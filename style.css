@@ -493,6 +493,7 @@
   }
   .table-wrap {
     flex: 1 1 auto;
+    align-self: stretch;
     min-width: 0;
     overflow-x: auto;
   }
@@ -630,6 +631,12 @@
   }
 
   /* ===== View Toggle Tabs ===== */
+  #viewToggleFade.scroll-fade-wrap {
+    width: fit-content;
+    max-width: 100%;
+    margin: 24px auto 18px;
+    border-radius: 22px;
+  }
   .view-toggle-wrap {
     display: flex;
     justify-content: flex-start;
@@ -637,7 +644,6 @@
     gap: 3px;
     width: fit-content;
     max-width: 100%;
-    margin: 24px auto 18px;
     padding: 4px;
     background: var(--color-surface);
     border-radius: 22px;
@@ -645,6 +651,7 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    scroll-snap-type: x proximity;
   }
   .view-toggle-wrap::-webkit-scrollbar {
     display: none;
@@ -672,10 +679,53 @@
     box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.3);
   }
   @media (max-width: 720px) {
+    #viewToggleFade.scroll-fade-wrap {
+      width: 100%;
+    }
     .view-toggle-wrap {
       width: 100%;
       justify-content: flex-start;
     }
+    .view-toggle-btn,
+    .view-toggle-community {
+      scroll-snap-align: start;
+    }
+  }
+
+  /* ===== Scroll Fade Hint (indicates a tab bar can be swiped horizontally) ===== */
+  .scroll-fade-wrap {
+    position: relative;
+    width: 100%;
+    align-self: stretch;
+  }
+  .scroll-fade-wrap::before,
+  .scroll-fade-wrap::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    width: 30px;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .scroll-fade-wrap::before {
+    left: 0;
+    border-radius: 18px 0 0 18px;
+    background: linear-gradient(to right, var(--color-surface), rgba(var(--color-white-rgb),0));
+  }
+  .scroll-fade-wrap::after {
+    right: 0;
+    border-radius: 0 18px 18px 0;
+    background: linear-gradient(to left, var(--color-surface), rgba(var(--color-white-rgb),0));
+  }
+  .scroll-fade-wrap.show-left::before { opacity: 1; }
+  .scroll-fade-wrap.show-right::after { opacity: 1; }
+  .scroll-fade-sticky {
+    position: sticky;
+    top: 10px;
+    z-index: 40;
   }
   .view-toggle-sep {
     width: 1px;
@@ -1589,9 +1639,6 @@
     box-shadow: 0 6px 18px rgba(var(--color-navy-rgb),0.12);
     margin-bottom: 18px;
     transition: var(--theme-transition);
-    position: sticky;
-    top: 10px;
-    z-index: 40;
   }
   .team-info-tab-bar::-webkit-scrollbar { display: none; }
   .team-info-tab-btn {

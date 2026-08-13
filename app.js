@@ -2084,4 +2084,25 @@
     window.addEventListener('resize', equalizeTitleLines);
 
     showDisclaimerIfNeeded();
+    initScrollFadeHints();
   });
+
+  // ===== 스크롤 힌트 (탭 바를 좌우로 넘길 수 있음을 표시) =====
+  function initScrollFadeHints() {
+    const scroller = document.getElementById('viewToggleWrap');
+    const fadeWrap = document.getElementById('viewToggleFade');
+    if (!scroller || !fadeWrap) return;
+
+    function update() {
+      const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+      const scrolled = scroller.scrollLeft;
+      fadeWrap.classList.toggle('show-left', scrolled > 4);
+      fadeWrap.classList.toggle('show-right', scrolled < maxScroll - 4);
+    }
+
+    scroller.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    // 콘텐츠/폰트 로딩 이후에도 정확한 스크롤 폭을 반영하기 위해 약간의 지연 후 재확인
+    update();
+    setTimeout(update, 300);
+  }
