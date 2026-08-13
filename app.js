@@ -2037,6 +2037,34 @@
   }
 
 
+  // ===== 접속 안내 팝업 (공식 사이트 아님 안내) =====
+  const DISCLAIMER_KEY = 'nrfa-disclaimer-hide-until';
+  const DISCLAIMER_HIDE_WEEKS = 1;
+
+  function showDisclaimerIfNeeded() {
+    const modal = document.getElementById('disclaimerModal');
+    if (!modal) return;
+    try {
+      const hideUntil = localStorage.getItem(DISCLAIMER_KEY);
+      if (hideUntil && Date.now() < Number(hideUntil)) {
+        return; // 아직 숨김 기간이 지나지 않음
+      }
+    } catch (e) {}
+    modal.style.display = 'flex';
+  }
+
+  function closeDisclaimer() {
+    const modal = document.getElementById('disclaimerModal');
+    const dontShow = document.getElementById('disclaimerDontShow');
+    if (dontShow && dontShow.checked) {
+      try {
+        const hideUntil = Date.now() + DISCLAIMER_HIDE_WEEKS * 7 * 24 * 60 * 60 * 1000;
+        localStorage.setItem(DISCLAIMER_KEY, String(hideUntil));
+      } catch (e) {}
+    }
+    if (modal) modal.style.display = 'none';
+  }
+
   // ===== 초기 실행 (App Init) =====
   document.addEventListener('DOMContentLoaded', function() {
     renderLeagueTable();
@@ -2054,4 +2082,6 @@
     equalizeTitleLines();
     setInterval(updateSeasonInfo, 60 * 60 * 1000); 
     window.addEventListener('resize', equalizeTitleLines);
+
+    showDisclaimerIfNeeded();
   });

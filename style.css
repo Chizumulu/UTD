@@ -1129,6 +1129,52 @@
   .modal-body table {
     box-shadow: none; border-radius: 0;
   }
+  .disclaimer-modal-content {
+    max-width: 380px;
+  }
+  .disclaimer-modal-body {
+    padding: 22px 22px 24px;
+    text-align: center;
+  }
+  .disclaimer-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-text-dark);
+    margin: 0 0 18px;
+  }
+  .disclaimer-dontshow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    margin-bottom: 18px;
+    user-select: none;
+  }
+  .disclaimer-dontshow input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--color-navy);
+    cursor: pointer;
+  }
+  .disclaimer-confirm-btn {
+    width: 100%;
+    background: var(--color-navy);
+    color: var(--color-white);
+    border: none;
+    padding: 11px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .disclaimer-confirm-btn:hover {
+    background: var(--color-navy-light);
+  }
   @media (max-width: 720px) {
     .stats-grid {
       grid-template-columns: 1fr;
