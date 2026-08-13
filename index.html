@@ -54,7 +54,7 @@
 </script>
 
 <link rel="icon" href="./favicon.ico" sizes="any">
-<link rel="stylesheet" href="style.css?v=002">
+<link rel="stylesheet" href="style.css?v=003">
 <script>
   // 페이지 렌더링 전에 저장된 테마(또는 시스템 설정)를 즉시 적용해 깜빡임(FOUC)을 방지합니다.
   (function() {
@@ -428,6 +428,16 @@
   </div>
 </div>
 
+<div id="matchDetailModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content match-detail-modal-content">
+    <div class="modal-header">
+      <h2 id="matchDetailTitle"></h2>
+      <button class="close-btn" onclick="closeMatchDetail()">&times;</button>
+    </div>
+    <div class="modal-body match-detail-modal-body" id="matchDetailBody"></div>
+  </div>
+</div>
+
 <div id="disclaimerModal" class="modal-overlay" style="display: none;">
   <div class="modal-content disclaimer-modal-content">
     <div class="modal-header">
@@ -446,7 +456,7 @@
 
 </div>
 
-<script src="data.js?v=002"></script>
-<script src="app.js?v=002"></script>
+<script src="data.js?v=003"></script>
+<script src="app.js?v=003"></script>
 </body>
 </html>

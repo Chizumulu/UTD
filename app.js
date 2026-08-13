@@ -279,6 +279,8 @@
       formHtml += `<span class="form-badge ${fClass}">${f}</span>`;
     });
 
+    const awardsHtml = renderTeamAwardsCard();
+
     el.innerHTML = `
       <div class="ti-overview-grid">
         <div class="ti-card ti-next-match-card">
@@ -302,9 +304,81 @@
             </div>
           </div>
         </div>
+        ${awardsHtml}
       </div>
     `;
     attachImageFallback();
+  }
+
+  // 등번호로 선수 정보를 찾아 언어에 맞는 이름과 포지션 텍스트를 반환
+  function awardPlayerHtml(number) {
+    const sq = squadData.find(p => p.number === number);
+    if (!sq) return '';
+    const name = isKorean ? sq.nameKo : sq.nameEn;
+    return `
+      <span class="ti-award-player">
+        <span class="ti-award-player-number">${sq.number}</span>
+        <span class="ti-award-player-name">${name}</span>
+      </span>`;
+  }
+
+  const MONTH_LABELS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  function formatAwardMonth(ymKey) {
+    const [y, m] = ymKey.split('-').map(Number);
+    return isKorean ? `${m}월` : MONTH_LABELS_EN[m - 1];
+  }
+
+  // 맨 오브 더 매치 / 이달의 선수 카드 렌더링 (teamAwards 기반)
+  function renderTeamAwardsCard() {
+    if (typeof teamAwards === 'undefined') return '';
+
+    const motmKeys = Object.keys(teamAwards.motm || {})
+      .filter(key => (teamAwards.motm[key] || []).length)
+      .sort((a, b) => {
+        const na = parseInt(a.replace('round', ''), 10);
+        const nb = parseInt(b.replace('round', ''), 10);
+        return nb - na; // 최신 라운드 먼저
+      });
+
+    const motmHtml = motmKeys.map(key => {
+      const weekNum = parseInt(key.replace('round', ''), 10);
+      const weekLabel = isKorean ? `${weekNum}주차` : `Week ${weekNum}`;
+      const playersHtml = teamAwards.motm[key].map(awardPlayerHtml).join('');
+      return `
+        <div class="ti-award-row">
+          <span class="ti-award-week lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${weekLabel}</span>
+          <span class="ti-award-players">${playersHtml}</span>
+        </div>`;
+    }).join('');
+
+    const potmKeys = Object.keys(teamAwards.playerOfTheMonth || {}).sort().reverse();
+    const potmHtml = potmKeys.map(ymKey => {
+      const monthLabel = formatAwardMonth(ymKey);
+      const playerHtml = awardPlayerHtml(teamAwards.playerOfTheMonth[ymKey]);
+      return `
+        <div class="ti-award-row">
+          <span class="ti-award-week lbl" data-en="${monthLabel}" data-ko="${monthLabel}">${monthLabel}</span>
+          <span class="ti-award-players">${playerHtml}</span>
+        </div>`;
+    }).join('');
+
+    if (!motmHtml && !potmHtml) return '';
+
+    return `
+      <div class="ti-card ti-awards-card">
+        <div class="ti-card-title lbl" data-en="Awards" data-ko="수상 정보">수상 정보</div>
+        ${potmHtml ? `
+          <div class="ti-award-group">
+            <div class="ti-award-group-title lbl" data-en="Player of the Month" data-ko="이달의 선수">이달의 선수</div>
+            ${potmHtml}
+          </div>` : ''}
+        ${motmHtml ? `
+          <div class="ti-award-group">
+            <div class="ti-award-group-title lbl" data-en="Man of the Match" data-ko="맨 오브 더 매치">맨 오브 더 매치</div>
+            ${motmHtml}
+          </div>` : ''}
+      </div>`;
   }
 
   function renderTeamRecordTab() {
@@ -418,6 +492,8 @@
               <span class="rmc-scorers-icon">⚽</span>
             </div>
           </div>
+          ${matchLineups[key] ? `
+          <button class="rmc-detail-btn lbl" data-en="View Details" data-ko="상세보기" onclick="openMatchDetail('${key}', ${weekNum})">${isKorean ? '상세보기' : 'View Details'}</button>` : ''}
         </div>`;
     });
 
@@ -1922,6 +1998,139 @@
     if (event.target === playerModal) {
       closePlayerModal();
     }
+    const matchDetailModal = document.getElementById('matchDetailModal');
+    if (event.target === matchDetailModal) {
+      closeMatchDetail();
+    }
+  }
+
+  // ===== 라운드 상세(포메이션/득점/최근 전적) 모달 =====
+  const POS_ROWS = [
+    ['ST'],
+    ['LW', 'CAM', 'RW'],
+    ['LCM', 'RCM'],
+    ['LB', 'LCB', 'RCB', 'RB'],
+    ['GK']
+  ];
+
+  function findLineupPlayer(lineup, pos) {
+    return lineup.starters.find(s => s.pos === pos);
+  }
+
+  function renderLineupPitch(lineup) {
+    const isKo = isKorean;
+    let subIdx = 0;
+    const rowsHtml = POS_ROWS.map(rowPositions => {
+      const cellsHtml = rowPositions.map(pos => {
+        const p = findLineupPlayer(lineup, pos);
+        if (!p) return '';
+        const captainTag = p.captain ? `<span class="lineup-captain-tag">C</span>` : '';
+        const goalsHtml = (p.goals && p.goals.length)
+          ? `<span class="lineup-goal-tag">⚽ ${p.goals.filter(g => g !== '-').join(', ')}</span>`
+          : (p.goalNote ? `<span class="lineup-goal-tag">⚽</span>` : '');
+        let outHtml = '';
+        if (p.outMin) {
+          const half = p.outMin.startsWith('전반') ? '전반' : (p.outMin.startsWith('후반') ? '후반' : '');
+          const outLabel = half ? `${half} 교체 아웃` : '교체 아웃';
+          const outTimeHtml = `<span class="lineup-sub-out">${outLabel}${p.injury ? ' 🩹' : ''}</span>`;
+          // subsIn은 starters 배열과 동일한 순서로 기록되어 있으므로 인덱스로 매칭
+          const inPlayer = (lineup.subsIn && lineup.subsIn[subIdx]) ? lineup.subsIn[subIdx] : null;
+          subIdx++;
+          const inHtml = inPlayer
+            ? `<span class="lineup-sub-in">▲ ${inPlayer.number} ${isKo ? inPlayer.nameKo : (inPlayer.nameEn || inPlayer.nameKo)}${isKo ? ' 투입' : ' in'}</span>`
+            : '';
+          outHtml = outTimeHtml + inHtml;
+        }
+        return `
+          <div class="lineup-cell">
+            <div class="lineup-pos">${pos}</div>
+            <div class="lineup-player${p.outMin ? ' has-sub' : ''}">
+              <span class="lineup-num">${p.number}</span>
+              <span class="lineup-name">${p.nameKo}</span>
+              ${captainTag}
+              ${goalsHtml}
+            </div>
+            ${outHtml}
+          </div>`;
+      }).join('');
+      return `<div class="lineup-row">${cellsHtml}</div>`;
+    }).join('');
+    return `<div class="lineup-pitch">${rowsHtml}</div>`;
+  }
+
+  function renderLineupSubs(lineup) {
+    const isKo = isKorean;
+    const inHtml = lineup.subsIn.length
+      ? lineup.subsIn.map(s => {
+          const goalsHtml = (s.goals && s.goals.length)
+            ? `<span class="lineup-goal-tag">⚽ ${s.goals.filter(g => g !== '-').join(', ')}</span>`
+            : '';
+          return `<span class="lineup-sub-chip lineup-sub-chip-in">▲ ${s.inMin && s.inMin !== '-' ? s.inMin + ' ' : ''}${s.number} ${s.nameKo}${goalsHtml}</span>`;
+        }).join('')
+      : `<span class="lineup-sub-empty">${isKo ? '교체 없음' : 'No substitutions'}</span>`;
+
+    const unusedHtml = (lineup.subsUnused || []).map(num => {
+      const sq = squadData.find(p => p.number === num);
+      const name = sq ? (isKo ? sq.nameKo : sq.nameEn) : num;
+      return `<span class="lineup-sub-chip lineup-sub-chip-unused">${num} ${name}</span>`;
+    }).join('');
+
+    return `
+      <div class="lineup-subs-section">
+        <div class="lineup-subs-title lbl" data-en="Substitutes (Used)" data-ko="교체 투입">${isKo ? '교체 투입' : 'Substitutes (Used)'}</div>
+        <div class="lineup-subs-chips">${inHtml}</div>
+      </div>
+      <div class="lineup-subs-section">
+        <div class="lineup-subs-title lbl" data-en="Unused Substitutes" data-ko="벤치 (미출전)">${isKo ? '벤치 (미출전)' : 'Unused Substitutes'}</div>
+        <div class="lineup-subs-chips">${unusedHtml || `<span class="lineup-sub-empty">${isKo ? '없음' : 'None'}</span>`}</div>
+      </div>`;
+  }
+
+  function renderLineupHistory(lineup) {
+    const isKo = isKorean;
+    const rows = lineup.recentHistory.map(h => `
+      <tr>
+        <td class="h2h-comp">${h.comp}</td>
+        <td class="h2h-score">${h.score}</td>
+        <td class="h2h-result">${h.result}</td>
+      </tr>`).join('');
+    return `
+      <div class="lineup-history-section">
+        <div class="lineup-subs-title lbl" data-en="Recent Head-to-Head" data-ko="최근 상대 전적">${isKo ? '최근 상대 전적' : 'Recent Head-to-Head'}</div>
+        <table class="h2h-table">
+          <thead><tr>
+            <th class="lbl" data-en="Match" data-ko="경기">${isKo ? '경기' : 'Match'}</th>
+            <th class="lbl" data-en="Score" data-ko="스코어">${isKo ? '스코어' : 'Score'}</th>
+            <th class="lbl" data-en="Result" data-ko="결과">${isKo ? '결과' : 'Result'}</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="h2h-summary">${lineup.historySummary}</div>
+      </div>`;
+  }
+
+  function openMatchDetail(roundKey, weekNum) {
+    const lineup = matchLineups[roundKey];
+    if (!lineup) return;
+
+    const isKo = isKorean;
+    const weekLabel = isKo ? `${weekNum}주차` : `Week ${weekNum}`;
+    document.getElementById('matchDetailTitle').textContent =
+      `${weekLabel} vs ${lineup.opponentKo} (${lineup.result})`;
+
+    const bodyEl = document.getElementById('matchDetailBody');
+    bodyEl.innerHTML = `
+      <div class="lineup-formation-tag">${lineup.formation}</div>
+      ${renderLineupPitch(lineup)}
+      ${renderLineupSubs(lineup)}
+      ${renderLineupHistory(lineup)}
+    `;
+
+    document.getElementById('matchDetailModal').style.display = 'flex';
+  }
+
+  function closeMatchDetail() {
+    document.getElementById('matchDetailModal').style.display = 'none';
   }
 
 

@@ -6,6 +6,155 @@
 const SEASON_START = '2026-07-12';
 const ROUND_DATE = '2026-08-12';
 
+// ===== 치주물루 라운드별 상세 (포메이션/득점/교체/최근 상대전적) =====
+// starters: 포지션별 선발. goals: 득점 시간(분) 배열. outMin: 교체 아웃 시간('HT'=하프타임)
+// subsIn: 교체 투입 선수. subsUnused: 미출전 명단(등번호)
+const matchLineups = {
+  round1: {
+    formation: "4-2-3-1",
+    opponentKo: "치하메 올스타즈 FC",
+    result: "3 : 1 승",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "TEEKAY" },
+      { pos: "LW", number: 49, nameKo: "쿰부카니 바냐", outMin: "후반 11'" },
+      { pos: "CAM", number: 7, nameKo: "디킨스", goals: ["8'", "78'"], outMin: "후반" },
+      { pos: "RW", number: 6, nameKo: "벤자민" },
+      { pos: "LCM", number: 77, nameKo: "군도", captain: true },
+      { pos: "RCM", number: 98, nameKo: "스티브", outMin: "후반 10'" },
+      { pos: "LB", number: 5, nameKo: "라반" },
+      { pos: "LCB", number: 13, nameKo: "조셉" },
+      { pos: "RCB", number: 25, nameKo: "모버트", outMin: "후반 15'" },
+      { pos: "RB", number: 2, nameKo: "로날드", outMin: "후반" },
+      { pos: "GK", number: 88, nameKo: "티나시" }
+    ],
+    subsIn: [
+      { number: 11, nameKo: "해리", inMin: "후반 11'", goals: ["76'"] },
+      { number: 80, nameKo: "스쿠카", inMin: "후반" },
+      { number: 10, nameKo: "찰스", inMin: "후반 10'" },
+      { number: 15, nameKo: "만토", inMin: "후반 15'" },
+      { number: 3, nameKo: "음롱골라", inMin: "후반" }
+    ],
+    subsUnused: [9, 20, 66, 90],
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 23주차", score: "치하메 2 : 1 치주물루", result: "치하메 승" },
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 8주차", score: "치주물루 2 : 0 치하메", result: "치주물루 승" }
+    ],
+    historySummary: "최근 2경기 전적 2전 1승 0무 1패로 백중세"
+  },
+  round2: {
+    formation: "4-2-3-1",
+    opponentKo: "마푸 스타즈 FC",
+    result: "0 : 1 패",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "TEEKAY" },
+      { pos: "LW", number: 11, nameKo: "해리" },
+      { pos: "CAM", number: 7, nameKo: "디킨스" },
+      { pos: "RW", number: 6, nameKo: "벤자민", outMin: "후반" },
+      { pos: "LCM", number: 77, nameKo: "군도", outMin: "34'" },
+      { pos: "RCM", number: 10, nameKo: "찰스", outMin: "후반" },
+      { pos: "LB", number: 5, nameKo: "라반" },
+      { pos: "LCB", number: 13, nameKo: "조셉" },
+      { pos: "RCB", number: 3, nameKo: "음롱골라", captain: true },
+      { pos: "RB", number: 25, nameKo: "모버트" },
+      { pos: "GK", number: 88, nameKo: "티나시", outMin: "전반", injury: true }
+    ],
+    subsIn: [
+      { number: 49, nameKo: "바냐", inMin: "후반" },
+      { number: 98, nameKo: "스티브", inMin: "34'" },
+      { number: 80, nameKo: "스쿠카", inMin: "후반" },
+      { number: 90, nameKo: "마야미코", inMin: "전반" }
+    ],
+    subsUnused: [15, 20, 66],
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 27주차", score: "심보웨 4 : 2 치주물루", result: "심보웨 승" },
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 13주차", score: "치주물루 2 : 1 심보웨", result: "치주물루 승" }
+    ],
+    historySummary: "최근 2경기 전적 2전 1승 0무 1패로 백중세"
+  },
+  round3: {
+    formation: "4-2-3-1",
+    opponentKo: "라이플리 FC",
+    result: "1 : 0 승",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "TEEKAY", goalNote: true },
+      { pos: "LW", number: 11, nameKo: "해리" },
+      { pos: "CAM", number: 7, nameKo: "디킨스" },
+      { pos: "RW", number: 6, nameKo: "벤자민" },
+      { pos: "LCM", number: 99, nameKo: "패트릭" },
+      { pos: "RCM", number: 98, nameKo: "스티브" },
+      { pos: "LB", number: 5, nameKo: "라반" },
+      { pos: "LCB", number: 13, nameKo: "조셉" },
+      { pos: "RCB", number: 3, nameKo: "음롱골라", captain: true },
+      { pos: "RB", number: 2, nameKo: "로날드" },
+      { pos: "GK", number: 90, nameKo: "마야미코" }
+    ],
+    subsIn: [],
+    subsUnused: [9, 10, 20, 25, 66, 77, 88],
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 28주차", score: "치주물루 2 : 0 라이플리", result: "치주물루 승" },
+      { comp: "2025-26 시즌 MNRF 심소 프리미어 리그 1주차", score: "라이플리 5 : 1 치주물루", result: "라이플리 승" }
+    ],
+    historySummary: "최근 2경기 전적 2전 1승 0무 1패로 백중세"
+  },
+  round4: {
+    formation: "4-2-3-1",
+    opponentKo: "루베 마스터즈 FC",
+    result: "0 : 0 무",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "TEEKAY" },
+      { pos: "LW", number: 11, nameKo: "해리", outMin: "후반" },
+      { pos: "CAM", number: 7, nameKo: "디킨스" },
+      { pos: "RW", number: 6, nameKo: "벤자민" },
+      { pos: "LCM", number: 98, nameKo: "스티브" },
+      { pos: "RCM", number: 3, nameKo: "음롱골라", captain: true },
+      { pos: "LB", number: 5, nameKo: "라반" },
+      { pos: "LCB", number: 13, nameKo: "조셉" },
+      { pos: "RCB", number: 25, nameKo: "모버트" },
+      { pos: "RB", number: 2, nameKo: "로날드", outMin: "후반" },
+      { pos: "GK", number: 90, nameKo: "마야미코" }
+    ],
+    subsIn: [
+      { number: 10, nameKo: "찰스", inMin: "후반" },
+      { number: 77, nameKo: "군도", inMin: "후반" }
+    ],
+    subsUnused: [9, 20, 49, 66, 88],
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 27주차", score: "치주물루 4 : 1 루베", result: "치주물루 승" },
+      { comp: "2025-26 시즌 카스텔컵 지역 단계 3라운드", score: "치주물루 1 : 1 루베 (PSO 4:2)", result: "무승부" },
+      { comp: "2025-26 시즌 MNRF 심소 프리미어 리그 2주차", score: "루베 3 : 2 치주물루", result: "루베 승" }
+    ],
+    historySummary: "최근 3경기 전적 1승 1무 1패로 백중세"
+  },
+  round5: {
+    formation: "4-2-3-1",
+    opponentKo: "에크웬데니 FC",
+    result: "2 : 0 승",
+    starters: [
+      { pos: "ST", number: 9, nameKo: "임마누엘", outMin: "29'" },
+      { pos: "LW", number: 49, nameKo: "쿰부카니", goalNote: true },
+      { pos: "CAM", number: 7, nameKo: "디킨스" },
+      { pos: "RW", number: 6, nameKo: "벤자민" },
+      { pos: "LCM", number: 98, nameKo: "스티브", goalNote: true },
+      { pos: "RCM", number: 3, nameKo: "음롱골라", captain: true },
+      { pos: "LB", number: 20, nameKo: "프란시스", outMin: "-" },
+      { pos: "LCB", number: 13, nameKo: "조셉" },
+      { pos: "RCB", number: 25, nameKo: "모버트" },
+      { pos: "RB", number: 77, nameKo: "군도" },
+      { pos: "GK", number: 90, nameKo: "마야미코" }
+    ],
+    subsIn: [
+      { number: 22, nameKo: "TK", inMin: "29'" },
+      { number: 5, nameKo: "라반", inMin: "-" }
+    ],
+    subsUnused: [8, 10, 11, 66, 80, 88],
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 28주차", score: "치주물루 5 : 1 에크웬데니", result: "치주물루 승" },
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 11주차", score: "에크웬데니 2 : 2 치주물루", result: "무승부" }
+    ],
+    historySummary: "최근 2경기 전적 2전 1승 1무 0패로 우세"
+  }
+};
+
 const squadData = [
   { number: 2, position: "DF", nameKo: "로날드 은달라마", nameEn: "Ronald Ndalama" },
   { number: 3, position: "DF", nameKo: "알란 음롱골라", nameEn: "Allan Mlongola", isViceCaptain: true },
@@ -30,6 +179,20 @@ const squadData = [
   { number: 98, position: "MF", nameKo: "스티브 피리", nameEn: "Steve Phiri" },
   { number: 99, position: "MF", nameKo: "패트릭 지야", nameEn: "Patrick Jiya" }
 ];
+
+// ===== 팀 수상 정보 (맨 오브 더 매치 / 이달의 선수) =====
+// motm: 라운드별 맨 오브 더 매치 수상자. 값은 squadData의 등번호(number) 배열 (공동 수상 가능)
+// playerOfTheMonth: 'YYYY-MM' 형식의 월별 이달의 선수 수상자. 값은 squadData의 등번호(number)
+const teamAwards = {
+  motm: {
+    round1: [13, 7],
+    round3: [22, 6],
+    round5: [49]
+  },
+  playerOfTheMonth: {
+    '2026-07': 90
+  }
+};
 
 const matchDetails = {
   round1: [
@@ -65,7 +228,7 @@ const matchDetails = {
     },
     {
       match: "치주물루 3 : 치하메 1",
-      scorersHome: "DICKIES NYIRENDA (2골), HARRISON PHIRI",
+      scorersHome: "DICKIES NYIRENDA (2골), HARRY BARTON",
       scorersAway: "KENNEDY SEME"
     }
   ],
@@ -213,7 +376,7 @@ const matchDetails = {
     },
     {
       match: "치주물루 2 : 에크웬데니 0",
-      scorersHome: "STEVEN PHIRI, KUMBUKANI CHIBAKA",
+      scorersHome: "STEVEN PHIRI, KUMBUKANI BANYA",
       scorersAway: "없음"
     }
   ]
@@ -507,10 +670,10 @@ const playerDirectory = {
   "CHISOMO MYGHA": { nameKo: "치소모 미그하", nameEn: "Chisomo Mygha" },
   "CHIKONDI NYIRENDA": { nameKo: "치콘디 니렌다", nameEn: "Chikondi Nyirenda" },
   "DUNCAN MPOHA": { nameKo: "던컨 음포하", nameEn: "Duncan Mpoha" },
-  "HARRISON PHIRI": { nameKo: "해리슨 피리", nameEn: "Harrison Phiri" },
+  "HARRY BARTON": { nameKo: "해리 바튼", nameEn: "Harry Barton" },
   "TIMOTHY KATAPA": { nameKo: "티모시 카타파", nameEn: "Timothy Katapa" },
   "STEVEN PHIRI": { nameKo: "스티브 피리", nameEn: "Steven Phiri" },
-  "KUMBUKANI CHIBAKA": { nameKo: "쿰부카니 치바카", nameEn: "Kumbukani Chibaka" },
+  "KUMBUKANI BANYA": { nameKo: "쿰부카니 바냐", nameEn: "Kumbukani Banya" },
   "BABA NKHOMA": { nameKo: "바바 은코마", nameEn: "Baba Nkhoma" },
   "SAMANI NYIRENDA": { nameKo: "사마니 니렌다", nameEn: "Samani Nyirenda" },
   "TAIMON GOMEKA": { nameKo: "타이몬 고메카", nameEn: "Taimon Gomeka" },
