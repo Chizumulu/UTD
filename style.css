@@ -115,6 +115,14 @@
 
   /* ===== Base / Reset ===== */
   * { box-sizing: border-box; }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
   body {
     font-family: 'Segoe UI', 'Noto Sans KR', Arial, sans-serif;
     background: linear-gradient(160deg, var(--color-bg-grad-1) 0%, var(--color-bg-grad-2) 40%, var(--color-bg-grad-3) 100%);
@@ -123,6 +131,11 @@
     padding: 30px 10px;
     margin: 0;
     transition: var(--theme-transition);
+  }
+  @media (max-width: 600px) {
+    body {
+      padding: 16px 8px;
+    }
   }
   /* 다크모드 전환 시 주요 표면들도 부드럽게 색이 바뀌도록 처리 */
   table, .view-toggle-wrap, .view-toggle-btn, .scatter-card, .predict-table-wrap,
@@ -663,6 +676,29 @@
       width: 100%;
       justify-content: flex-start;
     }
+  }
+  .view-toggle-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--color-border-chip);
+    flex-shrink: 0;
+    margin: 0 2px;
+  }
+  .view-toggle-community {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-teal-dark);
+    text-decoration: none;
+  }
+  .view-toggle-community:hover {
+    background: var(--color-bg-btn-hover);
+    color: var(--color-teal-dark);
+  }
+  .view-toggle-community-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
   }
 
   /* ===== Team Records / Stats Grid ===== */
@@ -1428,6 +1464,41 @@
     margin-left: auto;
     padding-top: 2px;
   }
+  .team-info-social {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .team-info-social-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(var(--color-white-rgb),0.12);
+    color: var(--color-cream);
+    border: 1.5px solid rgba(var(--color-gold-rgb),0.7);
+    backdrop-filter: blur(4px);
+    transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
+  }
+  .team-info-social-link svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+  }
+  .team-info-social-link:hover {
+    background: var(--color-gold);
+    color: var(--color-navy);
+    border-color: var(--color-gold);
+    transform: translateY(-1px);
+  }
+  @media (max-width: 720px) {
+    .team-info-social-link {
+      width: 34px;
+      height: 34px;
+    }
+  }
   .ti-stat {
     display: flex;
     flex-direction: column;
@@ -1875,5 +1946,38 @@
     .rmc-scorers-col-away {
       flex-direction: row;
       text-align: left;
+    }
+  }
+
+  /* ===== Mobile Touch Target Adjustments =====
+     Desktop sizes are untouched; these only widen the tappable
+     area of small icon buttons on touch-sized viewports. */
+  @media (max-width: 720px) {
+    .close-btn {
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    .theme-toggle-btn {
+      width: 38px;
+      height: 38px;
+    }
+    .info-icon-btn {
+      width: 22px;
+      height: 22px;
+      font-size: 12px;
+    }
+    .view-toggle-btn,
+    .team-info-tab-btn,
+    .round-tab-btn {
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+    .lang-btn {
+      padding-top: 8px;
+      padding-bottom: 8px;
     }
   }
