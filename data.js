@@ -232,6 +232,93 @@ const teamAwards = {
   }
 };
 
+// ============================================================
+// 스쿼드 선수별 통산 기록 (squadPlayerStats) 자동 계산
+// ------------------------------------------------------------
+// matchLineups(라운드별 선발/교체/득점 기록)와 teamAwards.motm을 훑어서
+// 치주물루 선수 개개인의 출전수/선발/교체/득점/주장/MOTM 횟수를 계산합니다.
+// 새 라운드가 matchLineups에 추가되면 이 함수가 자동으로 반영하므로
+// 이 파일을 따로 수정할 필요가 없습니다.
+// 반환값: { [등번호]: { appearances, starts, subApps, goals, captainCount,
+//           motmCount, unusedCount, history: [ {roundKey, weekNum, opponentKo,
+//           result, wasStarter, goals, isCaptain, wasMotm}, ... ] } }
+// ============================================================
+function computeSquadPlayerStats() {
+  const stats = {};
+
+  function ensure(number) {
+    if (!stats[number]) {
+      stats[number] = {
+        number,
+        appearances: 0,
+        starts: 0,
+        subApps: 0,
+        goals: 0,
+        captainCount: 0,
+        motmCount: 0,
+        unusedCount: 0,
+        history: []
+      };
+    }
+    return stats[number];
+  }
+
+  const roundKeysSorted = Object.keys(matchLineups).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  });
+
+  roundKeysSorted.forEach((roundKey, idx) => {
+    const weekNum = idx + 1;
+    const lineup = matchLineups[roundKey];
+    if (!lineup) return;
+
+    const motmList = (teamAwards.motm && teamAwards.motm[roundKey]) || [];
+
+    (lineup.starters || []).forEach(p => {
+      const s = ensure(p.number);
+      s.appearances++;
+      s.starts++;
+      const goalCount = (p.goals || []).length;
+      s.goals += goalCount;
+      if (p.captain) s.captainCount++;
+      const wasMotm = motmList.includes(p.number);
+      if (wasMotm) s.motmCount++;
+      s.history.push({
+        roundKey, weekNum,
+        opponentKo: lineup.opponentKo, result: lineup.result,
+        wasStarter: true, goals: goalCount,
+        isCaptain: !!p.captain, wasMotm
+      });
+    });
+
+    (lineup.subsIn || []).forEach(p => {
+      const s = ensure(p.number);
+      s.appearances++;
+      s.subApps++;
+      const goalCount = (p.goals || []).length;
+      s.goals += goalCount;
+      const wasMotm = motmList.includes(p.number);
+      if (wasMotm) s.motmCount++;
+      s.history.push({
+        roundKey, weekNum,
+        opponentKo: lineup.opponentKo, result: lineup.result,
+        wasStarter: false, goals: goalCount,
+        isCaptain: false, wasMotm
+      });
+    });
+
+    (lineup.subsUnused || []).forEach(number => {
+      const s = ensure(number);
+      s.unusedCount++;
+    });
+  });
+
+  return stats;
+}
+
+// 스쿼드 선수별 통산 기록 데이터 (matchLineups/teamAwards 로부터 자동 계산됨)
+const squadPlayerStats = computeSquadPlayerStats();
+
 const matchDetails = {
   round1: [
     {
@@ -418,6 +505,21 @@ const matchDetails = {
       scorersAway: "없음"
     }
   ]
+};
+
+// ===== 아직 안 치른(예정된) 경기의 사전 상대전적 메모 =====
+// matchLineups[].recentHistory는 라운드가 끝난 뒤(포메이션/득점 등과 함께) 채우는 값이라
+// 예정된 라운드에는 아직 없습니다. 다음 경기 프리뷰에서 H2H를 보여주려면 이렇게
+// roundKey(scheduledRounds 기준)를 키로 미리 적어두면 됩니다. 라운드가 실제로 끝나면
+// 이 항목은 지우고 matchLineups[roundKey].recentHistory로 옮겨주세요.
+const upcomingMatchHistory = {
+  round6: {
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 24주차", score: "치주물루 2 : 0 에우티니", result: "치주물루 승(몰수승)" },
+      { comp: "2025-26 시즌 MNRF 심소 프리미어 리그 6주차", score: "에우티니 1 : 0 치주물루", result: "에우티니 승" }
+    ],
+    historySummary: "최근 2경기 전적 1승 0무 1패로 백중세"
+  }
 };
 
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
@@ -747,6 +849,307 @@ const leagueData = [
     nextMatch: { isBye: false, homeAway: "H", oppKo: "치바비 리얼 스타스 FC", oppEn: "Chibavi Real Stars FC", oppLogo: "치바비.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   }
 ];
+
+// ============================================================
+// 상대전적(H2H) 통산 기록 (h2hHistory) 계산
+// ------------------------------------------------------------
+// roundsData(이번 시즌에 치주물루 유나이티드가 실제로 치른 경기)와
+// matchLineups[].recentHistory(라운드 상세 화면에 함께 실리는, 과거 시즌
+// 상대전적 메모)를 합쳐서 상대팀별 통산 승/무/패와 득실차를 계산합니다.
+// - recentHistory 안의 상대팀 이름은 "치하메", "루베" 처럼 줄임말로 적혀
+//   있을 수 있어서, leagueData의 정식 팀명과 접두어가 일치하면 그 팀의
+//   정식 명칭/로고로 연결합니다. 지금 리그에 없는 과거 상대(예: 심보웨)는
+//   이름을 그대로 사용합니다.
+// - "(PSO 4:2)" 같은 승부차기 표기는 정규시간 스코어만 승/무/패 판정에
+//   사용하고 무시합니다.
+// 새 라운드가 roundsData/matchLineups에 추가되면 자동으로 반영되므로
+// 이 파일을 따로 수정할 필요가 없습니다.
+// 반환값: 상대팀별 배열(경기 수가 많은 순으로 정렬), 각 항목:
+// { key, nameKo, nameEn, logoSrc, isCurrentLeagueTeam,
+//   played, won, drawn, lost, goalsFor, goalsAgainst, goalDiff,
+//   matches: [ { source: 'season'|'history', myGoals, oppGoals, result, ... } ] }
+// ============================================================
+function isOurTeamLabel(label) {
+  if (!label) return false;
+  const t = String(label).trim();
+  return t.indexOf('치주물루') !== -1 || t.toLowerCase().indexOf('chizumulu') !== -1;
+}
+
+// recentHistory 안에서 지금은 다른 이름으로 불리는(또는 옛 명칭인) 상대팀을
+// leagueData의 정식 팀명으로 동일시해주는 별칭 매핑입니다.
+// 예: "심보웨"는 "마푸 스타즈 FC"의 옛 팀명이라 마푸 스타즈 FC 전적에 합산합니다.
+// 새로운 별칭이 필요하면 이 목록에 한 줄만 추가하면 됩니다.
+const h2hOpponentAliases = {
+  "심보웨": "마푸 스타즈 FC"
+};
+
+// recentHistory에 적힌 상대팀 이름(줄임말 가능)을 leagueData의 정식 팀과 연결합니다.
+function resolveH2HOpponent(rawKo) {
+  const raw = (rawKo || '').trim();
+  const aliased = h2hOpponentAliases[raw] || raw;
+  const teams = (typeof leagueData !== 'undefined') ? leagueData : [];
+  const found = teams.find(t => t.nameKo && (t.nameKo === aliased || t.nameKo.indexOf(aliased) === 0));
+  if (found) {
+    return {
+      key: found.nameEn, nameKo: found.nameKo, nameEn: found.nameEn,
+      logoSrc: found.logoSrc || null, isCurrentLeagueTeam: true
+    };
+  }
+  // 현재 리그 소속이 아닌(과거 시즌에만 있었던) 상대팀은 이름 그대로 사용
+  return { key: 'hist:' + aliased, nameKo: aliased, nameEn: aliased, logoSrc: null, isCurrentLeagueTeam: false };
+}
+
+function computeH2HHistory() {
+  const table = {};
+
+  function ensure(info) {
+    if (!table[info.key]) {
+      table[info.key] = {
+        key: info.key, nameKo: info.nameKo, nameEn: info.nameEn,
+        logoSrc: info.logoSrc, isCurrentLeagueTeam: info.isCurrentLeagueTeam,
+        played: 0, won: 0, drawn: 0, lost: 0,
+        goalsFor: 0, goalsAgainst: 0, matches: []
+      };
+    }
+    return table[info.key];
+  }
+
+  function applyResult(rec, myGoals, oppGoals, extra) {
+    rec.played++;
+    rec.goalsFor += myGoals;
+    rec.goalsAgainst += oppGoals;
+    let result;
+    if (myGoals > oppGoals) { rec.won++; result = 'W'; }
+    else if (myGoals < oppGoals) { rec.lost++; result = 'L'; }
+    else { rec.drawn++; result = 'D'; }
+    rec.matches.push(Object.assign({ myGoals, oppGoals, result }, extra));
+  }
+
+  // 1) 이번 시즌 roundsData (확정된 라운드만)
+  const roundKeysSorted = Object.keys(roundsData).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  });
+  roundKeysSorted.forEach((roundKey, idx) => {
+    const weekNum = idx + 1;
+    (roundsData[roundKey] || []).forEach(m => {
+      if (m.byeKo || m.byeEn) return;
+      const homeIsUs = m.homeKo === '치주물루 유나이티드 FC' || m.homeEn === 'Chizumulu United FC';
+      const awayIsUs = m.awayKo === '치주물루 유나이티드 FC' || m.awayEn === 'Chizumulu United FC';
+      if (!homeIsUs && !awayIsUs) return;
+
+      const oppKo = homeIsUs ? m.awayKo : m.homeKo;
+      const oppEn = homeIsUs ? m.awayEn : m.homeEn;
+      const myGoals = homeIsUs ? m.homeScore : m.awayScore;
+      const oppGoals = homeIsUs ? m.awayScore : m.homeScore;
+
+      const info = resolveH2HOpponent(oppKo);
+      if (!info.isCurrentLeagueTeam && oppEn) info.nameEn = oppEn;
+      const rec = ensure(info);
+      applyResult(rec, myGoals, oppGoals, {
+        source: 'season', roundKey, weekNum, homeAway: homeIsUs ? 'H' : 'A'
+      });
+    });
+  });
+
+  // recentHistory 배열 하나(h.score 형식: "A 2 : 1 B")를 파싱해서 H2H 테이블에 반영하는
+  // 공용 헬퍼. matchLineups(치른 라운드)와 upcomingMatchHistory(예정 라운드)가 형식이
+  // 같아서 이 함수 하나로 둘 다 처리합니다.
+  function applyRecentHistoryList(recentHistory, roundKey, source) {
+    (recentHistory || []).forEach(h => {
+      const scoreText = (h.score || '').trim();
+      const parsed = /^(.+?)\s+(\d+)\s*:\s*(\d+)\s+(.+)$/.exec(scoreText);
+      if (!parsed) return;
+
+      const leftRaw = parsed[1];
+      const leftScore = parseInt(parsed[2], 10);
+      const rightScore = parseInt(parsed[3], 10);
+      const rightRaw = parsed[4].replace(/\s*\(.*\)\s*$/, '').trim();
+
+      let myGoals, oppGoals, oppRaw;
+      if (isOurTeamLabel(leftRaw)) {
+        myGoals = leftScore; oppGoals = rightScore; oppRaw = rightRaw;
+      } else if (isOurTeamLabel(rightRaw)) {
+        myGoals = rightScore; oppGoals = leftScore; oppRaw = leftRaw;
+      } else {
+        return; // 치주물루가 언급되지 않은 기록은 건너뜁니다
+      }
+
+      const info = resolveH2HOpponent(oppRaw);
+      const rec = ensure(info);
+      applyResult(rec, myGoals, oppGoals, { source, roundKey, comp: h.comp, scoreText });
+    });
+  }
+
+  // 2) matchLineups[].recentHistory (치른 라운드의 상대전적 메모)
+  Object.keys(matchLineups).forEach(roundKey => {
+    const lineup = matchLineups[roundKey];
+    if (!lineup) return;
+    applyRecentHistoryList(lineup.recentHistory, roundKey, 'history');
+  });
+
+  // 3) upcomingMatchHistory[].recentHistory (아직 안 치른 라운드에 미리 적어둔 상대전적 메모)
+  if (typeof upcomingMatchHistory !== 'undefined') {
+    Object.keys(upcomingMatchHistory).forEach(roundKey => {
+      const entry = upcomingMatchHistory[roundKey];
+      if (!entry) return;
+      applyRecentHistoryList(entry.recentHistory, roundKey, 'upcoming');
+    });
+  }
+
+  const list = Object.keys(table).map(k => {
+    const rec = table[k];
+    rec.goalDiff = rec.goalsFor - rec.goalsAgainst;
+    return rec;
+  });
+
+  list.sort((a, b) => {
+    if (b.played !== a.played) return b.played - a.played;
+    return (a.nameKo || '').localeCompare(b.nameKo || '', 'ko');
+  });
+
+  return list;
+}
+
+// ============================================================
+// 폼 가이드 / 연승·무패 스트릭 (computeFormGuide) 계산
+// ------------------------------------------------------------
+// roundsData(확정된 라운드)를 주차 순서대로 훑어서 특정 팀의 W/D/L
+// 결과열을 만들고, 그 결과열로부터
+//  - 최근 5경기 폼(recentForm)
+//  - 역대(시즌 전체) 최다 연승 기록(longestWinStreak)
+//  - 역대 최다 무패(승+무) 기록(longestUnbeatenStreak)
+//  - 지금 이 순간까지 이어지고 있는 연승/무패 행진(currentWinStreak/
+//    currentUnbeatenStreak)
+// 을 계산합니다. nameEn/nameKo만 넘기면 어떤 팀에도 재사용할 수 있습니다.
+// ============================================================
+function computeFormGuide(nameEn, nameKo) {
+  const roundKeysSorted = Object.keys(roundsData).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  });
+
+  const sequence = [];
+  roundKeysSorted.forEach((roundKey, idx) => {
+    const weekNum = idx + 1;
+    (roundsData[roundKey] || []).forEach(m => {
+      if (m.byeKo || m.byeEn) return;
+      const isHome = m.homeEn === nameEn || m.homeKo === nameKo;
+      const isAway = m.awayEn === nameEn || m.awayKo === nameKo;
+      if (!isHome && !isAway) return;
+
+      const myGoals = isHome ? m.homeScore : m.awayScore;
+      const oppGoals = isHome ? m.awayScore : m.homeScore;
+      let result;
+      if (myGoals > oppGoals) result = 'W';
+      else if (myGoals < oppGoals) result = 'L';
+      else result = 'D';
+
+      sequence.push({
+        weekNum, roundKey, result,
+        homeAway: isHome ? 'H' : 'A',
+        oppKo: isHome ? m.awayKo : m.homeKo,
+        oppEn: isHome ? m.awayEn : m.homeEn,
+        myGoals, oppGoals
+      });
+    });
+  });
+
+  // predicate를 만족하는 가장 긴 연속 구간(및 그 시작/끝 주차)을 찾습니다.
+  // 동률(같은 길이)이 여러 번 나오면 가장 처음(오래된) 기록을 유지합니다.
+  function longestStreak(predicate) {
+    let best = { count: 0, startWeek: null, endWeek: null };
+    let currentCount = 0;
+    let currentStart = null;
+    sequence.forEach(m => {
+      if (predicate(m.result)) {
+        if (currentCount === 0) currentStart = m.weekNum;
+        currentCount++;
+        if (currentCount > best.count) {
+          best = { count: currentCount, startWeek: currentStart, endWeek: m.weekNum };
+        }
+      } else {
+        currentCount = 0;
+        currentStart = null;
+      }
+    });
+    return best;
+  }
+
+  // 가장 최근 경기부터 거슬러 올라가며 predicate가 끊기지 않고 이어지는 길이
+  function currentStreak(predicate) {
+    let count = 0;
+    for (let i = sequence.length - 1; i >= 0; i--) {
+      if (predicate(sequence[i].result)) count++;
+      else break;
+    }
+    return count;
+  }
+
+  const isWin = r => r === 'W';
+  const isUnbeaten = r => r === 'W' || r === 'D';
+
+  return {
+    sequence,
+    recentForm: sequence.slice(-5),
+    longestWinStreak: longestStreak(isWin),
+    longestUnbeatenStreak: longestStreak(isUnbeaten),
+    currentWinStreak: currentStreak(isWin),
+    currentUnbeatenStreak: currentStreak(isUnbeaten)
+  };
+}
+
+// ============================================================
+// 다음 경기 프리뷰 (computeNextMatchPreview) 계산
+// ------------------------------------------------------------
+// scheduledRounds(아직 안 치른 라운드)를 훑어서 특정 팀의 다음 라운드
+// 매치업(부전승이면 부전승 여부)을 찾고, 상대가 있다면
+//  - 홈/원정 여부(homeAway)
+//  - 그 상대와의 H2H(상대전적) 요약 (computeH2HHistory 재사용)
+// 을 한 번에 묶어서 돌려줍니다. kickoffDate/kickoffTime은 말라위 표준시
+// (CAT, UTC+2 고정, 서머타임 없음) 기준이라, 카운트다운 등에서 이 값으로
+// UTC 시각을 그대로 계산할 수 있습니다.
+// ============================================================
+function computeNextMatchPreview(nameEn, nameKo) {
+  if (typeof scheduledRounds === 'undefined') return null;
+
+  const scheduledKeysSorted = Object.keys(scheduledRounds).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  });
+
+  for (let i = 0; i < scheduledKeysSorted.length; i++) {
+    const roundKey = scheduledKeysSorted[i];
+    const matches = scheduledRounds[roundKey] || [];
+
+    const byeEntry = matches.find(m => (m.byeKo || m.byeEn) && (m.byeEn === nameEn || m.byeKo === nameKo));
+    if (byeEntry) {
+      return { isBye: true, roundKey };
+    }
+
+    const found = matches.find(m => !(m.byeKo || m.byeEn) &&
+      (m.homeEn === nameEn || m.homeKo === nameKo || m.awayEn === nameEn || m.awayKo === nameKo));
+    if (!found) continue;
+
+    const isHome = found.homeEn === nameEn || found.homeKo === nameKo;
+    const oppKo = isHome ? found.awayKo : found.homeKo;
+    const oppEn = isHome ? found.awayEn : found.homeEn;
+    const oppTeam = (typeof leagueData !== 'undefined') ? leagueData.find(t => t.nameEn === oppEn) : null;
+
+    const h2hAll = (typeof computeH2HHistory === 'function') ? computeH2HHistory() : [];
+    const h2h = h2hAll.find(r => r.nameEn === oppEn || r.nameKo === oppKo) || null;
+
+    return {
+      isBye: false,
+      roundKey,
+      homeAway: isHome ? 'H' : 'A',
+      oppKo, oppEn,
+      oppLogo: oppTeam ? oppTeam.logoSrc : null,
+      kickoffDate: found.kickoffDate,
+      kickoffTime: found.kickoffTime,
+      h2h
+    };
+  }
+
+  return null; // 남은 예정 라운드가 없음
+}
 
 // ============================================================
 // 득점 순위 (topScorersData) 자동 계산
@@ -1156,6 +1559,73 @@ function poissonRandom(lambda) {
 // 표본이 아직 작으므로(35경기) 시즌이 진행되며 더 많은 결과가 쌓이면 이 값도 다시 확인해보는 게 좋습니다.
 const HOME_ADVANTAGE = 1.35;
 const AWAY_DISADVANTAGE = 0.65;
+
+// ============================================================
+// 팀별 홈/원정 스플릿 (computeHomeAwaySplit) 계산
+// ------------------------------------------------------------
+// roundsData(확정된 라운드)를 훑어서 특정 팀의 홈 성적과 원정 성적을
+// 각각 승/무/패·득실·승점으로 나눠 계산합니다.
+// 여기에 더해, 몬테카를로 시뮬레이션(runMonteCarloSimulation)에서 쓰는
+// 것과 동일한 HOME_ADVANTAGE/AWAY_DISADVANTAGE 배율과 computeTeamStrengths
+// 로직을 그대로 재사용해서, "평균적인 팀"을 상대할 때의 홈/원정 기대 득점도
+// 함께 계산해 실제 득점과 비교할 수 있게 해줍니다.
+// ============================================================
+function computeHomeAwaySplit(nameEn, nameKo) {
+  function emptySide() {
+    return { played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0 };
+  }
+  const home = emptySide();
+  const away = emptySide();
+
+  const roundKeysSorted = Object.keys(roundsData).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  });
+
+  roundKeysSorted.forEach(roundKey => {
+    (roundsData[roundKey] || []).forEach(m => {
+      if (m.byeKo || m.byeEn) return;
+      const isHome = m.homeEn === nameEn || m.homeKo === nameKo;
+      const isAway = m.awayEn === nameEn || m.awayKo === nameKo;
+      if (isHome) {
+        home.played++;
+        home.goalsFor += m.homeScore;
+        home.goalsAgainst += m.awayScore;
+        if (m.homeScore > m.awayScore) home.won++;
+        else if (m.homeScore < m.awayScore) home.lost++;
+        else home.drawn++;
+      } else if (isAway) {
+        away.played++;
+        away.goalsFor += m.awayScore;
+        away.goalsAgainst += m.homeScore;
+        if (m.awayScore > m.homeScore) away.won++;
+        else if (m.awayScore < m.homeScore) away.lost++;
+        else away.drawn++;
+      }
+    });
+  });
+
+  [home, away].forEach(side => {
+    side.points = side.won * 3 + side.drawn;
+    side.ppg = side.played > 0 ? side.points / side.played : 0;
+    side.gpg = side.played > 0 ? side.goalsFor / side.played : 0;
+    side.gapg = side.played > 0 ? side.goalsAgainst / side.played : 0;
+    side.gd = side.goalsFor - side.goalsAgainst;
+  });
+
+  // 몬테카를로와 동일한 로직(리그 평균 득점 × 공격/수비 지수 × 홈/원정 배율)으로
+  // '평균적인 상대(공격/수비 지수 1.0)'를 만났을 때의 기대 득점을 계산합니다.
+  const { strengths, leagueAvgGoals } = computeTeamStrengths();
+  const myStrength = strengths[nameEn] || { attack: 1, defense: 1 };
+  const expectedHomeGoals = leagueAvgGoals * myStrength.attack * HOME_ADVANTAGE;
+  const expectedAwayGoals = leagueAvgGoals * myStrength.attack * AWAY_DISADVANTAGE;
+
+  return {
+    home, away,
+    expectedHomeGoals, expectedAwayGoals,
+    homeAdvantageMultiplier: HOME_ADVANTAGE,
+    awayDisadvantageMultiplier: AWAY_DISADVANTAGE
+  };
+}
 
 // 몬테카를로 시즌 시뮬레이션 실행
 // iterations: 반복 횟수 (기본 4000회)

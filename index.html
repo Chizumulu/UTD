@@ -54,7 +54,7 @@
 </script>
 
 <link rel="icon" href="./favicon.ico" sizes="any">
-<link rel="stylesheet" href="style.css?v=005">
+<link rel="stylesheet" href="style.css?v=007">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -121,6 +121,11 @@
 </div>
 <div class="content-row" id="rankView">
 <div class="table-wrap">
+<div class="rank-filter-wrap">
+  <button class="rank-filter-btn active lbl" data-filter="all" data-en="ALL" data-ko="전체" onclick="setRankFilter('all')">전체</button>
+  <button class="rank-filter-btn lbl" data-filter="home" data-en="HOME" data-ko="홈" onclick="setRankFilter('home')">홈</button>
+  <button class="rank-filter-btn lbl" data-filter="away" data-en="AWAY" data-ko="원정" onclick="setRankFilter('away')">원정</button>
+</div>
 <table id="mainTable">
   <thead>
     <tr>
@@ -178,6 +183,7 @@
     <button class="team-info-tab-btn active lbl" id="tiOverviewBtn" data-en="TEAM INFO" data-ko="팀 정보" onclick="scrollToTeamInfoSection('overview')">팀 정보</button>
     <button class="team-info-tab-btn lbl" id="tiRecordBtn" data-en="RECORD" data-ko="기록" onclick="scrollToTeamInfoSection('record')">기록</button>
     <button class="team-info-tab-btn lbl" id="tiSquadBtn" data-en="SQUAD" data-ko="선수단" onclick="scrollToTeamInfoSection('squad')">선수단</button>
+    <button class="team-info-tab-btn lbl" id="tiH2hBtn" data-en="H2H" data-ko="상대전적" onclick="scrollToTeamInfoSection('h2h')">상대전적</button>
     <button class="team-info-tab-btn lbl" id="tiResultsBtn" data-en="RESULTS" data-ko="경기결과" onclick="scrollToTeamInfoSection('results')">경기결과</button>
   </div>
 
@@ -194,6 +200,10 @@
   <section id="tiSection-squad" class="ti-section">
     <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
     <div id="squadGroups" class="team-info-tab-content"></div>
+  </section>
+  <section id="tiSection-h2h" class="ti-section">
+    <div class="ti-section-title lbl" data-en="Head-to-Head" data-ko="상대전적">상대전적</div>
+    <div id="teamInfoH2hTab" class="team-info-tab-content"></div>
   </section>
   <section id="tiSection-results" class="ti-section">
     <div class="ti-section-title lbl" data-en="Results" data-ko="경기결과">경기결과</div>
@@ -467,6 +477,43 @@
   </div>
 </div>
 
+<div id="squadPlayerModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content player-modal-content">
+    <div class="modal-header player-modal-header">
+      <div class="player-modal-title-wrap">
+        <img id="squadPlayerModalPhoto" class="squad-player-modal-photo" src="" alt="">
+        <div class="player-modal-title-text">
+          <h2 id="squadPlayerModalName"></h2>
+          <span id="squadPlayerModalPos" class="player-modal-team"></span>
+        </div>
+      </div>
+      <button class="close-btn" onclick="closeSquadPlayerModal()">&times;</button>
+    </div>
+    <div class="modal-body player-modal-body">
+      <div class="player-modal-summary squad-player-modal-summary">
+        <div class="player-modal-stat">
+          <span class="player-modal-stat-num" id="squadPlayerModalApps"></span>
+          <span class="player-modal-stat-label lbl" data-en="Appearances" data-ko="출전 경기">출전 경기</span>
+        </div>
+        <div class="player-modal-stat">
+          <span class="player-modal-stat-num" id="squadPlayerModalGoals"></span>
+          <span class="player-modal-stat-label lbl" data-en="Goals" data-ko="득점">득점</span>
+        </div>
+        <div class="player-modal-stat">
+          <span class="player-modal-stat-num" id="squadPlayerModalStarts"></span>
+          <span class="player-modal-stat-label lbl" data-en="Starts / Subs" data-ko="선발 / 교체">선발 / 교체</span>
+        </div>
+        <div class="player-modal-stat">
+          <span class="player-modal-stat-num" id="squadPlayerModalMotm"></span>
+          <span class="player-modal-stat-label lbl" data-en="MOTM" data-ko="MOTM">MOTM</span>
+        </div>
+      </div>
+      <div id="squadPlayerModalCaptainNote" class="squad-player-modal-note"></div>
+      <div class="player-timeline" id="squadPlayerTimeline"></div>
+    </div>
+  </div>
+</div>
+
 <div id="matchDetailModal" class="modal-overlay" style="display: none;">
   <div class="modal-content match-detail-modal-content">
     <div class="modal-header">
@@ -499,7 +546,7 @@
 
 </div>
 
-<script src="data.js?v=005"></script>
-<script src="app.js?v=005"></script>
+<script src="data.js?v=007"></script>
+<script src="app.js?v=007"></script>
 </body>
 </html>
