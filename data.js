@@ -1,10 +1,14 @@
 // 치웨미 인베스트먼트 NRFA 리그 원 - 26/27 시즌 데이터베이스
 
 // ===== 시즌/라운드 날짜 정보 =====
-// SEASON_START: 시즌 개막일 (주차 계산 기준일)
+// SEASON_START: 시즌 개막일 (참고용)
 // ROUND_DATE  : 가장 최근에 끝난 라운드의 날짜 — 새 라운드가 끝날 때마다 이 값만 갱신하면 됩니다.
+// NEXT_ROUND_START_DATE : 다음 라운드 경기가 시작되는 날짜(말라위 기준 첫 경기일).
+//   방문자의 현재 날짜가 이 날짜 이상이 되면 화면 상단의 "N주차" 표기가 자동으로 다음 주차로 넘어갑니다.
+//   새 라운드가 시작될 때마다 이 값도 그 다음 라운드의 시작일로 갱신해주세요.
 const SEASON_START = '2026-07-12';
 const ROUND_DATE = '2026-08-12';
+const NEXT_ROUND_START_DATE = '2026-08-15';
 
 // ===== 치주물루 라운드별 상세 (포메이션/득점/교체/최근 상대전적) =====
 // starters: 포지션별 선발. goals: 득점 시간(분) 배열. outMin: 교체 아웃 시간('HT'=하프타임)
@@ -156,28 +160,55 @@ const matchLineups = {
 };
 
 const squadData = [
-  { number: 2, position: "DF", nameKo: "로날드 은달라마", nameEn: "Ronald Ndalama" },
-  { number: 3, position: "DF", nameKo: "알란 음롱골라", nameEn: "Allan Mlongola", isViceCaptain: true },
-  { number: 5, position: "DF", nameKo: "라반 롱웨", nameEn: "Laban Longwe" },
-  { number: 6, position: "MF", nameKo: "벤자민 니렌다", nameEn: "Benjamin Nyirenda" },
-  { number: 7, position: "MF", nameKo: "디킨스 니렌다", nameEn: "Dickies Nyirenda" },
-  { number: 8, position: "MF", nameKo: "엑스퍼트 카망가", nameEn: "Expert Kamanga" },
-  { number: 9, position: "FW", nameKo: "임마누엘 음칸다위레", nameEn: "Emmanuel Mkandawire" },
-  { number: 10, position: "MF", nameKo: "찰스 데야", nameEn: "Charles Deya" },
-  { number: 11, position: "FW", nameKo: "해리 바튼", nameEn: "Harry Barton" },
-  { number: 13, position: "DF", nameKo: "조셉 반다", nameEn: "Joseph Banda" },
-  { number: 15, position: "DF", nameKo: "만토 카망가", nameEn: "Mantoh Kamanga", isCaptain: true },
-  { number: 20, position: "DF", nameKo: "프란시스 피리", nameEn: "Francis Phiri" },
-  { number: 22, position: "FW", nameKo: "티모시 카타파", nameEn: "Timothy Katapa" },
-  { number: 25, position: "DF", nameKo: "모버트 카타파", nameEn: "Movert Katapa" },
-  { number: 49, position: "FW", nameKo: "쿰부카니 바냐", nameEn: "Kumbukani Banya" },
-  { number: 66, position: "DF", nameKo: "조던 칠와", nameEn: "Jordon Chirwa" },
-  { number: 77, position: "DF", nameKo: "제임스 귄도안", nameEn: "James Gundogan" },
-  { number: 80, position: "FW", nameKo: "다니엘 스쿠카", nameEn: "Daniel Scuka" },
-  { number: 88, position: "GK", nameKo: "티나시 카삼발라", nameEn: "Tinashe Kasambala" },
-  { number: 90, position: "GK", nameKo: "마야미코 치우시와", nameEn: "Mayamiko Chiusiwa" },
-  { number: 98, position: "MF", nameKo: "스티브 피리", nameEn: "Steve Phiri" },
-  { number: 99, position: "MF", nameKo: "패트릭 지야", nameEn: "Patrick Jiya" }
+  { number: 2, position: "DF", nameKo: "로날드 은달라마", nameEn: "Ronald Ndalama", photoSrc: "no2.png" },
+  { number: 3, position: "DF", nameKo: "알란 음롱골라", nameEn: "Allan Mlongola", isViceCaptain: true, photoSrc: "no3.png" },
+  { number: 5, position: "DF", nameKo: "라반 롱웨", nameEn: "Laban Longwe", photoSrc: "no5.png" },
+  { number: 6, position: "MF", nameKo: "벤자민 니렌다", nameEn: "Benjamin Nyirenda", photoSrc: "no6.png" },
+  { number: 7, position: "MF", nameKo: "디킨스 니렌다", nameEn: "Dickies Nyirenda", photoSrc: "no7.png" },
+  { number: 8, position: "MF", nameKo: "엑스퍼트 카망가", nameEn: "Expert Kamanga", photoSrc: "no8.png" },
+  { number: 9, position: "FW", nameKo: "임마누엘 음칸다위레", nameEn: "Emmanuel Mkandawire", photoSrc: "no9.png" },
+  { number: 10, position: "MF", nameKo: "찰스 데야", nameEn: "Charles Deya", photoSrc: "no10.png" },
+  { number: 11, position: "FW", nameKo: "해리 바튼", nameEn: "Harry Barton", photoSrc: "no11.png" },
+  { number: 13, position: "DF", nameKo: "조셉 반다", nameEn: "Joseph Banda", photoSrc: "no13.png" },
+  { number: 15, position: "DF", nameKo: "만토 카망가", nameEn: "Mantoh Kamanga", isCaptain: true, photoSrc: "no15.png" },
+  { number: 20, position: "DF", nameKo: "프란시스 피리", nameEn: "Francis Phiri", photoSrc: "no20.png" },
+  { number: 22, position: "FW", nameKo: "티모시 카타파", nameEn: "Timothy Katapa", photoSrc: "no22.png" },
+  { number: 25, position: "DF", nameKo: "모버트 카타파", nameEn: "Movert Katapa", photoSrc: "no25.png" },
+  { number: 49, position: "FW", nameKo: "쿰부카니 바냐", nameEn: "Kumbukani Banya", photoSrc: "no49.png" },
+  { number: 66, position: "DF", nameKo: "조던 칠와", nameEn: "Jordon Chirwa", photoSrc: "no66.png" },
+  { number: 77, position: "DF", nameKo: "제임스 귄도안", nameEn: "James Gundogan", photoSrc: "no77.png" },
+  { number: 80, position: "FW", nameKo: "다니엘 스쿠카", nameEn: "Daniel Scuka", photoSrc: "no80.png" },
+  { number: 88, position: "GK", nameKo: "티나시 카삼발라", nameEn: "Tinashe Kasambala", photoSrc: "no88.png" },
+  { number: 90, position: "GK", nameKo: "마야미코 치우시와", nameEn: "Mayamiko Chiusiwa", photoSrc: "no90.png" },
+  { number: 98, position: "MF", nameKo: "스티브 피리", nameEn: "Steve Phiri", photoSrc: "no98.png" },
+  { number: 99, position: "MF", nameKo: "패트릭 지야", nameEn: "Patrick Jiya", photoSrc: "no99.png" }
+];
+
+// ===== 스태프 명단 =====
+const staffData = [
+  { roleKo: "구단주", roleEn: "Chairman", people: [
+    { nameKo: "이동훈", nameEn: "Lee Dong-hoon" }
+  ]},
+  { roleKo: "감독", roleEn: "Head Coach", people: [
+    { nameKo: "맥팔른 마푸타", nameEn: "Mcfallen Mafuta" }
+  ]},
+  { roleKo: "어시스턴트 코치", roleEn: "Assistant Coach", people: [
+    { nameKo: "맥슨 툰두", nameEn: "Mackson Thundu" }
+  ]},
+  { roleKo: "골키퍼 코치", roleEn: "Goalkeeper Coach", people: [
+    { nameKo: "로버트 음지지망가", nameEn: "Robert Mzizimanga" }
+  ]},
+  { roleKo: "팀 닥터", roleEn: "Team Doctor", people: [
+    { nameKo: "로버트 음지지망가", nameEn: "Robert Mzizimanga" },
+    { nameKo: "베네딕토 칠와", nameEn: "Benedicto Chirwa" }
+  ]},
+  { roleKo: "키트마스터", roleEn: "Kit Master", people: [
+    { nameKo: "해피 칠와", nameEn: "Happy Chirwa" },
+    { nameKo: "레오나드 롱웨", nameEn: "" }
+  ]},
+  { roleKo: "미디어", roleEn: "Media", people: [
+    { nameKo: "모스터 은코마", nameEn: "" }
+  ]}
 ];
 
 // ===== 팀 수상 정보 (맨 오브 더 매치 / 이달의 선수) =====
@@ -382,6 +413,21 @@ const matchDetails = {
   ]
 };
 
+// ===== 예정된(아직 안 치른) 라운드 일정 =====
+// 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
+const scheduledRounds = {
+  round6: [
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-08-15", kickoffTime: "14:30" },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-08-15", kickoffTime: "14:30" },
+    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-08-16", kickoffTime: "14:30" },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-08-16", kickoffTime: "14:30" },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-08-16", kickoffTime: "14:30" },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-08-16", kickoffTime: "14:30" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-08-16", kickoffTime: "14:30" },
+    { byeKo: "라이플리 FC", byeEn: "Raiply FC" }
+  ]
+};
+
 
 const roundsData = {
   round1: [
@@ -392,12 +438,12 @@ const roundsData = {
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", homeScore: 2, awayScore: 1 },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", homeScore: 0, awayScore: 1 },
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", homeScore: 3, awayScore: 1 },
-    { byeKo: "치폴로폴로 FC", byeEn: "Chipolopolo FC" }
+    { byeKo: "치폴로폴로 보이즈 FC", byeEn: "Chipolopolo Boys FC" }
   ],
   round2: [
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", homeScore: 1, awayScore: 2 },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", homeScore: 0, awayScore: 0 },
-    { homeKo: "치폴로폴로 FC", homeEn: "Chipolopolo FC", awayKo: "루비리 FC", awayEn: "Luviri FC", homeScore: 3, awayScore: 1 },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루비리 FC", awayEn: "Luviri FC", homeScore: 3, awayScore: 1 },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", homeScore: 1, awayScore: 1 },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", homeScore: 4, awayScore: 3 },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", homeScore: 3, awayScore: 3 },
@@ -410,7 +456,7 @@ const roundsData = {
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", homeScore: 3, awayScore: 0 },
     { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", homeScore: 6, awayScore: 0 },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", homeScore: 0, awayScore: 0 },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치폴로폴로 FC", awayEn: "Chipolopolo FC", homeScore: 1, awayScore: 1 },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", homeScore: 1, awayScore: 1 },
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", homeScore: 1, awayScore: 0 },
     { byeKo: "루비리 FC", byeEn: "Luviri FC" }
   ],
@@ -420,7 +466,7 @@ const roundsData = {
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", homeScore: 1, awayScore: 0 },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", homeScore: 1, awayScore: 0 },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", homeScore: 0, awayScore: 0 },
-    { homeKo: "치폴로폴로 FC", homeEn: "Chipolopolo FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", homeScore: 2, awayScore: 1 },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", homeScore: 2, awayScore: 1 },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", homeScore: 4, awayScore: 2 },
     { byeKo: "마푸 스타즈 FC", byeEn: "Mafu Stars FC" }
   ],
@@ -428,7 +474,7 @@ const roundsData = {
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", homeScore: 1, awayScore: 1 },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "루비리 FC", awayEn: "Luviri FC", homeScore: 1, awayScore: 0 },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", homeScore: 2, awayScore: 0 },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치폴로폴로 FC", awayEn: "Chipolopolo FC", homeScore: 4, awayScore: 1 },
+    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", homeScore: 4, awayScore: 1 },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", homeScore: 2, awayScore: 4 },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", homeScore: 4, awayScore: 2 },
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", homeScore: 2, awayScore: 0 },
@@ -502,67 +548,67 @@ const leagueData = [
     nameKo: "치바비 리얼 스타스 FC", nameEn: "Chibavi Real Stars FC", logoSrc: "치바비.webp",
     played: 5, won: 4, drawn: 0, lost: 1, goalsFor: 15, goalsAgainst: 3, cleanSheets: 2, failedToScore: 1,
     form: ["W", "L", "W", "W", "W"],
-    nextMatch: { isBye: false, homeAway: "A", oppKo: "루비리 FC", oppEn: "Luviri FC", oppLogo: "루비리.webp" }
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "루비리 FC", oppEn: "Luviri FC", oppLogo: "루비리.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   },
   {
     nameKo: "젠다 유나이티드 FC", nameEn: "Jenda United FC", logoSrc: "젠다.webp",
     played: 5, won: 3, drawn: 2, lost: 0, goalsFor: 6, goalsAgainst: 2, cleanSheets: 4, failedToScore: 2,
     form: ["W", "D", "D", "W", "W"],
-    nextMatch: { isBye: false, homeAway: "H", oppKo: "친테체 유나이티드 FC", oppEn: "Chintheche United FC", oppLogo: "친테체.webp" }
+    nextMatch: { isBye: false, homeAway: "H", oppKo: "친테체 유나이티드 FC", oppEn: "Chintheche United FC", oppLogo: "친테체.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   },
   {
     nameKo: "치주물루 유나이티드 FC", nameEn: "Chizumulu United FC", logoSrc: "dd.svg",
     played: 5, won: 3, drawn: 1, lost: 1, goalsFor: 6, goalsAgainst: 2, cleanSheets: 3, failedToScore: 2,
     form: ["W", "L", "W", "D", "W"],
-    nextMatch: { isBye: false, homeAway: "A", oppKo: "에우티니 베테랑스 FC", oppEn: "Euthini Veterans FC", oppLogo: "에우티니.webp" }
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "에우티니 베테랑스 FC", oppEn: "Euthini Veterans FC", oppLogo: "에우티니.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   },
   {
     nameKo: "친테체 유나이티드 FC", nameEn: "Chintheche United FC", logoSrc: "친테체.webp",
     played: 5, won: 2, drawn: 2, lost: 1, goalsFor: 10, goalsAgainst: 6, cleanSheets: 2, failedToScore: 2,
     form: ["D", "D", "W", "L", "W"],
-    nextMatch: { isBye: false, homeAway: "H", oppKo: "에크웬데니 FC", oppEn: "Ekwendeni FC", oppLogo: "에크웬데니.webp" }
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "젠다 유나이티드 FC", oppEn: "Jenda United FC", oppLogo: "젠다.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   },
   {
     nameKo: "칠룸바 배럭스 FC", nameEn: "Chilumba Barracks FC", logoSrc: "칠룸바.webp",
     played: 5, won: 2, drawn: 2, lost: 1, goalsFor: 5, goalsAgainst: 4, cleanSheets: 2, failedToScore: 2,
     form: ["W", "D", "D", "L", "W"],
-    nextMatch: { isBye: false, homeAway: "A", oppKo: "음벨와 워리어스 FC", oppEn: "M'mbelwa Warriors FC", oppLogo: "음벨와.webp" }
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "음벨와 워리어스 FC", oppEn: "M'mbelwa Warriors FC", oppLogo: "음벨와.webp", kickoffDate: "2026-08-15", kickoffTime: "14:30" }
   },
   {
     nameKo: "마푸 스타즈 FC", nameEn: "Mafu Stars FC", logoSrc: "마푸스타즈.webp",
     played: 4, won: 1, drawn: 3, lost: 0, goalsFor: 4, goalsAgainst: 3, cleanSheets: 1, failedToScore: 1,
     form: ["D", "W", "D", "D"],
-    nextMatch: { isBye: false, homeAway: "A", oppKo: "루베 마스터즈 FC", oppEn: "Lube Masters FC", oppLogo: "루베.webp" }
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "루베 마스터즈 FC", oppEn: "Lube Masters FC", oppLogo: "루베.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   },
   {
     nameKo: "음벨와 워리어스 FC", nameEn: "M'mbelwa Warriors FC", logoSrc: "음벨와.webp",
     played: 4, won: 1, drawn: 3, lost: 0, goalsFor: 3, goalsAgainst: 2, cleanSheets: 2, failedToScore: 1,
     form: ["W", "D", "D", "D"],
-    nextMatch: { isBye: false, homeAway: "H", oppKo: "칠룸바 배럭스 FC", oppEn: "Chilumba Barracks FC", oppLogo: "칠룸바.webp" }
+    nextMatch: { isBye: false, homeAway: "H", oppKo: "칠룸바 배럭스 FC", oppEn: "Chilumba Barracks FC", oppLogo: "칠룸바.webp", kickoffDate: "2026-08-15", kickoffTime: "14:30" }
   },
   {
-    nameKo: "치폴로폴로 FC", nameEn: "Chipolopolo FC", logoSrc: "치폴로폴로.webp",
+    nameKo: "치폴로폴로 보이즈 FC", nameEn: "Chipolopolo Boys FC", logoSrc: "치폴로폴로.webp",
     played: 4, won: 2, drawn: 1, lost: 1, goalsFor: 7, goalsAgainst: 7, cleanSheets: 0, failedToScore: 0,
     form: ["W", "D", "W", "L"],
-    nextMatch: { isBye: false, homeAway: "H", oppKo: "비전 S 아카데미", oppEn: "Vision S Academy", oppLogo: "비전아카데미.webp" }
+    nextMatch: { isBye: false, homeAway: "H", oppKo: "비전 S 아카데미", oppEn: "Vision S Academy", oppLogo: "비전아카데미.webp", kickoffDate: "2026-08-15", kickoffTime: "14:30" }
   },
   {
     nameKo: "에크웬데니 FC", nameEn: "Ekwendeni FC", logoSrc: "에크웬데니.webp",
     played: 5, won: 2, drawn: 0, lost: 3, goalsFor: 6, goalsAgainst: 6, cleanSheets: 1, failedToScore: 2,
     form: ["L", "W", "W", "L", "L"],
-    nextMatch: { isBye: false, homeAway: "H", oppKo: "치하메 올스타즈 FC", oppEn: "Chihame All Stars FC", oppLogo: "치하메.webp" }
+    nextMatch: { isBye: false, homeAway: "H", oppKo: "치하메 올스타즈 FC", oppEn: "Chihame All Stars FC", oppLogo: "치하메.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   },
   {
     nameKo: "루베 마스터즈 FC", nameEn: "Lube Masters FC", logoSrc: "루베.webp",
     played: 5, won: 1, drawn: 1, lost: 3, goalsFor: 6, goalsAgainst: 13, cleanSheets: 1, failedToScore: 3,
     form: ["L", "W", "L", "D", "L"],
-    nextMatch: { isBye: false, homeAway: "A", oppKo: "마푸 스타즈 FC", oppEn: "Mafu Stars FC", oppLogo: "마푸스타즈.webp" }
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "마푸 스타즈 FC", oppEn: "Mafu Stars FC", oppLogo: "마푸스타즈.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   },
   {
     nameKo: "치하메 올스타즈 FC", nameEn: "Chihame All Stars FC", logoSrc: "치하메.webp",
     played: 4, won: 1, drawn: 1, lost: 2, goalsFor: 5, goalsAgainst: 12, cleanSheets: 1, failedToScore: 2,
     form: ["L", "D", "L", "W"],
-    nextMatch: { isBye: false, homeAway: "A", oppKo: "에크웬데니 FC", oppEn: "Ekwendeni FC", oppLogo: "에크웬데니.webp" }
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "에크웬데니 FC", oppEn: "Ekwendeni FC", oppLogo: "에크웬데니.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   },
   {
     nameKo: "라이플리 FC", nameEn: "Raiply FC", logoSrc: "라이플리.webp",
@@ -574,19 +620,19 @@ const leagueData = [
     nameKo: "에우티니 베테랑스 FC", nameEn: "Euthini Veterans FC", logoSrc: "에우티니.webp",
     played: 5, won: 1, drawn: 1, lost: 3, goalsFor: 6, goalsAgainst: 13, cleanSheets: 0, failedToScore: 2,
     form: ["L", "D", "L", "W", "L"],
-    nextMatch: { isBye: false, homeAway: "H", oppKo: "치주물루 유나이티드 FC", oppEn: "Chizumulu United FC", oppLogo: "dd.svg" }
+    nextMatch: { isBye: false, homeAway: "H", oppKo: "치주물루 유나이티드 FC", oppEn: "Chizumulu United FC", oppLogo: "dd.svg", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   },
   {
     nameKo: "비전 S 아카데미", nameEn: "Vision S Academy", logoSrc: "비전아카데미.webp",
     played: 5, won: 1, drawn: 0, lost: 4, goalsFor: 11, goalsAgainst: 18, cleanSheets: 0, failedToScore: 1,
     form: ["W", "L", "L", "L", "L"],
-    nextMatch: { isBye: false, homeAway: "A", oppKo: "치폴로폴로 FC", oppEn: "Chipolopolo FC", oppLogo: "치폴로폴로.webp" }
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "치폴로폴로 보이즈 FC", oppEn: "Chipolopolo Boys FC", oppLogo: "치폴로폴로.webp", kickoffDate: "2026-08-15", kickoffTime: "14:30" }
   },
   {
     nameKo: "루비리 FC", nameEn: "Luviri FC", logoSrc: "루비리.webp",
     played: 4, won: 0, drawn: 1, lost: 3, goalsFor: 1, goalsAgainst: 5, cleanSheets: 1, failedToScore: 3,
     form: ["L", "L", "D", "L"],
-    nextMatch: { isBye: false, homeAway: "H", oppKo: "치바비 리얼 스타스 FC", oppEn: "Chibavi Real Stars FC", oppLogo: "치바비.webp" }
+    nextMatch: { isBye: false, homeAway: "H", oppKo: "치바비 리얼 스타스 FC", oppEn: "Chibavi Real Stars FC", oppLogo: "치바비.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
   }
 ];
 
@@ -672,7 +718,7 @@ const playerDirectory = {
   "DUNCAN MPOHA": { nameKo: "던컨 음포하", nameEn: "Duncan Mpoha" },
   "HARRY BARTON": { nameKo: "해리 바튼", nameEn: "Harry Barton" },
   "TIMOTHY KATAPA": { nameKo: "티모시 카타파", nameEn: "Timothy Katapa" },
-  "STEVEN PHIRI": { nameKo: "스티브 피리", nameEn: "Steven Phiri" },
+  "STEVEN PHIRI": { nameKo: "스티브 피리", nameEn: "Steve Phiri" },
   "KUMBUKANI BANYA": { nameKo: "쿰부카니 바냐", nameEn: "Kumbukani Banya" },
   "BABA NKHOMA": { nameKo: "바바 은코마", nameEn: "Baba Nkhoma" },
   "SAMANI NYIRENDA": { nameKo: "사마니 니렌다", nameEn: "Samani Nyirenda" },
@@ -760,6 +806,15 @@ function computeTopScorers() {
     .map(key => {
       const { goals, team } = goalsByPlayer[key];
       const info = playerDirectory[key] || { nameKo: toTitleCase(key), nameEn: toTitleCase(key) };
+
+      // 치주물루 유나이티드 소속 선수라면 squadData 에서 선수 사진을 찾아 연결합니다
+      // (팀 정보 탭의 선수단 카드와 동일한 조건: photoSrc 가 있으면 사진을 사용).
+      let photoSrc = null;
+      if (team.nameEn === 'Chizumulu United FC') {
+        const squadMatch = squadData.find(p => p.nameEn.toUpperCase() === info.nameEn.toUpperCase());
+        if (squadMatch && squadMatch.photoSrc) photoSrc = squadMatch.photoSrc;
+      }
+
       return {
         key,
         nameKo: info.nameKo,
@@ -767,6 +822,7 @@ function computeTopScorers() {
         teamKo: team.nameKo,
         teamEn: team.nameEn,
         teamLogo: team.logoSrc,
+        photoSrc,
         goals
       };
     })

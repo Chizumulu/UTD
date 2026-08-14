@@ -150,6 +150,19 @@
     align-items: center;
   }
 
+  .site-footer {
+    width: 100%;
+    align-self: flex-end;
+    display: flex;
+    justify-content: flex-end;
+    padding: 14px 4px 4px;
+    opacity: 0.75;
+  }
+  .site-footer img {
+    display: block;
+    height: 20px;
+  }
+
   /* ===== Header Banner ===== */
   .banner {
     width: 100%;
@@ -386,6 +399,9 @@
     background: var(--color-navy);
     color: var(--color-white);
   }
+  :root:not([data-theme="dark"]) thead th {
+    color: var(--color-white);
+  }
   th, td {
     padding: 12px 8px;
     text-align: center;
@@ -512,6 +528,10 @@
     display: flex;
     justify-content: flex-end;
     margin-bottom: 10px;
+  }
+  .table-toolbar-bottom {
+    margin-bottom: 0;
+    margin-top: 14px;
   }
   .export-img-btn {
     display: inline-flex;
@@ -1679,6 +1699,35 @@
     font-weight: 800;
     flex-shrink: 0;
   }
+  .scorer-player-photo {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 15%;
+    vertical-align: middle;
+    margin-right: 8px;
+    background: var(--color-bg-subtle, rgba(var(--color-navy-rgb),0.06));
+    border: 1px solid var(--color-border-light);
+  }
+  .squad-card-photo {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 15%;
+    flex-shrink: 0;
+    background: var(--color-bg-subtle, rgba(var(--color-navy-rgb),0.06));
+    border: 1px solid var(--color-border-light);
+  }
+  .squad-card-photo-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-faint);
+    font-size: 13px;
+    font-weight: 700;
+  }
   .squad-card-body {
     min-width: 0;
     flex: 1 1 auto;
@@ -1687,9 +1736,11 @@
     font-size: 14px;
     font-weight: 700;
     color: var(--color-text-darkest);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.25;
+    word-break: keep-all;
   }
   .squad-card-pos {
     font-size: 11px;
@@ -1959,6 +2010,76 @@
     font-size: 13px;
     font-weight: 600;
   }
+  .next-match-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 16px 4px;
+    padding: 7px 14px;
+    background: var(--color-surface);
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.08);
+    transition: var(--theme-transition);
+  }
+  .next-match-strip:empty { display: none; }
+  .nms-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--color-teal-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .nms-team {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+  .nms-team .team-logo-sm {
+    width: 20px;
+    height: 20px;
+  }
+  .nms-ha {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+  .nms-opp-rank {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--color-text-muted);
+    background: var(--color-bg-table-alt);
+    border-radius: 8px;
+    padding: 1px 6px;
+  }
+  .nms-bye {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+  }
+  .nms-kickoff {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    white-space: normal;
+    line-height: 1.5;
+    padding-left: 8px;
+    border-left: 1px solid var(--color-border-light);
+  }
+  .ti-next-match-kickoff {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border-light);
+    text-align: center;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+  }
   .ti-next-mini {
     margin-bottom: 12px;
   }
@@ -2068,6 +2189,49 @@
     font-weight: 800;
   }
 
+  .ti-staff-card {
+    margin-bottom: 16px;
+  }
+  .ti-staff-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid var(--color-border-light);
+  }
+  .ti-staff-row:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+  .ti-staff-role {
+    flex: 0 0 auto;
+    min-width: 96px;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: var(--color-teal-dark);
+    background: var(--color-bg-table-alt);
+    border-radius: 8px;
+    padding: 3px 8px;
+    text-align: center;
+  }
+  .ti-staff-people {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    flex: 1;
+  }
+  .ti-staff-person {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+  }
+  @media (max-width: 480px) {
+    .ti-staff-role {
+      min-width: 80px;
+      font-size: 11px;
+    }
+  }
+
   .ti-record-card {
     background: var(--color-surface);
     border-radius: 14px;
@@ -2150,6 +2314,15 @@
     color: var(--color-text-faint);
     letter-spacing: 0.3px;
     margin-bottom: 8px;
+  }
+  .ti-result-badge {
+    margin-left: 8px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
   }
 
   /* ===== Round Results View ===== */
@@ -2286,6 +2459,33 @@
     color: var(--color-text-faint);
     font-size: 13px;
     font-weight: 600;
+  }
+  .round-match-scheduled {
+    opacity: 0.92;
+  }
+  .rmc-score-pending {
+    padding: 0 2px;
+  }
+  .rmc-pending-badge {
+    display: inline-block;
+    white-space: nowrap;
+    background: var(--color-bg-table-alt);
+    color: var(--color-teal-dark);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    padding: 4px 9px;
+    border-radius: 10px;
+  }
+  .rmc-kickoff {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border-light);
+    text-align: center;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    line-height: 1.5;
   }
   .round-bye-badge {
     background: var(--color-bg-table-alt);

@@ -54,7 +54,7 @@
 </script>
 
 <link rel="icon" href="./favicon.ico" sizes="any">
-<link rel="stylesheet" href="style.css?v=003">
+<link rel="stylesheet" href="style.css?v=004">
 <script>
   // 페이지 렌더링 전에 저장된 테마(또는 시스템 설정)를 즉시 적용해 깜빡임(FOUC)을 방지합니다.
   (function() {
@@ -113,15 +113,10 @@
     <span class="lbl" data-en="COMMUNITY" data-ko="커뮤니티">커뮤니티</span>
   </a>
 </div>
+<div class="next-match-strip" id="nextMatchStrip"></div>
 </div>
 <div class="content-row" id="rankView">
 <div class="table-wrap">
-<div class="table-toolbar">
-  <button class="export-img-btn" id="exportImgBtn" onclick="exportStandingsImage()">
-    <svg class="export-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17V18C4 19.657 5.343 21 7 21H17C18.657 21 20 19.657 20 18V17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span class="lbl" data-en="Save as Image" data-ko="이미지로 저장">이미지로 저장</span>
-  </button>
-</div>
 <table id="mainTable">
   <thead>
     <tr>
@@ -134,6 +129,12 @@
 <div class="legend">
   <span><span class="dot dot-promo"></span><span class="lbl" data-en="1st: Promoted to National Division League" data-ko="1위: 내셔널 디비전 리그 승격">1위: 내셔널 디비전 리그 승격</span></span>
   <span><span class="dot dot-gd-neg"></span><span class="lbl" data-en="13th–15th: Relegated to NRFA League Two" data-ko="13~15위: NRFA 리그 투 강등">13~15위: NRFA 리그 투 강등</span></span>
+</div>
+<div class="table-toolbar table-toolbar-bottom">
+  <button class="export-img-btn" id="exportImgBtn" onclick="exportStandingsImage()">
+    <svg class="export-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17V18C4 19.657 5.343 21 7 21H17C18.657 21 20 19.657 20 18V17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="lbl" data-en="Save as Image" data-ko="이미지로 저장">이미지로 저장</span>
+  </button>
 </div>
 </div>
 </div>
@@ -176,12 +177,15 @@
     <button class="team-info-tab-btn lbl" id="tiResultsBtn" data-en="RESULTS" data-ko="경기결과" onclick="scrollToTeamInfoSection('results')">경기결과</button>
   </div>
 
-  <section id="tiSection-overview" class="ti-section">
-    <div id="teamInfoOverviewTab" class="team-info-tab-content"></div>
-  </section>
   <section id="tiSection-record" class="ti-section">
     <div class="ti-section-title lbl" data-en="Record" data-ko="기록">기록</div>
     <div id="teamInfoRecordTab" class="team-info-tab-content"></div>
+  </section>
+  <section id="tiSection-overview" class="ti-section">
+    <div id="teamInfoOverviewTab" class="team-info-tab-content"></div>
+  </section>
+  <section id="tiSection-staff" class="ti-section">
+    <div id="teamInfoStaffTab" class="team-info-tab-content"></div>
   </section>
   <section id="tiSection-squad" class="ti-section">
     <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
@@ -454,9 +458,13 @@
   </div>
 </div>
 
+<div class="site-footer">
+  <a href="https://myhits.vercel.app" target="_blank" rel="noopener noreferrer"><img src="https://myhits.vercel.app/api/hit/https%3A%2F%2Fchizumulu.github.io%2FUTD%2F?color=blue&label=hits&size=small&base_count=229" alt="hits"></a>
 </div>
 
-<script src="data.js?v=003"></script>
-<script src="app.js?v=003"></script>
+</div>
+
+<script src="data.js?v=004"></script>
+<script src="app.js?v=004"></script>
 </body>
 </html>
