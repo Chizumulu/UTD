@@ -56,7 +56,8 @@
     }
   }
 
-  // leagueData, topScorersData, SEASON_START, ROUND_DATE 등은 data.js 파일에서 불러옵니다.
+  // leagueData, topScorersData, SEASON_START 등은 data.js 파일에서 불러옵니다.
+  // "N주차" 표기는 roundsData/scheduledRounds를 기반으로 자동 계산됩니다(아래 updateSeasonInfo 참고).
 
 
   // ===== 화면 전환 (View Switching) =====
@@ -68,6 +69,7 @@
     const statsView = document.getElementById('statsView');
     const scorersView = document.getElementById('scorersView');
     const predictView = document.getElementById('predictView');
+    const venuesView = document.getElementById('venuesView');
     const nextMatchStrip = document.getElementById('nextMatchStrip');
     const rankBtn = document.getElementById('viewRankBtn');
     const squadBtn = document.getElementById('viewSquadBtn');
@@ -75,6 +77,7 @@
     const statsBtn = document.getElementById('viewStatsBtn');
     const scorersBtn = document.getElementById('viewScorersBtn');
     const predictBtn = document.getElementById('viewPredictBtn');
+    const venuesBtn = document.getElementById('viewVenuesBtn');
 
     rankView.style.display = 'none';
     squadView.style.display = 'none';
@@ -82,6 +85,7 @@
     statsView.style.display = 'none';
     scorersView.style.display = 'none';
     predictView.style.display = 'none';
+    if (venuesView) venuesView.style.display = 'none';
     if (nextMatchStrip) nextMatchStrip.style.display = 'none';
     rankBtn.classList.remove('active');
     squadBtn.classList.remove('active');
@@ -89,6 +93,7 @@
     statsBtn.classList.remove('active');
     scorersBtn.classList.remove('active');
     predictBtn.classList.remove('active');
+    if (venuesBtn) venuesBtn.classList.remove('active');
 
     if (view === 'squad') {
       squadView.style.display = '';
@@ -111,6 +116,10 @@
       predictBtn.classList.add('active');
       renderPredictions(false);
       renderRankHistoryChart();
+    } else if (view === 'venues') {
+      if (venuesView) venuesView.style.display = '';
+      if (venuesBtn) venuesBtn.classList.add('active');
+      renderVenuesView();
     } else {
       rankView.style.display = '';
       rankBtn.classList.add('active');
@@ -323,6 +332,9 @@
     const oppName = isKorean ? team.nextMatch.oppKo : team.nextMatch.oppEn;
     const nextWeek = sortedRoundKeys().length + 1;
     const kickoffTxt = formatKickoff(team.nextMatch);
+    const nextMatchHomeEn = team.nextMatch.homeAway === 'H' ? 'Chizumulu United FC' : team.nextMatch.oppEn;
+    const nextMatchVenue = getTeamVenue(nextMatchHomeEn);
+    const nextMatchVenueName = nextMatchVenue ? (isKorean ? nextMatchVenue.nameKo : nextMatchVenue.nameEn) : '';
     return `
       <div class="ti-next-match">
         <div class="ti-next-match-label lbl" data-en="Next Match · Week ${nextWeek}" data-ko="다음 경기 · ${nextWeek}주차">${isKorean ? `다음 경기 · ${nextWeek}주차` : `Next Match · Week ${nextWeek}`}</div>
@@ -343,6 +355,7 @@
           </div>
         </div>
         ${kickoffTxt ? `<div class="ti-next-match-kickoff">${kickoffTxt}</div>` : ''}
+        ${nextMatchVenueName ? `<div class="ti-next-match-venue">🏟️ ${nextMatchVenueName}</div>` : ''}
       </div>`;
   }
 
@@ -497,11 +510,15 @@
     const gpg = t.played > 0 ? (t.goalsFor / t.played).toFixed(1) : '0.0';
     const gapg = t.played > 0 ? (t.goalsAgainst / t.played).toFixed(1) : '0.0';
     const gdClass = t.gd > 0 ? 'gd-pos' : (t.gd < 0 ? 'gd-neg' : 'gd-zero');
+    const { home, away } = computeHomeAwayRecord(t.nameEn, t.nameKo);
+    const homeAwayValue = (rec) => `${rec.won}/${rec.played}${isKorean ? '승' : ' W'}`;
 
     const rows = [
       { ko: '승점', en: 'PTS', value: `<span class="pts">${t.pts}</span>` },
       { ko: '경기', en: 'PLAYED', value: t.played },
       { ko: '승-무-패', en: 'W-D-L', value: `${t.won}-${t.drawn}-${t.lost}` },
+      { ko: '홈 성적', en: 'HOME RECORD', value: homeAwayValue(home) },
+      { ko: '원정 성적', en: 'AWAY RECORD', value: homeAwayValue(away) },
       { ko: '득점', en: 'GOALS FOR', value: t.goalsFor },
       { ko: '실점', en: 'GOALS AGAINST', value: t.goalsAgainst },
       { ko: '득실차', en: 'GOAL DIFF', value: `<span class="${gdClass}">${t.gd > 0 ? '+' : ''}${t.gd}</span>` },
@@ -606,8 +623,15 @@
               <span class="rmc-scorers-icon">⚽</span>
             </div>
           </div>
-          ${matchLineups[key] ? `
-          <button class="rmc-detail-btn lbl" data-en="View Details" data-ko="상세보기" onclick="openMatchDetail('${key}', ${weekNum})">${isKorean ? '상세보기' : 'View Details'}</button>` : ''}
+          ${venueCaptionHtml(m.homeEn)}
+          ${(matchLineups[key] || matchHighlights[key]) ? `
+          <div class="rmc-btn-row">
+            ${matchLineups[key] ? `<button class="rmc-detail-btn lbl" data-en="View Details" data-ko="상세보기" onclick="openMatchDetail('${key}', ${weekNum})">${isKorean ? '상세보기' : 'View Details'}</button>` : ''}
+            ${matchHighlights[key] ? `<a class="rmc-highlight-btn lbl" data-en="Watch Highlights" data-ko="하이라이트 보기" href="${matchHighlights[key]}" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              ${isKorean ? '하이라이트 보기' : 'Watch Highlights'}
+            </a>` : ''}
+          </div>` : ''}
         </div>`;
     });
 
@@ -804,6 +828,40 @@
     return nameEn === 'Chizumulu United FC' || nameKo === '치주물루 유나이티드 FC';
   }
 
+  // 완료된 라운드를 훑어서 홈/원정 각각의 (승수/경기수)를 계산합니다.
+  function computeHomeAwayRecord(nameEn, nameKo) {
+    const home = { played: 0, won: 0 };
+    const away = { played: 0, won: 0 };
+    sortedRoundKeys().forEach(key => {
+      buildRoundMatches(key).forEach(m => {
+        if (m.isBye) return;
+        const isHome = m.homeEn === nameEn || m.homeKo === nameKo;
+        const isAway = m.awayEn === nameEn || m.awayKo === nameKo;
+        if (isHome) {
+          home.played++;
+          if (m.homeScore > m.awayScore) home.won++;
+        } else if (isAway) {
+          away.played++;
+          if (m.awayScore > m.homeScore) away.won++;
+        }
+      });
+    });
+    return { home, away };
+  }
+
+  // 홈팀 nameEn 으로 leagueData 에서 구장 정보를 찾아줍니다 (경기는 홈팀 구장에서 열림)
+  function getTeamVenue(nameEn) {
+    const team = leagueData.find(t => t.nameEn === nameEn);
+    return (team && team.venue) ? team.venue : null;
+  }
+
+  function venueCaptionHtml(homeEn) {
+    const venue = getTeamVenue(homeEn);
+    if (!venue) return '';
+    const venueName = isKorean ? venue.nameKo : venue.nameEn;
+    return `<div class="rmc-venue">🏟️ ${venueName}</div>`;
+  }
+
   function renderRoundsView() {
     const tabBar = document.getElementById('roundTabBar');
     const roundKeys = allRoundKeysIncludingScheduled();
@@ -814,14 +872,20 @@
     }
 
     tabBar.innerHTML = '';
+    let activeBtn = null;
     roundKeys.forEach((key, idx) => {
       const weekNum = idx + 1;
       const btn = document.createElement('button');
-      btn.className = 'round-tab-btn' + (key === currentRoundKey ? ' active' : '');
+      const isActive = key === currentRoundKey;
+      btn.className = 'round-tab-btn' + (isActive ? ' active' : '');
       btn.innerHTML = `<span class="lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${isKorean ? weekNum + '주차' : 'Week ' + weekNum}</span>`;
       btn.onclick = () => { currentRoundKey = key; renderRoundsView(); };
+      if (isActive) activeBtn = btn;
       tabBar.appendChild(btn);
     });
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ block: 'nearest', inline: 'center' });
+    }
 
     const listEl = document.getElementById('roundMatchList');
     listEl.innerHTML = '';
@@ -874,6 +938,7 @@
             </div>
           </div>
           ${kickoffTxt ? `<div class="rmc-kickoff">${kickoffTxt}</div>` : ''}
+          ${venueCaptionHtml(m.homeEn)}
         `;
         listEl.appendChild(card);
         return;
@@ -914,6 +979,7 @@
             <span class="rmc-scorers-icon">⚽</span>
           </div>
         </div>
+        ${venueCaptionHtml(m.homeEn)}
       `;
       listEl.appendChild(card);
     });
@@ -1742,6 +1808,191 @@
     });
   }
 
+  // ===== 구단 위치 (Club Venues Map — Leaflet / OpenStreetMap) =====
+  let venueLeafletMap = null;
+  let venueMarkersByIdx = {};
+  let venueLeafletMapLarge = null;
+  let venueMarkersByIdxLarge = {};
+
+  // 두 좌표 간 직선거리 (Haversine, km 단위)
+  function haversineDistanceKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const toRad = deg => deg * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function getHomeVenue() {
+    const mineTeam = leagueData.find(t => t.nameEn === 'Chizumulu United FC');
+    return (mineTeam && mineTeam.venue) ? mineTeam.venue : null;
+  }
+
+  function formatDistanceLabel(team, homeVenue, isMine) {
+    if (isMine) return isKorean ? '홈' : 'Home';
+    if (!homeVenue || !team.venue) return '';
+    const km = haversineDistanceKm(homeVenue.lat, homeVenue.lng, team.venue.lat, team.venue.lng);
+    return `${Math.round(km).toLocaleString()}km`;
+  }
+
+  function renderVenuesView() {
+    renderVenueLeafletMap();
+    renderVenuesList();
+  }
+
+  // 마커 구성 로직을 map 인스턴스별로 공유합니다 (기본 지도 / 확대보기 모달 지도 공용)
+  function populateVenueMap(mapInstance, markerStore) {
+    const teams = leagueData.filter(t => t.venue && typeof t.venue.lat === 'number' && typeof t.venue.lng === 'number');
+    if (teams.length === 0) return;
+
+    const homeVenue = getHomeVenue();
+
+    // 기존 마커 정리 후 다시 그리기 (언어 전환 시 팝업 텍스트 갱신 목적)
+    Object.values(markerStore).forEach(m => mapInstance.removeLayer(m));
+    Object.keys(markerStore).forEach(k => delete markerStore[k]);
+
+    const bounds = [];
+    teams.forEach(team => {
+      const idx = leagueData.indexOf(team);
+      const isMine = team.nameEn === 'Chizumulu United FC';
+      const teamName = isKorean ? team.nameKo : team.nameEn;
+      const venueName = isKorean ? team.venue.nameKo : team.venue.nameEn;
+      const distLabel = formatDistanceLabel(team, homeVenue, isMine);
+      const shortTeamName = isKorean ? team.nameKo.split(' ')[0] : team.nameEn.split(' ')[0];
+
+      const icon = L.divIcon({
+        className: 'venue-leaflet-icon' + (isMine ? ' venue-leaflet-icon-mine' : ''),
+        html: `<div class="venue-pin-wrap">` +
+          `<div class="venue-pin"><img src="${team.logoSrc}" alt="" onerror="this.style.display='none';this.parentNode.classList.add('venue-pin-noimg')"></div>` +
+          `<div class="venue-pin-name${isMine ? ' venue-pin-name-mine' : ''}">${shortTeamName}</div>` +
+          `</div>`,
+        iconSize: [64, 54],
+        iconAnchor: [32, 17],
+        popupAnchor: [0, -20]
+      });
+
+      const marker = L.marker([team.venue.lat, team.venue.lng], { icon }).addTo(mapInstance);
+      const distPopupLine = (!isMine && homeVenue)
+        ? `<br><span class="venue-popup-distance">${isKorean ? '치주물루로부터 ' : 'From Chizumulu: '}${distLabel}</span>`
+        : '';
+      marker.bindPopup(
+        `<div class="venue-popup"><strong>${teamName}</strong><br>${venueName}<br>` +
+        `<span class="venue-popup-coords">${team.venue.lat.toFixed(5)}, ${team.venue.lng.toFixed(5)}</span>${distPopupLine}</div>`
+      );
+      marker.on('click', () => highlightVenueMarker(idx, 'map', markerStore, mapInstance));
+      markerStore[idx] = marker;
+      bounds.push([team.venue.lat, team.venue.lng]);
+    });
+
+    if (bounds.length > 0) {
+      mapInstance.fitBounds(bounds, { padding: [32, 32], maxZoom: 12 });
+    }
+  }
+
+  function renderVenueLeafletMap() {
+    const mapEl = document.getElementById('venueLeafletMap');
+    if (!mapEl || typeof L === 'undefined') return;
+
+    if (!venueLeafletMap) {
+      venueLeafletMap = L.map('venueLeafletMap', { scrollWheelZoom: false });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>'
+      }).addTo(venueLeafletMap);
+    }
+
+    populateVenueMap(venueLeafletMap, venueMarkersByIdx);
+
+    // 탭이 숨겨진 상태에서 초기화됐을 수 있으므로, 보여진 뒤 크기를 다시 계산
+    setTimeout(() => { if (venueLeafletMap) venueLeafletMap.invalidateSize(); }, 60);
+  }
+
+  // ===== 구단 위치 지도 크게 보기 모달 =====
+  function renderVenueLeafletMapLarge() {
+    const mapEl = document.getElementById('venueLeafletMapLarge');
+    if (!mapEl || typeof L === 'undefined') return;
+
+    if (!venueLeafletMapLarge) {
+      venueLeafletMapLarge = L.map('venueLeafletMapLarge', { scrollWheelZoom: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>'
+      }).addTo(venueLeafletMapLarge);
+    }
+
+    populateVenueMap(venueLeafletMapLarge, venueMarkersByIdxLarge);
+  }
+
+  function openVenueMapModal() {
+    const modal = document.getElementById('venueMapModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    renderVenueLeafletMapLarge();
+    setTimeout(() => { if (venueLeafletMapLarge) venueLeafletMapLarge.invalidateSize(); }, 80);
+  }
+
+  function closeVenueMapModal() {
+    const modal = document.getElementById('venueMapModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function highlightVenueMarker(idx, source, markerStore, mapInstance) {
+    markerStore = markerStore || venueMarkersByIdx;
+    mapInstance = mapInstance || venueLeafletMap;
+    document.querySelectorAll('.venue-list-item.active').forEach(el => el.classList.remove('active'));
+    const listRow = document.querySelector('.venue-list-item[data-venue-idx="' + idx + '"]');
+    if (listRow) {
+      listRow.classList.add('active');
+      if (source === 'map') listRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    const marker = markerStore[idx];
+    if (marker && mapInstance) {
+      mapInstance.flyTo(marker.getLatLng(), Math.max(mapInstance.getZoom(), 11), { duration: 0.6 });
+      if (source === 'list') marker.openPopup();
+    }
+  }
+
+  function renderVenuesList() {
+    const wrap = document.getElementById('venuesList');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+
+    const homeVenue = getHomeVenue();
+    const teams = leagueData.filter(t => t.venue).slice().sort((a, b) => {
+      const an = isKorean ? a.nameKo : a.nameEn;
+      const bn = isKorean ? b.nameKo : b.nameEn;
+      return an.localeCompare(bn);
+    });
+
+    teams.forEach(team => {
+      const idx = leagueData.indexOf(team);
+      const row = document.createElement('div');
+      row.className = 'venue-list-item';
+      row.setAttribute('data-venue-idx', idx);
+      const teamName = isKorean ? team.nameKo : team.nameEn;
+      const venueName = isKorean ? team.venue.nameKo : team.venue.nameEn;
+      const isMine = team.nameEn === 'Chizumulu United FC';
+      const distLabel = formatDistanceLabel(team, homeVenue, isMine);
+      row.innerHTML = `
+        <img class="team-logo venue-list-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}">
+        <div class="venue-list-text">
+          <span class="venue-list-team lbl" data-en="${team.nameEn}" data-ko="${team.nameKo}">${teamName}</span>
+          <span class="venue-list-ground lbl" data-en="${team.venue.nameEn}" data-ko="${team.venue.nameKo}">${venueName}</span>
+        </div>
+        <div class="venue-list-meta">
+          <span class="venue-list-coords">${team.venue.lat.toFixed(4)}, ${team.venue.lng.toFixed(4)}</span>
+          ${distLabel ? `<span class="venue-list-distance${isMine ? ' venue-list-distance-mine' : ''}">${distLabel}</span>` : ''}
+        </div>
+      `;
+      row.addEventListener('click', () => highlightVenueMarker(idx, 'list'));
+      wrap.appendChild(row);
+    });
+
+    attachImageFallback();
+  }
+
   const RANK_HIST_COLORS = [
     '#e63946', '#f4a261', '#e9c46a', '#8ab17d', '#2a9d8f',
     '#3fc4c4', '#118ab2', '#5b5fc7', '#9b5de5', '#f15bb5',
@@ -2190,6 +2441,10 @@
     if (event.target === matchDetailModal) {
       closeMatchDetail();
     }
+    const venueMapModal = document.getElementById('venueMapModal');
+    if (event.target === venueMapModal) {
+      closeVenueMapModal();
+    }
   }
 
   // ===== 라운드 상세(포메이션/득점/최근 전적) 모달 =====
@@ -2342,13 +2597,27 @@
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
 
+  // 완료된 라운드 다음에 예정된 라운드의 첫 킥오프 날짜를 scheduledRounds에서 자동으로 찾습니다.
+  // (더 이상 NEXT_ROUND_START_DATE를 수동으로 갱신할 필요가 없습니다.)
+  function computeNextRoundStartDate() {
+    const completedRounds = sortedRoundKeys().length;
+    const nextKey = 'round' + (completedRounds + 1);
+    const nextRound = (scheduledRounds && scheduledRounds[nextKey]) || [];
+    const dates = nextRound
+      .filter(m => !m.byeKo && !m.byeEn && m.kickoffDate)
+      .map(m => m.kickoffDate)
+      .sort();
+    return dates[0] || null;
+  }
+
   function updateSeasonInfo() {
     const today = getLocalToday();
-    const nextRoundStart = new Date(`${NEXT_ROUND_START_DATE}T00:00:00`);
+    const nextRoundStartStr = computeNextRoundStartDate();
+    const nextRoundStart = nextRoundStartStr ? new Date(`${nextRoundStartStr}T00:00:00`) : null;
 
     // 완료된 라운드 수를 기준 주차로 삼고, 다음 라운드 시작일이 지나면 주차를 하나 올립니다.
     const completedRounds = sortedRoundKeys().length;
-    const week = today >= nextRoundStart ? completedRounds + 1 : completedRounds;
+    const week = (nextRoundStart && today >= nextRoundStart) ? completedRounds + 1 : completedRounds;
 
     const weekEl = document.getElementById('weekLabel');
     const dateEl = document.getElementById('dateLabel');
@@ -2410,6 +2679,12 @@
       renderTeamInfoView();
     } else if (currentView === 'rounds') {
       renderRoundsView();
+    } else if (currentView === 'venues') {
+      renderVenuesView();
+      const venueModal = document.getElementById('venueMapModal');
+      if (venueModal && venueModal.style.display === 'flex') {
+        renderVenueLeafletMapLarge();
+      }
     }
 
     if (currentPlayerModalKey) {

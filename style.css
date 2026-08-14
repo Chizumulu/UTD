@@ -837,6 +837,213 @@
   .stats-col {
     min-width: 0;
   }
+
+  /* ===== Club Venues Map (Leaflet / OpenStreetMap) ===== */
+  .venue-map-card {
+    margin-top: 4px;
+  }
+  .venue-map-expand-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: var(--color-white);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .venue-map-expand-btn:hover {
+    background: rgba(255,255,255,0.28);
+  }
+  .venue-map-expand-btn svg {
+    flex-shrink: 0;
+  }
+  @media (max-width: 700px) {
+    .venue-map-expand-btn span {
+      display: none;
+    }
+    .venue-map-expand-btn {
+      padding: 6px;
+    }
+  }
+  .venue-map-body {
+    padding: 14px;
+  }
+  .venue-leaflet-map {
+    width: 100%;
+    height: 420px;
+    border-radius: 10px;
+    overflow: hidden;
+    z-index: 0;
+  }
+  @media (max-width: 600px) {
+    .venue-leaflet-map {
+      height: 320px;
+    }
+  }
+  .venue-pin {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2.5px solid var(--color-teal);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .venue-pin img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .venue-leaflet-icon-mine .venue-pin {
+    border-color: var(--color-gold-strong);
+    border-width: 3px;
+    width: 34px;
+    height: 34px;
+  }
+  .venue-pin-noimg {
+    background: var(--color-navy);
+  }
+  .venue-popup {
+    font-family: 'Segoe UI', 'Noto Sans KR', Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #2c3244;
+  }
+  .venue-popup-coords {
+    font-size: 11px;
+    color: #8891a3;
+  }
+  .venue-popup-distance {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-teal-dark);
+  }
+  .venue-leaflet-icon {
+    background: transparent !important;
+    border: none !important;
+  }
+  .venue-pin-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .venue-pin-name {
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    padding: 3px 6px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.95);
+    color: var(--color-navy);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+    white-space: nowrap;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .venue-pin-name-mine {
+    background: var(--color-gold-strong);
+    color: #fff;
+  }
+  .venue-list-item.active .venue-list-team {
+    color: var(--color-teal-dark);
+  }
+  .venue-list {
+    width: 100%;
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .venue-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-chip);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--theme-transition), transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .venue-list-item:hover {
+    background: var(--color-bg-row-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.1);
+  }
+  .venue-list-item.active {
+    border-color: var(--color-teal);
+    box-shadow: 0 0 0 2px rgba(var(--color-navy-rgb),0.12);
+  }
+  .venue-list-logo {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .venue-list-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+  .venue-list-team {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--color-text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .venue-list-ground {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .venue-list-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .venue-list-coords {
+    font-size: 10px;
+    color: var(--color-text-faint);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .venue-list-distance {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--color-teal-dark);
+    white-space: nowrap;
+  }
+  .venue-list-distance-mine {
+    color: var(--color-gold-strong);
+  }
+  @media (max-width: 720px) {
+    .venue-list {
+      grid-template-columns: 1fr;
+    }
+  }
   .stats-title {
     background: var(--color-teal);
     color: var(--color-white);
@@ -1175,7 +1382,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 2000;
     backdrop-filter: blur(4px);
   }
   .modal-content {
@@ -1212,6 +1419,30 @@
   }
   .modal-body table {
     box-shadow: none; border-radius: 0;
+  }
+  .venue-map-modal-content {
+    width: 97%;
+    max-width: 1600px;
+    height: 94vh;
+    max-height: 1200px;
+  }
+  .venue-map-modal-body {
+    flex: 1;
+    padding: 0;
+    display: flex;
+  }
+  .venue-leaflet-map-large {
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+  @media (max-width: 700px) {
+    .venue-map-modal-content {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      border-radius: 0;
+    }
   }
   .disclaimer-modal-content {
     max-width: 380px;
@@ -1266,6 +1497,11 @@
   }
 
   /* ===== Match Detail Button & Modal ===== */
+  .rmc-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
   .rmc-detail-btn {
     display: block;
     width: 100%;
@@ -1280,9 +1516,37 @@
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
   }
+  .rmc-btn-row .rmc-detail-btn {
+    flex: 1;
+    margin-top: 0;
+  }
   .rmc-detail-btn:hover {
     background: var(--color-navy);
     color: var(--color-white);
+  }
+  .rmc-highlight-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: #ff0000;
+    color: var(--color-white);
+    border: 1px solid #ff0000;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 800;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  .rmc-highlight-btn:hover {
+    background: #d90000;
+    border-color: #d90000;
+  }
+  .rmc-highlight-btn svg {
+    flex-shrink: 0;
   }
   .match-detail-modal-content {
     max-width: 560px;
@@ -2080,6 +2344,14 @@
     font-weight: 700;
     color: var(--color-text-muted);
   }
+  .ti-next-match-venue {
+    margin-top: 6px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+    line-height: 1.4;
+  }
   .ti-next-mini {
     margin-bottom: 12px;
   }
@@ -2328,10 +2600,12 @@
   /* ===== Round Results View ===== */
   .round-tab-bar {
     display: flex;
+    flex-wrap: nowrap;
     gap: 6px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--color-navy-rgb),0.35) transparent;
     padding: 4px;
     background: var(--color-surface);
     border-radius: 22px;
@@ -2340,8 +2614,19 @@
     width: fit-content;
     max-width: 100%;
     transition: var(--theme-transition);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
   }
-  .round-tab-bar::-webkit-scrollbar { display: none; }
+  .round-tab-bar::-webkit-scrollbar {
+    height: 5px;
+  }
+  .round-tab-bar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .round-tab-bar::-webkit-scrollbar-thumb {
+    background: rgba(var(--color-navy-rgb),0.35);
+    border-radius: 999px;
+  }
   .round-tab-btn {
     background: transparent;
     color: var(--color-text-toggle);
@@ -2486,6 +2771,14 @@
     font-weight: 700;
     color: var(--color-text-muted);
     line-height: 1.5;
+  }
+  .rmc-venue {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+    line-height: 1.4;
   }
   .round-bye-badge {
     background: var(--color-bg-table-alt);
