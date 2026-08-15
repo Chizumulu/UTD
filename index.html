@@ -54,7 +54,7 @@
 </script>
 
 <link rel="icon" href="./favicon.ico" sizes="any">
-<link rel="stylesheet" href="style.css?v=007">
+<link rel="stylesheet" href="style.css?v=008">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -109,7 +109,7 @@
   <button class="view-toggle-btn lbl" id="viewRoundsBtn" data-en="ROUND RESULTS" data-ko="라운드별 결과" onclick="showView('rounds')">라운드별 결과</button>
   <button class="view-toggle-btn lbl" id="viewStatsBtn" data-en="TEAM RECORDS" data-ko="팀 기록" onclick="showView('stats')">팀 기록</button>
   <button class="view-toggle-btn lbl" id="viewScorersBtn" data-en="TOP SCORERS" data-ko="득점 순위" onclick="showView('scorers')">득점 순위</button>
-  <button class="view-toggle-btn lbl" id="viewPredictBtn" data-en="MATCH PROJECTIONS" data-ko="경기 예측" onclick="showView('predict')">경기 예측</button>
+  <button class="view-toggle-btn lbl" id="viewPredictBtn" data-en="MATCH PROJECTIONS" data-ko="리그 예측" onclick="showView('predict')">리그 예측</button>
   <button class="view-toggle-btn lbl" id="viewVenuesBtn" data-en="CLUB VENUES" data-ko="구단 위치" onclick="showView('venues')">구단 위치</button>
   <span class="view-toggle-sep"></span>
   <a class="view-toggle-btn view-toggle-community" href="https://gall.dcinside.com/mgallery/board/lists/?id=chizumuluunitedfc" target="_blank" rel="noopener noreferrer">
@@ -129,7 +129,7 @@
 <table id="mainTable">
   <thead>
     <tr>
-      <th class="lbl" data-en="RANK" data-ko="순위">순위</th><th class="lbl" data-en="TEAMS" data-ko="팀">팀</th><th class="lbl" data-en="P" data-ko="경기">경기</th><th class="lbl" data-en="W" data-ko="승">승</th><th class="lbl" data-en="D" data-ko="무">무</th><th class="lbl" data-en="L" data-ko="패">패</th><th class="lbl" data-en="F" data-ko="득점">득점</th><th class="lbl" data-en="A" data-ko="실점">실점</th><th class="lbl" data-en="GD" data-ko="득실차">득실차</th><th class="lbl" data-en="PTS" data-ko="승점">승점</th><th class="lbl" data-en="FORM" data-ko="최근 5경기">최근 5경기</th><th class="lbl" data-en="NEXT" data-ko="다음 상대">다음 상대</th>
+      <th class="lbl" data-en="RANK" data-ko="순위">순위</th><th class="lbl rank-change-th" data-en="CHG" data-ko="변동">변동</th><th class="lbl" data-en="TEAMS" data-ko="팀">팀</th><th class="lbl" data-en="P" data-ko="경기">경기</th><th class="lbl" data-en="W" data-ko="승">승</th><th class="lbl" data-en="D" data-ko="무">무</th><th class="lbl" data-en="L" data-ko="패">패</th><th class="lbl" data-en="F" data-ko="득점">득점</th><th class="lbl" data-en="A" data-ko="실점">실점</th><th class="lbl" data-en="GD" data-ko="득실차">득실차</th><th class="lbl" data-en="PTS" data-ko="승점">승점</th><th class="lbl" data-en="FORM" data-ko="최근 5경기">최근 5경기</th><th class="lbl" data-en="NEXT" data-ko="다음 상대">다음 상대</th>
     </tr>
   </thead>
   <tbody id="leagueTableBody">
@@ -148,6 +148,23 @@
 </div>
 </div>
 <div id="squadView" style="display:none;">
+  <div class="ti-team-switcher">
+    <button class="ti-switch-arrow" id="tiPrevTeamBtn" onclick="switchTeamInfo(-1)" aria-label="Previous team">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 5L8 12L15 19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="ti-switch-current" id="tiSwitchCurrentBtn" onclick="openOtherTeamModal()">
+      <img class="ti-switch-logo" id="tiSwitchLogo" src="./dd.svg" alt="">
+      <span class="ti-switch-text">
+        <span class="ti-switch-rank" id="tiSwitchRank"></span>
+        <span class="ti-switch-name lbl" id="tiSwitchName" data-en="Chizumulu United FC" data-ko="치주물루 유나이티드 FC">치주물루 유나이티드 FC</span>
+      </span>
+    </button>
+    <button class="ti-switch-arrow" id="tiNextTeamBtn" onclick="switchTeamInfo(1)" aria-label="Next team">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <div id="myTeamInfoView">
   <div class="squad-header team-info-header">
     <img class="squad-header-logo" src="./dd.svg" alt="Chizumulu United FC">
     <div class="squad-header-text">
@@ -209,6 +226,12 @@
     <div class="ti-section-title lbl" data-en="Results" data-ko="경기결과">경기결과</div>
     <div id="teamInfoResultsTab" class="team-info-tab-content"></div>
   </section>
+  </div>
+
+  <div id="otherTeamFullView" class="other-team-full-view" style="display:none;">
+    <div id="otherTeamFullHeader"></div>
+    <div id="otherTeamFullBody"></div>
+  </div>
 </div>
 <div id="roundsView" style="display:none;">
   <div class="round-tab-bar" id="roundTabBar"></div>
@@ -317,6 +340,97 @@
       <tbody id="pythagBody"></tbody>
     </table>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('pythag')">더보기</button>
+  </div>
+  <div class="stats-col">
+    <div class="stats-title lbl" data-en="WINNING STREAK (Highest first)" data-ko="연승 (많은 순)">연승 (많은 순)</div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
+          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
+          <th class="lbl" data-en="STREAK" data-ko="연승">연승</th>
+        </tr>
+      </thead>
+      <tbody id="streakWinBody"></tbody>
+    </table>
+    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakWin')">더보기</button>
+  </div>
+  <div class="stats-col">
+    <div class="stats-title lbl" data-en="LOSING STREAK (Highest first)" data-ko="연패 (많은 순)">연패 (많은 순)</div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
+          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
+          <th class="lbl" data-en="STREAK" data-ko="연패">연패</th>
+        </tr>
+      </thead>
+      <tbody id="streakLossBody"></tbody>
+    </table>
+    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakLoss')">더보기</button>
+  </div>
+  <div class="stats-col">
+    <div class="stats-title lbl" data-en="DRAWING STREAK (Highest first)" data-ko="연속 무승부 (많은 순)">연속 무승부 (많은 순)</div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
+          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
+          <th class="lbl" data-en="STREAK" data-ko="연무">연무</th>
+        </tr>
+      </thead>
+      <tbody id="streakDrawBody"></tbody>
+    </table>
+    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakDraw')">더보기</button>
+  </div>
+  <div class="stats-col">
+    <div class="stats-title advanced">
+      <span class="advanced-tag lbl" data-en="BONUS" data-ko="추천 스탯">추천 스탯</span>
+      <span class="lbl" data-en="UNBEATEN STREAK (Highest first)" data-ko="무패 행진 (많은 순)">무패 행진 (많은 순)</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'unbeatenInfo')">ⓘ</span>
+      <div class="info-tooltip" id="unbeatenInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-ko="가장 최근 패배 이후 이어지고 있는 무패(승 또는 무) 경기 수예요. 연승과 연무를 합쳐서 팀의 안정적인 컨디션을 한눈에 보여줍니다." data-en="Consecutive matches without a loss (win or draw) since the most recent defeat. Combines winning and drawing streaks to show a team's overall run of form.">가장 최근 패배 이후 이어지고 있는 무패(승 또는 무) 경기 수예요. 연승과 연무를 합쳐서 팀의 안정적인 컨디션을 한눈에 보여줍니다.</span>
+      </div>
+    </div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
+          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
+          <th class="lbl" data-en="STREAK" data-ko="무패">무패</th>
+        </tr>
+      </thead>
+      <tbody id="streakUnbeatenBody"></tbody>
+    </table>
+    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakUnbeaten')">더보기</button>
+  </div>
+  <div class="stats-col">
+    <div class="stats-title lbl" data-en="SCORING STREAK (Highest first)" data-ko="연속 득점 (많은 순)">연속 득점 (많은 순)</div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
+          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
+          <th class="lbl" data-en="STREAK" data-ko="연속 득점">연속 득점</th>
+        </tr>
+      </thead>
+      <tbody id="streakScoringBody"></tbody>
+    </table>
+    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakScoring')">더보기</button>
+  </div>
+  <div class="stats-col">
+    <div class="stats-title lbl" data-en="CONCEDING STREAK (Highest first)" data-ko="연속 실점 (많은 순)">연속 실점 (많은 순)</div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
+          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
+          <th class="lbl" data-en="STREAK" data-ko="연속 실점">연속 실점</th>
+        </tr>
+      </thead>
+      <tbody id="streakConcedingBody"></tbody>
+    </table>
+    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakConceding')">더보기</button>
   </div>
 </div>
 <div class="scatter-card">
@@ -524,6 +638,19 @@
   </div>
 </div>
 
+<div id="otherTeamModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content other-team-modal-content">
+    <div class="modal-header">
+      <h2 id="otherTeamModalTitle" class="lbl" data-en="Jump to Team" data-ko="팀 바로가기">팀 바로가기</h2>
+      <button class="close-btn" onclick="closeOtherTeamModal()">&times;</button>
+    </div>
+    <div class="modal-body other-team-modal-body">
+      <p class="other-team-list-hint lbl" data-en="26/27 Season · NRFA League One standings" data-ko="26/27 시즌 · NRFA 리그 원 순위">26/27 시즌 · NRFA 리그 원 순위</p>
+      <div id="otherTeamGrid" class="other-team-grid"></div>
+    </div>
+  </div>
+</div>
+
 <div id="disclaimerModal" class="modal-overlay" style="display: none;">
   <div class="modal-content disclaimer-modal-content">
     <div class="modal-header">
@@ -546,7 +673,7 @@
 
 </div>
 
-<script src="data.js?v=008"></script>
-<script src="app.js?v=007"></script>
+<script src="data.js?v=009"></script>
+<script src="app.js?v=008"></script>
 </body>
 </html>

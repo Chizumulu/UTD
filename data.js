@@ -211,7 +211,7 @@ const staffData = [
   ]},
   { roleKo: "키트마스터", roleEn: "Kit Master", people: [
     { nameKo: "해피 칠와", nameEn: "Happy Chirwa" },
-    { nameKo: "레오나드 롱웨", nameEn: "" }
+    { nameKo: "레오나드 롱웨", nameEn: "Leonard Longwe" }
   ]},
   { roleKo: "미디어", roleEn: "Media", people: [
     { nameKo: "모스터 은코마", nameEn: "" }
@@ -504,6 +504,21 @@ const matchDetails = {
       scorersHome: "STEVEN PHIRI, KUMBUKANI BANYA",
       scorersAway: "없음"
     }
+  ],
+  // 6주차는 아직 전체 라운드가 끝나지 않아 scheduledRounds에 남아있습니다.
+  // (경기가 끝나는 대로 이 배열에 결과를 추가하고, 라운드 전체가 끝나면
+  // scheduledRounds.round6를 roundsData.round6로 옮겨주세요.)
+  round6: [
+    {
+      match: "음벨와 0 : 칠룸바 0",
+      scorersHome: "없음",
+      scorersAway: "없음"
+    },
+    {
+      match: "치폴로폴로 2 : 비전 1",
+      scorersHome: "CLEMENT MUNTHALI, RODRICK KASUDZA",
+      scorersAway: "GEORGE MASEWO"
+    }
   ]
 };
 
@@ -526,9 +541,9 @@ const upcomingMatchHistory = {
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
   round6: [
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-08-15", kickoffTime: "14:30" },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-08-15", kickoffTime: "14:30", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-08-15", kickoffTime: "14:30" },
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-08-15", kickoffTime: "14:30" },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-08-15", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "CLEMENT MUNTHALI, RODRICK KASUDZA", scorersAway: "GEORGE MASEWO" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-08-15", kickoffTime: "14:30" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-08-16", kickoffTime: "14:30" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-08-16", kickoffTime: "14:30" },
@@ -702,10 +717,11 @@ function computeStandingsHistory() {
 
   const history = []; // [{ week, ranks: { nameEn: rank } }]
 
-  roundKeys.forEach((roundKey, idx) => {
-    roundsData[roundKey].forEach(m => {
+  function applyMatches(matches) {
+    matches.forEach(m => {
       if (m.byeKo || m.byeEn) return;
       if (!m.homeEn || !m.awayEn) return;
+      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
       const home = state[m.homeEn];
       const away = state[m.awayEn];
       if (!home || !away) return;
@@ -719,7 +735,9 @@ function computeStandingsHistory() {
       else if (m.homeScore < m.awayScore) away.pts += 3;
       else { home.pts += 1; away.pts += 1; }
     });
+  }
 
+  function pushSnapshot(week) {
     const standings = leagueData
       .map(t => ({
         nameEn: t.nameEn,
@@ -736,8 +754,26 @@ function computeStandingsHistory() {
     const ranks = {};
     standings.forEach((s, i) => { ranks[s.nameEn] = i + 1; });
 
-    history.push({ week: idx + 1, ranks });
+    history.push({ week, ranks });
+  }
+
+  roundKeys.forEach((roundKey, idx) => {
+    applyMatches(roundsData[roundKey]);
+    pushSnapshot(idx + 1);
   });
+
+  // 다음 라운드가 아직 완전히 끝나지 않아 scheduledRounds에 남아있어도,
+  // 그 안에 스코어가 채워진 경기가 있으면(=일부만 먼저 끝난 경우) 그만큼 반영해서
+  // 순위 변동 그래프에 그 주차를 미리 보여줍니다.
+  const nextRoundKey = 'round' + (roundKeys.length + 1);
+  const nextRoundMatches = (scheduledRounds && scheduledRounds[nextRoundKey]) || [];
+  const hasPartialResult = nextRoundMatches.some(m =>
+    !m.byeKo && !m.byeEn && typeof m.homeScore === 'number' && typeof m.awayScore === 'number'
+  );
+  if (hasPartialResult) {
+    applyMatches(nextRoundMatches);
+    pushSnapshot(roundKeys.length + 1);
+  }
 
   return history;
 }
@@ -774,13 +810,13 @@ const leagueData = [
   {
     nameKo: "칠룸바 배럭스 FC", nameEn: "Chilumba Barracks FC", logoSrc: "칠룸바.webp",
     venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.437859548225552, lng: 34.244529365527434 },
-    played: 5, won: 2, drawn: 2, lost: 1, goalsFor: 5, goalsAgainst: 4, cleanSheets: 2, failedToScore: 2,
-    form: ["W", "D", "D", "L", "W"],
-    nextMatch: { isBye: false, homeAway: "A", oppKo: "음벨와 워리어스 FC", oppEn: "M'mbelwa Warriors FC", oppLogo: "음벨와.webp", kickoffDate: "2026-08-15", kickoffTime: "14:30" }
+    played: 6, won: 2, drawn: 3, lost: 1, goalsFor: 5, goalsAgainst: 4, cleanSheets: 3, failedToScore: 3,
+    form: ["W", "D", "D", "L", "W", "D"],
+    nextMatch: { isBye: true }
   },
   {
     nameKo: "마푸 스타즈 FC", nameEn: "Mafu Stars FC", logoSrc: "마푸스타즈.webp",
-    venue: { nameKo: "만캄비라 그라운드", nameEn: "Mankhambira Ground", lat: -11.722050060500038, lng: 34.296560298979976 },
+    venue: { nameKo: "망캄비라 그라운드", nameEn: "Mankhambira Ground", lat: -11.722050060500038, lng: 34.296560298979976 },
     played: 4, won: 1, drawn: 3, lost: 0, goalsFor: 4, goalsAgainst: 3, cleanSheets: 1, failedToScore: 1,
     form: ["D", "W", "D", "D"],
     nextMatch: { isBye: false, homeAway: "A", oppKo: "루베 마스터즈 FC", oppEn: "Lube Masters FC", oppLogo: "루베.webp", kickoffDate: "2026-08-16", kickoffTime: "14:30" }
@@ -788,16 +824,16 @@ const leagueData = [
   {
     nameKo: "음벨와 워리어스 FC", nameEn: "M'mbelwa Warriors FC", logoSrc: "음벨와.webp",
     venue: { nameKo: "치반자 그라운드", nameEn: "Chibanja Ground", lat: -11.459634955492291, lng: 34.00871941636782 },
-    played: 4, won: 1, drawn: 3, lost: 0, goalsFor: 3, goalsAgainst: 2, cleanSheets: 2, failedToScore: 1,
-    form: ["W", "D", "D", "D"],
-    nextMatch: { isBye: false, homeAway: "H", oppKo: "칠룸바 배럭스 FC", oppEn: "Chilumba Barracks FC", oppLogo: "칠룸바.webp", kickoffDate: "2026-08-15", kickoffTime: "14:30" }
+    played: 5, won: 1, drawn: 4, lost: 0, goalsFor: 3, goalsAgainst: 2, cleanSheets: 3, failedToScore: 2,
+    form: ["W", "D", "D", "D", "D"],
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "치바비 리얼 스타스 FC", oppEn: "Chibavi Real Stars FC", oppLogo: "치바비.webp", kickoffDate: "2026-08-23", kickoffTime: "14:30" }
   },
   {
     nameKo: "치폴로폴로 보이즈 FC", nameEn: "Chipolopolo Boys FC", logoSrc: "치폴로폴로.webp",
     venue: { nameKo: "루지 그라운드", nameEn: "Luzi Ground", lat: -10.996973616990681, lng: 33.95852479021444 },
-    played: 4, won: 2, drawn: 1, lost: 1, goalsFor: 7, goalsAgainst: 7, cleanSheets: 0, failedToScore: 0,
-    form: ["W", "D", "W", "L"],
-    nextMatch: { isBye: false, homeAway: "H", oppKo: "비전 S 아카데미", oppEn: "Vision S Academy", oppLogo: "비전아카데미.webp", kickoffDate: "2026-08-15", kickoffTime: "14:30" }
+    played: 5, won: 3, drawn: 1, lost: 1, goalsFor: 9, goalsAgainst: 8, cleanSheets: 0, failedToScore: 0,
+    form: ["W", "D", "W", "L", "W"],
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "친테체 유나이티드 FC", oppEn: "Chintheche United FC", oppLogo: "친테체.webp", kickoffDate: "2026-08-23", kickoffTime: "14:30" }
   },
   {
     nameKo: "에크웬데니 FC", nameEn: "Ekwendeni FC", logoSrc: "에크웬데니.webp",
@@ -837,9 +873,9 @@ const leagueData = [
   {
     nameKo: "비전 S 아카데미", nameEn: "Vision S Academy", logoSrc: "비전아카데미.webp",
     venue: { nameKo: "보타닉 그라운드", nameEn: "Votanic Ground", lat: -11.396261544531715, lng: 34.00939476359461 },
-    played: 5, won: 1, drawn: 0, lost: 4, goalsFor: 11, goalsAgainst: 18, cleanSheets: 0, failedToScore: 1,
-    form: ["W", "L", "L", "L", "L"],
-    nextMatch: { isBye: false, homeAway: "A", oppKo: "치폴로폴로 보이즈 FC", oppEn: "Chipolopolo Boys FC", oppLogo: "치폴로폴로.webp", kickoffDate: "2026-08-15", kickoffTime: "14:30" }
+    played: 6, won: 1, drawn: 0, lost: 5, goalsFor: 12, goalsAgainst: 20, cleanSheets: 0, failedToScore: 1,
+    form: ["W", "L", "L", "L", "L", "L"],
+    nextMatch: { isBye: false, homeAway: "H", oppKo: "루비리 FC", oppEn: "Luviri FC", oppLogo: "루비리.webp", kickoffDate: "2026-08-23", kickoffTime: "14:30" }
   },
   {
     nameKo: "루비리 FC", nameEn: "Luviri FC", logoSrc: "루비리.webp",
@@ -1128,6 +1164,12 @@ function computeNextMatchPreview(nameEn, nameKo) {
       (m.homeEn === nameEn || m.homeKo === nameKo || m.awayEn === nameEn || m.awayKo === nameKo));
     if (!found) continue;
 
+    // 진행 중인 라운드(scheduledRounds)에는 이미 끝난 경기의 스코어가 먼저 채워지는 경우가 있습니다.
+    // (그 라운드의 다른 경기들은 아직 예정 상태로 남아있는 동안) 이렇게 이미 스코어가 있는 경기는
+    // "다음 경기"가 아니라 이미 끝난 경기이므로, 건너뛰고 그다음 라운드에서 진짜 다음 경기를 찾습니다.
+    const alreadyPlayed = typeof found.homeScore === 'number' && typeof found.awayScore === 'number';
+    if (alreadyPlayed) continue;
+
     const isHome = found.homeEn === nameEn || found.homeKo === nameKo;
     const oppKo = isHome ? found.awayKo : found.homeKo;
     const oppEn = isHome ? found.awayEn : found.homeEn;
@@ -1176,7 +1218,8 @@ const nameAliases = {
   "JOMOLLY PHIRI": "JOMOLE PHIRI",
   "LUMABANI KAMANGA": "LIMBANI KAMANGA",
   "SOLOMON INKOSI": "SOLOMON NKOSI",
-  "ZACHARIAH MPHAMBA": "ZAKARIA MPHAMBA"
+  "ZACHARIAH MPHAMBA": "ZAKARIA MPHAMBA",
+  "CLEMENT MUNTHALI": "CLEMENT MTHALI"
 };
 
 // 영문 이름(대문자) -> 한글/영문 표기 사전. matchDetails 에 새 득점자가
@@ -1243,7 +1286,9 @@ const playerDirectory = {
   "TYSON KAUNDA": { nameKo: "타이슨 카운다", nameEn: "Tyson Kaunda" },
   "CLEMENT KASEKA": { nameKo: "클레멘트 카세카", nameEn: "Clement Kaseka" },
   "JERPHASON KANYENDA": { nameKo: "제르파손 칸옌다", nameEn: "Jerphason Kanyenda" },
-  "GOMEZGANI SIBALE": { nameKo: "고메즈가니 시발레", nameEn: "Gomezgani Sibale" }
+  "GOMEZGANI SIBALE": { nameKo: "고메즈가니 시발레", nameEn: "Gomezgani Sibale" },
+  "RODRICK KASUDZA": { nameKo: "로드릭 카수자", nameEn: "Rodrick Kasudza" },
+  "GEORGE MASEWO": { nameKo: "조지 마세워", nameEn: "George Masewo" }
 };
 
 function toTitleCase(upperName) {
@@ -1489,6 +1534,9 @@ function generateRemainingFixtures() {
     if (roundsData[roundKey]) return; // 이미 결과가 확정된 라운드는 제외
     (scheduledRounds[roundKey] || []).forEach(m => {
       if (m.byeKo || m.byeEn) return;
+      // 라운드가 통째로 끝나지 않았어도, 개별 경기에 이미 스코어가 채워져 있으면
+      // (=그 경기만 먼저 끝난 경우) 이미 leagueData에 반영된 결과이므로 제외합니다.
+      if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
       const home = teamByEn[m.homeEn];
       const away = teamByEn[m.awayEn];
       if (home && away) fixtures.push({ home, away });
