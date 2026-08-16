@@ -713,6 +713,21 @@
       margin-left: 0;
     }
   }
+  @media (min-width: 721px) {
+    .share-btn:not(.round-share-btn) {
+      background: var(--color-surface);
+      border: 1.5px solid rgba(var(--color-navy-rgb), 0.12);
+      box-shadow: 0 4px 12px rgba(var(--color-navy-rgb), 0.10);
+      padding: 8px 16px;
+    }
+    .share-btn:not(.round-share-btn):hover {
+      background: var(--color-teal-dark);
+      color: var(--color-white);
+      border-color: var(--color-teal-dark);
+      box-shadow: 0 6px 16px rgba(var(--color-navy-rgb), 0.18);
+      transform: translateY(-1px);
+    }
+  }
   @media (max-width: 720px) {
     .rank-filter-wrap {
       width: 100%;
