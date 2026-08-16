@@ -1,0 +1,27 @@
+{
+  "name": "치주물루 유나이티드 FC 팬사이트",
+  "short_name": "치주물루 UTD",
+  "description": "치주물루 유나이티드 FC(Chizumulu United FC) 비공식 팬사이트 — NRFA 리그 원 순위, 경기 결과, 득점 순위",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "id": "/UTD/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f7fb",
+  "theme_color": "#033990",
+  "lang": "ko",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "./dd.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

@@ -54,6 +54,16 @@
 </script>
 
 <link rel="icon" href="./favicon.ico" sizes="any">
+<!-- PWA: 홈 화면에 추가(설치) 지원 -->
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./dd.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="치주물루 UTD">
+<!-- 한글 웹폰트 (Noto Sans KR) - 기기별 시스템 폰트 차이 없이 통일된 디자인을 위해 로드 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=008">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -99,6 +109,9 @@
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.5 14.5C19.3 15 18 15.3 16.6 15.1C12.9 14.6 10.1 11.4 10.1 7.5C10.1 6.1 10.4 4.8 11 3.6C6.9 4.4 3.8 8 3.8 12.4C3.8 17.3 7.8 21.3 12.7 21.3C16.6 21.3 19.9 18.8 21 15.3C20.8 15.1 20.6 14.8 20.5 14.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity="0.15"/></svg>
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity="0.15"/><path d="M12 2.5V4.5M12 19.5V21.5M4.5 12H2.5M21.5 12H19.5M5.6 5.6L7 7M17 17L18.4 18.4M18.4 5.6L17 7M7 17L5.6 18.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
+      <button class="theme-toggle-btn install-app-btn" onclick="installApp()" id="installAppBtn" title="앱으로 저장" aria-label="Install app" style="display:none;">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V15M12 15L8 11M12 15L16 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16V17.8C4 19.567 5.433 21 7.2 21H16.8C18.567 21 20 19.567 20 17.8V16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
   </div>
 </div>
@@ -119,12 +132,18 @@
 </div>
 <div class="next-match-strip" id="nextMatchStrip"></div>
 </div>
-<div class="content-row" id="rankView">
-<div class="table-wrap">
+<div id="rankView">
+<div class="content-row">
+<div class="scroll-fade-wrap" id="rankTableFade">
+<div class="table-wrap" id="rankTableScroller">
 <div class="rank-filter-wrap">
   <button class="rank-filter-btn active lbl" data-filter="all" data-en="ALL" data-ko="전체" onclick="setRankFilter('all')">전체</button>
   <button class="rank-filter-btn lbl" data-filter="home" data-en="HOME" data-ko="홈" onclick="setRankFilter('home')">홈</button>
   <button class="rank-filter-btn lbl" data-filter="away" data-en="AWAY" data-ko="원정" onclick="setRankFilter('away')">원정</button>
+  <button class="share-btn lbl" data-en="Share" data-ko="공유하기" onclick="shareRankTable()" aria-label="Share standings" title="순위표 공유">
+    <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>
+    <span class="lbl" data-en="Share" data-ko="공유">공유</span>
+  </button>
 </div>
 <table id="mainTable">
   <thead>
@@ -135,6 +154,9 @@
   <tbody id="leagueTableBody">
   </tbody>
 </table>
+</div>
+</div>
+</div>
 <div class="legend">
   <span><span class="dot dot-promo"></span><span class="lbl" data-en="1st: Promoted to National Division League" data-ko="1위: 내셔널 디비전 리그 승격">1위: 내셔널 디비전 리그 승격</span></span>
   <span><span class="dot dot-gd-neg"></span><span class="lbl" data-en="13th–15th: Relegated to NRFA League Two" data-ko="13~15위: NRFA 리그 투 강등">13~15위: NRFA 리그 투 강등</span></span>
@@ -144,7 +166,6 @@
     <svg class="export-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17V18C4 19.657 5.343 21 7 21H17C18.657 21 20 19.657 20 18V17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span class="lbl" data-en="Save as Image" data-ko="이미지로 저장">이미지로 저장</span>
   </button>
-</div>
 </div>
 </div>
 <div id="squadView" style="display:none;">
@@ -234,7 +255,13 @@
   </div>
 </div>
 <div id="roundsView" style="display:none;">
-  <div class="round-tab-bar" id="roundTabBar"></div>
+  <div class="round-toolbar">
+    <div class="round-tab-bar" id="roundTabBar"></div>
+    <button class="share-btn round-share-btn lbl" data-en="Share" data-ko="공유하기" onclick="shareRoundResults()" aria-label="Share round results" title="이번 라운드 결과 공유">
+      <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span class="lbl" data-en="Share" data-ko="공유">공유</span>
+    </button>
+  </div>
   <div class="round-match-list" id="roundMatchList"></div>
 </div>
 <div id="statsView" style="display:none;">
@@ -447,7 +474,8 @@
 </div>
 </div>
 <div class="content-row" id="scorersView" style="display:none;">
-<div class="table-wrap">
+<div class="scroll-fade-wrap" id="scorersTableFade">
+<div class="table-wrap" id="scorersTableScroller">
 <table id="scorersTable">
   <thead>
     <tr>
@@ -462,6 +490,7 @@
 </table>
 </div>
 </div>
+</div>
 
 <div id="predictView" style="display:none;">
   <div class="predict-intro">
@@ -473,6 +502,8 @@
     <button class="predict-refresh-btn lbl" id="predictRefreshBtn" data-en="Re-run Simulation" data-ko="시뮬레이션 다시 돌리기" onclick="renderPredictions(true)">시뮬레이션 다시 돌리기</button>
   </div>
   <div class="predict-table-wrap">
+    <div class="scroll-fade-wrap" id="predictTableFade">
+    <div class="predict-table-scroller" id="predictTableScroller">
     <table class="predict-table" id="predictTable">
       <thead>
         <tr>
@@ -489,6 +520,8 @@
         <tr><td colspan="7" class="predict-loading"><span class="predict-loading-inner"><span class="predict-spinner"></span><span class="lbl" data-en="Running simulation..." data-ko="시뮬레이션 실행 중...">시뮬레이션 실행 중...</span></span></td></tr>
       </tbody>
     </table>
+    </div>
+    </div>
     <div class="legend">
       <span><span class="dot dot-promo"></span><span class="lbl" data-en="1st: Promoted to National Division League" data-ko="1위: 내셔널 디비전 리그 승격">1위: 내셔널 디비전 리그 승격</span></span>
       <span><span class="dot dot-gd-neg"></span><span class="lbl" data-en="13th–15th: Relegated to NRFA League Two" data-ko="13~15위: NRFA 리그 투 강등">13~15위: NRFA 리그 투 강등</span></span>

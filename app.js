@@ -59,6 +59,59 @@
     }
   }
 
+  // ===== PWA: "앱으로 저장"(홈 화면에 추가) 버튼 =====
+  // 안드로이드/크롬 계열은 beforeinstallprompt 이벤트로 네이티브 설치 팝업을 띄우고,
+  // iOS 사파리는 이 API 자체가 없어서 "공유 → 홈 화면에 추가" 안내로 대체합니다.
+  let deferredInstallPrompt = null;
+
+  function isStandaloneMode() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  }
+
+  function isIOSDevice() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  }
+
+  function updateInstallBtnVisibility() {
+    const btn = document.getElementById('installAppBtn');
+    if (!btn) return;
+    if (isStandaloneMode()) {
+      btn.style.display = 'none';
+      return;
+    }
+    btn.style.display = (deferredInstallPrompt || isIOSDevice()) ? 'inline-flex' : 'none';
+  }
+
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    updateInstallBtnVisibility();
+  });
+
+  window.addEventListener('appinstalled', function() {
+    deferredInstallPrompt = null;
+    updateInstallBtnVisibility();
+    showShareToast(isKorean ? '✅ 앱이 설치됐어요' : '✅ App installed');
+  });
+
+  async function installApp() {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      try { await deferredInstallPrompt.userChoice; } catch (e) {}
+      deferredInstallPrompt = null;
+      updateInstallBtnVisibility();
+      return;
+    }
+    if (isIOSDevice()) {
+      showShareToast(
+        isKorean ? '하단 공유 버튼(□↑) → "홈 화면에 추가"를 눌러주세요' : 'Tap Share (□↑) → "Add to Home Screen"',
+        4000
+      );
+      return;
+    }
+    showShareToast(isKorean ? '이 브라우저에서는 설치를 지원하지 않아요' : 'Install is not supported in this browser');
+  }
+
   // leagueData, topScorersData, SEASON_START 등은 data.js 파일에서 불러옵니다.
   // "N주차" 표기는 roundsData/scheduledRounds를 기반으로 자동 계산됩니다(아래 updateSeasonInfo 참고).
 
@@ -128,6 +181,8 @@
       rankBtn.classList.add('active');
       if (nextMatchStrip) nextMatchStrip.style.display = '';
     }
+
+    refreshScrollFadeHints();
   }
 
   let predictionCache = null;
@@ -201,8 +256,8 @@
     });
 
     attachImageFallback();
+    refreshScrollFadeHints();
   }
-
 
   // ===== 득점 순위 렌더링 (Top Scorers) =====
   // ===== 선수단(스쿼드) 렌더링 (Squad View) =====
@@ -287,10 +342,156 @@
         <span class="lbl" data-en="${t.nextMatch.oppEn}" data-ko="${t.nextMatch.oppKo}">${oppName}</span>
         ${oppRankTxt ? `<span class="nms-opp-rank">${oppRankTxt}</span>` : ''}
       </span>
-      ${kickoffTxt ? `<span class="nms-kickoff">${kickoffTxt}</span>` : ''}`;
+      ${kickoffTxt ? `<span class="nms-kickoff">${kickoffTxt}</span>` : ''}
+      <span class="nms-action-group">
+        <button class="nms-action-btn" onclick="downloadNextMatchICS()" aria-label="Add to calendar" title="${isKorean ? '캘린더에 추가' : 'Add to calendar'}">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21M7 3V5M17 3V5M6.2 5H17.8C19 5 20 6 20 7.2V18.8C20 20 19 21 17.8 21H6.2C5 21 4 20 4 18.8V7.2C4 6 5 5 6.2 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="nms-action-btn" onclick="shareNextMatch()" aria-label="Share" title="${isKorean ? '공유하기' : 'Share'}">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="18" cy="5" r="2.4" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="19" r="2.4" stroke="currentColor" stroke-width="1.6"/></svg>
+        </button>
+      </span>`;
   }
 
-  // ===== 팀 정보 허브 (Team Info Hub: 팀정보/기록/선수단/경기결과) =====
+  // ===== 공유하기 (Web Share API + 클립보드 폴백) =====
+  function showShareToast(msg, duration) {
+    let toast = document.getElementById('shareToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'shareToast';
+      toast.className = 'share-toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => toast.classList.remove('show'), duration || 2200);
+  }
+
+  async function shareContent(title, text, url) {
+    const shareUrl = url || window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url: shareUrl });
+      } catch (e) {
+        // 사용자가 공유 시트를 취소한 경우는 조용히 무시합니다.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${text}\n${shareUrl}`);
+      showShareToast(isKorean ? '클립보드에 복사했어요' : 'Copied to clipboard');
+    } catch (e) {
+      showShareToast(isKorean ? '공유에 실패했어요' : 'Share failed');
+    }
+  }
+
+  // 현재 순위표 상위 5팀(+내 팀 순위)을 공유합니다.
+  function shareRankTable() {
+    const ranked = getRankedTeams('all');
+    const info = getMyRankedTeam();
+    const ptsLabel = isKorean ? '점' : ' pts';
+    const lines = ranked.slice(0, 5).map((t, i) => `${i + 1}. ${isKorean ? t.nameKo : t.nameEn} — ${t.pts}${ptsLabel}`);
+    let text = (isKorean ? '📊 NRFA 리그 원 순위표 TOP 5\n' : '📊 NRFA League One — Top 5\n') + lines.join('\n');
+    if (info && info.rank > 5) {
+      text += `\n...\n${info.rank}. ${isKorean ? info.team.nameKo : info.team.nameEn} — ${info.team.pts}${ptsLabel}`;
+    }
+    shareContent(isKorean ? 'NRFA 리그 원 순위표' : 'NRFA League One Standings', text);
+  }
+
+  // 현재 선택된 라운드의 확정된 경기 결과를 공유합니다.
+  function shareRoundResults() {
+    if (!currentRoundKey) return;
+    const weekNum = allRoundKeysIncludingScheduled().indexOf(currentRoundKey) + 1;
+    const weekLabel = isKorean ? `${weekNum}주차` : `Week ${weekNum}`;
+    const matches = buildRoundMatches(currentRoundKey).filter(m => !m.isBye && !m.isScheduled);
+    if (!matches.length) {
+      showShareToast(isKorean ? '공유할 결과가 아직 없어요' : 'No results to share yet');
+      return;
+    }
+    const lines = matches.map(m => {
+      const home = isKorean ? m.homeKo : m.homeEn;
+      const away = isKorean ? m.awayKo : m.awayEn;
+      return `${home} ${m.homeScore} : ${m.awayScore} ${away}`;
+    });
+    const text = (isKorean ? `⚽ NRFA 리그 원 ${weekLabel} 결과\n` : `⚽ NRFA League One ${weekLabel} Results\n`) + lines.join('\n');
+    shareContent(isKorean ? `NRFA 리그 원 ${weekLabel} 결과` : `NRFA League One ${weekLabel} Results`, text);
+  }
+
+  // 우리 팀(치주물루)의 다음 경기 정보를 공유합니다.
+  function shareNextMatch() {
+    const info = getMyRankedTeam();
+    if (!info || !info.team.nextMatch || info.team.nextMatch.isBye) return;
+    const nm = info.team.nextMatch;
+    const oppName = isKorean ? nm.oppKo : nm.oppEn;
+    const haTxt = nm.homeAway === 'H' ? (isKorean ? '홈' : 'Home') : (isKorean ? '원정' : 'Away');
+    const kickoffTxt = formatKickoff(nm).replace(/<br>\s*/g, ' / ');
+    const text = isKorean
+      ? `⚽ 치주물루 유나이티드 FC 다음 경기\n${haTxt} vs ${oppName}\n${kickoffTxt}`
+      : `⚽ Chizumulu United FC — Next Match\n${haTxt} vs ${oppName}\n${kickoffTxt}`;
+    shareContent(isKorean ? '치주물루 다음 경기' : 'Chizumulu Next Match', text);
+  }
+
+  // ===== 다음 경기 캘린더 등록 (.ics 다운로드) =====
+  // 브라우저 알림 대신, 어떤 캘린더 앱(구글/애플/아웃룩)에도 바로 등록 가능한 표준 .ics 파일을 생성합니다.
+  function toICSDate(ms) {
+    return new Date(ms).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  }
+
+  function icsEscape(str) {
+    return String(str).replace(/([,;])/g, '\\$1');
+  }
+
+  function downloadNextMatchICS() {
+    const info = getMyRankedTeam();
+    if (!info || !info.team.nextMatch || info.team.nextMatch.isBye) return;
+    const nm = info.team.nextMatch;
+    const startMs = kickoffUTCMillis(nm.kickoffDate, nm.kickoffTime);
+    if (!startMs) {
+      showShareToast(isKorean ? '경기 일정을 아직 알 수 없어요' : 'Kickoff time not confirmed yet');
+      return;
+    }
+    const endMs = startMs + 2 * 60 * 60 * 1000; // 경기 시간 2시간으로 가정
+    const oppName = isKorean ? nm.oppKo : nm.oppEn;
+    const haTxt = nm.homeAway === 'H' ? (isKorean ? '홈' : 'Home') : (isKorean ? '원정' : 'Away');
+    const summary = isKorean
+      ? `[NRFA] 치주물루 유나이티드 FC vs ${oppName} (${haTxt})`
+      : `[NRFA] Chizumulu United FC vs ${oppName} (${haTxt})`;
+    const description = isKorean
+      ? '치주물루 유나이티드 FC 팬사이트에서 등록한 일정입니다.'
+      : 'Added from the Chizumulu United FC fan site.';
+    const uid = `chizumulu-${nm.kickoffDate}-${nm.kickoffTime}-${nm.oppEn}`.replace(/\s+/g, '').toLowerCase();
+
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Chizumulu United FC Fan Site//NRFA//KO',
+      'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT',
+      `UID:${uid}@chizumulu.github.io`,
+      `DTSTAMP:${toICSDate(Date.now())}`,
+      `DTSTART:${toICSDate(startMs)}`,
+      `DTEND:${toICSDate(endMs)}`,
+      `SUMMARY:${icsEscape(summary)}`,
+      `DESCRIPTION:${icsEscape(description)}`,
+      `URL:${window.location.href}`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'chizumulu-next-match.ics';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showShareToast(isKorean ? '캘린더 파일을 내려받았어요' : 'Calendar file downloaded');
+  }
+
+
   function getMyRankedTeam() {
     const ranked = getRankedTeams('all');
     const idx = ranked.findIndex(t => isMyTeamName(t.nameEn, t.nameKo));
@@ -1279,6 +1480,8 @@
       tr.innerHTML = `<td colspan="4" style="padding:24px; color:var(--color-text-faint);">${isKorean ? '득점 데이터가 아직 없습니다.' : 'No scorer data yet.'}</td>`;
       tbody.appendChild(tr);
     }
+
+    refreshScrollFadeHints();
   }
 
 
@@ -1510,6 +1713,7 @@
     });
 
     attachImageFallback();
+    refreshScrollFadeHints();
   }
 
   // ===== 순위표 이미지로 내보내기 (Export Standings as PNG) =====
@@ -3616,12 +3820,19 @@
 
     showDisclaimerIfNeeded();
     initScrollFadeHints();
+    updateInstallBtnVisibility();
   });
 
-  // ===== 스크롤 힌트 (탭 바를 좌우로 넘길 수 있음을 표시) =====
-  function initScrollFadeHints() {
-    const scroller = document.getElementById('viewToggleWrap');
-    const fadeWrap = document.getElementById('viewToggleFade');
+  // ===== 스크롤 힌트 (표/탭 바를 좌우로 넘길 수 있음을 표시) =====
+  // 여러 개의 가로 스크롤 영역(순위표, 득점 순위표, 리그 예측표, 상단 탭 바)에
+  // 공통으로 적용합니다. 각 영역은 { scrollerId, fadeWrapId } 쌍으로 등록되고,
+  // 스크롤/리사이즈 시점마다 실제로 더 스크롤할 내용이 남아있는 쪽에만
+  // show-left/show-right 클래스를 붙여 그라데이션 힌트를 보여줍니다.
+  const scrollFadeUpdaters = [];
+
+  function registerScrollFadeHint(scrollerId, fadeWrapId) {
+    const scroller = document.getElementById(scrollerId);
+    const fadeWrap = document.getElementById(fadeWrapId);
     if (!scroller || !fadeWrap) return;
 
     function update() {
@@ -3633,7 +3844,20 @@
 
     scroller.addEventListener('scroll', update, { passive: true });
     window.addEventListener('resize', update);
-    // 콘텐츠/폰트 로딩 이후에도 정확한 스크롤 폭을 반영하기 위해 약간의 지연 후 재확인
     update();
     setTimeout(update, 300);
+    scrollFadeUpdaters.push(update);
+  }
+
+  function initScrollFadeHints() {
+    registerScrollFadeHint('viewToggleWrap', 'viewToggleFade');
+    registerScrollFadeHint('rankTableScroller', 'rankTableFade');
+    registerScrollFadeHint('scorersTableScroller', 'scorersTableFade');
+    registerScrollFadeHint('predictTableScroller', 'predictTableFade');
+  }
+
+  // 데이터가 다시 렌더링되거나(언어 전환, 필터 변경, 화면 전환 등) 콘텐츠 폭이
+  // 바뀔 수 있는 시점마다 이 함수를 호출해 힌트 상태를 다시 계산합니다.
+  function refreshScrollFadeHints() {
+    scrollFadeUpdaters.forEach(update => update());
   }
