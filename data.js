@@ -1076,15 +1076,26 @@ function computeH2HHistory() {
 // 을 계산합니다. nameEn/nameKo만 넘기면 어떤 팀에도 재사용할 수 있습니다.
 // ============================================================
 function computeFormGuide(nameEn, nameKo) {
+  // roundsData(완전히 끝난 라운드)뿐 아니라, 아직 라운드 전체가 끝나지 않아
+  // scheduledRounds에 남아있어도 개별 경기에 스코어가 이미 채워져 있으면
+  // 그 경기도 "치른 경기"로 함께 훑습니다. (roundHasAnyResult / buildRoundMatches와 동일한 패턴)
   const roundKeysSorted = Object.keys(roundsData).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  });
+  const scheduledKeysSorted = Object.keys(scheduledRounds || {})
+    .filter(k => !roundsData[k])
+    .sort((a, b) => parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10));
+  const allKeysSorted = [...roundKeysSorted, ...scheduledKeysSorted].sort((a, b) => {
     return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
   });
 
   const sequence = [];
-  roundKeysSorted.forEach((roundKey, idx) => {
+  allKeysSorted.forEach((roundKey, idx) => {
     const weekNum = idx + 1;
-    (roundsData[roundKey] || []).forEach(m => {
+    const matches = roundsData[roundKey] || (scheduledRounds && scheduledRounds[roundKey]) || [];
+    matches.forEach(m => {
       if (m.byeKo || m.byeEn) return;
+      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
       const isHome = m.homeEn === nameEn || m.homeKo === nameKo;
       const isAway = m.awayEn === nameEn || m.awayKo === nameKo;
       if (!isHome && !isAway) return;
@@ -1650,13 +1661,21 @@ function computeHomeAwaySplit(nameEn, nameKo) {
   const home = emptySide();
   const away = emptySide();
 
+  // computeFormGuide와 동일하게, 아직 라운드가 안 끝나 scheduledRounds에 남아있어도
+  // 스코어가 채워진 경기는 함께 집계합니다.
   const roundKeysSorted = Object.keys(roundsData).sort((a, b) => {
     return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
   });
+  const scheduledKeysSorted = Object.keys(scheduledRounds || {})
+    .filter(k => !roundsData[k])
+    .sort((a, b) => parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10));
+  const allKeysSorted = [...roundKeysSorted, ...scheduledKeysSorted];
 
-  roundKeysSorted.forEach(roundKey => {
-    (roundsData[roundKey] || []).forEach(m => {
+  allKeysSorted.forEach(roundKey => {
+    const matches = roundsData[roundKey] || (scheduledRounds && scheduledRounds[roundKey]) || [];
+    matches.forEach(m => {
       if (m.byeKo || m.byeEn) return;
+      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
       const isHome = m.homeEn === nameEn || m.homeKo === nameKo;
       const isAway = m.awayEn === nameEn || m.awayKo === nameKo;
       if (isHome) {
