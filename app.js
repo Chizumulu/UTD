@@ -967,7 +967,7 @@
       html += `<div class="ti-next-mini">${nextMatchOpponentHtml(info.team, info.rank)}</div>`;
     }
 
-    const roundKeys = sortedRoundKeys();
+    const roundKeys = completedRoundKeysIncludingScheduled();
     const totalRounds = roundKeys.length;
 
     roundKeys.slice().reverse().forEach((key, revIdx) => {
@@ -1270,11 +1270,20 @@
     return keys[0] || null;
   }
 
+  // roundsData(완전히 끝나 옮겨진 라운드) + scheduledRounds에 남아있어도 이미
+  // 결과가 채워진 라운드(예: 다음 라운드가 시작되기 전까지 순위변동 비교를 위해
+  // 잠시 scheduledRounds에 남아있는 완료 라운드)까지 모두 포함해서, 실제로 결과가
+  // 있는 라운드만 순서대로 반환합니다. 팀별 홈/원정 성적, 팀 결과 목록 등
+  // "이미 끝난 경기는 전부 보여줘야 하는" 화면에서 sortedRoundKeys() 대신 이걸 씁니다.
+  function completedRoundKeysIncludingScheduled() {
+    return allRoundKeysIncludingScheduled().filter(roundHasAnyResult);
+  }
+
   // 완료된 라운드를 훑어서 홈/원정 각각의 (승수/경기수)를 계산합니다.
   function computeHomeAwayRecord(nameEn, nameKo) {
     const home = { played: 0, won: 0 };
     const away = { played: 0, won: 0 };
-    sortedRoundKeys().forEach(key => {
+    completedRoundKeysIncludingScheduled().forEach(key => {
       buildRoundMatches(key).forEach(m => {
         if (m.isBye) return;
         const isHome = m.homeEn === nameEn || m.homeKo === nameKo;
