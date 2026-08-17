@@ -1236,7 +1236,8 @@ const nameAliases = {
   "LUMABANI KAMANGA": "LIMBANI KAMANGA",
   "SOLOMON INKOSI": "SOLOMON NKOSI",
   "ZACHARIAH MPHAMBA": "ZAKARIA MPHAMBA",
-  "CLEMENT MUNTHALI": "CLEMENT MTHALI"
+  "CLEMENT MUNTHALI": "CLEMENT MTHALI",
+  "CHISOMO MYEGHA": "CHISOMO MYGHA"
 };
 
 // 영문 이름(대문자) -> 한글/영문 표기 사전. matchDetails 에 새 득점자가
@@ -1305,7 +1306,14 @@ const playerDirectory = {
   "JERPHASON KANYENDA": { nameKo: "제르파손 칸옌다", nameEn: "Jerphason Kanyenda" },
   "GOMEZGANI SIBALE": { nameKo: "고메즈가니 시발레", nameEn: "Gomezgani Sibale" },
   "RODRICK KASUDZA": { nameKo: "로드릭 카수자", nameEn: "Rodrick Kasudza" },
-  "GEORGE MASEWO": { nameKo: "조지 마세워", nameEn: "George Masewo" }
+  "GEORGE MASEWO": { nameKo: "조지 마세워", nameEn: "George Masewo" },
+  "TYSON SOKO": { nameKo: "타이슨 소코", nameEn: "Tyson Soko" },
+  "KINGSLEY MKANDAWIRE": { nameKo: "킹슬리 음칸다위레", nameEn: "Kingsley Mkandawire" },
+  "ABRAHAM MVULA": { nameKo: "아브라함 음불라", nameEn: "Abraham Mvula" },
+  "JOSEPH BANDA": { nameKo: "조셉 반다", nameEn: "Joseph Banda" },
+  "JAMES ZONGA": { nameKo: "제임스 존가", nameEn: "James Zonga" },
+  "CHARLES KAMANGA": { nameKo: "찰스 카망가", nameEn: "Charles Kamanga" },
+  "WANANGWA GAMA": { nameKo: "와낭과 가마", nameEn: "Wanangwa Gama" }
 };
 
 function toTitleCase(upperName) {
