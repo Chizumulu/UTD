@@ -552,7 +552,19 @@ const matchDetails = {
 // 예정된 라운드에는 아직 없습니다. 다음 경기 프리뷰에서 H2H를 보여주려면 이렇게
 // roundKey(scheduledRounds 기준)를 키로 미리 적어두면 됩니다. 라운드가 실제로 끝나면
 // 이 항목은 지우고 matchLineups[roundKey].recentHistory로 옮겨주세요.
-const upcomingMatchHistory = {};
+// round6(에우티니전, 2026-08-16)은 이미 종료됐지만 아직 matchLineups에
+// 포메이션/득점 등 상세 데이터가 들어가지 않아 임시로 여기 적어둡니다.
+// 나중에 round6 라인업을 matchLineups에 추가하게 되면 이 항목은 지우고
+// matchLineups.round6.recentHistory / historySummary로 옮겨주세요.
+const upcomingMatchHistory = {
+  round6: {
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 24주차", score: "치주물루 2 : 0 에우티니", result: "치주물루 승(몰수승)" },
+      { comp: "2025-26 시즌 MNRF 심소 프리미어 리그 6주차", score: "에우티니 1 : 0 치주물루", result: "에우티니 승" }
+    ],
+    historySummary: "최근 2경기 전적 1승 0무 1패로 백중세"
+  }
+};
 
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
