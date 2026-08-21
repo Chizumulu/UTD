@@ -312,12 +312,7 @@
     const info = getMyRankedTeam();
     if (!info) { el.innerHTML = ''; return; }
     const t = info.team;
-    const preview = (typeof computeNextMatchPreview === 'function')
-      ? computeNextMatchPreview(t.nameEn, t.nameKo)
-      : null;
-    const nextWeek = (preview && preview.roundKey)
-      ? parseInt(preview.roundKey.replace('round', ''), 10)
-      : (sortedRoundKeys().length + 1);
+    const nextWeek = sortedRoundKeys().length + 1;
     const weekLbl = isKorean ? `${nextWeek}주차` : `WK ${nextWeek}`;
 
     if (t.nextMatch.isBye) {
@@ -2357,4 +2352,1521 @@
         ko: '공격형', en: 'ATTACKING', lx: avgX + (margin.left + plotW - avgX) / 2, ly: margin.top + 18 },
       { x: margin.left, y: avgY, w: avgX - margin.left, h: margin.top + plotH - avgY, fill: ct.quadDefense, labelColor: ct.quadDefenseLabel,
         ko: '수비형', en: 'DEFENSIVE', lx: margin.left + (avgX - margin.left) / 2, ly: margin.top + plotH - 10 },
-      { x: avgX, y: avgY, w: margin.left + plotW - avgX, h: margin.top + plotH - avgY, fill: ct.qua
+      { x: avgX, y: avgY, w: margin.left + plotW - avgX, h: margin.top + plotH - avgY, fill: ct.quadWeak, labelColor: ct.quadWeakLabel,
+        ko: '약팀', en: 'WEAK', lx: avgX + (margin.left + plotW - avgX) / 2, ly: margin.top + plotH - 10 }
+    ];
+
+    quads.forEach(q => {
+      if (q.w <= 0 || q.h <= 0) return;
+      svg.appendChild(svgEl('rect', { x: q.x, y: q.y, width: q.w, height: q.h, fill: q.fill }));
+    });
+
+    // plot border
+    svg.appendChild(svgEl('rect', { x: margin.left, y: margin.top, width: plotW, height: plotH, fill: 'none', stroke: ct.plotBorder, 'stroke-width': 1.5 }));
+
+    // average guide lines
+    svg.appendChild(svgEl('line', { x1: avgX, y1: margin.top, x2: avgX, y2: margin.top + plotH, stroke: ct.guideLine, 'stroke-width': 1.4, 'stroke-dasharray': '5,4' }));
+    svg.appendChild(svgEl('line', { x1: margin.left, y1: avgY, x2: margin.left + plotW, y2: avgY, stroke: ct.guideLine, 'stroke-width': 1.4, 'stroke-dasharray': '5,4' }));
+
+    // quadrant labels
+    quads.forEach(q => {
+      if (q.w <= 0 || q.h <= 0) return;
+      const t = svgEl('text', { x: q.lx, y: q.ly, 'text-anchor': 'middle', class: 'scatter-quad-label' });
+      t.setAttribute('fill', q.labelColor);
+      t.textContent = isKorean ? q.ko : q.en;
+      svg.appendChild(t);
+    });
+
+    // axis ticks
+    const stepsX = 5, stepsY = 5;
+    for (let i = 0; i <= stepsX; i++) {
+      const v = (domainX / stepsX) * i;
+      const x = xPos(v);
+      svg.appendChild(svgEl('line', { x1: x, y1: margin.top + plotH, x2: x, y2: margin.top + plotH + 5, stroke: ct.tickLine, 'stroke-width': 1 }));
+      const t = svgEl('text', { x: x, y: margin.top + plotH + 18, 'text-anchor': 'middle', class: 'scatter-tick-label' });
+      t.textContent = v.toFixed(1);
+      svg.appendChild(t);
+    }
+    for (let i = 0; i <= stepsY; i++) {
+      const v = (domainY / stepsY) * i;
+      const y = yPos(v);
+      svg.appendChild(svgEl('line', { x1: margin.left - 5, y1: y, x2: margin.left, y2: y, stroke: ct.tickLine, 'stroke-width': 1 }));
+      const t = svgEl('text', { x: margin.left - 9, y: y + 3, 'text-anchor': 'end', class: 'scatter-tick-label' });
+      t.textContent = v.toFixed(1);
+      svg.appendChild(t);
+    }
+
+    // axis titles
+    const xTitle = svgEl('text', { x: margin.left + plotW / 2, y: H - 10, 'text-anchor': 'middle', class: 'scatter-axis-label' });
+    xTitle.textContent = isKorean ? '경기당 실점 →' : 'Goals Against / Game →';
+    svg.appendChild(xTitle);
+
+    const yTitle = svgEl('text', { x: 14, y: margin.top + plotH / 2, 'text-anchor': 'middle', class: 'scatter-axis-label', transform: `rotate(-90 14 ${margin.top + plotH / 2})` });
+    yTitle.textContent = isKorean ? '경기당 득점 →' : 'Goals For / Game →';
+    svg.appendChild(yTitle);
+
+    // data points
+    const points = teams.map((team, idx) => {
+      const isMine = team.nameEn === 'Chizumulu United FC' || team.nameKo === '치주물루 유나이티드 FC';
+      let ringColor;
+      if (team.goalsAgainstPerGame <= avgGA && team.goalsForPerGame > avgGF) ringColor = '#c99a2e';
+      else if (team.goalsAgainstPerGame > avgGA && team.goalsForPerGame > avgGF) ringColor = '#079696';
+      else if (team.goalsAgainstPerGame <= avgGA && team.goalsForPerGame <= avgGF) ringColor = '#033990';
+      else ringColor = '#c0392b';
+
+      const shortName = (isKorean ? team.nameKo : team.nameEn).split(' ')[0];
+      const labelText = isMine ? '⭐ ' + shortName : shortName;
+      const charW = isKorean ? 10.5 : 6.3;
+      const labelW = labelText.length * charW + 4;
+
+      return {
+        team, idx, isMine, ringColor, labelText, labelW, labelH: 12,
+        r: isMine ? 12 : 10,
+        cx: xPos(team.goalsAgainstPerGame),
+        cy: yPos(team.goalsForPerGame)
+      };
+    });
+
+    // separate dots that sit too close together (near-duplicate stats)
+    for (let iter = 0; iter < 120; iter++) {
+      let moved = false;
+      for (let i = 0; i < points.length; i++) {
+        for (let j = i + 1; j < points.length; j++) {
+          const a = points[i], b = points[j];
+          let dx = b.cx - a.cx, dy = b.cy - a.cy;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = a.r + b.r + 4;
+          if (dist < minDist) {
+            moved = true;
+            if (dist < 0.01) { dx = 0.6; dy = 0.6; dist = Math.sqrt(dx * dx + dy * dy); }
+            const push = (minDist - dist) / 2 + 0.3;
+            const ux = dx / dist, uy = dy / dist;
+            a.cx -= ux * push; a.cy -= uy * push;
+            b.cx += ux * push; b.cy += uy * push;
+          }
+        }
+      }
+      if (!moved) break;
+    }
+
+    points.forEach(p => {
+      p.lx = p.cx + p.r + 5;
+      p.ly = p.cy + 3.5;
+    });
+
+    // simple iterative label declutter (push apart overlapping label boxes)
+    for (let iter = 0; iter < 80; iter++) {
+      let moved = false;
+      for (let i = 0; i < points.length; i++) {
+        for (let j = i + 1; j < points.length; j++) {
+          const a = points[i], b = points[j];
+          const ax1 = a.lx - 2, ax2 = a.lx + a.labelW, ay1 = a.ly - 9, ay2 = a.ly + 3;
+          const bx1 = b.lx - 2, bx2 = b.lx + b.labelW, by1 = b.ly - 9, by2 = b.ly + 3;
+          const overlapX = Math.min(ax2, bx2) - Math.max(ax1, bx1);
+          const overlapY = Math.min(ay2, by2) - Math.max(ay1, by1);
+          if (overlapX > 0 && overlapY > 0) {
+            moved = true;
+            const push = Math.min(overlapY, 6) / 2 + 0.4;
+            if (a.ly <= b.ly) { a.ly -= push; b.ly += push; }
+            else { a.ly += push; b.ly -= push; }
+          }
+        }
+      }
+      if (!moved) break;
+    }
+
+    const defs = svgEl('defs', {});
+    svg.appendChild(defs);
+
+    points.forEach(p => {
+      const g = svgEl('g', {});
+      const clipId = 'scatterClip-' + p.idx;
+
+      const clipPath = svgEl('clipPath', { id: clipId });
+      clipPath.appendChild(svgEl('circle', { cx: p.cx, cy: p.cy, r: p.r - 1.5 }));
+      defs.appendChild(clipPath);
+
+      // white backdrop behind logo (covers transparent-background logos)
+      g.appendChild(svgEl('circle', { cx: p.cx, cy: p.cy, r: p.r - 1.5, fill: '#fff' }));
+
+      const img = svgEl('image', {
+        x: p.cx - p.r + 1.5, y: p.cy - p.r + 1.5, width: (p.r - 1.5) * 2, height: (p.r - 1.5) * 2,
+        'clip-path': `url(#${clipId})`, preserveAspectRatio: 'xMidYMid slice'
+      });
+      img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', p.team.logoSrc);
+      img.setAttribute('href', p.team.logoSrc);
+
+      img.addEventListener('error', function handleErr() {
+        img.removeEventListener('error', handleErr);
+        const cleanName = (p.team.nameEn || 'Team').replace(/\s+FC$/i, '').replace(/\s+Academy$/i, '').trim();
+        const initials = cleanName.split(' ').map(w => w[0]).join('').substring(0, 3).toUpperCase();
+        const fallback = `https://placehold.co/40x40/033990/FFFFFF?text=${initials}`;
+        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', fallback);
+        img.setAttribute('href', fallback);
+      });
+
+      const ring = svgEl('circle', {
+        cx: p.cx, cy: p.cy, r: p.r - 1, fill: 'none',
+        stroke: p.ringColor, 'stroke-width': p.isMine ? 3 : 2
+      });
+
+      const title = svgEl('title', {});
+      const name = isKorean ? p.team.nameKo : p.team.nameEn;
+      title.textContent = `${name} — ${isKorean ? '경기당 득점' : 'GF/g'}: ${p.team.goalsForPerGame.toFixed(2)}, ${isKorean ? '경기당 실점' : 'GA/g'}: ${p.team.goalsAgainstPerGame.toFixed(2)}`;
+
+      g.appendChild(img);
+      g.appendChild(ring);
+      g.appendChild(title);
+      svg.appendChild(g);
+
+      if (Math.abs(p.ly - (p.cy + 3.5)) > 4 || Math.abs(p.lx - (p.cx + p.r + 5)) > 4) {
+        svg.appendChild(svgEl('line', {
+          x1: p.cx + p.r, y1: p.cy, x2: p.lx - 2, y2: p.ly - 3,
+          stroke: ct.guideLine, 'stroke-width': 0.8
+        }));
+      }
+
+      const label = svgEl('text', {
+        x: p.lx, y: p.ly,
+        class: p.isMine ? 'scatter-dot-label-mine' : 'scatter-dot-label'
+      });
+      label.textContent = p.labelText;
+      svg.appendChild(label);
+    });
+  }
+
+  // ===== 구단 위치 (Club Venues Map — Leaflet / OpenStreetMap) =====
+  let venueLeafletMap = null;
+  let venueMarkersByIdx = {};
+  let venueLeafletMapLarge = null;
+  let venueMarkersByIdxLarge = {};
+
+  // 두 좌표 간 직선거리 (Haversine, km 단위)
+  function haversineDistanceKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const toRad = deg => deg * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function getHomeVenue() {
+    const mineTeam = leagueData.find(t => t.nameEn === 'Chizumulu United FC');
+    return (mineTeam && mineTeam.venue) ? mineTeam.venue : null;
+  }
+
+  function formatDistanceLabel(team, homeVenue, isMine) {
+    if (isMine) return isKorean ? '홈' : 'Home';
+    if (!homeVenue || !team.venue) return '';
+    const km = haversineDistanceKm(homeVenue.lat, homeVenue.lng, team.venue.lat, team.venue.lng);
+    return `${Math.round(km).toLocaleString()}km`;
+  }
+
+  function renderVenuesView() {
+    renderVenueLeafletMap();
+    renderVenuesList();
+  }
+
+  // 마커 구성 로직을 map 인스턴스별로 공유합니다 (기본 지도 / 확대보기 모달 지도 공용)
+  function populateVenueMap(mapInstance, markerStore) {
+    const teams = leagueData.filter(t => t.venue && typeof t.venue.lat === 'number' && typeof t.venue.lng === 'number');
+    if (teams.length === 0) return;
+
+    const homeVenue = getHomeVenue();
+
+    // 기존 마커 정리 후 다시 그리기 (언어 전환 시 팝업 텍스트 갱신 목적)
+    Object.values(markerStore).forEach(m => mapInstance.removeLayer(m));
+    Object.keys(markerStore).forEach(k => delete markerStore[k]);
+
+    const bounds = [];
+    teams.forEach(team => {
+      const idx = leagueData.indexOf(team);
+      const isMine = team.nameEn === 'Chizumulu United FC';
+      const teamName = isKorean ? team.nameKo : team.nameEn;
+      const venueName = isKorean ? team.venue.nameKo : team.venue.nameEn;
+      const distLabel = formatDistanceLabel(team, homeVenue, isMine);
+      const shortTeamName = isKorean ? team.nameKo.split(' ')[0] : team.nameEn.split(' ')[0];
+
+      const icon = L.divIcon({
+        className: 'venue-leaflet-icon' + (isMine ? ' venue-leaflet-icon-mine' : ''),
+        html: `<div class="venue-pin-wrap">` +
+          `<div class="venue-pin"><img src="${team.logoSrc}" alt="" onerror="this.style.display='none';this.parentNode.classList.add('venue-pin-noimg')"></div>` +
+          `<div class="venue-pin-name${isMine ? ' venue-pin-name-mine' : ''}">${shortTeamName}</div>` +
+          `</div>`,
+        iconSize: [64, 54],
+        iconAnchor: [32, 17],
+        popupAnchor: [0, -20]
+      });
+
+      const marker = L.marker([team.venue.lat, team.venue.lng], { icon }).addTo(mapInstance);
+      const distPopupLine = (!isMine && homeVenue)
+        ? `<br><span class="venue-popup-distance">${isKorean ? '치주물루로부터 ' : 'From Chizumulu: '}${distLabel}</span>`
+        : '';
+      marker.bindPopup(
+        `<div class="venue-popup"><strong>${teamName}</strong><br>${venueName}<br>` +
+        `<span class="venue-popup-coords">${team.venue.lat.toFixed(5)}, ${team.venue.lng.toFixed(5)}</span>${distPopupLine}</div>`
+      );
+      marker.on('click', () => highlightVenueMarker(idx, 'map', markerStore, mapInstance));
+      markerStore[idx] = marker;
+      bounds.push([team.venue.lat, team.venue.lng]);
+    });
+
+    if (bounds.length > 0) {
+      mapInstance.fitBounds(bounds, { padding: [32, 32], maxZoom: 12 });
+    }
+  }
+
+  function renderVenueLeafletMap() {
+    const mapEl = document.getElementById('venueLeafletMap');
+    if (!mapEl || typeof L === 'undefined') return;
+
+    if (!venueLeafletMap) {
+      venueLeafletMap = L.map('venueLeafletMap', { scrollWheelZoom: false });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>'
+      }).addTo(venueLeafletMap);
+    }
+
+    populateVenueMap(venueLeafletMap, venueMarkersByIdx);
+
+    // 탭이 숨겨진 상태에서 초기화됐을 수 있으므로, 보여진 뒤 크기를 다시 계산
+    setTimeout(() => { if (venueLeafletMap) venueLeafletMap.invalidateSize(); }, 60);
+  }
+
+  // ===== 구단 위치 지도 크게 보기 모달 =====
+  function renderVenueLeafletMapLarge() {
+    const mapEl = document.getElementById('venueLeafletMapLarge');
+    if (!mapEl || typeof L === 'undefined') return;
+
+    if (!venueLeafletMapLarge) {
+      venueLeafletMapLarge = L.map('venueLeafletMapLarge', { scrollWheelZoom: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>'
+      }).addTo(venueLeafletMapLarge);
+    }
+
+    populateVenueMap(venueLeafletMapLarge, venueMarkersByIdxLarge);
+  }
+
+  function openVenueMapModal() {
+    const modal = document.getElementById('venueMapModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    renderVenueLeafletMapLarge();
+    setTimeout(() => { if (venueLeafletMapLarge) venueLeafletMapLarge.invalidateSize(); }, 80);
+  }
+
+  function closeVenueMapModal() {
+    const modal = document.getElementById('venueMapModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function highlightVenueMarker(idx, source, markerStore, mapInstance) {
+    markerStore = markerStore || venueMarkersByIdx;
+    mapInstance = mapInstance || venueLeafletMap;
+    document.querySelectorAll('.venue-list-item.active').forEach(el => el.classList.remove('active'));
+    const listRow = document.querySelector('.venue-list-item[data-venue-idx="' + idx + '"]');
+    if (listRow) {
+      listRow.classList.add('active');
+      if (source === 'map') listRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    const marker = markerStore[idx];
+    if (marker && mapInstance) {
+      mapInstance.flyTo(marker.getLatLng(), Math.max(mapInstance.getZoom(), 11), { duration: 0.6 });
+      if (source === 'list') marker.openPopup();
+    }
+  }
+
+  function renderVenuesList() {
+    const wrap = document.getElementById('venuesList');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+
+    const homeVenue = getHomeVenue();
+    const teams = leagueData.filter(t => t.venue).slice().sort((a, b) => {
+      const an = isKorean ? a.nameKo : a.nameEn;
+      const bn = isKorean ? b.nameKo : b.nameEn;
+      return an.localeCompare(bn);
+    });
+
+    teams.forEach(team => {
+      const idx = leagueData.indexOf(team);
+      const row = document.createElement('div');
+      row.className = 'venue-list-item';
+      row.setAttribute('data-venue-idx', idx);
+      const teamName = isKorean ? team.nameKo : team.nameEn;
+      const venueName = isKorean ? team.venue.nameKo : team.venue.nameEn;
+      const isMine = team.nameEn === 'Chizumulu United FC';
+      const distLabel = formatDistanceLabel(team, homeVenue, isMine);
+      row.innerHTML = `
+        <img class="team-logo venue-list-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}">
+        <div class="venue-list-text">
+          <span class="venue-list-team lbl" data-en="${team.nameEn}" data-ko="${team.nameKo}">${teamName}</span>
+          <span class="venue-list-ground lbl" data-en="${team.venue.nameEn}" data-ko="${team.venue.nameKo}">${venueName}</span>
+        </div>
+        <div class="venue-list-meta">
+          <span class="venue-list-coords">${team.venue.lat.toFixed(4)}, ${team.venue.lng.toFixed(4)}</span>
+          ${distLabel ? `<span class="venue-list-distance${isMine ? ' venue-list-distance-mine' : ''}">${distLabel}</span>` : ''}
+        </div>
+      `;
+      row.addEventListener('click', () => highlightVenueMarker(idx, 'list'));
+      wrap.appendChild(row);
+    });
+
+    attachImageFallback();
+  }
+
+  const RANK_HIST_COLORS = [
+    '#e63946', '#f4a261', '#e9c46a', '#8ab17d', '#2a9d8f',
+    '#3fc4c4', '#118ab2', '#5b5fc7', '#9b5de5', '#f15bb5',
+    '#ef476f', '#ff7f51', '#8d6a4f', '#6c7a89', '#495867'
+  ];
+
+  function straightPath(coords) {
+    if (coords.length === 0) return '';
+    return coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x.toFixed(2)} ${c.y.toFixed(2)}`).join(' ');
+  }
+
+  let rankHistHighlighted = null;
+
+
+  // ===== SVG 차트 - 주차별 순위 변동 (Rank History Chart) =====
+  // renderRankHistoryChart()가 하던 일을 역할별로 나눈 헬퍼 함수들입니다:
+  //   computeRankHistDimensions  - 차트 크기/좌표 변환 함수 계산
+  //   drawRankHistBackdrop       - 배경 카드 + 짝수 순위 줄무늬
+  //   drawRankHistGridlines      - 가로(순위)/세로(주차) 격자선 + 라벨 + 테두리
+  //   drawRankHistAxisTitles     - X/Y축 제목
+  //   addRankHistGlowFilter      - 강조 시 사용하는 그림자(glow) 필터 정의
+  //   buildRankHistTeamLines     - 팀별 좌표/색상 데이터 계산 (DOM 없음)
+  //   drawRankHistTeamLine       - 팀 한 명 분의 선/점/로고/약어를 그림
+  //   applyRankHistHighlight     - 특정 팀 강조 표시 on/off
+  //   buildRankHistLegend        - 하단 팀 칩(legend) 생성 + 클릭 핸들러
+
+  function computeRankHistDimensions(history) {
+    const teamCount = leagueData.length;
+    const weekCount = history.length;
+    const W = 820, H = 40 + teamCount * 34;
+    const margin = { top: 26, right: 118, bottom: 42, left: 42 };
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+    const logoColX = margin.left + plotW + 26;
+
+    function xPos(week) {
+      return weekCount > 1
+        ? margin.left + ((week - 1) / (weekCount - 1)) * plotW
+        : margin.left + plotW / 2;
+    }
+    function yPos(rank) {
+      return margin.top + ((rank - 1) / (teamCount - 1)) * plotH;
+    }
+
+    return { teamCount, weekCount, W, H, margin, plotW, plotH, logoColX, xPos, yPos };
+  }
+
+  function drawRankHistBackdrop(svg, dims) {
+    const { margin, plotW, plotH, teamCount, yPos } = dims;
+    const ct = chartTheme();
+
+    // 둥근 배경 카드
+    svg.appendChild(svgEl('rect', { x: margin.left, y: margin.top, width: plotW, height: plotH, rx: 10, fill: ct.backdropCard }));
+
+    // 홀수 순위 줄에 옅은 배경 (가독성용 줄무늬)
+    const rowH = teamCount > 1 ? plotH / (teamCount - 1) : plotH;
+    for (let r = 1; r <= teamCount; r++) {
+      if (r % 2 === 0) continue;
+      const yTop = yPos(r) - rowH / 2;
+      svg.appendChild(svgEl('rect', {
+        x: margin.left, y: Math.max(margin.top, yTop), width: plotW,
+        height: Math.min(rowH, margin.top + plotH - Math.max(margin.top, yTop)),
+        fill: ct.backdropStripe
+      }));
+    }
+  }
+
+  function drawRankHistGridlines(svg, dims) {
+    const { margin, plotW, plotH, teamCount, weekCount, xPos, yPos } = dims;
+    const ct = chartTheme();
+
+    // 가로 순위 격자선 + 좌측 순위 숫자
+    for (let r = 1; r <= teamCount; r++) {
+      const y = yPos(r);
+      svg.appendChild(svgEl('line', { x1: margin.left, y1: y, x2: margin.left + plotW, y2: y, stroke: ct.gridLine, 'stroke-width': 1 }));
+      const t = svgEl('text', { x: margin.left - 10, y: y + 4, 'text-anchor': 'end', class: 'rank-hist-week-label' });
+      t.textContent = r;
+      svg.appendChild(t);
+    }
+
+    // 세로 주차 격자선 + 하단 주차 라벨
+    for (let w = 1; w <= weekCount; w++) {
+      const x = xPos(w);
+      svg.appendChild(svgEl('line', { x1: x, y1: margin.top, x2: x, y2: margin.top + plotH, stroke: ct.gridLine, 'stroke-width': 1, 'stroke-dasharray': '3,4' }));
+      const t = svgEl('text', { x: x, y: margin.top + plotH + 20, 'text-anchor': 'middle', class: 'rank-hist-week-label' });
+      t.textContent = isKorean ? `${w}주` : `W${w}`;
+      svg.appendChild(t);
+    }
+
+    // 플롯 테두리
+    svg.appendChild(svgEl('rect', { x: margin.left, y: margin.top, width: plotW, height: plotH, rx: 10, fill: 'none', stroke: ct.gridBorder, 'stroke-width': 1.5 }));
+  }
+
+  function drawRankHistAxisTitles(svg, dims) {
+    const { margin, plotW, plotH, H } = dims;
+
+    const yTitle = svgEl('text', { x: 12, y: margin.top + plotH / 2, 'text-anchor': 'middle', class: 'rank-hist-axis-label', transform: `rotate(-90 12 ${margin.top + plotH / 2})` });
+    yTitle.textContent = isKorean ? '순위 →' : 'Rank →';
+    svg.appendChild(yTitle);
+
+    const xTitle = svgEl('text', { x: margin.left + plotW / 2, y: H - 6, 'text-anchor': 'middle', class: 'rank-hist-axis-label' });
+    xTitle.textContent = isKorean ? '주차 →' : 'Week →';
+    svg.appendChild(xTitle);
+  }
+
+  function addRankHistGlowFilter(defs) {
+    const glow = svgEl('filter', { id: 'rankHistGlow', x: '-60%', y: '-60%', width: '220%', height: '220%' });
+    glow.innerHTML = '<feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#000" flood-opacity="0.28"/>';
+    defs.appendChild(glow);
+  }
+
+  // 팀별 색상 + 주차별 (x, y) 좌표를 계산합니다. DOM을 건드리지 않는 순수 데이터 계산 단계입니다.
+  function buildRankHistTeamLines(history, dims) {
+    const { xPos, yPos } = dims;
+    let colorCursor = 0;
+    return leagueData.map((team) => {
+      const isMine = team.nameEn === 'Chizumulu United FC';
+      const color = isMine ? '#0454e0' : RANK_HIST_COLORS[colorCursor++ % RANK_HIST_COLORS.length];
+      const coords = history.map(h => ({
+        week: h.week,
+        rank: h.ranks[team.nameEn],
+        x: xPos(h.week),
+        y: yPos(h.ranks[team.nameEn])
+      }));
+      return { team, color, isMine, coords };
+    });
+  }
+
+  // 팀 한 명 분의 연결선, 순위선, 주차별 점, 로고, 구단 약어를 그립니다.
+  function drawRankHistTeamLine(lineGroup, defs, tl, tlIdx, logoColX) {
+    const lastCoord = tl.coords[tl.coords.length - 1];
+
+    // 마지막 점에서 로고 칼럼까지 이어지는 얇은 연결선
+    const connector = svgEl('line', {
+      x1: lastCoord.x, y1: lastCoord.y, x2: logoColX, y2: lastCoord.y,
+      stroke: tl.color, 'stroke-width': tl.isMine ? 2.4 : 1.6, 'stroke-dasharray': '2,3', opacity: 0.75
+    });
+    connector.classList.add('rank-hist-line');
+    connector.dataset.teamKey = tl.team.nameEn;
+    lineGroup.appendChild(connector);
+    tl.connectorEl = connector;
+
+    // 주차별 순위를 잇는 선
+    const pathD = straightPath(tl.coords);
+    const path = svgEl('path', { d: pathD, stroke: tl.color, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+    path.classList.add('rank-hist-line');
+    if (tl.isMine) path.classList.add('highlighted');
+    path.dataset.teamKey = tl.team.nameEn;
+    lineGroup.appendChild(path);
+    tl.pathEl = path;
+
+    // 주차별 점(dot)
+    tl.dotEls = tl.coords.map((c) => {
+      const dot = svgEl('circle', { cx: c.x, cy: c.y, r: tl.isMine ? 5 : 3.6, fill: tl.color, stroke: '#fff', 'stroke-width': 1.6 });
+      dot.classList.add('rank-hist-dot');
+      dot.dataset.teamKey = tl.team.nameEn;
+      const title = svgEl('title', {});
+      const name = isKorean ? tl.team.nameKo : tl.team.nameEn;
+      const weekLabel = isKorean ? `${c.week}주차` : `Week ${c.week}`;
+      const rankLabel = isKorean ? `${c.rank}위` : `Rank ${c.rank}`;
+      title.textContent = `${name} — ${weekLabel}: ${rankLabel}`;
+      dot.appendChild(title);
+      lineGroup.appendChild(dot);
+      return dot;
+    });
+
+    // 로고 칼럼: 마지막 순위 자리에 구단 로고 배치
+    const r = tl.isMine ? 14 : 12;
+    const g = svgEl('g', {});
+    g.dataset.teamKey = tl.team.nameEn;
+    g.classList.add('rank-hist-dot');
+
+    const clipId = 'rankHistClip-' + tlIdx;
+    const clipPath = svgEl('clipPath', { id: clipId });
+    clipPath.appendChild(svgEl('circle', { cx: logoColX, cy: lastCoord.y, r: r - 2 }));
+    defs.appendChild(clipPath);
+
+    g.appendChild(svgEl('circle', { cx: logoColX, cy: lastCoord.y, r: r - 2, fill: '#fff' }));
+
+    const img = svgEl('image', {
+      x: logoColX - r + 2, y: lastCoord.y - r + 2, width: (r - 2) * 2, height: (r - 2) * 2,
+      'clip-path': `url(#${clipId})`, preserveAspectRatio: 'xMidYMid slice'
+    });
+    img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', tl.team.logoSrc);
+    img.setAttribute('href', tl.team.logoSrc);
+    img.addEventListener('error', function handleErr() {
+      img.removeEventListener('error', handleErr);
+      const cleanName = (tl.team.nameEn || 'Team').replace(/\s+FC$/i, '').replace(/\s+Academy$/i, '').trim();
+      const initials = cleanName.split(' ').map(w => w[0]).join('').substring(0, 3).toUpperCase();
+      const fallback = `https://placehold.co/40x40/033990/FFFFFF?text=${initials}`;
+      img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', fallback);
+      img.setAttribute('href', fallback);
+    });
+
+    const ring = svgEl('circle', { cx: logoColX, cy: lastCoord.y, r: r - 1, fill: 'none', stroke: tl.color, 'stroke-width': tl.isMine ? 3 : 2 });
+
+    const title = svgEl('title', {});
+    const name = isKorean ? tl.team.nameKo : tl.team.nameEn;
+    title.textContent = `${name} — ${isKorean ? '현재' : 'Current'}: ${lastCoord.rank}${isKorean ? '위' : ''}`;
+
+    g.appendChild(img);
+    g.appendChild(ring);
+    g.appendChild(title);
+    lineGroup.appendChild(g);
+    tl.logoEl = g;
+
+    // 로고 오른쪽에 구단 약어 표시
+    const shortName = (isKorean ? tl.team.nameKo : tl.team.nameEn).split(' ')[0];
+    const abbrText = svgEl('text', {
+      x: logoColX + r + 5, y: lastCoord.y + 4,
+      class: tl.isMine ? 'rank-hist-abbr-mine rank-hist-dot' : 'rank-hist-abbr rank-hist-dot'
+    });
+    abbrText.dataset.teamKey = tl.team.nameEn;
+    abbrText.textContent = shortName;
+    abbrText.style.fill = tl.color;
+    lineGroup.appendChild(abbrText);
+    tl.abbrEl = abbrText;
+  }
+
+  // teamKey가 있으면 해당 팀 선/점/로고/칩만 강조하고 나머지는 흐리게, null이면 전체 강조 해제
+  function applyRankHistHighlight(teamLines, teamKey) {
+    teamLines.forEach(tl => {
+      const active = !teamKey || tl.team.nameEn === teamKey;
+      tl.pathEl.classList.toggle('dimmed', !active);
+      tl.pathEl.classList.toggle('highlighted', !!teamKey && active);
+      tl.connectorEl.classList.toggle('dimmed', !active);
+      tl.pathEl.style.filter = (teamKey && active) ? 'url(#rankHistGlow)' : '';
+      tl.dotEls.forEach(d => d.classList.toggle('dimmed', !active));
+      tl.logoEl.classList.toggle('dimmed', !active);
+      tl.abbrEl.classList.toggle('dimmed', !active);
+    });
+    document.querySelectorAll('.rank-hist-chip').forEach(chip => {
+      const active = !teamKey || chip.dataset.teamKey === teamKey;
+      chip.classList.toggle('dimmed', !active);
+    });
+  }
+
+  // legend chips: 클릭하면 해당 팀 선만 강조, 다시 클릭하면 해제
+  function buildRankHistLegend(legendEl, teamLines) {
+    teamLines.forEach(tl => {
+      const chip = document.createElement('div');
+      chip.className = 'rank-hist-chip';
+      chip.dataset.teamKey = tl.team.nameEn;
+      const dot = document.createElement('span');
+      dot.className = 'chip-dot';
+      dot.style.background = tl.color;
+      const label = document.createElement('span');
+      label.textContent = (isKorean ? tl.team.nameKo : tl.team.nameEn).replace(/\s*FC$/i, '');
+      chip.appendChild(dot);
+      chip.appendChild(label);
+      chip.addEventListener('click', () => {
+        rankHistHighlighted = rankHistHighlighted === tl.team.nameEn ? null : tl.team.nameEn;
+        applyRankHistHighlight(teamLines, rankHistHighlighted);
+      });
+      legendEl.appendChild(chip);
+    });
+  }
+
+  function renderRankHistoryChart() {
+    const svg = document.getElementById('rankHistorySvg');
+    const legendEl = document.getElementById('rankHistLegend');
+    if (!svg || !legendEl) return;
+    svg.innerHTML = '';
+    legendEl.innerHTML = '';
+
+    const history = computeStandingsHistory();
+    if (!history.length) return;
+
+    const dims = computeRankHistDimensions(history);
+    svg.setAttribute('viewBox', `0 0 ${dims.W} ${dims.H}`);
+
+    drawRankHistBackdrop(svg, dims);
+    drawRankHistGridlines(svg, dims);
+    drawRankHistAxisTitles(svg, dims);
+
+    const defs = svgEl('defs', {});
+    svg.appendChild(defs);
+    addRankHistGlowFilter(defs);
+
+    const teamLines = buildRankHistTeamLines(history, dims);
+
+    const lineGroup = svgEl('g', {});
+    svg.appendChild(lineGroup);
+    teamLines.forEach((tl, tlIdx) => drawRankHistTeamLine(lineGroup, defs, tl, tlIdx, dims.logoColX));
+
+    buildRankHistLegend(legendEl, teamLines);
+    applyRankHistHighlight(teamLines, rankHistHighlighted);
+  }
+
+
+  // ===== 통계 상세 모달 (Stat Detail Modal) =====
+
+  // 모달 종류별 설정. 새 통계 항목을 추가하려면 이 객체에 항목만 추가하면 됩니다.
+  // (statsData의 key와 동일한 이름을 사용)
+  const MODAL_CONFIG = {
+    goalsFor: {
+      titleKo: "경기당 득점 (전체)", titleEn: "GOALS PER GAME (Full List)",
+      header1Ko: "총 득점", header1En: "TOTAL",
+      header2Ko: "경기당", header2En: "PER GAME",
+    },
+    goalsAgainst: {
+      titleKo: "경기당 실점 (전체)", titleEn: "GOALS CONCEDED PER GAME (Full List)",
+      header1Ko: "총 실점", header1En: "TOTAL",
+      header2Ko: "경기당", header2En: "PER GAME",
+    },
+    cs: {
+      titleKo: "무실점 경기수 (전체)", titleEn: "CLEAN SHEETS (Full List)",
+      header1Ko: "무실점", header1En: "CLEAN SHEETS",
+      // header2 없음 (단일 컬럼 통계)
+    },
+    fts: {
+      titleKo: "무득점 경기수 (전체)", titleEn: "FAILED TO SCORE (Full List)",
+      header1Ko: "무득점", header1En: "FAILED TO SCORE",
+    },
+    ppg: {
+      titleKo: "경기당 승점 (전체)", titleEn: "POINTS PER GAME (Full List)",
+      header1Ko: "승점", header1En: "PTS",
+      header2Ko: "경기당", header2En: "PPG",
+    },
+    pythag: {
+      titleKo: "피타고리안 승점 (전체)", titleEn: "PYTHAGOREAN POINTS (Full List)",
+      header1Ko: "기대 승점", header1En: "EXPECTED",
+      header2Ko: "실제 대비", header2En: "+/-",
+    },
+    streakWin: {
+      titleKo: "연승 (전체)", titleEn: "WINNING STREAK (Full List)",
+      header1Ko: "연승", header1En: "STREAK",
+    },
+    streakLoss: {
+      titleKo: "연패 (전체)", titleEn: "LOSING STREAK (Full List)",
+      header1Ko: "연패", header1En: "STREAK",
+    },
+    streakDraw: {
+      titleKo: "연속 무승부 (전체)", titleEn: "DRAWING STREAK (Full List)",
+      header1Ko: "연무", header1En: "STREAK",
+    },
+    streakUnbeaten: {
+      titleKo: "무패 행진 (전체)", titleEn: "UNBEATEN STREAK (Full List)",
+      header1Ko: "무패", header1En: "STREAK",
+    },
+    streakScoring: {
+      titleKo: "연속 득점 (전체)", titleEn: "SCORING STREAK (Full List)",
+      header1Ko: "연속 득점", header1En: "STREAK",
+    },
+    streakConceding: {
+      titleKo: "연속 실점 (전체)", titleEn: "CONCEDING STREAK (Full List)",
+      header1Ko: "연속 실점", header1En: "STREAK",
+    },
+  };
+
+  function openModal(type) {
+    const config = MODAL_CONFIG[type];
+    if (!config) return;
+
+    currentModalType = type;
+    const modal = document.getElementById('statModal');
+    const title = document.getElementById('modalTitle');
+    const header1 = document.getElementById('modalStatHeader1');
+    const header2 = document.getElementById('modalStatHeader2');
+
+    title.textContent = isKorean ? config.titleKo : config.titleEn;
+    header1.textContent = isKorean ? config.header1Ko : config.header1En;
+
+    const hasHeader2 = config.header2Ko !== undefined;
+    header2.style.display = hasHeader2 ? '' : 'none';
+    if (hasHeader2) {
+      header2.textContent = isKorean ? config.header2Ko : config.header2En;
+    }
+
+    renderStatsTable('modalTableBody', statsData[type], type);
+    modal.style.display = 'flex';
+  }
+
+  function closeModal() {
+    currentModalType = null;
+    document.getElementById('statModal').style.display = 'none';
+  }
+
+  // ===== 선수 득점 타임라인 모달 (Player Goal Timeline Modal) =====
+  function openPlayerModal(key) {
+    const player = topScorersData.find(p => p.key === key);
+    if (!player) return;
+
+    currentPlayerModalKey = key;
+
+    const timeline = (playerGoalTimelines[key] || []).slice();
+
+    document.getElementById('playerModalLogo').src = player.teamLogo;
+    document.getElementById('playerModalLogo').alt = player.teamEn;
+    document.getElementById('playerModalName').textContent = isKorean ? player.nameKo : player.nameEn;
+    document.getElementById('playerModalTeam').textContent = isKorean ? player.teamKo : player.teamEn;
+    document.getElementById('playerModalTotalGoals').textContent = player.goals;
+    document.getElementById('playerModalMatches').textContent = timeline.length;
+
+    const listEl = document.getElementById('playerTimeline');
+    listEl.innerHTML = '';
+
+    timeline.forEach(entry => {
+      const weekLabel = isKorean ? `${entry.weekNum}주차` : `Week ${entry.weekNum}`;
+      const oppName = isKorean ? entry.oppKo : entry.oppEn;
+      const haClass = entry.homeAway === 'H' ? 'ha-home' : 'ha-away';
+      const scoreLine = entry.homeAway === 'H'
+        ? `${entry.homeScore} : ${entry.awayScore}`
+        : `${entry.awayScore} : ${entry.homeScore}`;
+      const pkTag = entry.isPk ? `<span class="timeline-pk-tag">PK</span>` : '';
+      const goalsLabel = isKorean ? `${entry.goals}골` : (entry.goals > 1 ? `${entry.goals} goals` : `${entry.goals} goal`);
+
+      const row = document.createElement('div');
+      row.className = 'timeline-row';
+      row.innerHTML = `
+        <div class="timeline-round">
+          <span class="timeline-round-label">${weekLabel}</span>
+        </div>
+        <div class="timeline-match">
+          <span class="ha-badge ${haClass}">${entry.homeAway}</span>
+          ${entry.oppLogo ? `<img class="team-logo team-logo-sm" src="${entry.oppLogo}" alt="${entry.oppEn}">` : ''}
+          <span class="timeline-opp-name">${oppName}</span>
+          <span class="timeline-score">${scoreLine}</span>
+        </div>
+        <div class="timeline-goals">
+          <span class="timeline-goals-badge">${goalsLabel}</span>
+          ${pkTag}
+        </div>
+      `;
+      listEl.appendChild(row);
+    });
+
+    if (timeline.length === 0) {
+      listEl.innerHTML = `<div class="timeline-empty">${isKorean ? '득점 기록이 없습니다.' : 'No goal records.'}</div>`;
+    }
+
+    attachImageFallback();
+    document.getElementById('playerModal').style.display = 'flex';
+  }
+
+  function closePlayerModal() {
+    currentPlayerModalKey = null;
+    document.getElementById('playerModal').style.display = 'none';
+  }
+
+  document.addEventListener('click', function(event) {
+    const link = event.target.closest('.player-name-link');
+    if (link && link.dataset.playerKey) {
+      openPlayerModal(link.dataset.playerKey);
+    }
+  });
+
+  // ===== 스쿼드 선수 통산 기록 모달 (Squad Player Career Stats Modal) =====
+  function openSquadPlayerModal(number) {
+    const num = parseInt(number, 10);
+    const player = squadData.find(p => p.number === num);
+    if (!player) return;
+
+    currentSquadPlayerModalNumber = num;
+    const stats = squadPlayerStats[num] || {
+      appearances: 0, starts: 0, subApps: 0, goals: 0,
+      captainCount: 0, motmCount: 0, history: []
+    };
+
+    document.getElementById('squadPlayerModalPhoto').src = player.photoSrc || '';
+    document.getElementById('squadPlayerModalPhoto').alt = player.nameEn;
+    document.getElementById('squadPlayerModalPhoto').style.display = player.photoSrc ? '' : 'none';
+    document.getElementById('squadPlayerModalName').textContent = isKorean ? player.nameKo : player.nameEn;
+    const posLabel = POSITION_LABEL[player.position] ? (isKorean ? POSITION_LABEL[player.position].ko : POSITION_LABEL[player.position].en) : player.position;
+    document.getElementById('squadPlayerModalPos').textContent = `#${player.number} · ${posLabel}`;
+
+    document.getElementById('squadPlayerModalApps').textContent = stats.appearances;
+    document.getElementById('squadPlayerModalGoals').textContent = stats.goals;
+    document.getElementById('squadPlayerModalStarts').textContent = `${stats.starts} / ${stats.subApps}`;
+    document.getElementById('squadPlayerModalMotm').textContent = stats.motmCount;
+
+    const noteEl = document.getElementById('squadPlayerModalCaptainNote');
+    if (stats.captainCount > 0) {
+      noteEl.style.display = '';
+      noteEl.innerHTML = isKorean
+        ? `🎖️ 주장 선발 출전 <b>${stats.captainCount}</b>회`
+        : `🎖️ Started as captain <b>${stats.captainCount}</b> time(s)`;
+    } else {
+      noteEl.style.display = 'none';
+      noteEl.innerHTML = '';
+    }
+
+    const listEl = document.getElementById('squadPlayerTimeline');
+    listEl.innerHTML = '';
+
+    stats.history.slice().reverse().forEach(entry => {
+      const weekLabel = isKorean ? `${entry.weekNum}주차` : `Week ${entry.weekNum}`;
+      const roleLabel = entry.wasStarter
+        ? (isKorean ? '선발' : 'Start')
+        : (isKorean ? '교체' : 'Sub');
+      const goalsTag = entry.goals > 0
+        ? `<span class="timeline-goals-badge">${isKorean ? entry.goals + '골' : (entry.goals > 1 ? entry.goals + ' goals' : entry.goals + ' goal')}</span>`
+        : '';
+      const capTag = entry.isCaptain ? `<span class="timeline-pk-tag">${isKorean ? 'C' : 'C'}</span>` : '';
+      const motmTag = entry.wasMotm ? `<span class="timeline-pk-tag">MOTM</span>` : '';
+
+      const row = document.createElement('div');
+      row.className = 'timeline-row';
+      row.innerHTML = `
+        <div class="timeline-round">
+          <span class="timeline-round-label">${weekLabel}</span>
+        </div>
+        <div class="timeline-match">
+          <span class="ha-badge ${entry.wasStarter ? 'ha-home' : 'ha-away'}">${roleLabel}</span>
+          <span class="timeline-opp-name">vs ${entry.opponentKo}</span>
+          <span class="timeline-score">${entry.result}</span>
+        </div>
+        <div class="timeline-goals">
+          ${goalsTag}
+          ${capTag}
+          ${motmTag}
+        </div>
+      `;
+      listEl.appendChild(row);
+    });
+
+    if (stats.history.length === 0) {
+      listEl.innerHTML = `<div class="timeline-empty">${isKorean ? '출전 기록이 없습니다.' : 'No appearance records.'}</div>`;
+    }
+
+    attachImageFallback();
+    document.getElementById('squadPlayerModal').style.display = 'flex';
+  }
+
+  function closeSquadPlayerModal() {
+    currentSquadPlayerModalNumber = null;
+    document.getElementById('squadPlayerModal').style.display = 'none';
+  }
+
+  // ===== 팀 정보 전환 (Team Info Switcher: 좌우 화살표 / 팀 바로가기) =====
+  // 치주물루는 기존 전체 허브(팀정보/기록/선수단/상대전적/경기결과)를 그대로 보여주고,
+  // 나머지 14개 구단은 leagueData에 있는 간단 정보(순위/승점/전적/폼/다음경기/홈구장)만
+  // 같은 전체화면 레이아웃으로 보여줍니다.
+  function renderTeamSwitcherBar(team, rank, total) {
+    const name = isKorean ? team.nameKo : team.nameEn;
+    const rankTxt = isKorean ? `${rank} / ${total}위` : `#${rank} of ${total}`;
+    const logoEl = document.getElementById('tiSwitchLogo');
+    const nameEl = document.getElementById('tiSwitchName');
+    const rankEl = document.getElementById('tiSwitchRank');
+    if (logoEl) { logoEl.src = team.logoSrc; logoEl.alt = team.nameEn; }
+    if (nameEl) {
+      nameEl.textContent = name;
+      nameEl.setAttribute('data-en', team.nameEn);
+      nameEl.setAttribute('data-ko', team.nameKo);
+    }
+    if (rankEl) rankEl.textContent = rankTxt;
+  }
+
+  function switchTeamInfo(direction) {
+    const ranked = getRankedTeams('all');
+    const idx = ranked.findIndex(t => t.nameEn === currentTeamInfoKey);
+    const safeIdx = idx === -1 ? 0 : idx;
+    const newIdx = (safeIdx + direction + ranked.length) % ranked.length;
+    showTeamInfoForKey(ranked[newIdx].nameEn);
+  }
+
+  function showTeamInfoForKey(nameEn) {
+    const ranked = getRankedTeams('all');
+    const idx = ranked.findIndex(t => t.nameEn === nameEn);
+    if (idx === -1) return;
+    const team = ranked[idx];
+
+    currentTeamInfoKey = team.nameEn;
+    renderTeamSwitcherBar(team, idx + 1, ranked.length);
+
+    const mineEl = document.getElementById('myTeamInfoView');
+    const otherEl = document.getElementById('otherTeamFullView');
+
+    if (isMyTeamName(team.nameEn, team.nameKo)) {
+      if (mineEl) mineEl.style.display = '';
+      if (otherEl) otherEl.style.display = 'none';
+      renderTeamInfoView();
+    } else {
+      if (mineEl) mineEl.style.display = 'none';
+      if (otherEl) otherEl.style.display = '';
+      renderOtherTeamFull(team, idx + 1, ranked.length);
+    }
+  }
+
+  function renderOtherTeamFull(t, rank, total) {
+    const name = isKorean ? t.nameKo : t.nameEn;
+    const venueName = t.venue ? (isKorean ? t.venue.nameKo : t.venue.nameEn) : '';
+
+    const headerEl = document.getElementById('otherTeamFullHeader');
+    if (headerEl) {
+      headerEl.innerHTML = `
+        <div class="squad-header team-info-header other-team-full-header" data-logo-src="${t.logoSrc}">
+          <img class="squad-header-logo" src="${t.logoSrc}" alt="${t.nameEn}">
+          <div class="squad-header-text">
+            <h2 class="lbl" data-en="${t.nameEn}" data-ko="${t.nameKo}">${name}</h2>
+            <span class="squad-header-sub lbl" data-en="26/27 Season · NRFA League One" data-ko="26/27 시즌 · NRFA 리그 원">26/27 시즌 · NRFA 리그 원</span>
+            ${venueName ? `<div class="team-info-people"><span class="team-info-person"><span class="tip-label lbl" data-en="Home Ground" data-ko="홈구장">홈구장</span><span class="tip-value lbl" data-en="${t.venue.nameEn}" data-ko="${t.venue.nameKo}">${venueName}</span></span></div>` : ''}
+          </div>
+          <div class="team-info-quickstats">
+            <div class="ti-stat ti-stat-highlight">
+              <span class="ti-stat-value">${rank}${isKorean ? '위' : ''}</span>
+              <span class="ti-stat-label lbl" data-en="RANK" data-ko="순위">${isKorean ? '순위' : 'RANK'}</span>
+            </div>
+            <div class="ti-stat">
+              <span class="ti-stat-value">${t.pts}</span>
+              <span class="ti-stat-label lbl" data-en="PTS" data-ko="승점">${isKorean ? '승점' : 'PTS'}</span>
+            </div>
+            <div class="ti-stat">
+              <span class="ti-stat-value">${t.played}</span>
+              <span class="ti-stat-label lbl" data-en="PLAYED" data-ko="경기">${isKorean ? '경기' : 'PLAYED'}</span>
+            </div>
+            <div class="ti-stat">
+              <span class="ti-stat-value">${t.won}</span>
+              <span class="ti-stat-label lbl" data-en="W" data-ko="승">${isKorean ? '승' : 'W'}</span>
+            </div>
+            <div class="ti-stat">
+              <span class="ti-stat-value">${t.drawn}</span>
+              <span class="ti-stat-label lbl" data-en="D" data-ko="무">${isKorean ? '무' : 'D'}</span>
+            </div>
+            <div class="ti-stat">
+              <span class="ti-stat-value">${t.lost}</span>
+              <span class="ti-stat-label lbl" data-en="L" data-ko="패">${isKorean ? '패' : 'L'}</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // 치주물루(우리 팀)와 동일한 형태로 보여줍니다: 기록 카드 → 폼 가이드 + 홈 vs 원정 카드 → 다음 경기.
+    const recordCardHtml = buildRecordCardHtml(t, rank, total);
+    const formGuideHtml = buildFormGuideCardHtml(t);
+    const homeAwayHtml = renderHomeAwaySplitCard(t);
+    const nextMatchHtml = nextMatchOpponentHtml(t, rank);
+
+    const bodyEl = document.getElementById('otherTeamFullBody');
+    if (bodyEl) {
+      bodyEl.innerHTML = `
+        <div class="ti-section">
+          <div class="ti-section-title lbl" data-en="Record" data-ko="기록">${isKorean ? '기록' : 'Record'}</div>
+          ${recordCardHtml}
+        </div>
+        <div class="ti-section">
+          <div class="ti-overview-grid other-team-full-grid">
+            ${formGuideHtml}
+            ${homeAwayHtml}
+          </div>
+        </div>
+        <div class="ti-section">
+          <div class="ti-card">
+            ${nextMatchHtml}
+          </div>
+        </div>`;
+    }
+
+    attachImageFallback();
+    applyOtherTeamHeaderAccent(t.nameEn);
+  }
+
+  // ===== 타 팀 헤더 색상 (하드코딩) =====
+  // 로고에서 실시간으로 색을 뽑는 대신, 팀별로 고정된 색상을 지정합니다.
+  // (일괄 남색 대신 팀마다 다른 색으로 보이도록)
+  const TEAM_ACCENT_COLORS = {
+    "Chibavi Real Stars FC":  { r: 196, g: 45,  b: 58  }, // 레드
+    "Jenda United FC":        { r: 32,  g: 122, b: 77  }, // 그린
+    "Chintheche United FC":   { r: 106, g: 56,  b: 168 }, // 퍼플
+    "Chilumba Barracks FC":   { r: 200, g: 98,  b: 24  }, // 오렌지
+    "Mafu Stars FC":          { r: 16,  g: 137, b: 126 }, // 틸
+    "M'mbelwa Warriors FC":   { r: 145, g: 32,  b: 60  }, // 마룬
+    "Chipolopolo Boys FC":    { r: 176, g: 108, b: 30  }, // 카퍼/브론즈
+    "Ekwendeni FC":           { r: 51,  g: 92,  b: 158 }, // 슬레이트 블루
+    "Lube Masters FC":        { r: 98,  g: 110, b: 36  }, // 올리브
+    "Chihame All Stars FC":   { r: 190, g: 45,  b: 120 }, // 마젠타
+    "Raiply FC":              { r: 122, g: 78,  b: 44  }, // 브라운
+    "Euthini Veterans FC":    { r: 71,  g: 100, b: 112 }, // 스틸 블루그레이
+    "Vision S Academy":       { r: 68,  g: 60,  b: 168 }, // 인디고
+    "Luviri FC":              { r: 20,  g: 150, b: 108 }  // 에메랄드
+  };
+
+  function headerGradientFromColor(rgb) {
+    const { r, g, b } = rgb;
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    // 밝은 색일수록 더 어둡게 눌러서 흰 글자와 대비를 확보합니다.
+    const darkFactor = luminance > 0.6 ? 0.42 : (luminance > 0.4 ? 0.6 : 0.8);
+    const lightFactor = Math.min(darkFactor + 0.32, 1.15);
+    const clamp = (v) => Math.max(0, Math.min(255, Math.round(v)));
+    const dark = `rgb(${clamp(r * darkFactor)}, ${clamp(g * darkFactor)}, ${clamp(b * darkFactor)})`;
+    const light = `rgb(${clamp(r * lightFactor)}, ${clamp(g * lightFactor)}, ${clamp(b * lightFactor)})`;
+    return `linear-gradient(135deg, ${dark} 0%, ${light} 100%)`;
+  }
+
+  function applyOtherTeamHeaderAccent(nameEn) {
+    const headerEl = document.querySelector('.other-team-full-header');
+    if (!headerEl) return;
+
+    const rgb = TEAM_ACCENT_COLORS[nameEn];
+    if (!rgb) return;
+
+    if (!otherTeamAccentCache[nameEn]) {
+      otherTeamAccentCache[nameEn] = headerGradientFromColor(rgb);
+    }
+    headerEl.style.background = otherTeamAccentCache[nameEn];
+  }
+
+  // ===== 팀 바로가기 모달 (Jump to Team Modal) =====
+  function openOtherTeamModal() {
+    renderOtherTeamGrid();
+    document.getElementById('otherTeamModal').style.display = 'flex';
+  }
+
+  function closeOtherTeamModal() {
+    document.getElementById('otherTeamModal').style.display = 'none';
+  }
+
+  function jumpToTeam(nameEn) {
+    closeOtherTeamModal();
+    showTeamInfoForKey(nameEn);
+  }
+
+  function renderOtherTeamGrid() {
+    const grid = document.getElementById('otherTeamGrid');
+    if (!grid) return;
+    const ranked = getRankedTeams('all');
+
+    grid.innerHTML = ranked.map((t, idx) => {
+      const rank = idx + 1;
+      const isMine = isMyTeamName(t.nameEn, t.nameKo);
+      const isCurrent = t.nameEn === currentTeamInfoKey;
+      const name = isKorean ? t.nameKo : t.nameEn;
+      const rankTxt = isKorean ? `${rank}위 · ${t.pts}점` : `#${rank} · ${t.pts} pts`;
+      return `
+        <button class="other-team-grid-item${isCurrent ? ' other-team-grid-item-current' : ''}" onclick="jumpToTeam('${t.nameEn.replace(/'/g, "\\'")}')">
+          <img class="other-team-grid-logo" src="${t.logoSrc}" alt="${t.nameEn}">
+          <span class="other-team-grid-info">
+            <span class="other-team-grid-name lbl" data-en="${t.nameEn}" data-ko="${t.nameKo}">${name}${isMine ? (isKorean ? ' (우리 팀)' : ' (Us)') : ''}</span>
+            <span class="other-team-grid-rank">${rankTxt}</span>
+          </span>
+        </button>`;
+    }).join('');
+
+    attachImageFallback();
+  }
+
+  document.addEventListener('click', function(event) {
+    const card = event.target.closest('.squad-card');
+    if (card && card.dataset.playerNumber) {
+      openSquadPlayerModal(card.dataset.playerNumber);
+    }
+  });
+
+  function toggleInfoTooltip(event, id) {
+    event.stopPropagation();
+    document.querySelectorAll('.info-tooltip').forEach(el => {
+      if (el.id !== id) el.classList.remove('show');
+    });
+    document.getElementById(id).classList.toggle('show');
+  }
+
+  document.addEventListener('click', function() {
+    document.querySelectorAll('.info-tooltip').forEach(el => el.classList.remove('show'));
+  });
+  
+  window.onclick = function(event) {
+    const modal = document.getElementById('statModal');
+    if (event.target === modal) {
+      closeModal();
+    }
+    const playerModal = document.getElementById('playerModal');
+    if (event.target === playerModal) {
+      closePlayerModal();
+    }
+    const squadPlayerModal = document.getElementById('squadPlayerModal');
+    if (event.target === squadPlayerModal) {
+      closeSquadPlayerModal();
+    }
+    const matchDetailModal = document.getElementById('matchDetailModal');
+    if (event.target === matchDetailModal) {
+      closeMatchDetail();
+    }
+    const venueMapModal = document.getElementById('venueMapModal');
+    if (event.target === venueMapModal) {
+      closeVenueMapModal();
+    }
+  }
+
+  // ===== 라운드 상세(포메이션/득점/최근 전적) 모달 =====
+  const POS_ROWS = [
+    ['ST'],
+    ['LW', 'CAM', 'RW'],
+    ['LCM', 'RCM'],
+    ['LB', 'LCB', 'RCB', 'RB'],
+    ['GK']
+  ];
+
+  function findLineupPlayer(lineup, pos) {
+    return lineup.starters.find(s => s.pos === pos);
+  }
+
+  function renderLineupPitch(lineup) {
+    const isKo = isKorean;
+    let subIdx = 0;
+    const rowsHtml = POS_ROWS.map(rowPositions => {
+      const cellsHtml = rowPositions.map(pos => {
+        const p = findLineupPlayer(lineup, pos);
+        if (!p) return '';
+        const captainTag = p.captain ? `<span class="lineup-captain-tag">C</span>` : '';
+        const goalsHtml = (p.goals && p.goals.length)
+          ? `<span class="lineup-goal-tag">⚽ ${p.goals.filter(g => g !== '-').join(', ')}</span>`
+          : (p.goalNote ? `<span class="lineup-goal-tag">⚽</span>` : '');
+        let outHtml = '';
+        if (p.outMin) {
+          const half = p.outMin.startsWith('전반') ? '전반' : (p.outMin.startsWith('후반') ? '후반' : '');
+          const outLabel = half ? `${half} 교체 아웃` : '교체 아웃';
+          const outTimeHtml = `<span class="lineup-sub-out">${outLabel}${p.injury ? ' 🩹' : ''}</span>`;
+          // subsIn은 starters 배열과 동일한 순서로 기록되어 있으므로 인덱스로 매칭
+          const inPlayer = (lineup.subsIn && lineup.subsIn[subIdx]) ? lineup.subsIn[subIdx] : null;
+          subIdx++;
+          const inHtml = inPlayer
+            ? `<span class="lineup-sub-in">▲ ${inPlayer.number} ${isKo ? inPlayer.nameKo : (inPlayer.nameEn || inPlayer.nameKo)}${isKo ? ' 투입' : ' in'}</span>`
+            : '';
+          outHtml = outTimeHtml + inHtml;
+        }
+        return `
+          <div class="lineup-cell">
+            <div class="lineup-pos">${pos}</div>
+            <div class="lineup-player${p.outMin ? ' has-sub' : ''}">
+              <span class="lineup-num">${p.number}</span>
+              <span class="lineup-name">${p.nameKo}</span>
+              ${captainTag}
+              ${goalsHtml}
+            </div>
+            ${outHtml}
+          </div>`;
+      }).join('');
+      return `<div class="lineup-row">${cellsHtml}</div>`;
+    }).join('');
+    return `<div class="lineup-pitch">${rowsHtml}</div>`;
+  }
+
+  function renderLineupSubs(lineup) {
+    const isKo = isKorean;
+    const inHtml = lineup.subsIn.length
+      ? lineup.subsIn.map(s => {
+          const goalsHtml = (s.goals && s.goals.length)
+            ? `<span class="lineup-goal-tag">⚽ ${s.goals.filter(g => g !== '-').join(', ')}</span>`
+            : '';
+          return `<span class="lineup-sub-chip lineup-sub-chip-in">▲ ${s.inMin && s.inMin !== '-' ? s.inMin + ' ' : ''}${s.number} ${s.nameKo}${goalsHtml}</span>`;
+        }).join('')
+      : `<span class="lineup-sub-empty">${isKo ? '교체 없음' : 'No substitutions'}</span>`;
+
+    const unusedHtml = (lineup.subsUnused || []).map(num => {
+      const sq = squadData.find(p => p.number === num);
+      const name = sq ? (isKo ? sq.nameKo : sq.nameEn) : num;
+      return `<span class="lineup-sub-chip lineup-sub-chip-unused">${num} ${name}</span>`;
+    }).join('');
+
+    return `
+      <div class="lineup-subs-section">
+        <div class="lineup-subs-title lbl" data-en="Substitutes (Used)" data-ko="교체 투입">${isKo ? '교체 투입' : 'Substitutes (Used)'}</div>
+        <div class="lineup-subs-chips">${inHtml}</div>
+      </div>
+      <div class="lineup-subs-section">
+        <div class="lineup-subs-title lbl" data-en="Unused Substitutes" data-ko="벤치 (미출전)">${isKo ? '벤치 (미출전)' : 'Unused Substitutes'}</div>
+        <div class="lineup-subs-chips">${unusedHtml || `<span class="lineup-sub-empty">${isKo ? '없음' : 'None'}</span>`}</div>
+      </div>`;
+  }
+
+  function renderLineupHistory(lineup) {
+    const isKo = isKorean;
+    const rows = lineup.recentHistory.map(h => `
+      <tr>
+        <td class="h2h-comp">${h.comp}</td>
+        <td class="h2h-score">${h.score}</td>
+        <td class="h2h-result">${h.result}</td>
+      </tr>`).join('');
+    return `
+      <div class="lineup-history-section">
+        <div class="lineup-subs-title lbl" data-en="Recent Head-to-Head" data-ko="최근 상대 전적">${isKo ? '최근 상대 전적' : 'Recent Head-to-Head'}</div>
+        <table class="h2h-table">
+          <thead><tr>
+            <th class="lbl" data-en="Match" data-ko="경기">${isKo ? '경기' : 'Match'}</th>
+            <th class="lbl" data-en="Score" data-ko="스코어">${isKo ? '스코어' : 'Score'}</th>
+            <th class="lbl" data-en="Result" data-ko="결과">${isKo ? '결과' : 'Result'}</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="h2h-summary">${lineup.historySummary}</div>
+      </div>`;
+  }
+
+  // 결과 문자열("3 : 1 승" 등) 끝의 승/패/무 표기를 언어에 맞게 변환
+  function translateResultSuffix(resultKo) {
+    const suffixMap = { '승': 'W', '패': 'L', '무': 'D' };
+    const trimmed = resultKo.trim();
+    const lastChar = trimmed.slice(-1);
+    if (isKorean || !suffixMap[lastChar]) return resultKo;
+    const scorePart = trimmed.slice(0, -1).trim();
+    return `${scorePart} ${suffixMap[lastChar]}`;
+  }
+
+  function openMatchDetail(roundKey, weekNum) {
+    const lineup = matchLineups[roundKey];
+    if (!lineup) return;
+
+    const isKo = isKorean;
+    const weekLabel = isKo ? `${weekNum}주차` : `Week ${weekNum}`;
+    const opponentTeam = leagueData.find(t => t.nameKo === lineup.opponentKo);
+    const opponentName = opponentTeam ? (isKo ? opponentTeam.nameKo : opponentTeam.nameEn) : lineup.opponentKo;
+    const resultText = translateResultSuffix(lineup.result);
+    document.getElementById('matchDetailTitle').textContent =
+      `${weekLabel} vs ${opponentName} (${resultText})`;
+
+    const bodyEl = document.getElementById('matchDetailBody');
+    bodyEl.innerHTML = `
+      <div class="lineup-formation-tag">${lineup.formation}</div>
+      ${renderLineupPitch(lineup)}
+      ${renderLineupSubs(lineup)}
+      ${renderLineupHistory(lineup)}
+    `;
+
+    document.getElementById('matchDetailModal').style.display = 'flex';
+  }
+
+  function closeMatchDetail() {
+    document.getElementById('matchDetailModal').style.display = 'none';
+  }
+
+
+  // ===== 날짜 / 시즌 정보 유틸 (Date & Season Utils) =====
+  function getLocalToday() {
+    // 방문자의 브라우저(접속 국가) 로컬 시간대 기준 오늘 날짜
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  // 완료된 라운드 다음에 예정된 라운드의 첫 킥오프 날짜를 scheduledRounds에서 자동으로 찾습니다.
+  // (더 이상 NEXT_ROUND_START_DATE를 수동으로 갱신할 필요가 없습니다.)
+  function computeNextRoundStartDate() {
+    const completedRounds = sortedRoundKeys().length;
+    const nextKey = 'round' + (completedRounds + 1);
+    const nextRound = (scheduledRounds && scheduledRounds[nextKey]) || [];
+    const dates = nextRound
+      .filter(m => !m.byeKo && !m.byeEn && m.kickoffDate)
+      .map(m => m.kickoffDate)
+      .sort();
+    return dates[0] || null;
+  }
+
+  function updateSeasonInfo() {
+    const today = getLocalToday();
+    const nextRoundStartStr = computeNextRoundStartDate();
+    const nextRoundStart = nextRoundStartStr ? new Date(`${nextRoundStartStr}T00:00:00`) : null;
+
+    // 완료된 라운드 수를 기준 주차로 삼고, 다음 라운드 시작일이 지나면 주차를 하나 올립니다.
+    const completedRounds = sortedRoundKeys().length;
+    const week = (nextRoundStart && today >= nextRoundStart) ? completedRounds + 1 : completedRounds;
+
+    const weekEl = document.getElementById('weekLabel');
+    const dateEl = document.getElementById('dateLabel');
+    if (weekEl) weekEl.textContent = isKorean ? `${week}주차` : `Week ${week}`;
+    if (dateEl) {
+      dateEl.textContent = isKorean
+        ? `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
+        : today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+  }
+
+  function equalizeTitleLines() {
+    const h1 = document.querySelector('.league-title h1');
+    if (!h1) return;
+    const line1 = h1.querySelector('.sponsor-line');
+    const line2 = h1.querySelector('.main-line');
+    if (!line1 || !line2) return;
+    line1.style.letterSpacing = '';
+    line2.style.letterSpacing = '';
+    const w1 = line1.getBoundingClientRect().width;
+    const w2 = line2.getBoundingClientRect().width;
+    const shorter = w1 < w2 ? line1 : line2;
+    const longer = w1 < w2 ? line2 : line1;
+    const diff = longer.getBoundingClientRect().width - shorter.getBoundingClientRect().width;
+    const charCount = shorter.textContent.trim().length;
+    if (charCount > 1 && diff > 0) {
+      shorter.style.letterSpacing = (diff / (charCount - 1)) + 'px';
+    }
+  }
+
+
+  // ===== 언어 전환 (Language Toggle) =====
+  function toggleLang() {
+    isKorean = !isKorean;
+    document.querySelectorAll('.lbl').forEach(el => {
+      el.innerHTML = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');
+    });
+    document.querySelectorAll('.opp-logo').forEach(el => {
+      el.title = isKorean ? el.getAttribute('data-ko-name') : el.getAttribute('data-en-name');
+    });
+    document.getElementById('langBtnText').textContent = isKorean ? 'View in English' : '한국어로 보기';
+    updateSeasonInfo();
+    equalizeTitleLines();
+    
+    renderLeagueTable();
+    renderNextMatchStrip();
+    
+    if (currentView === 'stats') {
+      buildStatsTables();
+      if (currentModalType) {
+        openModal(currentModalType);
+      }
+    } else if (currentView === 'scorers') {
+      renderScorersTable();
+    } else if (currentView === 'predict') {
+      drawPredictionTable();
+      renderRankHistoryChart();
+    } else if (currentView === 'squad') {
+      showTeamInfoForKey(currentTeamInfoKey);
+    } else if (currentView === 'rounds') {
+      renderRoundsView();
+    } else if (currentView === 'venues') {
+      renderVenuesView();
+      const venueModal = document.getElementById('venueMapModal');
+      if (venueModal && venueModal.style.display === 'flex') {
+        renderVenueLeafletMapLarge();
+      }
+    }
+
+    if (currentPlayerModalKey) {
+      openPlayerModal(currentPlayerModalKey);
+    }
+    if (currentSquadPlayerModalNumber) {
+      openSquadPlayerModal(currentSquadPlayerModalNumber);
+    }
+
+    const otherTeamModal = document.getElementById('otherTeamModal');
+    if (otherTeamModal && otherTeamModal.style.display === 'flex') {
+      renderOtherTeamGrid();
+    }
+  }
+
+
+  // ===== 이미지 로드 실패 대체 처리 (Image Fallback) =====
+  function attachImageFallback() {
+    document.querySelectorAll('img').forEach(img => {
+      if (img.dataset.fallbackListenerAdded) return;
+      img.dataset.fallbackListenerAdded = true;
+      
+      img.addEventListener('error', function() {
+        if (this.dataset.fallbackApplied) return;
+        this.dataset.fallbackApplied = true;
+
+        let name = this.getAttribute('data-en-name') || this.alt || this.title || 'Team';
+        let cleanName = name.replace(/\s+FC$/i, '').replace(/\s+Academy$/i, '').trim();
+        let initials = cleanName.split(' ').map(w => w[0]).join('').substring(0, 3).toUpperCase();
+        
+        let size = '150x150';
+        if (this.classList.contains('team-logo-sm')) {
+            size = '40x40';
+        } else if (this.classList.contains('team-logo')) {
+            size = '50x50';
+        }
+
+        this.src = `https://placehold.co/${size}/033990/FFFFFF?text=${initials}`;
+      });
+    });
+  }
+
+
+  // ===== 접속 안내 팝업 (공식 사이트 아님 안내) =====
+  const DISCLAIMER_KEY = 'nrfa-disclaimer-hide-until';
+  const DISCLAIMER_HIDE_WEEKS = 1;
+
+  function showDisclaimerIfNeeded() {
+    const modal = document.getElementById('disclaimerModal');
+    if (!modal) return;
+    try {
+      const hideUntil = localStorage.getItem(DISCLAIMER_KEY);
+      if (hideUntil && Date.now() < Number(hideUntil)) {
+        return; // 아직 숨김 기간이 지나지 않음
+      }
+    } catch (e) {}
+    modal.style.display = 'flex';
+  }
+
+  function closeDisclaimer() {
+    const modal = document.getElementById('disclaimerModal');
+    const dontShow = document.getElementById('disclaimerDontShow');
+    if (dontShow && dontShow.checked) {
+      try {
+        const hideUntil = Date.now() + DISCLAIMER_HIDE_WEEKS * 7 * 24 * 60 * 60 * 1000;
+        localStorage.setItem(DISCLAIMER_KEY, String(hideUntil));
+      } catch (e) {}
+    }
+    if (modal) modal.style.display = 'none';
+  }
+
+  // ===== 초기 실행 (App Init) =====
+  document.addEventListener('DOMContentLoaded', function() {
+    renderLeagueTable();
+    renderNextMatchStrip();
+  
+    document.querySelectorAll('.lbl').forEach(el => {
+      el.innerHTML = el.getAttribute('data-ko');
+    });
+    document.getElementById('langBtnText').textContent = 'View in English';
+
+    applyTheme(isDarkTheme() ? 'dark' : 'light');
+    
+    attachImageFallback();
+
+    updateSeasonInfo();
+    equalizeTitleLines();
+    setInterval(updateSeasonInfo, 60 * 60 * 1000); 
+    setInterval(updateAllNextMatchCountdowns, 1000);
+    window.addEventListener('resize', equalizeTitleLines);
+
+    showDisclaimerIfNeeded();
+    initScrollFadeHints();
+    updateInstallBtnVisibility();
+  });
+
+  // ===== 스크롤 힌트 (표/탭 바를 좌우로 넘길 수 있음을 표시) =====
+  // 여러 개의 가로 스크롤 영역(순위표, 득점 순위표, 리그 예측표, 상단 탭 바)에
+  // 공통으로 적용합니다. 각 영역은 { scrollerId, fadeWrapId } 쌍으로 등록되고,
+  // 스크롤/리사이즈 시점마다 실제로 더 스크롤할 내용이 남아있는 쪽에만
+  // show-left/show-right 클래스를 붙여 그라데이션 힌트를 보여줍니다.
+  const scrollFadeUpdaters = [];
+
+  function registerScrollFadeHint(scrollerId, fadeWrapId) {
+    const scroller = document.getElementById(scrollerId);
+    const fadeWrap = document.getElementById(fadeWrapId);
+    if (!scroller || !fadeWrap) return;
+
+    function update() {
+      const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+      const scrolled = scroller.scrollLeft;
+      fadeWrap.classList.toggle('show-left', scrolled > 4);
+      fadeWrap.classList.toggle('show-right', scrolled < maxScroll - 4);
+    }
+
+    scroller.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+    setTimeout(update, 300);
+    scrollFadeUpdaters.push(update);
+  }
+
+  function initScrollFadeHints() {
+    registerScrollFadeHint('viewToggleWrap', 'viewToggleFade');
+    registerScrollFadeHint('rankTableScroller', 'rankTableFade');
+    registerScrollFadeHint('scorersTableScroller', 'scorersTableFade');
+    registerScrollFadeHint('predictTableScroller', 'predictTableFade');
+  }
+
+  // 데이터가 다시 렌더링되거나(언어 전환, 필터 변경, 화면 전환 등) 콘텐츠 폭이
+  // 바뀔 수 있는 시점마다 이 함수를 호출해 힌트 상태를 다시 계산합니다.
+  function refreshScrollFadeHints() {
+    scrollFadeUpdaters.forEach(update => update());
+  }
