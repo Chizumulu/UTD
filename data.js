@@ -828,16 +828,16 @@ const leagueData = [
   {
     nameKo: "젠다 유나이티드 FC", nameEn: "Jenda United FC", logoSrc: "젠다.webp",
     venue: { nameKo: "젠다 커뮤니티 그라운드", nameEn: "Jenda Community Ground", lat: -12.353220994618397, lng: 33.55134047659975 },
-    played: 6, won: 3, drawn: 3, lost: 0, goalsFor: 7, goalsAgainst: 3, cleanSheets: 4, failedToScore: 2,
-    form: ["W", "D", "D", "W", "W", "D"],
-    nextMatch: { isBye: false, homeAway: "A", oppKo: "치주물루 유나이티드 FC", oppEn: "Chizumulu United FC", oppLogo: "dd.svg", kickoffDate: "2026-08-21", kickoffTime: "15:00" }
+    played: 7, won: 3, drawn: 3, lost: 1, goalsFor: 7, goalsAgainst: 7, cleanSheets: 4, failedToScore: 3,
+    form: ["W", "D", "D", "W", "W", "D", "L"],
+    nextMatch: { isBye: false, homeAway: "H", oppKo: "치하메 올스타즈 FC", oppEn: "Chihame All Stars FC", oppLogo: "치하메.webp", kickoffDate: "2026-08-30", kickoffTime: "14:30" }
   },
   {
     nameKo: "치주물루 유나이티드 FC", nameEn: "Chizumulu United FC", logoSrc: "dd.svg",
     venue: { nameKo: "치테코 커뮤니티 그라운드", nameEn: "Chiteko Community Ground", lat: -12.013520053363743, lng: 34.61472198075732 },
-    played: 6, won: 3, drawn: 1, lost: 2, goalsFor: 6, goalsAgainst: 3, cleanSheets: 3, failedToScore: 3,
-    form: ["W", "L", "W", "D", "W", "L"],
-    nextMatch: { isBye: false, homeAway: "H", oppKo: "젠다 유나이티드 FC", oppEn: "Jenda United FC", oppLogo: "젠다.webp", kickoffDate: "2026-08-21", kickoffTime: "15:00" }
+    played: 7, won: 4, drawn: 1, lost: 2, goalsFor: 10, goalsAgainst: 3, cleanSheets: 4, failedToScore: 3,
+    form: ["W", "L", "W", "D", "W", "L", "W"],
+    nextMatch: { isBye: false, homeAway: "A", oppKo: "치폴로폴로 보이즈 FC", oppEn: "Chipolopolo Boys FC", oppLogo: "치폴로폴로.webp", kickoffDate: "2026-08-30", kickoffTime: "14:30" }
   },
   {
     nameKo: "친테체 유나이티드 FC", nameEn: "Chintheche United FC", logoSrc: "친테체.webp",
