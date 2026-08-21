@@ -544,6 +544,16 @@ const matchDetails = {
       scorersHome: "CHARLES KAMANGA, MAPALO GUMBO",
       scorersAway: "WANANGWA GAMA"
     }
+  ],
+  // 7주차는 아직 전체 라운드가 끝나지 않아 scheduledRounds에 남아있습니다.
+  // (경기가 끝나는 대로 이 배열에 결과를 추가하고, 라운드 전체가 끝나면
+  // scheduledRounds.round7를 roundsData.round7로 옮겨주세요.)
+  round7: [
+    {
+      match: "치주물루 4 : 젠다 0",
+      scorersHome: "STEVEN PHIRI, DICKIES NYIRENDA, BENJAMIN NYIRENDA, TIMOTHY KATAPA",
+      scorersAway: "없음"
+    }
   ]
 };
 
@@ -580,7 +590,7 @@ const scheduledRounds = {
     { byeKo: "라이플리 FC", byeEn: "Raiply FC" }
   ],
   round7: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-08-21", kickoffTime: "15:00" },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-08-21", kickoffTime: "15:00", homeScore: 4, awayScore: 0, scorersHome: "STEVEN PHIRI, DICKIES NYIRENDA, BENJAMIN NYIRENDA, TIMOTHY KATAPA", scorersAway: "없음" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
@@ -1318,6 +1328,7 @@ const playerDirectory = {
   "HARRY BARTON": { nameKo: "해리 바튼", nameEn: "Harry Barton" },
   "TIMOTHY KATAPA": { nameKo: "티모시 카타파", nameEn: "Timothy Katapa" },
   "STEVEN PHIRI": { nameKo: "스티브 피리", nameEn: "Steve Phiri" },
+  "BENJAMIN NYIRENDA": { nameKo: "벤자민 니렌다", nameEn: "Benjamin Nyirenda" },
   "KUMBUKANI BANYA": { nameKo: "쿰부카니 바냐", nameEn: "Kumbukani Banya" },
   "BABA NKHOMA": { nameKo: "바바 은코마", nameEn: "Baba Nkhoma" },
   "SAMANI NYIRENDA": { nameKo: "사마니 니렌다", nameEn: "Samani Nyirenda" },
