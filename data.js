@@ -505,9 +505,8 @@ const matchDetails = {
       scorersAway: "없음"
     }
   ],
-  // 6주차는 아직 전체 라운드가 끝나지 않아 scheduledRounds에 남아있습니다.
-  // (경기가 끝나는 대로 이 배열에 결과를 추가하고, 라운드 전체가 끝나면
-  // scheduledRounds.round6를 roundsData.round6로 옮겨주세요.)
+  // 6주차는 전체 라운드가 종료되어 roundsData.round6로 옮겨졌습니다.
+  // (이 매치 요약 텍스트는 결과 페이지 표시용으로 그대로 유지합니다.)
   round6: [
     {
       match: "음벨와 0 : 칠룸바 0",
@@ -579,16 +578,6 @@ const upcomingMatchHistory = {
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
-  round6: [
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-08-15", kickoffTime: "14:30", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
-    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-08-15", kickoffTime: "14:30", homeScore: 3, awayScore: 0, scorersHome: "TYSON SOKO, KINGSLEY MKANDAWIRE, ABRAHAM MVULA", scorersAway: "없음" },
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-08-15", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "CLEMENT MUNTHALI, RODRICK KASUDZA", scorersAway: "GEORGE MASEWO" },
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-08-15", kickoffTime: "14:30", homeScore: 1, awayScore: 1, scorersHome: "CHISOMO MYEGHA", scorersAway: "TEMWA NDHLOVU" },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-08-16", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "JOSEPH BANDA", scorersAway: "없음" },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-08-16", kickoffTime: "14:30", homeScore: 1, awayScore: 1, scorersHome: "MPHATSO KUMWENDA", scorersAway: "JAMES ZONGA" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-08-16", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "CHARLES KAMANGA, MAPALO GUMBO", scorersAway: "WANANGWA GAMA" },
-    { byeKo: "라이플리 FC", byeEn: "Raiply FC" }
-  ],
   round7: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-08-21", kickoffTime: "15:00", homeScore: 4, awayScore: 0, scorersHome: "STEVEN PHIRI, DICKIES NYIRENDA, BENJAMIN NYIRENDA, TIMOTHY KATAPA", scorersAway: "없음" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
@@ -732,6 +721,16 @@ const roundsData = {
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", homeScore: 4, awayScore: 2 },
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", homeScore: 2, awayScore: 0 },
     { byeKo: "음벨와 워리어스 FC", byeEn: "M'mbelwa Warriors FC" }
+  ],
+  round6: [
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", homeScore: 0, awayScore: 0 },
+    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", homeScore: 3, awayScore: 0 },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", homeScore: 2, awayScore: 1 },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", homeScore: 1, awayScore: 1 },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", homeScore: 1, awayScore: 0 },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", homeScore: 1, awayScore: 1 },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", homeScore: 2, awayScore: 1 },
+    { byeKo: "라이플리 FC", byeEn: "Raiply FC" }
   ]
 };
 
