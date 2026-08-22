@@ -1770,8 +1770,14 @@
       } else {
         const haClass = team.nextMatch.homeAway === 'H' ? 'ha-home' : 'ha-away';
         const oppName = isKorean ? team.nextMatch.oppKo : team.nextMatch.oppEn;
+        const isHome = team.nextMatch.homeAway === 'H';
+        const compareHomeEn = isHome ? team.nameEn : team.nextMatch.oppEn;
+        const compareHomeKo = isHome ? team.nameKo : team.nextMatch.oppKo;
+        const compareAwayEn = isHome ? team.nextMatch.oppEn : team.nameEn;
+        const compareAwayKo = isHome ? team.nextMatch.oppKo : team.nameKo;
+        const compareArgs = `'${compareHomeEn.replace(/'/g, "\\'")}', '${compareHomeKo.replace(/'/g, "\\'")}', '${compareAwayEn.replace(/'/g, "\\'")}', '${compareAwayKo.replace(/'/g, "\\'")}'`;
         nextMatchHtml = `
-          <span class="next-opp-inner">
+          <span class="next-opp-inner next-opp-clickable" onclick="event.stopPropagation(); openMatchCompareModal(${compareArgs})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openMatchCompareModal(${compareArgs})}" title="${isKorean ? '전적 비교 보기' : 'View head-to-head'}">
             <span class="ha-badge ${haClass}">${team.nextMatch.homeAway}</span>
             <img class="team-logo team-logo-sm opp-logo" data-en-name="${team.nextMatch.oppEn}" data-ko-name="${team.nextMatch.oppKo}" title="${oppName}" src="${team.nextMatch.oppLogo}" alt="${team.nextMatch.oppEn}">
           </span>
@@ -1800,7 +1806,7 @@
       tr.innerHTML = `
         <td class="rank-cell">${rank}</td>
         <td class="rank-change-cell">${rankChangeHtml}</td>
-        <td class="team">
+        <td class="team team-clickable" onclick="goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')}">
           <img class="team-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}">
           <span class="lbl" data-en="${team.nameEn}" data-ko="${team.nameKo}">${name}</span>
         </td>
@@ -3527,6 +3533,16 @@
   function jumpToTeam(nameEn) {
     closeOtherTeamModal();
     showTeamInfoForKey(nameEn);
+  }
+
+  // 팀 순위표에서 팀 이름/로고를 클릭하면 '팀 정보' 뷰로 바로 이동합니다.
+  function goToTeamInfo(nameEn) {
+    showView('squad');
+    showTeamInfoForKey(nameEn);
+    const squadBtn = document.getElementById('viewSquadBtn');
+    if (squadBtn && squadBtn.scrollIntoView) {
+      squadBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
   }
 
   function renderOtherTeamGrid() {

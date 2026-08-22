@@ -446,6 +446,21 @@
     font-size: 16px;
     white-space: nowrap;
   }
+  td.team-clickable {
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  td.team-clickable:hover,
+  td.team-clickable:focus-visible {
+    background: var(--color-bg-row-hover);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  td.team-clickable:focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: -2px;
+  }
   td.pts {
     font-weight: 800;
     color: var(--color-stat-value);
@@ -508,6 +523,21 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+  }
+  .next-opp-clickable {
+    cursor: pointer;
+    padding: 3px 6px;
+    margin: -3px -6px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .next-opp-clickable:hover,
+  .next-opp-clickable:focus-visible {
+    background: var(--color-bg-row-hover);
+  }
+  .next-opp-clickable:focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 0;
   }
   .ha-badge {
     display: inline-block;
