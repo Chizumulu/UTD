@@ -713,6 +713,165 @@
       margin-left: 0;
     }
   }
+
+  /* ===== PWA 설치 유도 배너 ===== */
+  .pwa-install-banner {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 14px;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--color-surface);
+    border-radius: 16px;
+    padding: 14px 14px 14px 12px;
+    box-shadow: 0 12px 32px rgba(var(--color-black-rgb),0.22), 0 2px 8px rgba(var(--color-black-rgb),0.08);
+    border: 1px solid var(--color-border-chip);
+    transform: translateY(120%);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(.2,.8,.2,1), opacity 0.35s ease;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  .pwa-install-banner.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  .pwa-install-banner-icon {
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--color-navy), var(--color-navy-light));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(var(--color-navy-rgb),0.3);
+  }
+  .pwa-install-banner-icon img {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    object-fit: contain;
+  }
+  .pwa-install-banner-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .pwa-install-banner-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--color-text-darkest);
+    margin: 0 0 2px;
+    letter-spacing: -0.2px;
+  }
+  .pwa-install-banner-desc {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 0;
+    line-height: 1.4;
+  }
+  .pwa-install-banner-actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pwa-install-banner-btn {
+    background: var(--color-navy);
+    color: var(--color-white);
+    border: none;
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .pwa-install-banner-btn:hover {
+    background: var(--color-navy-light);
+  }
+  .pwa-install-banner-btn:active {
+    transform: scale(0.96);
+  }
+  .pwa-install-banner-close {
+    flex: none;
+    background: none;
+    border: none;
+    color: var(--color-text-faint);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 2px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  .pwa-install-banner-close:hover {
+    opacity: 1;
+  }
+  @media (min-width: 640px) {
+    .pwa-install-banner {
+      left: auto;
+      right: 20px;
+      bottom: 20px;
+      width: 380px;
+    }
+  }
+
+  /* ===== iOS 설치 안내 모달 ===== */
+  .ios-guide-modal-content {
+    max-width: 340px;
+  }
+  .ios-guide-modal-body {
+    padding: 22px 22px 26px;
+    text-align: center;
+  }
+  .ios-guide-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 18px 0 4px;
+    text-align: left;
+  }
+  .ios-guide-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--color-bg-btn-hover);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .ios-guide-step-num {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-navy);
+    color: var(--color-white);
+    font-size: 12px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ios-guide-step-icon {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    color: var(--color-navy);
+  }
+  .ios-guide-step-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-dark);
+    line-height: 1.35;
+  }
+  .ios-guide-step-text b {
+    color: var(--color-brand-text);
+  }
   @media (min-width: 721px) {
     .share-btn:not(.round-share-btn) {
       background: var(--color-surface);
@@ -3550,6 +3709,184 @@
     padding: 2px 9px;
     border-radius: 10px;
   }
+
+  /* ===== Compare Teams Button & Modal (전적 비교) ===== */
+  .rmc-compare-btn {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    background: var(--color-bg-stripe);
+    color: var(--color-navy);
+    border: 1px solid var(--color-border-light);
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .rmc-compare-btn:hover {
+    background: var(--color-teal);
+    color: var(--color-white);
+    border-color: var(--color-teal);
+  }
+  .ti-next-match-compare-btn {
+    margin-top: 12px;
+  }
+  .match-compare-modal-content {
+    max-width: 480px;
+  }
+  .match-compare-modal-body {
+    padding: 18px 18px 22px;
+  }
+  .mc-teams-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .mc-team-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+  .mc-team-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
+  .mc-team-name {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--color-navy);
+    text-align: center;
+    line-height: 1.3;
+  }
+  .mc-team-rank {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+  }
+  .mc-vs {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--color-text-faint);
+    flex-shrink: 0;
+  }
+  .mc-stats-block {
+    border-top: 1px solid var(--color-border-light);
+    border-bottom: 1px solid var(--color-border-light);
+    padding: 6px 0;
+    margin-bottom: 16px;
+  }
+  .mc-stat-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 2px;
+  }
+  .mc-stat-row + .mc-stat-row {
+    border-top: 1px solid var(--color-border-light);
+  }
+  .mc-stat-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-navy);
+    text-align: center;
+  }
+  .mc-stat-row:first-child .mc-stat-val:first-child,
+  .mc-stat-row:first-child .mc-stat-val:last-child {
+    font-size: 15px;
+  }
+  .mc-stat-val.mc-stat-better {
+    color: var(--color-teal-dark);
+    font-weight: 900;
+  }
+  .mc-stat-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--color-text-faint);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .mc-form-block {
+    margin-bottom: 16px;
+  }
+  .mc-form-title {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .mc-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .mc-form-side {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .mc-form-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--color-white);
+  }
+  .mc-form-w { background: var(--color-teal); }
+  .mc-form-d { background: var(--color-text-faint); }
+  .mc-form-l { background: var(--color-red); }
+  .mc-form-empty {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+  }
+  .mc-h2h-block {
+    text-align: center;
+  }
+  .mc-h2h-note {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: var(--color-bg-stripe);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .mc-h2h-week {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--color-text-muted);
+  }
+  .mc-h2h-score {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--color-navy);
+  }
+  .mc-h2h-empty {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+  }
+  @media (max-width: 420px) {
+    .mc-team-logo { width: 34px; height: 34px; }
+    .mc-team-name { font-size: 11.5px; }
+  }
+
   @media (max-width: 600px) {
     .rmc-team {
       font-size: 12.5px;

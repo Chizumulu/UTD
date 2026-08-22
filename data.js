@@ -26,7 +26,7 @@ const matchLineups = {
     opponentKo: "치하메 올스타즈 FC",
     result: "3 : 1 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "TEEKAY" },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
       { pos: "LW", number: 49, nameKo: "쿰부카니 바냐", outMin: "후반 11'" },
       { pos: "CAM", number: 7, nameKo: "디킨스", goals: ["8'", "78'"], outMin: "후반" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
@@ -57,7 +57,7 @@ const matchLineups = {
     opponentKo: "마푸 스타즈 FC",
     result: "0 : 1 패",
     starters: [
-      { pos: "ST", number: 22, nameKo: "TEEKAY" },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
       { pos: "LW", number: 11, nameKo: "해리" },
       { pos: "CAM", number: 7, nameKo: "디킨스" },
       { pos: "RW", number: 6, nameKo: "벤자민", outMin: "후반" },
@@ -87,7 +87,7 @@ const matchLineups = {
     opponentKo: "라이플리 FC",
     result: "1 : 0 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "TEEKAY", goalNote: true },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"] },
       { pos: "LW", number: 11, nameKo: "해리" },
       { pos: "CAM", number: 7, nameKo: "디킨스" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
@@ -112,7 +112,7 @@ const matchLineups = {
     opponentKo: "루베 마스터즈 FC",
     result: "0 : 0 무",
     starters: [
-      { pos: "ST", number: 22, nameKo: "TEEKAY" },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
       { pos: "LW", number: 11, nameKo: "해리", outMin: "후반" },
       { pos: "CAM", number: 7, nameKo: "디킨스" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
@@ -142,10 +142,10 @@ const matchLineups = {
     result: "2 : 0 승",
     starters: [
       { pos: "ST", number: 9, nameKo: "임마누엘", outMin: "29'" },
-      { pos: "LW", number: 49, nameKo: "쿰부카니", goalNote: true },
+      { pos: "LW", number: 49, nameKo: "쿰부카니", goals: ["-"] },
       { pos: "CAM", number: 7, nameKo: "디킨스" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
-      { pos: "LCM", number: 98, nameKo: "스티브", goalNote: true },
+      { pos: "LCM", number: 98, nameKo: "스티브", goals: ["-"] },
       { pos: "RCM", number: 3, nameKo: "음롱골라", captain: true },
       { pos: "LB", number: 20, nameKo: "프란시스", outMin: "-" },
       { pos: "LCB", number: 13, nameKo: "조셉" },
@@ -154,7 +154,7 @@ const matchLineups = {
       { pos: "GK", number: 90, nameKo: "마야미코" }
     ],
     subsIn: [
-      { number: 22, nameKo: "TK", inMin: "29'" },
+      { number: 22, nameKo: "티모시 카타파", inMin: "29'" },
       { number: 5, nameKo: "라반", inMin: "-" }
     ],
     subsUnused: [8, 10, 11, 66, 80, 88],
@@ -163,6 +163,53 @@ const matchLineups = {
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 11주차", score: "에크웬데니 2 : 2 치주물루", result: "무승부" }
     ],
     historySummary: "최근 2경기 전적 2전 1승 1무 0패로 우세"
+  },
+  round6: {
+    formation: "4-2-3-1",
+    opponentKo: "에우티니 베테랑스 FC",
+    result: "0 : 1 패",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
+      { pos: "LW", number: 49, nameKo: "쿰부카니" },
+      { pos: "CAM", number: 10, nameKo: "찰스" },
+      { pos: "RW", number: 6, nameKo: "벤자민" },
+      { pos: "LCM", number: 98, nameKo: "스티브" },
+      { pos: "RCM", number: 3, nameKo: "음롱골라", captain: true },
+      { pos: "LB", number: 5, nameKo: "라반" },
+      { pos: "LCB", number: 13, nameKo: "조셉" },
+      { pos: "RCB", number: 25, nameKo: "모버트" },
+      { pos: "RB", number: 2, nameKo: "로날드" },
+      { pos: "GK", number: 90, nameKo: "마야미코" }
+    ],
+    subsIn: [],
+    subsUnused: [7, 8, 9, 11, 66, 80, 88],
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 24주차", score: "치주물루 2 : 0 에우티니", result: "치주물루 승(몰수승)" },
+      { comp: "2025-26 시즌 MNRF 심소 프리미어 리그 6주차", score: "에우티니 1 : 0 치주물루", result: "에우티니 승" }
+    ],
+    historySummary: "최근 2경기 전적 1승 0무 1패로 백중세"
+  },
+  round7: {
+    formation: "4-2-3-1",
+    opponentKo: "젠다 유나이티드 FC",
+    result: "4 : 0 승",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"] },
+      { pos: "LW", number: 49, nameKo: "쿰부카니" },
+      { pos: "CAM", number: 7, nameKo: "디킨스", goals: ["-"] },
+      { pos: "RW", number: 6, nameKo: "벤자민", goals: ["-"] },
+      { pos: "LCM", number: 98, nameKo: "스티브", goals: ["-"] },
+      { pos: "RCM", number: 99, nameKo: "패트릭" },
+      { pos: "LB", number: 5, nameKo: "라반" },
+      { pos: "LCB", number: 13, nameKo: "조셉" },
+      { pos: "RCB", number: 3, nameKo: "음롱골라", captain: true },
+      { pos: "RB", number: 25, nameKo: "모버트" },
+      { pos: "GK", number: 90, nameKo: "마야미코" }
+    ],
+    subsIn: [],
+    subsUnused: [8, 9, 10, 11, 20, 66, 80, 88],
+    recentHistory: [],
+    historySummary: "이번 시즌 첫 맞대결"
   }
 };
 
@@ -225,7 +272,8 @@ const teamAwards = {
   motm: {
     round1: [13, 7],
     round3: [22, 6],
-    round5: [49]
+    round5: [49],
+    round7: [98]
   },
   playerOfTheMonth: {
     '2026-07': 90
@@ -561,19 +609,7 @@ const matchDetails = {
 // 예정된 라운드에는 아직 없습니다. 다음 경기 프리뷰에서 H2H를 보여주려면 이렇게
 // roundKey(scheduledRounds 기준)를 키로 미리 적어두면 됩니다. 라운드가 실제로 끝나면
 // 이 항목은 지우고 matchLineups[roundKey].recentHistory로 옮겨주세요.
-// round6(에우티니전, 2026-08-16)은 이미 종료됐지만 아직 matchLineups에
-// 포메이션/득점 등 상세 데이터가 들어가지 않아 임시로 여기 적어둡니다.
-// 나중에 round6 라인업을 matchLineups에 추가하게 되면 이 항목은 지우고
-// matchLineups.round6.recentHistory / historySummary로 옮겨주세요.
-const upcomingMatchHistory = {
-  round6: {
-    recentHistory: [
-      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 24주차", score: "치주물루 2 : 0 에우티니", result: "치주물루 승(몰수승)" },
-      { comp: "2025-26 시즌 MNRF 심소 프리미어 리그 6주차", score: "에우티니 1 : 0 치주물루", result: "에우티니 승" }
-    ],
-    historySummary: "최근 2경기 전적 1승 0무 1패로 백중세"
-  }
-};
+const upcomingMatchHistory = {};
 
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
@@ -1000,16 +1036,13 @@ function computeH2HHistory() {
   }
 
   // 1) 이번 시즌 roundsData (확정된 라운드만)
-  const roundKeysSorted = Object.keys(roundsData).sort((a, b) => {
-    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
-  });
-  roundKeysSorted.forEach((roundKey, idx) => {
-    const weekNum = idx + 1;
-    (roundsData[roundKey] || []).forEach(m => {
+  function scanMatchesForUs(matches, roundKey, weekNum, source) {
+    (matches || []).forEach(m => {
       if (m.byeKo || m.byeEn) return;
       const homeIsUs = m.homeKo === '치주물루 유나이티드 FC' || m.homeEn === 'Chizumulu United FC';
       const awayIsUs = m.awayKo === '치주물루 유나이티드 FC' || m.awayEn === 'Chizumulu United FC';
       if (!homeIsUs && !awayIsUs) return;
+      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
 
       const oppKo = homeIsUs ? m.awayKo : m.homeKo;
       const oppEn = homeIsUs ? m.awayEn : m.homeEn;
@@ -1020,10 +1053,31 @@ function computeH2HHistory() {
       if (!info.isCurrentLeagueTeam && oppEn) info.nameEn = oppEn;
       const rec = ensure(info);
       applyResult(rec, myGoals, oppGoals, {
-        source: 'season', roundKey, weekNum, homeAway: homeIsUs ? 'H' : 'A'
+        source, roundKey, weekNum, homeAway: homeIsUs ? 'H' : 'A'
       });
     });
+  }
+
+  const roundKeysSorted = Object.keys(roundsData).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
   });
+  roundKeysSorted.forEach((roundKey, idx) => {
+    scanMatchesForUs(roundsData[roundKey], roundKey, idx + 1, 'season');
+  });
+
+  // 1b) 아직 라운드 전체가 끝나지 않아 scheduledRounds에 남아있지만,
+  // 치주물루 경기 자체는 이미 스코어가 채워진 경우(예: round7 젠다전)도
+  // 라운드가 roundsData로 옮겨지길 기다리지 않고 상대전적에 바로 반영합니다.
+  // (roundsData에 이미 있는 라운드는 중복 집계를 막기 위해 건너뜁니다.)
+  if (typeof scheduledRounds !== 'undefined') {
+    const scheduledKeysSorted = Object.keys(scheduledRounds).sort((a, b) => {
+      return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+    });
+    scheduledKeysSorted.forEach((roundKey, idx) => {
+      if (roundsData[roundKey]) return; // 이미 확정 라운드로 옮겨졌으면 건너뜁니다
+      scanMatchesForUs(scheduledRounds[roundKey], roundKey, roundKeysSorted.length + idx + 1, 'season');
+    });
+  }
 
   // recentHistory 배열 하나(h.score 형식: "A 2 : 1 B")를 파싱해서 H2H 테이블에 반영하는
   // 공용 헬퍼. matchLineups(치른 라운드)와 upcomingMatchHistory(예정 라운드)가 형식이
@@ -1741,8 +1795,45 @@ function computeHomeAwaySplit(nameEn, nameKo) {
   };
 }
 
-// 몬테카를로 시즌 시뮬레이션 실행
-// iterations: 반복 횟수 (기본 4000회)
+// 임의의 두 팀 사이의 "이번 시즌" 맞대결 기록을 찾습니다(1경기제 리그이므로 최대 1건).
+// roundsData(확정 라운드) + scheduledRounds(라운드 전체는 안 끝났어도 그 경기 자체는
+// 스코어가 채워진 경우)를 모두 훑습니다. 아직 안 만났으면 null을 반환합니다.
+function computeTeamSeasonH2H(nameEnA, nameKoA, nameEnB, nameKoB) {
+  const roundKeysSorted = Object.keys(roundsData).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  });
+  const scheduledKeysSorted = Object.keys(scheduledRounds || {})
+    .filter(k => !roundsData[k])
+    .sort((a, b) => parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10));
+  const allKeysSorted = [...roundKeysSorted, ...scheduledKeysSorted];
+
+  for (let i = 0; i < allKeysSorted.length; i++) {
+    const roundKey = allKeysSorted[i];
+    const weekNum = i + 1;
+    const matches = roundsData[roundKey] || (scheduledRounds && scheduledRounds[roundKey]) || [];
+    const found = matches.find(m => {
+      if (m.byeKo || m.byeEn) return false;
+      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return false;
+      const isAHome = m.homeEn === nameEnA || m.homeKo === nameKoA;
+      const isBAway = m.awayEn === nameEnB || m.awayKo === nameKoB;
+      const isBHome = m.homeEn === nameEnB || m.homeKo === nameKoB;
+      const isAAway = m.awayEn === nameEnA || m.awayKo === nameKoA;
+      return (isAHome && isBAway) || (isBHome && isAAway);
+    });
+    if (!found) continue;
+
+    const aIsHome = found.homeEn === nameEnA || found.homeKo === nameKoA;
+    return {
+      roundKey, weekNum,
+      aIsHome,
+      aScore: aIsHome ? found.homeScore : found.awayScore,
+      bScore: aIsHome ? found.awayScore : found.homeScore
+    };
+  }
+  return null;
+}
+
+
 function runMonteCarloSimulation(iterations) {
   const N = iterations || 4000;
   const fixtures = generateRemainingFixtures();
