@@ -4,19 +4,21 @@
    ===================================================== */
 :root {
   /* --- 브랜드 컬러 --- */
-  --color-navy: #033990;         /* 메인 브랜드 컬러 (헤더, 테이블 헤더 등) */
-  --color-navy-light: #0450c4;   /* 네이비 그라데이션 끝 색상 */
-  --color-navy-rgb: 3, 57, 144;  /* rgba() 용 (그림자 등) */
+  --color-navy: #003C8C;         /* 메인 브랜드 컬러 (헤더, 테이블 헤더 등) */
+  --color-navy-light: #0a56b8;   /* 네이비 그라데이션 끝 색상 */
+  --color-navy-deep: #002a63;    /* 배너용 딥 네이비 (그라데이션 시작점) */
+  --color-navy-rgb: 0, 60, 140;  /* rgba() 용 (그림자 등) */
 
-  --color-teal: #079696;         /* 보조 브랜드 컬러 (승리, 홈 배지 등) */
-  --color-teal-dark: #05716f;
-  --color-teal-light: #3fc4c4;
+  --color-teal: #0A9696;         /* 보조 브랜드 컬러 (승리, 홈 배지 등) */
+  --color-teal-dark: #087676;
+  --color-teal-light: #3fc8c8;
+  --color-teal-rgb: 10, 150, 150;
 
-  --color-gold: #d9c08a;         /* 배너 골드 톤 */
-  --color-gold-strong: #d9a441;  /* 강조용 진한 골드 (1~3위, 뱃지) */
-  --color-gold-light: #f0c674;
-  --color-gold-rgb: 217, 192, 138;
-  --color-cream: #f2e6cc;        /* 배너 위 텍스트 색 */
+  --color-gold: #DCBE8C;         /* 배너 골드 톤 */
+  --color-gold-strong: #cc9c4d;  /* 강조용 진한 골드 (1~3위, 뱃지) */
+  --color-gold-light: #ecd9b3;
+  --color-gold-rgb: 220, 190, 140;
+  --color-cream: #f5ecdb;        /* 배너 위 텍스트 색 */
 
   --color-white: #fff;
   --color-white-rgb: 255, 255, 255;
@@ -37,10 +39,10 @@
   --color-text-dark: #2c3244;
   --color-text-darkest: #1b2333;
   --color-text-muted: #6b7385;
-  --color-text-faint: #6f7685;   /* WCAG AA 4.5:1 이상 확보를 위해 어둡게 조정 (기존 #8891a3) */
-  --color-text-faint-2: #71757d; /* WCAG AA 4.5:1 이상 확보를 위해 어둡게 조정 (기존 #b7bdca) */
+  --color-text-faint: #5f6678;   /* WCAG AA 4.5:1 이상 확보를 위해 어둡게 조정 (기존 #8891a3 → #6f7685 → 10~11px 소형 텍스트 기준 재보정) */
+  --color-text-faint-2: #616570; /* WCAG AA 4.5:1 이상 확보를 위해 어둡게 조정 (기존 #b7bdca → #71757d → 10~11px 소형 텍스트 기준 재보정) */
   --color-text-secondary: #4a5163;
-  --color-text-soft: #6f7688;    /* WCAG AA 4.5:1 이상 확보를 위해 어둡게 조정 (기존 #7a8296) */
+  --color-text-soft: #5f6679;    /* WCAG AA 4.5:1 이상 확보를 위해 어둡게 조정 (기존 #7a8296 → #6f7688 → 10~11px 소형 텍스트 기준 재보정) */
   --color-text-toggle: #5a6278;
   --color-text-chip: #3a4256;
   --color-text-legend: #667;
@@ -67,6 +69,43 @@
   --color-brand-text: var(--color-navy);     /* 밝은 표면 위에 올라가는 네이비 텍스트 (다크모드에서 밝게 전환) */
 
   --theme-transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+
+  /* --- 모서리 반경(border-radius) 스케일 ---
+     이전에는 3~30px 사이 13개의 값이 컴포넌트마다 제각각 쓰이고 있었습니다.
+     카드/패널류는 아래 5단계로, 탭 바·토글 버튼·배지처럼 "완전히 둥근 캡슐형"으로
+     의도된 요소는 높이에 관계없이 항상 완전한 캡슐이 되도록 --radius-pill(999px)을
+     씁니다(고정 px값으로 캡슐을 흉내내면 패딩/폰트 크기가 바뀔 때 깨지기 쉽습니다).
+     원형 아바타/아이콘/점 등은 문맥상 50%를 그대로 사용합니다. */
+  --radius-xs: 6px;    /* 작은 로고 모서리, 클릭 가능한 표 셀 등 */
+  --radius-sm: 8px;    /* 작은 태그/아이콘 버튼 */
+  --radius-md: 10px;   /* 작은~중간 카드, 툴팁, 미니 위젯 */
+  --radius-lg: 12px;   /* 표준 카드/패널 */
+  --radius-xl: 16px;   /* 배너, 모달, 헤더형 대형 카드 */
+  --radius-pill: 999px; /* 탭 바, 토글 버튼, 배지 등 완전한 캡슐형 요소 */
+
+  /* --- 숫자 전용 폰트 스택 ---
+     순위/승점/득실차/스코어 등 "숫자가 줄지어 나오는" 곳에 적용합니다.
+     시스템에 이미 깔린 모노스페이스 폰트만 사용하므로 별도 다운로드가 없고,
+     숫자 자릿수가 항상 같은 폭으로 정렬되어 스포츠 데이터 사이트 특유의
+     "표가 딱딱 맞아떨어지는" 인상을 줍니다. 한글(위/연승 등 단위)처럼
+     모노스페이스 폰트에 없는 글자는 폰트 폴백에 의해 자동으로 마지막
+     Noto Sans KR로 대체되므로 숫자와 한글이 섞여도 안전합니다. */
+  --font-num: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Consolas', 'Roboto Mono', 'Noto Sans KR', Arial, sans-serif;
+
+  /* --- 공용 카드 셸 (다음 경기 / 상대 전적류 위젯) ---
+     .next-match-strip, .ti-next-match, 라운드 상세 모달의 상대 전적 카드처럼
+     서로 다른 위치에서 "다음 경기·상대 전적" 정보를 보여주는 위젯들이
+     패딩감/그림자 강도가 제각각이라 다른 컴포넌트처럼 보이는 문제가 있었습니다.
+     아래 프리셋 하나로 통일해서 재사용하면 같은 디자인 시스템에서 나온
+     카드라는 인상을 줄 수 있습니다. (.ti-card와 동일한 값) */
+  --card-shadow: 0 6px 18px rgba(var(--color-navy-rgb), 0.1);
+  --card-padding: 16px 18px;
+
+  /* --- 공용 순위 배지 (상대 랭크 뱃지) ---
+     .nms-opp-rank / .ti-next-match-rank 등에서 쓰이는 "○위" 형태의
+     작은 순위 배지를 하나의 크기/모서리 값으로 통일합니다. */
+  --rank-badge-radius: var(--radius-sm);
+  --rank-badge-padding: 2px 8px;
 }
 
 /* =====================================================
@@ -112,6 +151,24 @@
   --color-bg-myteam-2: #1a3634;
   --color-bg-myteam-hover: #1d3a38;
 }
+
+  /* ===== 공통 키보드 포커스 스타일 =====
+     버튼/링크/탭 등 모든 인터랙티브 요소에 브랜드 컬러(teal) 아웃라인을 일관되게
+     적용합니다. :where()로 감싸 특이도를 0으로 유지했기 때문에, td.team-clickable
+     같은 더 구체적인 규칙(다른 outline-offset 등)이 필요하면 그대로 우선 적용됩니다. */
+  :where(
+    button, a, input, select, summary, [tabindex]
+  ):focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+
+  /* 다크모드에서는 밝은 틸(teal-light)로 바꿔 어두운 표면 위에서도 또렷하게 보이도록 합니다 */
+  :root[data-theme="dark"] :where(
+    button, a, input, select, summary, [tabindex]
+  ):focus-visible {
+    outline-color: var(--color-teal-light);
+  }
 
   /* ===== Base / Reset ===== */
   * { box-sizing: border-box; }
@@ -168,87 +225,180 @@
   /* ===== Header Banner ===== */
   .banner {
     width: 100%;
-    background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
-    border-radius: 14px;
-    padding: 22px 20px 18px;
+    background:
+      linear-gradient(135deg, var(--color-navy-deep) 0%, var(--color-navy) 48%, var(--color-navy-light) 100%);
+    border-radius: var(--radius-xl);
+    padding: 20px 20px 16px;
     text-align: center;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 6px 18px rgba(var(--color-navy-rgb),0.25);
+    box-shadow: 0 10px 26px rgba(var(--color-navy-rgb),0.32);
+    isolation: isolate;
   }
+  /* 대각선 "핏치 라인" 패턴 - 클럽 서브 컬러(골드/틸)를 낮은 투명도로 겹쳐
+     은은한 스타디움 질감을 만듭니다. 순수 CSS 그라데이션이라 이미지 요청이 없습니다. */
   .banner::before {
     content: "";
     position: absolute;
-    top: -40px; right: -40px;
-    width: 140px; height: 140px;
-    background: var(--color-gold);
-    opacity: 0.15;
-    border-radius: 50%;
+    inset: 0;
+    z-index: 0;
+    background:
+      repeating-linear-gradient(
+        118deg,
+        rgba(var(--color-gold-rgb), 0.10) 0px,
+        rgba(var(--color-gold-rgb), 0.10) 2px,
+        transparent 2px,
+        transparent 34px
+      ),
+      radial-gradient(ellipse 60% 90% at 100% 0%, rgba(var(--color-teal-rgb), 0.35) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 85% at 0% 100%, rgba(var(--color-gold-rgb), 0.22) 0%, transparent 65%);
+    opacity: 0.9;
   }
   .banner::after {
     content: "";
     position: absolute;
-    bottom: -50px; left: -30px;
-    width: 120px; height: 120px;
-    background: var(--color-teal);
-    opacity: 0.18;
+    top: -55px; right: -55px;
+    width: 190px; height: 190px;
+    background: radial-gradient(circle, var(--color-teal) 0%, transparent 72%);
+    opacity: 0.35;
     border-radius: 50%;
+    z-index: 0;
+  }
+  .banner > * {
+    position: relative;
+    z-index: 1;
   }
   .league-logo {
     position: absolute;
-    top: 14px;
-    left: 16px;
-    width: 150px;
-    height: 150px;
+    top: 50%;
+    left: 20px;
+    transform: translateY(-50%);
+    width: 108px;
+    height: 108px;
     z-index: 2;
     filter: drop-shadow(0 3px 8px rgba(var(--color-black-rgb),0.25));
   }
   .club-logo {
     position: absolute;
-    top: 14px;
-    right: 16px;
-    width: 150px;
-    height: 150px;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    width: 108px;
+    height: 108px;
     z-index: 2;
     filter: drop-shadow(0 3px 8px rgba(var(--color-black-rgb),0.25));
   }
   @media (max-width: 600px) {
     .banner {
-      padding: 14px 10px 14px;
+      padding: 12px 10px 10px;
     }
     .league-logo,
     .club-logo {
-      width: 52px;
-      height: 52px;
+      width: 44px;
+      height: 44px;
       top: 10px;
+      transform: none;
     }
     .league-logo { left: 8px; }
     .club-logo { right: 8px; }
     .league-title {
-      padding: 0 58px;
+      padding: 0 52px;
     }
     .league-title h1 {
-      font-size: 21px;
+      font-size: 19px;
+      margin-bottom: 1px;
     }
     .league-title h1 .sponsor-line {
-      font-size: 13.5px;
+      font-size: 11px;
+    }
+    .banner-meta-row {
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .fan-badge {
+      font-size: 11px;
+      letter-spacing: 0.2px;
+      padding: 4px 9px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .info-bar {
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+    }
+    .info-item {
+      font-size: 11px;
+      gap: 3px;
+      white-space: nowrap;
+    }
+    .info-icon {
+      width: 11px;
+      height: 11px;
+    }
+    .info-sep {
+      height: 11px;
+    }
+    .date-label-full { display: none; }
+    .date-label-short { display: inline; }
+    .lang-toggle-wrap {
+      margin-top: 6px;
+      gap: 6px;
+    }
+    .lang-btn {
+      font-size: 11px;
+      padding: 5px 12px;
+    }
+    .lang-btn-icon {
+      width: 11px;
+      height: 11px;
+    }
+    .theme-toggle-btn {
+      width: 26px;
+      height: 26px;
+    }
+    .theme-toggle-btn svg {
+      width: 12px;
+      height: 12px;
     }
   }
   @media (max-width: 360px) {
     .league-logo,
     .club-logo {
-      width: 42px;
-      height: 42px;
+      width: 36px;
+      height: 36px;
     }
     .league-title {
-      padding: 0 48px;
+      padding: 0 42px;
     }
     .league-title h1 {
-      font-size: 18px;
+      font-size: 17px;
     }
     .league-title h1 .sponsor-line {
-      font-size: 12px;
+      font-size: 10.5px;
     }
+    .fan-badge {
+      font-size: 10.5px;
+      padding: 3px 7px;
+    }
+    .info-bar {
+      padding: 4px 8px;
+    }
+    .info-item {
+      font-size: 10.5px;
+    }
+  }
+  .banner-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+    position: relative;
+    z-index: 1;
   }
   .fan-badge {
     display: inline-block;
@@ -258,10 +408,7 @@
     font-size: 15px;
     letter-spacing: 0.5px;
     padding: 6px 16px;
-    border-radius: 20px;
-    margin-top: 10px;
-    position: relative;
-    z-index: 1;
+    border-radius: var(--radius-pill);
   }
   .info-bar {
     display: flex;
@@ -269,14 +416,11 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    margin: 12px auto 0;
     padding: 7px 18px;
     background: rgba(var(--color-white-rgb),0.1);
     border: 1px solid rgba(var(--color-gold-rgb),0.35);
-    border-radius: 30px;
+    border-radius: var(--radius-pill);
     backdrop-filter: blur(4px);
-    position: relative;
-    z-index: 1;
   }
   .info-item {
     display: flex;
@@ -298,18 +442,24 @@
     height: 14px;
     background: rgba(var(--color-gold-rgb),0.4);
   }
+  .date-label-short { display: none; }
   .league-title h1 {
     color: var(--color-white);
-    font-size: 32px;
-    margin: 0 0 4px 0;
+    font-size: 30px;
+    font-weight: 800;
+    margin: 0 0 2px 0;
     letter-spacing: -0.3px;
     position: relative;
     z-index: 1;
   }
   .league-title h1 .sponsor-line {
-    font-size: 19px;
-    font-weight: 700;
-    letter-spacing: 0.2px;
+    display: inline-block;
+    font-size: 15px;
+    font-weight: 600;
+    color: rgba(var(--color-white-rgb), 0.72);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin-bottom: 1px;
   }
   .league-title h1 .main-line {
     display: inline-block;
@@ -325,7 +475,7 @@
   .lang-toggle-wrap {
     display: flex;
     justify-content: center;
-    margin: 12px auto 0;
+    margin: 8px auto 0;
     position: relative;
     z-index: 1;
   }
@@ -337,7 +487,7 @@
     color: var(--color-cream);
     border: 1.5px solid rgba(var(--color-gold-rgb),0.7);
     padding: 6px 16px;
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
     font-size: 12.5px;
     font-weight: 700;
@@ -394,7 +544,7 @@
     width: 100%;
     background: var(--color-surface);
     box-shadow: 0 8px 24px rgba(var(--color-navy-rgb),0.14);
-    border-radius: 0 0 14px 14px;
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
     overflow: hidden;
   }
   thead tr {
@@ -448,7 +598,7 @@
   }
   td.team-clickable {
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     transition: background 0.15s;
   }
   td.team-clickable:hover,
@@ -528,7 +678,7 @@
     cursor: pointer;
     padding: 3px 6px;
     margin: -3px -6px;
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     transition: background 0.15s;
   }
   .next-opp-clickable:hover,
@@ -544,7 +694,7 @@
     font-size: 11px;
     font-weight: 800;
     color: var(--color-white);
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
     padding: 2px 5px;
     vertical-align: middle;
     flex-shrink: 0;
@@ -612,7 +762,7 @@
     color: var(--color-brand-text);
     border: 1px solid var(--color-border-light);
     padding: 8px 14px;
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     font-size: 13px;
     font-weight: 800;
     cursor: pointer;
@@ -650,7 +800,7 @@
     padding: 4px;
     margin-bottom: 12px;
     background: var(--color-surface);
-    border-radius: 18px;
+    border-radius: var(--radius-pill);
     box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.10);
   }
   .rank-filter-btn {
@@ -658,7 +808,7 @@
     color: var(--color-text-toggle);
     border: none;
     padding: 7px 16px;
-    border-radius: 14px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
     font-size: 12.5px;
     font-weight: 700;
@@ -682,7 +832,7 @@
     color: var(--color-teal-dark);
     border: none;
     padding: 7px 14px;
-    border-radius: 14px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
     font-size: 12.5px;
     font-weight: 700;
@@ -709,7 +859,7 @@
     margin-left: 0;
     background: var(--color-surface);
     box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.10);
-    border-radius: 18px;
+    border-radius: var(--radius-pill);
     padding: 8px 14px;
     margin-top: 0;
   }
@@ -723,7 +873,7 @@
     font-size: 13px;
     font-weight: 700;
     padding: 10px 18px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     box-shadow: 0 8px 24px rgba(var(--color-black-rgb),0.25);
     opacity: 0;
     pointer-events: none;
@@ -755,7 +905,7 @@
     align-items: center;
     gap: 12px;
     background: var(--color-surface);
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     padding: 14px 14px 14px 12px;
     box-shadow: 0 12px 32px rgba(var(--color-black-rgb),0.22), 0 2px 8px rgba(var(--color-black-rgb),0.08);
     border: 1px solid var(--color-border-chip);
@@ -773,7 +923,7 @@
     flex: none;
     width: 42px;
     height: 42px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: linear-gradient(135deg, var(--color-navy), var(--color-navy-light));
     display: flex;
     align-items: center;
@@ -783,7 +933,7 @@
   .pwa-install-banner-icon img {
     width: 26px;
     height: 26px;
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     object-fit: contain;
   }
   .pwa-install-banner-text {
@@ -814,7 +964,7 @@
     color: var(--color-white);
     border: none;
     padding: 9px 14px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     font-size: 12.5px;
     font-weight: 800;
     cursor: pointer;
@@ -871,7 +1021,7 @@
     align-items: center;
     gap: 12px;
     background: var(--color-bg-btn-hover);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 10px 12px;
   }
   .ios-guide-step-num {
@@ -924,6 +1074,53 @@
     }
   }
 
+  /* ===== 숫자 표기 (Tabular Nums) =====
+     순위표/스탯표/스코어/선수단 등판번호처럼 숫자 값을 보여주는 모든 곳에
+     tabular-nums(자릿수 폭 고정)와 옅은 모노스페이스 감성을 함께 입혀,
+     열이 어긋나지 않고 딱 맞아떨어지는 "스포츠 데이터 사이트" 느낌을 줍니다. */
+  .rank-cell,
+  .rank-change,
+  .rank-change-arrow,
+  #mainTable td:nth-child(4),
+  #mainTable td:nth-child(5),
+  #mainTable td:nth-child(6),
+  #mainTable td:nth-child(7),
+  #mainTable td:nth-child(8),
+  #mainTable td:nth-child(9),
+  td.pts,
+  .gd-pos,
+  .gd-neg,
+  .gd-zero,
+  .stat-val,
+  .rmc-score-num,
+  .rmc-score-sep,
+  .h2h-score,
+  .timeline-score,
+  .mc-team-rank,
+  .mc-stat-val,
+  .ti-stat-value,
+  .ti-mini-num,
+  .ti-ha-metric-value,
+  .ti-streak-value,
+  .ti-record-rank-num,
+  .ti-record-item-value,
+  .ti-award-player-number,
+  .squad-card-number,
+  .other-team-grid-rank,
+  .ti-scorer-card-goals,
+  .ti-scorer-card-rank,
+  .nms-opp-rank,
+  .ti-next-match-rank,
+  .lineup-num,
+  .player-modal-stat-num,
+  .pt-prob-bar-label,
+  .pt-prob-cell {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    letter-spacing: 0.01em;
+  }
+
   /* ===== Rank Highlighting (Top 3 / My Team / Promo-Releg) ===== */
   .rank-cell {
     font-weight: 700;
@@ -974,7 +1171,7 @@
   }
   tr.my-team td.team .team-logo {
     box-shadow: 0 0 0 2px var(--color-teal);
-    border-radius: 5px;
+    border-radius: var(--radius-xs);
   }
 
   /* ===== Legend & Team Logos ===== */
@@ -1007,7 +1204,7 @@
     object-fit: contain;
     vertical-align: middle;
     margin-right: 8px;
-    border-radius: 3px;
+    border-radius: var(--radius-xs);
   }
   .team-logo-sm {
     width: 20px;
@@ -1023,7 +1220,7 @@
     max-width: 100%;
     min-width: 0;
     margin: 24px auto 18px;
-    border-radius: 22px;
+    border-radius: var(--radius-pill);
   }
   .view-toggle-wrap {
     display: flex;
@@ -1035,12 +1232,18 @@
     min-width: 0;
     padding: 4px;
     background: var(--color-surface);
-    border-radius: 22px;
+    border-radius: var(--radius-pill);
     box-shadow: 0 6px 18px rgba(var(--color-navy-rgb),0.12);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     scroll-snap-type: x proximity;
+    cursor: grab;
+  }
+  .view-toggle-wrap.is-dragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
+    user-select: none;
   }
   .view-toggle-wrap::-webkit-scrollbar {
     display: none;
@@ -1050,7 +1253,7 @@
     color: var(--color-text-toggle);
     border: none;
     padding: 9px 18px;
-    border-radius: 18px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
     font-size: 13.5px;
     font-weight: 700;
@@ -1101,12 +1304,12 @@
   }
   .scroll-fade-wrap::before {
     left: 0;
-    border-radius: 18px 0 0 18px;
+    border-radius: var(--radius-pill) 0 0 var(--radius-pill);
     background: linear-gradient(to right, var(--color-surface), rgba(var(--color-white-rgb),0));
   }
   .scroll-fade-wrap::after {
     right: 0;
-    border-radius: 0 18px 18px 0;
+    border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
     background: linear-gradient(to left, var(--color-surface), rgba(var(--color-white-rgb),0));
   }
   .scroll-fade-wrap.show-left::before { opacity: 1; }
@@ -1152,7 +1355,7 @@
     width: 100%;
     margin-top: 20px;
     background: var(--color-surface);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 8px 24px rgba(var(--color-navy-rgb),0.14);
     overflow: visible;
   }
@@ -1213,7 +1416,7 @@
     font-weight: 700;
     letter-spacing: 0.2px;
     padding: 5px 10px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition: background 0.2s ease;
   }
@@ -1237,7 +1440,7 @@
   .venue-leaflet-map {
     width: 100%;
     height: 420px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     overflow: hidden;
     z-index: 0;
   }
@@ -1302,7 +1505,7 @@
     font-weight: 800;
     line-height: 1;
     padding: 3px 6px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: rgba(255,255,255,0.95);
     color: var(--color-navy);
     box-shadow: 0 1px 4px rgba(0,0,0,0.35);
@@ -1332,7 +1535,7 @@
     padding: 10px 12px;
     background: var(--color-surface);
     border: 1px solid var(--color-border-chip);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     cursor: pointer;
     transition: var(--theme-transition), transform 0.15s ease, box-shadow 0.15s ease;
   }
@@ -1408,7 +1611,7 @@
     font-weight: 800;
     letter-spacing: 0.4px;
     text-align: center;
-    border-radius: 12px 12px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1428,12 +1631,12 @@
     font-weight: 800;
     letter-spacing: 0.2px;
     padding: 2px 8px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     box-shadow: 0 2px 6px rgba(var(--color-navy-rgb),0.3);
   }
   .stats-col.advanced-col {
     box-shadow: 0 8px 22px rgba(var(--color-navy-rgb),0.16);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
   }
 
   /* ===== Info Tooltips ===== */
@@ -1476,7 +1679,7 @@
     text-transform: none;
     letter-spacing: 0;
     padding: 12px 14px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     box-shadow: 0 10px 28px rgba(var(--color-navy-rgb),0.4);
     z-index: 60;
   }
@@ -1509,7 +1712,7 @@
     font-size: 13px;
     font-weight: 800;
     cursor: pointer;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     transition: background 0.2s, color 0.2s;
   }
   .more-btn:hover {
@@ -1521,7 +1724,7 @@
   .predict-intro {
     width: 100%;
     background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 16px 20px;
     color: var(--color-cream);
     font-size: 13px;
@@ -1546,7 +1749,7 @@
     color: var(--color-white);
     border: 1.5px solid rgba(var(--color-white-rgb),0.6);
     padding: 6px 14px;
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
@@ -1563,7 +1766,7 @@
   .predict-table-wrap {
     width: 100%;
     background: var(--color-surface);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 8px 24px rgba(var(--color-navy-rgb),0.14);
   }
   .predict-table-scroller {
@@ -1606,13 +1809,13 @@
     min-width: 90px;
     height: 18px;
     background: var(--color-bg-table-alt);
-    border-radius: 9px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
   }
   .pt-prob-bar-fill {
     position: absolute;
     top: 0; left: 0; bottom: 0;
-    border-radius: 9px;
+    border-radius: var(--radius-sm);
     transition: width 0.4s ease;
   }
   .pt-prob-bar-fill.champ { background: linear-gradient(90deg, var(--color-gold-strong), var(--color-gold-light)); }
@@ -1646,7 +1849,7 @@
     color: var(--color-text-chip);
     cursor: pointer;
     padding: 5px 12px;
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     background: var(--color-bg-stripe);
     border: 1px solid var(--color-border-chip);
     box-shadow: 0 1px 2px rgba(var(--color-navy-rgb),0.04);
@@ -1749,7 +1952,7 @@
     width: 92%;
     max-width: 500px;
     max-height: 85vh;
-    border-radius: 14px;
+    border-radius: var(--radius-xl);
     display: flex;
     flex-direction: column;
     box-shadow: 0 10px 40px rgba(var(--color-black-rgb),0.3);
@@ -1840,7 +2043,7 @@
     color: var(--color-white);
     border: none;
     padding: 11px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     font-size: 14px;
     font-weight: 800;
     cursor: pointer;
@@ -1869,7 +2072,7 @@
     color: var(--color-navy);
     border: 1px solid var(--color-border-light);
     padding: 8px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     font-size: 12.5px;
     font-weight: 800;
     cursor: pointer;
@@ -1893,7 +2096,7 @@
     color: var(--color-white);
     border: 1px solid #ff0000;
     padding: 8px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     font-size: 12.5px;
     font-weight: 800;
     cursor: pointer;
@@ -1920,13 +2123,13 @@
     font-size: 12px;
     font-weight: 800;
     padding: 4px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     margin-bottom: 14px;
   }
   .lineup-pitch {
     background: var(--color-surface);
     border: 1px solid var(--color-border-light);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
     margin-bottom: 18px;
   }
@@ -2017,7 +2220,7 @@
     font-size: 11.5px;
     font-weight: 700;
     padding: 5px 9px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     background: var(--color-bg-stripe);
     color: var(--color-text-dark);
   }
@@ -2035,14 +2238,18 @@
   .lineup-history-section {
     margin-top: 18px;
   }
+  .h2h-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--card-shadow);
+    padding: var(--card-padding);
+  }
   .h2h-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 11.5px;
-    background: var(--color-surface);
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
-    box-shadow: 0 4px 14px rgba(var(--color-navy-rgb),0.08);
   }
   .h2h-table th {
     background: var(--color-navy);
@@ -2106,7 +2313,7 @@
   .player-modal-logo {
     width: 40px;
     height: 40px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: rgba(255,255,255,0.12);
     flex-shrink: 0;
   }
@@ -2137,7 +2344,7 @@
     flex: 1;
     background: var(--color-bg-stripe);
     border: 1px solid var(--color-border-light);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     padding: 12px;
     text-align: center;
   }
@@ -2167,7 +2374,7 @@
     padding: 10px 12px;
     background: var(--color-bg-stripe);
     border: 1px solid var(--color-border-light);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
   }
   .timeline-round {
     flex-shrink: 0;
@@ -2213,7 +2420,7 @@
     font-size: 12px;
     font-weight: 800;
     padding: 4px 9px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     white-space: nowrap;
   }
   .timeline-pk-tag {
@@ -2222,7 +2429,7 @@
     font-size: 11px;
     font-weight: 800;
     padding: 3px 6px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
   }
   .timeline-empty {
     text-align: center;
@@ -2242,7 +2449,7 @@
     align-items: center;
     gap: 14px;
     background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
-    border-radius: 14px;
+    border-radius: var(--radius-xl);
     padding: 18px 20px;
     margin-bottom: 18px;
     box-shadow: 0 8px 24px rgba(var(--color-navy-rgb),0.18);
@@ -2265,6 +2472,55 @@
     font-size: 12.5px;
     font-weight: 600;
   }
+
+  /* ===== 팀 표어 배너 (구단 헤더 바로 아래) =====
+     "Chilumba Chimodzi, Team Imodzi" — 이번 시즌 팀 표어.
+     브랜드 골드(#DCBE8C)를 살짝 짙게 그라데이션한 배경 위에 흰 글씨를 올려
+     골드 톤은 유지하면서도 WCAG AA 대비(4.5:1 이상)를 확보했습니다. */
+  .team-motto-banner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: -8px 0 18px;
+    padding: 10px 22px 9px;
+    background: linear-gradient(135deg, #96702e 0%, #8a6530 55%, #7a5726 100%);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 14px rgba(var(--color-navy-rgb),0.14), inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+  .team-motto-main {
+    font-size: 16px;
+    font-weight: 800;
+    font-style: italic;
+    color: var(--color-white);
+    letter-spacing: 0.1px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .team-motto-quote {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: normal;
+    margin-right: 2px;
+    opacity: 0.85;
+  }
+  .team-motto-sub {
+    display: block;
+    margin-top: 3px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.3px;
+  }
+  @media (max-width: 600px) {
+    .team-motto-banner {
+      padding: 9px 16px 8px;
+    }
+    .team-motto-main {
+      font-size: 14px;
+    }
+    .team-motto-sub {
+      font-size: 10.5px;
+    }
+  }
   .squad-group {
     margin-bottom: 22px;
   }
@@ -2286,7 +2542,7 @@
     font-size: 11px;
     font-weight: 800;
     padding: 2px 8px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
   }
   .squad-card-grid {
     display: grid;
@@ -2300,7 +2556,7 @@
     gap: 12px;
     background: var(--color-surface);
     border: 1px solid var(--color-border-light);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 12px 14px;
     box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.08);
     transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s;
@@ -2330,10 +2586,11 @@
     text-align: center;
     font-size: 13px;
     font-weight: 600;
+    line-height: 1.5;
     color: var(--color-stat-value);
     background: var(--color-bg-stripe);
     border: 1px solid var(--color-border-light);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     padding: 8px 10px;
     margin-bottom: 14px;
   }
@@ -2408,13 +2665,109 @@
     min-width: 20px;
     height: 20px;
     padding: 0 5px;
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     font-size: 10.5px;
     font-weight: 800;
     color: var(--color-white);
   }
   .squad-band-c { background: var(--color-gold-strong); }
   .squad-band-vc { background: var(--color-teal); }
+
+  /* ===== 팀 정보 페이지 "득점 순위" 카드 (Top Scorers Cards) ===== */
+  .ti-scorer-card-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ti-scorer-card {
+    position: relative;
+    flex: 1 1 140px;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-xl);
+    padding: 20px 12px 16px;
+    box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.08);
+    cursor: pointer;
+    transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s;
+  }
+  .ti-scorer-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+  }
+  .ti-scorer-card.rank-1 { background: linear-gradient(180deg, var(--color-bg-rank-highlight) 0%, var(--color-surface) 65%); }
+  .ti-scorer-card-rank {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--color-text-muted);
+    color: var(--color-white);
+    font-size: 13px;
+    font-weight: 800;
+    box-shadow: 0 2px 6px rgba(var(--color-navy-rgb),0.25);
+  }
+  .ti-scorer-card.rank-1 .ti-scorer-card-rank { background: var(--color-gold-strong); }
+  .ti-scorer-card.rank-2 .ti-scorer-card-rank { background: var(--color-rank-silver); }
+  .ti-scorer-card.rank-3 .ti-scorer-card-rank { background: var(--color-rank-bronze); }
+  .ti-scorer-card-photo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 15%;
+    margin-top: 6px;
+    background: var(--color-bg-subtle, rgba(var(--color-navy-rgb),0.06));
+    border: 1px solid var(--color-border-light);
+  }
+  .ti-scorer-card-photo-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .ti-scorer-card-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--color-text-darkest);
+    line-height: 1.25;
+    word-break: keep-all;
+  }
+  .ti-scorer-card-goals {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--color-teal-dark);
+  }
+  .ti-scorer-card-goals-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--color-text-faint);
+    letter-spacing: 0.3px;
+  }
+  @media (max-width: 480px) {
+    .ti-scorer-card {
+      flex: 1 1 100px;
+      padding: 18px 8px 14px;
+    }
+    .ti-scorer-card-photo {
+      width: 46px;
+      height: 46px;
+    }
+  }
   @media (max-width: 480px) {
     .squad-card-grid {
       grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -2569,7 +2922,7 @@
     min-width: 0;
     background: var(--color-surface);
     border: 1px solid var(--color-border-light);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 7px 14px;
     cursor: pointer;
     transition: var(--theme-transition), box-shadow 0.15s;
@@ -2625,6 +2978,7 @@
   .other-team-list-hint {
     font-size: 12px;
     font-weight: 600;
+    line-height: 1.5;
     color: var(--color-text-muted);
     margin: 0 0 14px;
   }
@@ -2639,7 +2993,7 @@
     gap: 10px;
     background: var(--color-bg-stripe);
     border: 1px solid var(--color-border-light);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 10px 12px;
     cursor: pointer;
     text-align: left;
@@ -2682,7 +3036,7 @@
     align-items: center;
     gap: 12px;
     background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
-    border-radius: 14px;
+    border-radius: var(--radius-xl);
     padding: 16px 18px;
     margin-bottom: 16px;
 
@@ -2740,7 +3094,7 @@
     align-items: center;
     background: var(--color-bg-stripe);
     border: 1px solid var(--color-border-light);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     padding: 10px 6px;
   }
   .other-team-detail-stat-value {
@@ -2769,7 +3123,7 @@
   .other-team-detail-next {
     background: var(--color-bg-stripe);
     border: 1px solid var(--color-border-light);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 12px 14px;
   }
   .other-team-detail-next-label {
@@ -2813,7 +3167,7 @@
     scrollbar-width: none;
     padding: 4px;
     background: var(--color-surface);
-    border-radius: 18px;
+    border-radius: var(--radius-pill);
     box-shadow: 0 6px 18px rgba(var(--color-navy-rgb),0.12);
     margin-bottom: 18px;
     transition: var(--theme-transition);
@@ -2824,7 +3178,7 @@
     color: var(--color-text-toggle);
     border: none;
     padding: 8px 16px;
-    border-radius: 14px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
     font-size: 13px;
     font-weight: 700;
@@ -2861,9 +3215,9 @@
   }
   .ti-card {
     background: var(--color-surface);
-    border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(var(--color-navy-rgb),0.1);
-    padding: 16px 18px;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--card-shadow);
+    padding: var(--card-padding);
     transition: var(--theme-transition);
   }
   .ti-card-title {
@@ -2884,7 +3238,7 @@
     flex-direction: column;
     gap: 6px;
     padding: 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: var(--color-bg-table-alt);
   }
   .ti-ha-col-label {
@@ -2991,11 +3345,11 @@
   }
   .ti-next-match-rank {
     display: inline-block;
-    padding: 2px 9px;
-    border-radius: 10px;
+    padding: var(--rank-badge-padding);
+    border-radius: var(--rank-badge-radius);
     background: var(--color-bg-table-alt);
     color: var(--color-text-muted);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 800;
     letter-spacing: 0.2px;
   }
@@ -3007,19 +3361,42 @@
     font-weight: 600;
   }
   .next-match-strip {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px 14px;
+    margin: 10px 16px 4px;
+    padding: 10px 18px;
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--card-shadow);
+    transition: var(--theme-transition);
+    position: relative;
+  }
+  .next-match-strip:empty { display: none; }
+  .next-match-strip .nms-label {
+    justify-self: start;
+    min-width: 0;
+  }
+  .nms-match-row {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
     gap: 8px;
-    margin: 10px 16px 4px;
-    padding: 7px 14px;
-    background: var(--color-surface);
-    border-radius: 10px;
-    box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.08);
-    transition: var(--theme-transition);
+    justify-self: center;
+    min-width: 0;
   }
-  .next-match-strip:empty { display: none; }
+  .nms-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-self: end;
+    flex-shrink: 0;
+  }
+  .nms-bye {
+    justify-self: start;
+  }
   .nms-label {
     font-size: 11px;
     font-weight: 800;
@@ -3050,8 +3427,8 @@
     font-weight: 800;
     color: var(--color-text-muted);
     background: var(--color-bg-table-alt);
-    border-radius: 8px;
-    padding: 1px 6px;
+    border-radius: var(--rank-badge-radius);
+    padding: var(--rank-badge-padding);
   }
   .nms-bye {
     font-size: 12.5px;
@@ -3094,6 +3471,30 @@
     color: var(--color-white);
     transform: translateY(-1px);
   }
+  @media (max-width: 600px) {
+    .next-match-strip {
+      grid-template-columns: 1fr;
+      justify-items: center;
+    }
+    .next-match-strip .nms-label,
+    .nms-bye {
+      justify-self: center;
+    }
+    .nms-match-row {
+      justify-self: center;
+    }
+    .nms-meta-row {
+      justify-self: center;
+      justify-content: center;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--color-border-light);
+    }
+    .nms-kickoff {
+      border-left: none;
+      padding-left: 0;
+    }
+  }
   .ti-next-match-kickoff {
     margin-top: 12px;
     padding-top: 10px;
@@ -3120,7 +3521,7 @@
     color: var(--color-teal-dark);
     font-variant-numeric: tabular-nums;
     background: rgba(7,150,150,0.1);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     padding: 6px 10px;
   }
   .ti-next-match-h2h {
@@ -3154,9 +3555,9 @@
   }
   .ti-next-mini .ti-next-match {
     background: var(--color-surface);
-    border-radius: 12px;
-    box-shadow: 0 4px 14px rgba(var(--color-navy-rgb),0.1);
-    padding: 14px 16px;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--card-shadow);
+    padding: var(--card-padding);
   }
 
   .ti-form-card-head {
@@ -3176,7 +3577,7 @@
     font-size: 10.5px;
     font-weight: 800;
     padding: 3px 9px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     white-space: nowrap;
   }
   .ti-streak-live-win {
@@ -3202,7 +3603,7 @@
     align-items: center;
     gap: 2px;
     padding: 10px 8px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: var(--color-bg-table-alt);
     text-align: center;
   }
@@ -3288,7 +3689,7 @@
     font-weight: 800;
     color: var(--color-teal-dark);
     background: var(--color-bg-table-alt);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     padding: 3px 8px;
     text-align: center;
   }
@@ -3340,7 +3741,7 @@
     font-weight: 800;
     color: var(--color-teal-dark);
     background: var(--color-bg-table-alt);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     padding: 3px 8px;
     text-align: center;
   }
@@ -3364,7 +3765,7 @@
 
   .ti-record-card {
     background: var(--color-surface);
-    border-radius: 14px;
+    border-radius: var(--radius-xl);
     box-shadow: 0 6px 18px rgba(var(--color-navy-rgb),0.1);
     padding: 20px;
     display: flex;
@@ -3379,7 +3780,7 @@
     justify-content: center;
     min-width: 110px;
     padding: 10px 16px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
   }
   .ti-record-rank-num {
@@ -3444,7 +3845,7 @@
   }
   .ti-h2h-card {
     background: var(--color-surface);
-    border-radius: 14px;
+    border-radius: var(--radius-xl);
     box-shadow: 0 6px 18px rgba(var(--color-navy-rgb),0.1);
     padding: 14px;
     display: flex;
@@ -3495,7 +3896,7 @@
     align-items: center;
     gap: 2px;
     padding: 6px 0;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: var(--color-bg-table-alt);
   }
   .ti-h2h-wdl-item b {
@@ -3558,7 +3959,7 @@
     scrollbar-color: rgba(var(--color-navy-rgb),0.35) transparent;
     padding: 4px;
     background: var(--color-surface);
-    border-radius: 22px;
+    border-radius: var(--radius-pill);
     box-shadow: 0 6px 18px rgba(var(--color-navy-rgb),0.12);
     margin-bottom: 18px;
     width: fit-content;
@@ -3575,14 +3976,14 @@
   }
   .round-tab-bar::-webkit-scrollbar-thumb {
     background: rgba(var(--color-navy-rgb),0.35);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
   }
   .round-tab-btn {
     background: transparent;
     color: var(--color-text-toggle);
     border: none;
     padding: 8px 16px;
-    border-radius: 18px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
     font-size: 13px;
     font-weight: 700;
@@ -3606,7 +4007,7 @@
   }
   .round-match-card {
     background: var(--color-surface);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 4px 14px rgba(var(--color-navy-rgb),0.1);
     padding: 14px 16px;
     transition: var(--theme-transition);
@@ -3710,7 +4111,7 @@
     font-weight: 800;
     letter-spacing: 0.2px;
     padding: 4px 9px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
   }
   .rmc-kickoff {
     margin-top: 10px;
@@ -3737,7 +4138,7 @@
     font-weight: 800;
     letter-spacing: 0.3px;
     padding: 2px 9px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
   }
 
   /* ===== Compare Teams Button & Modal (전적 비교) ===== */
@@ -3749,7 +4150,7 @@
     color: var(--color-navy);
     border: 1px solid var(--color-border-light);
     padding: 8px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     font-size: 12.5px;
     font-weight: 800;
     cursor: pointer;
@@ -3894,7 +4295,7 @@
     align-items: center;
     gap: 3px;
     background: var(--color-bg-stripe);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     padding: 10px;
   }
   .mc-h2h-week {

@@ -562,14 +562,14 @@ const matchDetails = {
       scorersAway: "없음"
     },
     {
-      match: "치폴로폴로 2 : 비전 1",
-      scorersHome: "CLEMENT MUNTHALI, RODRICK KASUDZA",
-      scorersAway: "GEORGE MASEWO"
-    },
-    {
       match: "루비리 3 : 치바비 0",
       scorersHome: "TYSON SOKO, KINGSLEY MKANDAWIRE, ABRAHAM MVULA",
       scorersAway: "없음"
+    },
+    {
+      match: "치폴로폴로 2 : 비전 1",
+      scorersHome: "CLEMENT MUNTHALI, RODRICK KASUDZA",
+      scorersAway: "GEORGE MASEWO"
     },
     {
       match: "젠다 1 : 친테체 1",
@@ -593,15 +593,11 @@ const matchDetails = {
     }
   ],
   // 7주차는 아직 전체 라운드가 끝나지 않아 scheduledRounds에 남아있습니다.
-  // (경기가 끝나는 대로 이 배열에 결과를 추가하고, 라운드 전체가 끝나면
-  // scheduledRounds.round7를 roundsData.round7로 옮겨주세요.)
-  round7: [
-    {
-      match: "치주물루 4 : 젠다 0",
-      scorersHome: "STEVEN PHIRI, DICKIES NYIRENDA, BENJAMIN NYIRENDA, TIMOTHY KATAPA",
-      scorersAway: "없음"
-    }
-  ]
+  // 개별 경기가 끝나는 대로 scheduledRounds.round7 안의 해당 경기에
+  // homeScore/awayScore/scorersHome/scorersAway만 채우면 득점 순위 등에
+  // 자동으로 반영됩니다 (computeTopScorers 참고). 라운드 전체가 끝나면
+  // scheduledRounds.round7를 통째로 roundsData.round7로 옮기고, 그때 이
+  // matchDetails.round7 항목을 새로 만들어주세요.
 };
 
 // ===== 아직 안 치른(예정된) 경기의 사전 상대전적 메모 =====
@@ -609,7 +605,15 @@ const matchDetails = {
 // 예정된 라운드에는 아직 없습니다. 다음 경기 프리뷰에서 H2H를 보여주려면 이렇게
 // roundKey(scheduledRounds 기준)를 키로 미리 적어두면 됩니다. 라운드가 실제로 끝나면
 // 이 항목은 지우고 matchLineups[roundKey].recentHistory로 옮겨주세요.
-const upcomingMatchHistory = {};
+const upcomingMatchHistory = {
+  round8: {
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 29주차", score: "치주물루 2 : 0 치폴로폴로", result: "치주물루 승(몰수승)" },
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 12주차", score: "치폴로폴로 4 : 4 치주물루", result: "무승부" }
+    ],
+    historySummary: "최근 2경기 전적 2전 1승 1무 0패로 우세"
+  }
+};
 
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
@@ -619,7 +623,7 @@ const scheduledRounds = {
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
-    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 1, awayScore: 2 },
+    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "TEMWA NDHLOVU", scorersAway: "KING NYASULU, MIKE LUHANGA" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-08-23", kickoffTime: "14:30" },
     { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-08-23", kickoffTime: "14:30" },
     { byeKo: "칠룸바 배럭스 FC", byeEn: "Chilumba Barracks FC" }
@@ -1454,6 +1458,7 @@ const playerDirectory = {
   "TAIMON GOMEKA": { nameKo: "타이몬 고메카", nameEn: "Taimon Gomeka" },
   "FRANK MWALE": { nameKo: "프랭크 므왈레", nameEn: "Frank Mwale" },
   "MIKE LUHANGA": { nameKo: "마이크 루항가", nameEn: "Mike Luhanga" },
+  "KING NYASULU": { nameKo: "킹 니야술루", nameEn: "King Nyasulu" },
   "TYSON KAUNDA": { nameKo: "타이슨 카운다", nameEn: "Tyson Kaunda" },
   "CLEMENT KASEKA": { nameKo: "클레멘트 카세카", nameEn: "Clement Kaseka" },
   "JERPHASON KANYENDA": { nameKo: "제르파손 칸옌다", nameEn: "Jerphason Kanyenda" },
@@ -1525,6 +1530,7 @@ function computeTopScorers() {
     });
   }
 
+  // 1) 완전히 끝나 roundsData로 옮겨진 라운드는 matchDetails의 "match" 텍스트로 팀을 찾습니다.
   Object.keys(matchDetails).forEach(roundKey => {
     matchDetails[roundKey].forEach(m => {
       const parts = m.match.split(":").map(s => s.trim());
@@ -1539,6 +1545,26 @@ function computeTopScorers() {
       addScorers(m.scorersAway, awayTeam);
     });
   });
+
+  // 2) 아직 진행 중인 라운드(scheduledRounds)에서 이미 스코어/득점자가 채워진
+  //    개별 경기는 homeEn/awayEn으로 바로 팀을 찾아 집계합니다. 라운드 전체가
+  //    끝나 roundsData로 옮겨진 뒤에도 scheduledRounds에 남아있을 경우를 대비해
+  //    roundsData에 이미 있는 라운드는 건너뛰어 중복 집계를 막습니다.
+  if (typeof scheduledRounds !== 'undefined' && scheduledRounds) {
+    Object.keys(scheduledRounds).forEach(roundKey => {
+      if (roundsData[roundKey]) return; // 이미 matchDetails 쪽에서 집계됨
+      scheduledRounds[roundKey].forEach(m => {
+        if (m.byeKo || m.byeEn) return;
+        if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+
+        const homeTeam = findTeamByNameEn(m.homeEn);
+        const awayTeam = findTeamByNameEn(m.awayEn);
+
+        addScorers(m.scorersHome, homeTeam);
+        addScorers(m.scorersAway, awayTeam);
+      });
+    });
+  }
 
   return Object.keys(goalsByPlayer)
     .map(key => {
@@ -1658,6 +1684,44 @@ function computePlayerGoalTimelines() {
       });
     });
   });
+
+  // 3) 아직 진행 중인 라운드(scheduledRounds)에서 이미 스코어/득점자가 채워진
+  //    개별 경기도 타임라인에 포함합니다. (computeTopScorers()의 2)번 로직과 동일한 이유:
+  //    라운드 전체가 끝나 roundsData로 옮겨진 뒤에도 scheduledRounds에 남아있을 경우를
+  //    대비해 roundsData에 이미 있는 라운드는 건너뛰어 중복 집계를 막습니다.
+  if (typeof scheduledRounds !== 'undefined' && scheduledRounds) {
+    const scheduledRoundKeysSorted = Object.keys(scheduledRounds).sort((a, b) => {
+      return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+    });
+
+    scheduledRoundKeysSorted.forEach(roundKey => {
+      if (roundsData[roundKey]) return; // 이미 위에서 집계됨
+      const weekNum = parseInt(roundKey.replace('round', ''), 10);
+
+      scheduledRounds[roundKey].forEach(m => {
+        if (m.byeKo || m.byeEn) return;
+        if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+
+        const homeTeam = findTeamByNameEn(m.homeEn);
+        const awayTeam = findTeamByNameEn(m.awayEn);
+
+        addEntry(m.scorersHome, {
+          roundKey, weekNum,
+          teamEn: m.homeEn, teamKo: m.homeKo,
+          oppEn: m.awayEn, oppKo: m.awayKo,
+          oppLogo: awayTeam ? awayTeam.logoSrc : '',
+          homeAway: 'H', homeScore: m.homeScore, awayScore: m.awayScore
+        });
+        addEntry(m.scorersAway, {
+          roundKey, weekNum,
+          teamEn: m.awayEn, teamKo: m.awayKo,
+          oppEn: m.homeEn, oppKo: m.homeKo,
+          oppLogo: homeTeam ? homeTeam.logoSrc : '',
+          homeAway: 'A', homeScore: m.homeScore, awayScore: m.awayScore
+        });
+      });
+    });
+  }
 
   return timelines;
 }
@@ -1780,11 +1844,12 @@ function poissonRandom(lambda) {
 }
 
 // 홈/원정 득점 배율 — 이 리그의 실제 경기 기록(roundsData) 기준으로 산출한 값입니다.
-// 지금까지 치른 35경기 기준 평균 득점이 홈 2.03골 : 원정 0.97골(약 2.1배 차이)로,
+// 지금까지 치른 44경기 기준 평균 득점이 홈 1.96골 : 원정 0.91골(약 2.15배 차이)로,
 // 일반적인 축구 리그 평균(약 1.3배)보다 홈 어드밴티지가 훨씬 큽니다.
-// 표본이 아직 작으므로(35경기) 시즌이 진행되며 더 많은 결과가 쌓이면 이 값도 다시 확인해보는 게 좋습니다.
-const HOME_ADVANTAGE = 1.35;
-const AWAY_DISADVANTAGE = 0.65;
+// 아래 값은 44경기 실측 평균(홈 1.365배 / 원정 0.635배)을 그대로 반영한 것입니다.
+// 표본이 아직 작으므로 시즌이 더 진행되며 결과가 쌓이면 이 값도 다시 확인해보는 게 좋습니다.
+const HOME_ADVANTAGE = 1.365;
+const AWAY_DISADVANTAGE = 0.635;
 
 // ============================================================
 // 팀별 홈/원정 스플릿 (computeHomeAwaySplit) 계산

@@ -400,7 +400,8 @@
     if (t.nextMatch.isBye) {
       el.innerHTML = `
         <span class="nms-label lbl" data-en="Next" data-ko="다음경기">${isKorean ? '다음경기' : 'Next'}</span>
-        <span class="nms-bye lbl" data-en="Bye week — no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week — no match this round'}</span>`;
+        <span class="nms-bye lbl" data-en="Bye week — no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week — no match this round'}</span>
+        <span class="nms-meta-row"></span>`;
       return;
     }
 
@@ -410,28 +411,33 @@
     const oppRankTxt = oppRank ? (isKorean ? `${oppRank}위` : `#${oppRank}`) : '';
     const haClass = t.nextMatch.homeAway === 'H' ? 'ha-home' : 'ha-away';
     const oppName = isKorean ? t.nextMatch.oppKo : t.nextMatch.oppEn;
+    const oppNameShort = (isKorean ? t.nextMatch.oppKo : t.nextMatch.oppEn).split(' ')[0];
     const kickoffTxt = formatKickoff(t.nextMatch);
 
     el.innerHTML = `
       <span class="nms-label lbl" data-en="Next · ${weekLbl}" data-ko="다음경기 · ${weekLbl}">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</span>
-      <span class="nms-team">
-        <img class="team-logo team-logo-sm" src="./dd.svg" alt="Chizumulu United FC">
-        <span class="lbl" data-en="Chizumulu United FC" data-ko="치주물루">${isKorean ? '치주물루' : 'Chizumulu'}</span>
+      <span class="nms-match-row">
+        <span class="nms-team">
+          <img class="team-logo team-logo-sm" src="./dd.svg" alt="Chizumulu United FC">
+          <span class="lbl" data-en="Chizumulu United FC" data-ko="치주물루">${isKorean ? '치주물루' : 'Chizumulu'}</span>
+        </span>
+        <span class="ha-badge ${haClass} nms-ha">${t.nextMatch.homeAway}</span>
+        <span class="nms-team">
+          <img class="team-logo team-logo-sm opp-logo" data-en-name="${t.nextMatch.oppEn}" data-ko-name="${t.nextMatch.oppKo}" title="${oppName}" src="${t.nextMatch.oppLogo}" alt="${t.nextMatch.oppEn}">
+          <span title="${oppName}">${oppNameShort}</span>
+          ${oppRankTxt ? `<span class="nms-opp-rank">${oppRankTxt}</span>` : ''}
+        </span>
       </span>
-      <span class="ha-badge ${haClass} nms-ha">${t.nextMatch.homeAway}</span>
-      <span class="nms-team">
-        <img class="team-logo team-logo-sm opp-logo" data-en-name="${t.nextMatch.oppEn}" data-ko-name="${t.nextMatch.oppKo}" title="${oppName}" src="${t.nextMatch.oppLogo}" alt="${t.nextMatch.oppEn}">
-        <span class="lbl" data-en="${t.nextMatch.oppEn}" data-ko="${t.nextMatch.oppKo}">${oppName}</span>
-        ${oppRankTxt ? `<span class="nms-opp-rank">${oppRankTxt}</span>` : ''}
-      </span>
-      ${kickoffTxt ? `<span class="nms-kickoff">${kickoffTxt}</span>` : ''}
-      <span class="nms-action-group">
-        <button class="nms-action-btn" onclick="downloadNextMatchICS()" aria-label="Add to calendar" title="${isKorean ? '캘린더에 추가' : 'Add to calendar'}">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21M7 3V5M17 3V5M6.2 5H17.8C19 5 20 6 20 7.2V18.8C20 20 19 21 17.8 21H6.2C5 21 4 20 4 18.8V7.2C4 6 5 5 6.2 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-        </button>
-        <button class="nms-action-btn" onclick="shareNextMatch()" aria-label="Share" title="${isKorean ? '공유하기' : 'Share'}">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="18" cy="5" r="2.4" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="19" r="2.4" stroke="currentColor" stroke-width="1.6"/></svg>
-        </button>
+      <span class="nms-meta-row">
+        ${kickoffTxt ? `<span class="nms-kickoff">${kickoffTxt}</span>` : ''}
+        <span class="nms-action-group">
+          <button class="nms-action-btn" onclick="downloadNextMatchICS()" aria-label="Add to calendar" title="${isKorean ? '캘린더에 추가' : 'Add to calendar'}">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21M7 3V5M17 3V5M6.2 5H17.8C19 5 20 6 20 7.2V18.8C20 20 19 21 17.8 21H6.2C5 21 4 20 4 18.8V7.2C4 6 5 5 6.2 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="nms-action-btn" onclick="shareNextMatch()" aria-label="Share" title="${isKorean ? '공유하기' : 'Share'}">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="18" cy="5" r="2.4" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="19" r="2.4" stroke="currentColor" stroke-width="1.6"/></svg>
+          </button>
+        </span>
       </span>`;
   }
 
@@ -1154,6 +1160,7 @@
       overview: 'tiOverviewBtn',
       record: 'tiRecordBtn',
       squad: 'tiSquadBtn',
+      scorers: 'tiScorersBtn',
       h2h: 'tiH2hBtn',
       results: 'tiResultsBtn'
     };
@@ -1169,7 +1176,7 @@
       teamInfoScrollObserver.disconnect();
       teamInfoScrollObserver = null;
     }
-    const sections = ['overview', 'record', 'squad', 'h2h', 'results']
+    const sections = ['overview', 'record', 'squad', 'scorers', 'h2h', 'results']
       .map(tab => ({ tab, el: document.getElementById('tiSection-' + tab) }))
       .filter(s => s.el);
     if (sections.length === 0) return;
@@ -1201,9 +1208,67 @@
     renderTeamH2HTab();
     renderTeamStaffTab();
     renderSquadView();
+    renderTeamScorersTab();
     renderTeamResultsTab();
     setActiveTeamInfoButton(currentTeamInfoTab);
     setupTeamInfoScrollSpy();
+  }
+
+  // ===== 팀별 득점 순위 카드 (재사용 가능한 빌더) =====
+  // topScorersData(리그 전체 득점 순위, computeTopScorers로 자동 계산됨) 중
+  // 해당 팀 소속 선수만 골 수 내림차순으로 걸러서, 1~3위까지 카드로 만듭니다.
+  // 동률이면 같은 순위로 표시하고, 순위 안에 여러 명이면 전부 표시합니다
+  // (예: 2위가 2명이면 1,2,2위까지만 노출되고 3위는 없음).
+  // 치주물루(선수단↔상대전적 사이)와 다른 팀들(다음경기 앞) 양쪽에서 공유합니다.
+  function buildTeamScorerCardsHtml(nameEn, nameKo) {
+    const teamScorers = topScorersData
+      .filter(p => p.teamEn === nameEn || p.teamKo === nameKo)
+      .slice()
+      .sort((a, b) => b.goals - a.goals);
+
+    if (teamScorers.length === 0) {
+      return `<div class="ti-card" style="text-align:center; color:var(--color-text-faint);">
+        ${isKorean ? '아직 득점 기록이 없습니다.' : 'No scorer data yet.'}
+      </div>`;
+    }
+
+    let displayRank = 1;
+    let prevGoals = null;
+    let tierCount = 0; // 지금까지 등장한 "골 수 그룹"의 개수 (동률은 한 그룹으로 취급)
+    const cards = [];
+    teamScorers.forEach((player, idx) => {
+      if (idx > 0 && player.goals !== prevGoals) {
+        displayRank = idx + 1;
+        tierCount++;
+      }
+      prevGoals = player.goals;
+      if (idx === 0) tierCount = 1;
+      if (tierCount > 3) return; // 골 수 상위 3개 그룹까지만 (그룹 내 동률은 전부 포함)
+
+      const playerName = isKorean ? player.nameKo : player.nameEn;
+      const goalsLabel = isKorean ? '골' : (player.goals === 1 ? 'GOAL' : 'GOALS');
+      const photo = player.photoSrc
+        ? `<img class="ti-scorer-card-photo" src="${player.photoSrc}" alt="${player.nameEn}">`
+        : `<div class="ti-scorer-card-photo ti-scorer-card-photo-placeholder">⚽</div>`;
+
+      cards.push(`
+        <div class="ti-scorer-card rank-${displayRank} player-name-link" data-en="${player.nameEn}" data-ko="${player.nameKo}" data-player-key="${player.key}">
+          <div class="ti-scorer-card-rank">${displayRank}</div>
+          ${photo}
+          <div class="ti-scorer-card-name lbl" data-en="${player.nameEn}" data-ko="${player.nameKo}">${playerName}</div>
+          <div class="ti-scorer-card-goals">${player.goals}<span class="ti-scorer-card-goals-label">${goalsLabel}</span></div>
+        </div>
+      `);
+    });
+
+    return `<div class="ti-scorer-card-row">${cards.join('')}</div>`;
+  }
+
+  // ===== 치주물루 팀 정보 페이지의 "득점 순위" 섹션 (선수단 ↔ 상대전적 사이) =====
+  function renderTeamScorersTab() {
+    const el = document.getElementById('teamInfoScorersTab');
+    if (!el) return;
+    el.innerHTML = buildTeamScorerCardsHtml('Chizumulu United FC', '치주물루 유나이티드 FC');
   }
 
   function renderTeamStaffTab() {
@@ -3445,10 +3510,11 @@
         </div>`;
     }
 
-    // 치주물루(우리 팀)와 동일한 형태로 보여줍니다: 기록 카드 → 폼 가이드 + 홈 vs 원정 카드 → 다음 경기.
+    // 치주물루(우리 팀)와 동일한 형태로 보여줍니다: 기록 카드 → 폼 가이드 + 홈 vs 원정 카드 → 득점 순위 → 다음 경기.
     const recordCardHtml = buildRecordCardHtml(t, rank, total);
     const formGuideHtml = buildFormGuideCardHtml(t);
     const homeAwayHtml = renderHomeAwaySplitCard(t);
+    const scorersHtml = buildTeamScorerCardsHtml(t.nameEn, t.nameKo);
     const nextMatchHtml = nextMatchOpponentHtml(t, rank);
 
     const bodyEl = document.getElementById('otherTeamFullBody');
@@ -3463,6 +3529,10 @@
             ${formGuideHtml}
             ${homeAwayHtml}
           </div>
+        </div>
+        <div class="ti-section">
+          <div class="ti-section-title lbl" data-en="Top Scorers" data-ko="득점 순위">${isKorean ? '득점 순위' : 'Top Scorers'}</div>
+          ${scorersHtml}
         </div>
         <div class="ti-section">
           <div class="ti-card">
@@ -3706,15 +3776,17 @@
     return `
       <div class="lineup-history-section">
         <div class="lineup-subs-title lbl" data-en="Recent Head-to-Head" data-ko="최근 상대 전적">${isKo ? '최근 상대 전적' : 'Recent Head-to-Head'}</div>
-        <table class="h2h-table">
-          <thead><tr>
-            <th class="lbl" data-en="Match" data-ko="경기">${isKo ? '경기' : 'Match'}</th>
-            <th class="lbl" data-en="Score" data-ko="스코어">${isKo ? '스코어' : 'Score'}</th>
-            <th class="lbl" data-en="Result" data-ko="결과">${isKo ? '결과' : 'Result'}</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <div class="h2h-summary">${lineup.historySummary}</div>
+        <div class="h2h-card">
+          <table class="h2h-table">
+            <thead><tr>
+              <th class="lbl" data-en="Match" data-ko="경기">${isKo ? '경기' : 'Match'}</th>
+              <th class="lbl" data-en="Score" data-ko="스코어">${isKo ? '스코어' : 'Score'}</th>
+              <th class="lbl" data-en="Result" data-ko="결과">${isKo ? '결과' : 'Result'}</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="h2h-summary">${lineup.historySummary}</div>
+        </div>
       </div>`;
   }
 
@@ -3899,11 +3971,17 @@
 
     const weekEl = document.getElementById('weekLabel');
     const dateEl = document.getElementById('dateLabel');
+    const dateShortEl = document.getElementById('dateLabelShort');
     if (weekEl) weekEl.textContent = isKorean ? `${week}주차` : `Week ${week}`;
     if (dateEl) {
       dateEl.textContent = isKorean
         ? `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
         : today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    if (dateShortEl) {
+      dateShortEl.textContent = isKorean
+        ? `${today.getMonth() + 1}.${today.getDate()}`
+        : today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
   }
 
@@ -4086,6 +4164,64 @@
     update();
     setTimeout(update, 300);
     scrollFadeUpdaters.push(update);
+    enableMouseDragScroll(scroller);
+    enableWheelToHorizontalScroll(scroller);
+  }
+
+  // 데스크톱에서는 터치 스와이프가 없으므로, 마우스 클릭+드래그로 가로 스크롤 영역을
+  // 좌우로 움직일 수 있게 해줍니다 (탭 바, 표 등 overflow-x:auto 영역 공통 적용).
+  function enableMouseDragScroll(el) {
+    let isDown = false;
+    let startX = 0;
+    let startScroll = 0;
+    let moved = false;
+
+    el.addEventListener('mousedown', (e) => {
+      // 버튼/링크 클릭 자체는 막지 않되, 드래그 시작점을 기록합니다.
+      isDown = true;
+      moved = false;
+      startX = e.pageX;
+      startScroll = el.scrollLeft;
+      el.classList.add('is-dragging');
+    });
+    window.addEventListener('mouseup', () => {
+      isDown = false;
+      el.classList.remove('is-dragging');
+    });
+    window.addEventListener('mouseleave', () => {
+      isDown = false;
+      el.classList.remove('is-dragging');
+    });
+    el.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      const dx = e.pageX - startX;
+      if (Math.abs(dx) > 3) moved = true;
+      if (moved) {
+        e.preventDefault();
+        el.scrollLeft = startScroll - dx;
+      }
+    });
+    // 드래그로 실제로 움직였다면, mouseup 직후 발생하는 click 이벤트(탭 전환 등)를
+    // 취소해서 드래그가 클릭으로 오인되지 않도록 합니다.
+    el.addEventListener('click', (e) => {
+      if (moved) {
+        e.preventDefault();
+        e.stopPropagation();
+        moved = false;
+      }
+    }, true);
+  }
+
+  // 세로 휠 스크롤(일반 마우스)만 있는 경우에도 가로 스크롤 영역을 움직일 수 있도록
+  // deltaY를 가로 스크롤로 변환합니다. 가로로 넘길 내용이 있을 때만 동작합니다.
+  function enableWheelToHorizontalScroll(el) {
+    el.addEventListener('wheel', (e) => {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll <= 0) return;
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      el.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }, { passive: false });
   }
 
   function initScrollFadeHints() {

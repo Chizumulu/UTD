@@ -74,7 +74,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=014">
+<link rel="stylesheet" href="style.css?v=001">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -98,17 +98,20 @@
   
   <div class="league-title">
     <h1 class="lbl" data-ko="<span class=&quot;sponsor-line&quot;>치웨미 인베스트먼트</span><br><span class=&quot;main-line&quot;>NRFA 리그 원</span>" data-en="<span class=&quot;sponsor-line&quot;>CHIWEMI INVESTMENT</span><br><span class=&quot;main-line&quot;>NRFA LEAGUE ONE</span>"><span class="sponsor-line">치웨미 인베스트먼트</span><br><span class="main-line">NRFA 리그 원</span></h1>
-    <span class="fan-badge lbl" data-ko="26/27 시즌" data-en="26/27 Season">26/27 시즌</span>
-    <div class="info-bar">
-      <span class="info-item">
-        <svg class="info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12C3 8.229 3 6.343 4.172 5.172C5.343 4 7.229 4 11 4H13C16.771 4 18.657 4 19.828 5.172C21 6.343 21 8.229 21 12V13C21 16.771 21 18.657 19.828 19.828C18.657 21 16.771 21 13 21H11C7.229 21 5.343 21 4.172 19.828C3 18.657 3 16.771 3 13V12Z" stroke="currentColor" stroke-width="1.6"/><path d="M3 9H21" stroke="currentColor" stroke-width="1.6"/><path d="M8 2V5M16 2V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        <span id="weekLabel">5주차</span>
-      </span>
-      <span class="info-sep"></span>
-      <span class="info-item">
-        <svg class="info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7V12L15 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span id="dateLabel">2026년 8월 12일</span>
-      </span>
+    <div class="banner-meta-row">
+      <span class="fan-badge lbl" data-ko="26/27 시즌" data-en="26/27 Season">26/27 시즌</span>
+      <div class="info-bar">
+        <span class="info-item">
+          <svg class="info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12C3 8.229 3 6.343 4.172 5.172C5.343 4 7.229 4 11 4H13C16.771 4 18.657 4 19.828 5.172C21 6.343 21 8.229 21 12V13C21 16.771 21 18.657 19.828 19.828C18.657 21 16.771 21 13 21H11C7.229 21 5.343 21 4.172 19.828C3 18.657 3 16.771 3 13V12Z" stroke="currentColor" stroke-width="1.6"/><path d="M3 9H21" stroke="currentColor" stroke-width="1.6"/><path d="M8 2V5M16 2V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span id="weekLabel">5주차</span>
+        </span>
+        <span class="info-sep"></span>
+        <span class="info-item">
+          <svg class="info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7V12L15 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="dateLabel" class="date-label-full">2026년 8월 12일</span>
+          <span id="dateLabelShort" class="date-label-short">8.12</span>
+        </span>
+      </div>
     </div>
     <div class="lang-toggle-wrap">
       <button class="lang-btn" onclick="toggleLang()" id="langBtn">
@@ -227,10 +230,16 @@
     <div class="team-info-quickstats" id="teamInfoQuickStats"></div>
   </div>
 
+  <div class="team-motto-banner">
+    <span class="team-motto-main"><span class="team-motto-quote" aria-hidden="true">&ldquo;</span>Chilumba Chimodzi, Team Imodzi<span class="team-motto-quote" aria-hidden="true">&rdquo;</span></span>
+    <span class="team-motto-sub lbl" data-en="One Island, One Team" data-ko="하나의 섬, 하나의 팀">하나의 섬, 하나의 팀</span>
+  </div>
+
   <div class="team-info-tab-bar" id="teamInfoTabBar">
     <button class="team-info-tab-btn active lbl" id="tiOverviewBtn" data-en="TEAM INFO" data-ko="팀 정보" onclick="scrollToTeamInfoSection('overview')">팀 정보</button>
     <button class="team-info-tab-btn lbl" id="tiRecordBtn" data-en="RECORD" data-ko="기록" onclick="scrollToTeamInfoSection('record')">기록</button>
     <button class="team-info-tab-btn lbl" id="tiSquadBtn" data-en="SQUAD" data-ko="선수단" onclick="scrollToTeamInfoSection('squad')">선수단</button>
+    <button class="team-info-tab-btn lbl" id="tiScorersBtn" data-en="TOP SCORERS" data-ko="득점 순위" onclick="scrollToTeamInfoSection('scorers')">득점 순위</button>
     <button class="team-info-tab-btn lbl" id="tiH2hBtn" data-en="H2H" data-ko="상대전적" onclick="scrollToTeamInfoSection('h2h')">상대전적</button>
     <button class="team-info-tab-btn lbl" id="tiResultsBtn" data-en="RESULTS" data-ko="경기결과" onclick="scrollToTeamInfoSection('results')">경기결과</button>
   </div>
@@ -248,6 +257,10 @@
   <section id="tiSection-squad" class="ti-section">
     <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
     <div id="squadGroups" class="team-info-tab-content"></div>
+  </section>
+  <section id="tiSection-scorers" class="ti-section">
+    <div class="ti-section-title lbl" data-en="Top Scorers" data-ko="득점 순위">득점 순위</div>
+    <div id="teamInfoScorersTab" class="team-info-tab-content"></div>
   </section>
   <section id="tiSection-h2h" class="ti-section">
     <div class="ti-section-title lbl" data-en="Head-to-Head" data-ko="상대전적">상대전적</div>
@@ -769,7 +782,7 @@
   </div>
 </div>
 
-<script src="data.js?v=019"></script>
-<script src="app.js?v=027"></script>
+<script src="data.js?v=001"></script>
+<script src="app.js?v=001"></script>
 </body>
 </html>
