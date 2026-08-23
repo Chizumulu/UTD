@@ -348,6 +348,36 @@
 
   // ===== 킥오프 일시 포맷 (말라위 표준시 UTC+2 → KST UTC+9 병기) =====
   const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
+  // ===== 득점자 이름을 클릭 가능한 링크로 렌더링 =====
+  // scorerText 예: "STEVEN PHIRI, DICKIES NYIRENDA (2골)"
+  // topScorersData 에 등록된 선수(=득점 순위표에 있는 선수)는 클릭 시
+  // 선수 득점 타임라인 모달이 뜨도록 .player-name-link 로 감싸서 반환합니다.
+  function renderScorerNamesHtml(scorerText, isKorean) {
+    if (!scorerText || scorerText === '없음') return scorerText;
+
+    return scorerText.split(',').map(rawSegment => {
+      const segment = rawSegment.trim();
+      if (!segment) return segment;
+
+      const parenMatch = segment.match(/^(.+?)\s*(\([^)]*\))?\s*$/);
+      const rawName = (parenMatch ? parenMatch[1] : segment).trim();
+      const note = (parenMatch && parenMatch[2]) ? parenMatch[2] : '';
+
+      let key = rawName.toUpperCase();
+      if (typeof nameAliases !== 'undefined' && nameAliases[key]) key = nameAliases[key];
+
+      const info = (typeof playerDirectory !== 'undefined') ? playerDirectory[key] : null;
+      const displayName = info ? (isKorean ? info.nameKo : info.nameEn) : rawName;
+      const noteHtml = note ? ` ${note}` : '';
+
+      const isLinkable = topScorersData.some(p => p.key === key);
+      if (isLinkable) {
+        return `<span class="lbl player-name-link" data-en="${info.nameEn}" data-ko="${info.nameKo}" data-player-key="${key}">${displayName}</span>${noteHtml}`;
+      }
+      return `${displayName}${noteHtml}`;
+    }).join(', ');
+  }
+
   function formatKickoff(nextMatch) {
     if (!nextMatch.kickoffDate || !nextMatch.kickoffTime) return '';
     const [y, mo, d] = nextMatch.kickoffDate.split('-').map(Number);
@@ -1098,8 +1128,8 @@
       const homeName = isKorean ? m.homeKo : m.homeEn;
       const awayName = isKorean ? m.awayKo : m.awayEn;
       const noneLabel = isKorean ? '득점자 없음' : 'No scorers';
-      const scorersHomeText = (m.scorersHome === '없음' || !m.scorersHome) ? noneLabel : m.scorersHome;
-      const scorersAwayText = (m.scorersAway === '없음' || !m.scorersAway) ? noneLabel : m.scorersAway;
+      const scorersHomeText = (m.scorersHome === '없음' || !m.scorersHome) ? noneLabel : renderScorerNamesHtml(m.scorersHome, isKorean);
+      const scorersAwayText = (m.scorersAway === '없음' || !m.scorersAway) ? noneLabel : renderScorerNamesHtml(m.scorersAway, isKorean);
 
       html += `
         <div class="round-match-card my-team">
@@ -1442,7 +1472,7 @@
       return {
         isBye: false, isScheduled: true,
         homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
-        kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime
+        kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime, postponed: m.postponed
       };
     });
   }
@@ -1579,7 +1609,7 @@
               <span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span>
             </div>
             <div class="rmc-score rmc-score-pending">
-              <span class="rmc-pending-badge lbl" data-en="Upcoming" data-ko="경기 시작 전">${isKorean ? '경기 시작 전' : 'Upcoming'}</span>
+              <span class="rmc-pending-badge lbl" data-en="${m.postponed ? 'Postponed' : 'Upcoming'}" data-ko="${m.postponed ? '경기 연기' : '경기 시작 전'}">${isKorean ? (m.postponed ? '경기 연기' : '경기 시작 전') : (m.postponed ? 'Postponed' : 'Upcoming')}</span>
             </div>
             <div class="rmc-team rmc-away">
               <span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span>
@@ -1604,8 +1634,8 @@
       const awayWin = m.awayScore > m.homeScore;
 
       const noneLabel = isKorean ? '득점자 없음' : 'No scorers';
-      const scorersHomeText = (m.scorersHome === '없음' || !m.scorersHome) ? noneLabel : m.scorersHome;
-      const scorersAwayText = (m.scorersAway === '없음' || !m.scorersAway) ? noneLabel : m.scorersAway;
+      const scorersHomeText = (m.scorersHome === '없음' || !m.scorersHome) ? noneLabel : renderScorerNamesHtml(m.scorersHome, isKorean);
+      const scorersAwayText = (m.scorersAway === '없음' || !m.scorersAway) ? noneLabel : renderScorerNamesHtml(m.scorersAway, isKorean);
 
       const card = document.createElement('div');
       card.className = 'round-match-card' + (mine ? ' my-team' : '');

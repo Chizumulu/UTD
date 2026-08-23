@@ -644,12 +644,12 @@ const upcomingMatchHistory = {
 const scheduledRounds = {
   round7: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-08-21", kickoffTime: "15:00", homeScore: 4, awayScore: 0, scorersHome: "STEVEN PHIRI, DICKIES NYIRENDA, BENJAMIN NYIRENDA, TIMOTHY KATAPA", scorersAway: "없음" },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-08-22", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "ROBIN CHIOKO, ACKIM GOMIRE, BABA NKHOMA", scorersAway: "확인 필요" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", postponed: true },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", postponed: true },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-08-22", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "ROBIN CHIOKO, ACKIM GOMIRE, BABA NKHOMA", scorersAway: "DANIEL CHISOKWE" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "TEMWA NDHLOVU", scorersAway: "KING NYASULU, MIKE LUHANGA" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "GIVEN MWANDIRA, JOMO PHIRI", scorersAway: "없음" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-08-23", kickoffTime: "14:30" },
+    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "KINGSLEY MVULA, DANIEL SIWALE", scorersAway: "SHAIBU JALAH" },
     { byeKo: "칠룸바 배럭스 FC", byeEn: "Chilumba Barracks FC" }
   ],
   round8: [
@@ -1428,6 +1428,10 @@ const playerDirectory = {
   "ROBIN CHIOKO": { nameKo: "로빈 치오코", nameEn: "Robin Chioko" },
   "ACKIM GOMIRE": { nameKo: "아킴 고미레", nameEn: "Ackim Gomire" },
   "BABA NKHOMA": { nameKo: "바바 은코마", nameEn: "Baba Nkhoma" },
+  "DANIEL CHISOKWE": { nameKo: "다니엘 치소크웨", nameEn: "Daniel Chisokwe" },
+  "KINGSLEY MVULA": { nameKo: "킹슬리 음불라", nameEn: "Kingsley Mvula" },
+  "DANIEL SIWALE": { nameKo: "다니엘 시왈레", nameEn: "Daniel Siwale" },
+  "SHAIBU JALAH": { nameKo: "샤이부 잘라", nameEn: "Shaibu Jalah" },
   "HENDERSON KANYIKA": { nameKo: "헨더슨 칸이카", nameEn: "Henderson Kanyika" },
   "ZAKARIA MPHAMBA": { nameKo: "자카리아 음팜바", nameEn: "Zakaria Mphamba" },
   "NATHAN MSISKA": { nameKo: "네이단 음시스카", nameEn: "Nathan Msiska" },
@@ -1508,6 +1512,34 @@ function toTitleCase(upperName) {
     .split(" ")
     .map(w => (w.length ? w.charAt(0) + w.slice(1).toLowerCase() : w))
     .join(" ");
+}
+
+// ============================================================
+// 득점자 텍스트("STEVEN PHIRI, DICKIES NYIRENDA" 등)를 화면 언어에 맞춰
+// playerDirectory 기준으로 번역해주는 공용 함수.
+// - "없음" / 빈 값은 그대로 반환합니다.
+// - "(2골)" 같은 괄호 메모는 그대로 유지한 채 이름만 바꿉니다.
+// - playerDirectory에 없는 이름은 원문 그대로 둡니다.
+// ============================================================
+function formatScorerNames(scorerText, isKorean) {
+  if (!scorerText || scorerText === "없음") return scorerText;
+
+  return scorerText.split(",").map(rawSegment => {
+    const segment = rawSegment.trim();
+    if (!segment) return segment;
+
+    const parenMatch = segment.match(/^(.+?)\s*(\([^)]*\))?\s*$/);
+    const rawName = (parenMatch ? parenMatch[1] : segment).trim();
+    const note = (parenMatch && parenMatch[2]) ? parenMatch[2] : "";
+
+    let key = rawName.toUpperCase();
+    if (typeof nameAliases !== 'undefined' && nameAliases[key]) key = nameAliases[key];
+
+    const info = (typeof playerDirectory !== 'undefined') ? playerDirectory[key] : null;
+    const displayName = info ? (isKorean ? info.nameKo : info.nameEn) : rawName;
+
+    return note ? `${displayName} ${note}` : displayName;
+  }).join(", ");
 }
 
 // nameEn 으로 leagueData 에서 팀 정보를 찾아줍니다 (로고 등 참조용)
