@@ -265,6 +265,30 @@ const staffData = [
   ]}
 ];
 
+// ===== 스폰서 정보 (메인 / 키트 / 일반) =====
+const sponsorData = {
+  main: [
+    { name: "", logo: "./스폰서2.webp" }
+  ],
+  kit: [
+    { name: "", logo: "./스폰서1.webp" }
+  ],
+  general: [
+    { name: "", logo: "./스폰서3.png" },
+    { name: "", logo: "./스폰서4.webp" },
+    { name: "", logo: "./스폰서5.png" },
+    { name: "", logo: "./스폰서6.png" }
+  ]
+};
+
+// ===== 26/27 시즌 유니폼 이미지 =====
+const kitData = {
+  home:   "./2627홈.webp",
+  away:   "./2627어웨이.webp",
+  gkHome: "./2627GK홈.webp",
+  gkAway: "./2627GK어웨이.jpg"
+};
+
 // ===== 팀 수상 정보 (맨 오브 더 매치 / 이달의 선수) =====
 // motm: 라운드별 맨 오브 더 매치 수상자. 값은 squadData의 등번호(number) 배열 (공동 수상 가능)
 // playerOfTheMonth: 'YYYY-MM' 형식의 월별 이달의 선수 수상자. 값은 squadData의 등번호(number)
@@ -624,7 +648,7 @@ const scheduledRounds = {
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-08-22", kickoffTime: "14:30" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "TEMWA NDHLOVU", scorersAway: "KING NYASULU, MIKE LUHANGA" },
-    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-08-23", kickoffTime: "14:30" },
+    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "GIVEN MWANDIRA, JOMO PHIRI", scorersAway: "없음" },
     { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-08-23", kickoffTime: "14:30" },
     { byeKo: "칠룸바 배럭스 FC", byeEn: "Chilumba Barracks FC" }
   ],

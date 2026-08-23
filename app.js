@@ -1201,6 +1201,50 @@
     sections.forEach(s => teamInfoScrollObserver.observe(s.el));
   }
 
+  function renderTeamSponsors() {
+    const el = document.getElementById('teamSponsorsCard');
+    if (!el) return;
+    if (typeof sponsorData === 'undefined') { el.innerHTML = ''; return; }
+
+    const main = (sponsorData.main || [])[0];
+    const kit = (sponsorData.kit || [])[0];
+    const general = sponsorData.general || [];
+
+    if (!main && !kit && !general.length) { el.innerHTML = ''; return; }
+
+    const mainHtml = main ? `
+      <div class="team-sponsor-block main">
+        <span class="team-sponsor-tag lbl" data-en="Main Sponsor" data-ko="메인 스폰서">${isKorean ? '메인 스폰서' : 'Main Sponsor'}</span>
+        <img class="team-sponsor-logo-img main" src="${main.logo}" alt="${main.name || (isKorean ? '메인 스폰서' : 'Main Sponsor')}" loading="lazy">
+        ${main.name ? `<span class="team-sponsor-name">${main.name}</span>` : ''}
+      </div>` : '';
+
+    const kitHtml = kit ? `
+      <div class="team-sponsor-block kit">
+        <span class="team-sponsor-tag lbl" data-en="Kit Sponsor" data-ko="키트 스폰서">${isKorean ? '키트 스폰서' : 'Kit Sponsor'}</span>
+        <img class="team-sponsor-logo-img kit" src="${kit.logo}" alt="${kit.name || (isKorean ? '키트 스폰서' : 'Kit Sponsor')}" loading="lazy">
+        ${kit.name ? `<span class="team-sponsor-name">${kit.name}</span>` : ''}
+      </div>` : '';
+
+    const generalHtml = general.length ? `
+      <div class="team-sponsor-general-section">
+        <div class="team-sponsor-general-label lbl" data-en="Sponsors" data-ko="일반 스폰서">${isKorean ? '일반 스폰서' : 'Sponsors'}</div>
+        <div class="team-sponsor-general-grid">
+          ${general.map(g => `<img class="team-sponsor-general-logo" src="${g.logo}" alt="${g.name || ''}" loading="lazy">`).join('')}
+        </div>
+      </div>` : '';
+
+    el.innerHTML = `
+      <div class="team-sponsors-title lbl" data-en="Sponsors" data-ko="스폰서">${isKorean ? '스폰서' : 'Sponsors'}</div>
+      <div class="team-sponsor-top-row">
+        ${mainHtml}
+        ${kitHtml}
+      </div>
+      ${generalHtml}
+    `;
+    attachImageFallback();
+  }
+
   function renderTeamInfoView() {
     renderTeamInfoHeader();
     renderTeamInfoOverview();
