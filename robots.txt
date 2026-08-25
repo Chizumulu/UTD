@@ -2,3 +2,5 @@ User-agent: *
 Allow: /
 
 Sitemap: https://chizumulu.github.io/UTD/sitemap.xml
+
+#DaumWebMasterTool:7d1c4b9c7dd40cf457fc9d3138b1d4bea0d8285183aae17dade48ad3dc5f2e86:88eBG2sqCT5qecZhTe5WdA==
