@@ -1416,7 +1416,8 @@ const nameAliases = {
   "LUMABANI KAMANGA": "LIMBANI KAMANGA",
   "SOLOMON INKOSI": "SOLOMON NKOSI",
   "ZACHARIAH MPHAMBA": "ZAKARIA MPHAMBA",
-  "CLEMENT MUNTHALI": "CLEMENT MTHALI",
+  "CLEMENT MUNTHALI": "CLEMENT KASEKA",
+  "CLEMENT MTHALI": "CLEMENT KASEKA",
   "CHISOMO MYEGHA": "CHISOMO MYGHA"
 };
 
@@ -1443,7 +1444,6 @@ const playerDirectory = {
   "MPHATSO KUMWENDA": { nameKo: "음파초 쿰웬다", nameEn: "Mphatso Kumwenda" },
   "DANIEL CHISOKWE": { nameKo: "다니엘 치소크웨", nameEn: "Daniel Chisokwe" },
   "KENNEDY SEME": { nameKo: "케네디 세메", nameEn: "Kennedy Seme" },
-  "CLEMENT MTHALI": { nameKo: "클레멘트 음탈리", nameEn: "Clement Mthali" },
   "GUMBIKANI BANDA": { nameKo: "감비카니 반다", nameEn: "Gumbikani Banda" },
   "CHIKONDI SAKA": { nameKo: "치콘디 사카", nameEn: "Chikondi Saka" },
   "PEARSON NYIRENDA": { nameKo: "피어슨 니렌다", nameEn: "Pearson Nyirenda" },
