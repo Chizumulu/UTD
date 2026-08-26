@@ -17,6 +17,26 @@ const matchHighlights = {
   round3: 'https://youtu.be/goM_m99MrDQ?si=coMD5rW48IhFYh0q'
 };
 
+// ===== 구단 유튜브 코너 - 채널 최신 영상 자동 연동 설정 =====
+// "구단 유튜브 코너"는 더 이상 matchHighlights(라운드별 하이라이트)를 쓰지 않고,
+// 아래 channelId 채널의 "최신 업로드 영상"을 YouTube Data API v3로 직접 가져와 보여줍니다.
+//
+// apiKey를 발급받는 방법 (무료):
+// 1) https://console.cloud.google.com/ 접속 → 새 프로젝트 생성(또는 기존 프로젝트 선택)
+// 2) 왼쪽 메뉴에서 "API 및 서비스" → "라이브러리" → "YouTube Data API v3" 검색 후 "사용 설정"
+// 3) "API 및 서비스" → "사용자 인증 정보" → "+ 사용자 인증 정보 만들기" → "API 키" 선택
+// 4) 생성된 키를 아래 apiKey 자리에 붙여넣기
+//    (선택) 키를 만든 뒤 "키 제한사항"에서 "API 제한"을 YouTube Data API v3로만 제한해두면 더 안전합니다.
+//
+// uploadsPlaylistId는 채널ID의 "UC"를 "UU"로 바꾼 값입니다(유튜브의 일반적인 규칙).
+// 이미 계산해서 넣어뒀으니 따로 수정할 필요 없습니다.
+const teamYoutubeChannel = {
+  channelId: 'UC5JtIP2gExbPDMbNMFr3aHA', // 창박골 Changbakgol (@changbakgol)
+  uploadsPlaylistId: 'UU5JtIP2gExbPDMbNMFr3aHA',
+  apiKey: 'AIzaSyCKU3vHbw4uw3cCdhreXi4AnJU5htEauMQ', // 여기에 위에서 발급받은 YouTube Data API v3 키를 넣어주세요
+  maxResults: 15
+};
+
 // ===== 치주물루 라운드별 상세 (포메이션/득점/교체/최근 상대전적) =====
 // starters: 포지션별 선발. goals: 득점 시간(분) 배열. outMin: 교체 아웃 시간('HT'=하프타임)
 // subsIn: 교체 투입 선수. subsUnused: 미출전 명단(등번호)

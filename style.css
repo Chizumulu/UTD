@@ -2999,7 +2999,7 @@
   }
   @media (max-width: 480px) {
     .squad-card-grid {
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      grid-template-columns: 1fr;
     }
     .squad-header-text h2 {
       font-size: 15.5px;
@@ -3724,6 +3724,62 @@
       padding-left: 0;
     }
   }
+  /* ===== 다음 경기 문자중계 링크 바 (킥오프 30분 전 ~ 종료 후 3시간까지만 노출) ===== */
+  .next-match-live-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: -6px 20px 4px;
+    padding: 8px 18px 7px;
+    background: var(--color-teal-dark);
+    color: var(--color-white);
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    box-shadow: var(--card-shadow);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1px;
+    position: relative;
+    transition: var(--theme-transition), transform 0.15s, filter 0.15s;
+  }
+  .next-match-live-bar:hover {
+    transform: translateY(1px);
+    filter: brightness(1.08);
+  }
+  .nmlb-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-red-light);
+    flex-shrink: 0;
+    animation: nmlb-pulse 1.6s ease-out infinite;
+  }
+  @keyframes nmlb-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55); }
+    70% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+  }
+  .nmlb-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nmlb-arrow {
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
+  @media (max-width: 600px) {
+    .next-match-live-bar {
+      margin: -6px 16px 4px;
+      font-size: 11.5px;
+    }
+    .nmlb-text {
+      white-space: normal;
+      text-align: center;
+    }
+  }
+
   .ti-next-match-kickoff {
     margin-top: 12px;
     padding-top: 10px;
@@ -4351,6 +4407,118 @@
     .ti-h2h-grid {
       grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
       gap: 10px;
+    }
+  }
+
+  /* ===== 구단 유튜브 코너 (상대전적 ↔ 경기결과 사이, 채널 최신 영상 좌→우 자동 흐름) ===== */
+  .ti-yt-marquee {
+    overflow: hidden;
+    padding: 2px 0 8px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+  }
+  .ti-yt-track {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    width: max-content;
+    animation: ti-yt-flow 42s linear infinite;
+  }
+  .ti-yt-marquee:hover .ti-yt-track {
+    animation-play-state: paused;
+  }
+  @keyframes ti-yt-flow {
+    from { transform: translateX(-50%); }
+    to { transform: translateX(0%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ti-yt-track {
+      animation: none;
+    }
+    .ti-yt-marquee {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+  .ti-yt-empty {
+    padding: 16px 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+  .ti-yt-card {
+    flex: 0 0 auto;
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 6px 18px rgba(var(--color-navy-rgb),0.1);
+    padding: 8px;
+    text-decoration: none;
+    transition: var(--theme-transition), transform 0.15s ease;
+  }
+  .ti-yt-card:hover {
+    transform: translateY(-2px);
+  }
+  .ti-yt-thumb-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--color-bg-table-alt);
+  }
+  .ti-yt-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .ti-yt-play-badge {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .ti-yt-play-badge svg {
+    width: 34px;
+    height: 34px;
+  }
+  .ti-yt-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 2px;
+  }
+  .ti-yt-round {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--color-teal-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .ti-yt-opponent {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--color-text-darkest);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ti-yt-result {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+  }
+  .ti-yt-result.gd-pos { color: var(--color-teal); }
+  .ti-yt-result.gd-neg { color: var(--color-red); }
+  @media (max-width: 600px) {
+    .ti-yt-card {
+      width: 170px;
     }
   }
 

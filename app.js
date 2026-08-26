@@ -432,6 +432,9 @@
         <span class="nms-label lbl" data-en="Next" data-ko="다음경기">${isKorean ? '다음경기' : 'Next'}</span>
         <span class="nms-bye lbl" data-en="Bye week — no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week — no match this round'}</span>
         <span class="nms-meta-row"></span>`;
+      const liveBarBye = document.getElementById('nextMatchLiveBar');
+      if (liveBarBye) liveBarBye.removeAttribute('data-kickoff-utc');
+      updateNextMatchLiveBar();
       return;
     }
 
@@ -469,6 +472,14 @@
           </button>
         </span>
       </span>`;
+
+    const liveBar = document.getElementById('nextMatchLiveBar');
+    if (liveBar) {
+      const kickoffMs = kickoffUTCMillis(t.nextMatch.kickoffDate, t.nextMatch.kickoffTime);
+      if (kickoffMs) liveBar.setAttribute('data-kickoff-utc', kickoffMs);
+      else liveBar.removeAttribute('data-kickoff-utc');
+    }
+    updateNextMatchLiveBar();
   }
 
   // ===== 공유하기 (Web Share API + 클립보드 폴백) =====
@@ -669,6 +680,25 @@
       if (!kickoffMs) return;
       el.textContent = formatCountdownText(kickoffMs - Date.now());
     });
+    updateNextMatchLiveBar();
+  }
+
+  // ===== 다음 경기 문자중계 링크 바 (킥오프 30분 전 ~ 3시간 후에만 노출) =====
+  // 치주물루 다음 경기 기준, data-kickoff-utc(킥오프 UTC ms)를 renderNextMatchStrip()에서
+  // nextMatchLiveBar에 심어두고, 매초 이 함수로 현재 시각과 비교해 노출 여부만 갱신합니다.
+  const NEXT_MATCH_LIVE_BAR_LEAD_MS = 30 * 60 * 1000;   // 킥오프 30분 전부터
+  const NEXT_MATCH_LIVE_BAR_TAIL_MS = 3 * 60 * 60 * 1000; // 킥오프 후 3시간까지
+  function updateNextMatchLiveBar() {
+    const el = document.getElementById('nextMatchLiveBar');
+    if (!el) return;
+    const kickoffMs = Number(el.getAttribute('data-kickoff-utc'));
+    if (!kickoffMs) {
+      el.style.display = 'none';
+      return;
+    }
+    const now = Date.now();
+    const inWindow = now >= (kickoffMs - NEXT_MATCH_LIVE_BAR_LEAD_MS) && now <= (kickoffMs + NEXT_MATCH_LIVE_BAR_TAIL_MS);
+    el.style.display = inWindow ? '' : 'none';
   }
 
   // 상대전적(H2H) 요약 한 줄 — computeH2HHistory 결과 하나를 받아 렌더링합니다.
@@ -1361,6 +1391,130 @@
     attachImageFallback();
   }
 
+  // 유튜브 링크(watch?v=, youtu.be, embed)에서 11자리 영상 ID만 뽑아냅니다.
+  function extractYoutubeId(url) {
+    if (!url) return null;
+    const patterns = [
+      /youtu\.be\/([\w-]{11})/,
+      /[?&]v=([\w-]{11})/,
+      /youtube\.com\/embed\/([\w-]{11})/
+    ];
+    for (const re of patterns) {
+      const m = url.match(re);
+      if (m) return m[1];
+    }
+    return null;
+  }
+
+  // HTML 특수문자를 이스케이프합니다(유튜브 API에서 온 영상 제목을 속성/텍스트에 안전하게 넣기 위함).
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // teamYoutubeChannel(data.js)에 설정된 채널의 "최신 업로드 영상"을 YouTube Data API v3로
+  // 가져옵니다. 같은 브라우저 세션 동안은 sessionStorage에 캐시해서(10분) API 호출을 아낍니다.
+  async function fetchTeamYoutubeChannelVideos() {
+    if (typeof teamYoutubeChannel === 'undefined' || !teamYoutubeChannel.apiKey || !teamYoutubeChannel.uploadsPlaylistId) {
+      return null;
+    }
+
+    const cacheKey = 'tiYoutubeChannelCache_' + teamYoutubeChannel.uploadsPlaylistId;
+    try {
+      const cachedRaw = sessionStorage.getItem(cacheKey);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        if (cached && Array.isArray(cached.videos) && (Date.now() - cached.ts) < 10 * 60 * 1000) {
+          return cached.videos;
+        }
+      }
+    } catch (e) { /* 캐시 읽기 실패는 무시하고 새로 받아옵니다 */ }
+
+    const maxResults = teamYoutubeChannel.maxResults || 15;
+    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${encodeURIComponent(teamYoutubeChannel.uploadsPlaylistId)}&maxResults=${maxResults}&key=${encodeURIComponent(teamYoutubeChannel.apiKey)}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('YouTube API 요청 실패: ' + res.status);
+    const data = await res.json();
+
+    const videos = (data.items || [])
+      .filter(item => item.snippet && item.snippet.resourceId && item.snippet.resourceId.videoId)
+      .map(item => {
+        const videoId = item.snippet.resourceId.videoId;
+        const thumbs = item.snippet.thumbnails || {};
+        const thumb = thumbs.medium || thumbs.high || thumbs.default;
+        return {
+          videoId,
+          title: item.snippet.title || '',
+          publishedAt: item.snippet.publishedAt || '',
+          thumbSrc: thumb ? thumb.url : `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+        };
+      });
+
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), videos }));
+    } catch (e) { /* 저장 실패(용량 등)는 무시 */ }
+
+    return videos;
+  }
+
+  // ===== 구단 유튜브 코너(상대전적 ↔ 경기결과 사이) =====
+  // teamYoutubeChannel(data.js)에 지정된 채널의 최신 영상 15개를 가져와 썸네일 카드로
+  // 보여줍니다. 카드 목록을 이어붙여(2배) 좌→우로 끊김 없이 자동으로 흐르게 하고,
+  // 클릭하면 새 탭에서 해당 유튜브 영상이 열립니다.
+  async function renderTeamYoutubeTab() {
+    const el = document.getElementById('teamInfoYoutubeTab');
+    if (!el) return;
+
+    if (typeof teamYoutubeChannel === 'undefined' || !teamYoutubeChannel.apiKey) {
+      el.innerHTML = `<div class="ti-yt-empty lbl" data-en="Add a YouTube Data API key in data.js (teamYoutubeChannel.apiKey) to show the channel's latest videos." data-ko="data.js의 teamYoutubeChannel.apiKey에 YouTube Data API 키를 넣으면 채널 최신 영상이 표시됩니다.">${isKorean ? 'data.js의 teamYoutubeChannel.apiKey에 YouTube Data API 키를 넣으면 채널 최신 영상이 표시됩니다.' : "Add a YouTube Data API key in data.js (teamYoutubeChannel.apiKey) to show the channel's latest videos."}</div>`;
+      return;
+    }
+
+    el.innerHTML = `<div class="ti-yt-empty lbl" data-en="Loading latest videos..." data-ko="최신 영상을 불러오는 중...">${isKorean ? '최신 영상을 불러오는 중...' : 'Loading latest videos...'}</div>`;
+
+    let videos;
+    try {
+      videos = await fetchTeamYoutubeChannelVideos();
+    } catch (e) {
+      el.innerHTML = `<div class="ti-yt-empty lbl" data-en="Could not load the channel's videos." data-ko="채널 영상을 불러오지 못했습니다.">${isKorean ? '채널 영상을 불러오지 못했습니다.' : "Could not load the channel's videos."}</div>`;
+      return;
+    }
+
+    if (!videos || !videos.length) { el.innerHTML = ''; return; }
+
+    const cardHtml = videos.map(v => {
+      const title = escapeHtml(v.title);
+      const dateLabel = v.publishedAt
+        ? new Date(v.publishedAt).toLocaleDateString(isKorean ? 'ko-KR' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+        : '';
+      return `
+        <a class="ti-yt-card" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.videoId)}" target="_blank" rel="noopener noreferrer" aria-label="${title}">
+          <div class="ti-yt-thumb-wrap">
+            <img class="ti-yt-thumb" src="${v.thumbSrc}" alt="${title}" loading="lazy">
+            <span class="ti-yt-play-badge">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,0.55)"/><path d="M10 8.5L16 12L10 15.5V8.5Z" fill="white"/></svg>
+            </span>
+          </div>
+          <div class="ti-yt-meta">
+            <span class="ti-yt-opponent" title="${title}">${title}</span>
+            ${dateLabel ? `<span class="ti-yt-round">${dateLabel}</span>` : ''}
+          </div>
+        </a>`;
+    }).join('');
+
+    // 카드 목록을 두 번 이어붙여서 애니메이션이 절반 지점을 돌 때 이음매 없이 이어지도록 합니다.
+    el.innerHTML = `
+      <div class="ti-yt-marquee">
+        <div class="ti-yt-track">${cardHtml}${cardHtml}</div>
+      </div>`;
+    attachImageFallback();
+  }
+
   // 특정 팀(nameEn/nameKo)이 치른 "이미 끝난 경기" 카드 목록을 만듭니다.
   // 원래 우리 팀(치주물루) 결과 탭 전용 로직이었으나, 다른 구단 화면에서도
   // 그대로 재사용할 수 있도록 대상 팀을 인자로 받는 형태로 뽑아뒀습니다.
@@ -1439,7 +1593,7 @@
             </div>
           </div>
           ${venueCaptionHtml(m.homeEn)}
-          ${(matchLineups[key] || matchHighlights[key]) ? `
+          ${(isMine && (matchLineups[key] || matchHighlights[key])) ? `
           <div class="rmc-btn-row">
             ${matchLineups[key] ? `<button class="rmc-detail-btn lbl" data-en="View Details" data-ko="상세보기" onclick="openMatchDetail('${key}', ${weekNum})">${isKorean ? '상세보기' : 'View Details'}</button>` : ''}
             ${matchHighlights[key] ? `<a class="rmc-highlight-btn lbl" data-en="Watch Highlights" data-ko="하이라이트 보기" href="${matchHighlights[key]}" target="_blank" rel="noopener noreferrer">
@@ -1484,6 +1638,7 @@
       squad: 'tiSquadBtn',
       scorers: 'tiScorersBtn',
       h2h: 'tiH2hBtn',
+      youtube: 'tiYoutubeBtn',
       results: 'tiResultsBtn'
     };
     Object.keys(buttons).forEach(key => {
@@ -1498,7 +1653,7 @@
       teamInfoScrollObserver.disconnect();
       teamInfoScrollObserver = null;
     }
-    const sections = ['overview', 'record', 'squad', 'scorers', 'h2h', 'results']
+    const sections = ['overview', 'record', 'squad', 'scorers', 'h2h', 'youtube', 'results']
       .map(tab => ({ tab, el: document.getElementById('tiSection-' + tab) }))
       .filter(s => s.el);
     if (sections.length === 0) return;
@@ -1575,6 +1730,7 @@
     renderTeamStaffTab();
     renderSquadView();
     renderTeamScorersTab();
+    renderTeamYoutubeTab();
     renderTeamResultsTab();
     setActiveTeamInfoButton(currentTeamInfoTab);
     setupTeamInfoScrollSpy();
@@ -2034,16 +2190,26 @@
       state[t.nameEn] = { played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, form: [] };
     });
 
-    const roundKeys = Object.keys(roundsData).sort((a, b) => {
+    // roundsData(완전히 끝나 옮겨진 라운드)뿐 아니라 scheduledRounds에 남아있어도
+    // 이미 스코어가 채워진 라운드(예: 아직 다음 라운드로 넘어가지 않아 scheduledRounds에
+    // 머물러 있는 현재 라운드)까지 합쳐야, 홈/원정 분할 기록이 '전체' 순위표와
+    // 동일한 시점의 최신 결과를 반영합니다.
+    const merged = {};
+    Object.keys(roundsData || {}).forEach(k => { merged[k] = roundsData[k]; });
+    Object.keys(scheduledRounds || {}).forEach(k => { if (!merged[k]) merged[k] = scheduledRounds[k]; });
+
+    const roundKeys = Object.keys(merged).sort((a, b) => {
       const na = parseInt(a.replace('round', ''), 10);
       const nb = parseInt(b.replace('round', ''), 10);
       return na - nb;
     });
 
     roundKeys.forEach(roundKey => {
-      roundsData[roundKey].forEach(m => {
+      (merged[roundKey] || []).forEach(m => {
         if (m.byeKo || m.byeEn) return;
         if (!m.homeEn || !m.awayEn) return;
+        // 연기(postponed)되었거나 아직 스코어가 없는 예정 경기는 집계에서 제외합니다.
+        if (m.postponed || typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
 
         const wantHome = filterType === 'home';
         const teamName = wantHome ? m.homeEn : m.awayEn;

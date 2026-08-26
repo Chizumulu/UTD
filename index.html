@@ -74,7 +74,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="icon" href="./favicon.ico" sizes="any">
 <!-- PWA: 홈 화면에 추가(설치) 지원 -->
 <link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./dd.svg">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="치주물루 UTD">
@@ -82,7 +82,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=003">
+<link rel="stylesheet" href="style.css?v=004">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -156,6 +156,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </a>
 </div>
 <div class="next-match-strip" id="nextMatchStrip"></div>
+<a class="next-match-live-bar" id="nextMatchLiveBar" href="https://www.facebook.com/profile.php?id=100083273735668" target="_blank" rel="noopener noreferrer" style="display:none;">
+  <span class="nmlb-dot"></span>
+  <span class="nmlb-text lbl" data-en="NRFA Facebook Live Text Commentary" data-ko="NRFA 페이스북 문자중계보기">NRFA 페이스북 문자중계보기</span>
+  <svg class="nmlb-arrow" viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</a>
 </div>
 <div id="rankView">
 <div class="content-row">
@@ -255,6 +260,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button class="team-info-tab-btn lbl" id="tiSquadBtn" data-en="SQUAD" data-ko="선수단" onclick="scrollToTeamInfoSection('squad')">선수단</button>
     <button class="team-info-tab-btn lbl" id="tiScorersBtn" data-en="TOP SCORERS" data-ko="득점 순위" onclick="scrollToTeamInfoSection('scorers')">득점 순위</button>
     <button class="team-info-tab-btn lbl" id="tiH2hBtn" data-en="H2H" data-ko="상대전적" onclick="scrollToTeamInfoSection('h2h')">상대전적</button>
+    <button class="team-info-tab-btn lbl" id="tiYoutubeBtn" data-en="YOUTUBE" data-ko="구단 유튜브" onclick="scrollToTeamInfoSection('youtube')">구단 유튜브</button>
     <button class="team-info-tab-btn lbl" id="tiResultsBtn" data-en="RESULTS" data-ko="경기결과" onclick="scrollToTeamInfoSection('results')">경기결과</button>
   </div>
 
@@ -279,6 +285,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <section id="tiSection-h2h" class="ti-section">
     <div class="ti-section-title lbl" data-en="Head-to-Head" data-ko="상대전적">상대전적</div>
     <div id="teamInfoH2hTab" class="team-info-tab-content"></div>
+  </section>
+  <section id="tiSection-youtube" class="ti-section">
+    <div class="ti-section-title lbl" data-en="Club YouTube" data-ko="구단 유튜브">구단 유튜브</div>
+    <div id="teamInfoYoutubeTab" class="team-info-tab-content"></div>
   </section>
   <section id="tiSection-results" class="ti-section">
     <div class="ti-section-title lbl" data-en="Results" data-ko="경기결과">경기결과</div>
@@ -796,7 +806,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
-<script src="data.js?v=003"></script>
-<script src="app.js?v=003"></script>
+<script src="data.js?v=004"></script>
+<script src="app.js?v=004"></script>
 </body>
 </html>
