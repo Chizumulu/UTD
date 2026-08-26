@@ -690,6 +690,25 @@
       </div>`;
   }
 
+  // 최근 5경기 폼(computeFormGuide 결과)을 작은 배지 열로 그려줍니다.
+  // "다음 경기" 카드에서 우리 팀 vs 다음 상대의 최근 폼을 나란히 비교하는 데 사용합니다.
+  function h2hFormDotsHtml(form) {
+    const results = form ? form.recentForm.map(m => m.result) : [];
+    if (!results.length) {
+      return `<span class="ti-h2h-form-empty lbl" data-en="No matches yet" data-ko="경기 기록 없음">${isKorean ? '경기 기록 없음' : 'No matches yet'}</span>`;
+    }
+    const label = { W: isKorean ? '승' : 'W', D: isKorean ? '무' : 'D', L: isKorean ? '패' : 'L' };
+    return results.map(r => `<span class="ti-h2h-form-dot ti-h2h-form-${r.toLowerCase()}">${label[r]}</span>`).join('');
+  }
+
+  // "다음 경기" 카드용 각 팀의 최근 폼 배지 한 줄. 해당 팀 컬럼(로고/이름 아래)에
+  // 바로 붙여서 보여주므로, 팀 하나의 폼만 계산해서 돌려줍니다.
+  function nextMatchTeamFormHtml(nameEn, nameKo) {
+    if (typeof computeFormGuide !== 'function') return '';
+    const form = computeFormGuide(nameEn, nameKo);
+    return `<div class="ti-next-match-team-form">${h2hFormDotsHtml(form)}</div>`;
+  }
+
   // scheduledRounds에서 다음 상대를 자동으로 찾아(computeNextMatchPreview) 홈/원정,
   // 그 상대와의 H2H, 킥오프까지 남은 시간(카운트다운)까지 한 카드로 묶어 보여줍니다.
   function nextMatchOpponentHtml(team, myRank) {
@@ -723,12 +742,19 @@
       : '';
     const h2hHtml = isMyTeamName(team.nameEn, team.nameKo) ? nextMatchH2HSummaryHtml(nm.h2h) : '';
 
+    // 상대가 이번 시즌 리그 소속일 때만(=폼 데이터가 있을 때만) 두 팀의 최근 폼을
+    // 각자 자신의 팀 컬럼(로고/이름 아래)에 붙여서 보여줍니다. 우리 팀 카드에서만 노출합니다.
+    const oppIsCurrentLeagueTeam = leagueData.some(t => t.nameEn === nm.oppEn);
+    const showFormBadges = isMyTeamName(team.nameEn, team.nameKo) && oppIsCurrentLeagueTeam;
+    const myFormHtml = showFormBadges ? nextMatchTeamFormHtml(team.nameEn, team.nameKo) : '';
+    const oppFormHtml = showFormBadges ? nextMatchTeamFormHtml(nm.oppEn, nm.oppKo) : '';
+
     // 라운드 카드의 rmc-compare-btn과 동일한 "전적 비교" 버튼을 다음 경기 카드에도 동일하게 노출합니다.
     const nextMatchHomeKo = nm.homeAway === 'H' ? team.nameKo : nm.oppKo;
     const nextMatchAwayEn = nm.homeAway === 'H' ? nm.oppEn : team.nameEn;
     const nextMatchAwayKo = nm.homeAway === 'H' ? nm.oppKo : team.nameKo;
     const escAttr = (s) => String(s || '').replace(/'/g, "\\'");
-    const compareBtnHtml = `<button type="button" class="rmc-compare-btn ti-next-match-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교" onclick="openMatchCompareModal('${escAttr(nextMatchHomeEn)}', '${escAttr(nextMatchHomeKo)}', '${escAttr(nextMatchAwayEn)}', '${escAttr(nextMatchAwayKo)}')">⚖️ ${isKorean ? '전적 비교' : 'Compare Teams'}</button>`;
+    const compareBtnHtml = `<button type="button" class="rmc-compare-btn ti-next-match-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교" onclick="openMatchCompareModal('${escAttr(nextMatchHomeEn)}', '${escAttr(nextMatchHomeKo)}', '${escAttr(nextMatchAwayEn)}', '${escAttr(nextMatchAwayKo)}', '${escAttr(nm.roundKey)}')">⚖️ ${isKorean ? '전적 비교' : 'Compare Teams'}</button>`;
 
     return `
       <div class="ti-next-match">
@@ -738,6 +764,7 @@
             <img class="team-logo" src="${team.logoSrc}" alt="${team.nameEn}">
             <span class="lbl" data-en="${team.nameEn}" data-ko="${team.nameKo}">${isKorean ? team.nameKo : team.nameEn}</span>
             ${rankBadge(myRank)}
+            ${myFormHtml}
           </div>
           <div class="ti-next-match-vs">
             <span class="ha-badge ${haClass}">${nm.homeAway}</span>
@@ -747,6 +774,7 @@
             <img class="team-logo" data-en-name="${nm.oppEn}" data-ko-name="${nm.oppKo}" src="${nm.oppLogo}" alt="${nm.oppEn}">
             <span class="lbl" data-en="${nm.oppEn}" data-ko="${nm.oppKo}">${oppName}</span>
             ${rankBadge(oppRank)}
+            ${oppFormHtml}
           </div>
         </div>
         ${kickoffTxt ? `<div class="ti-next-match-kickoff">${kickoffTxt}</div>` : ''}
@@ -804,6 +832,204 @@
 
   // 폼 가이드 카드 마크업 — 우리 팀 뿐 아니라 다른 팀에도 재사용할 수 있도록
   // team만 인자로 받는 형태로 뽑아둡니다 (computeFormGuide 자체가 nameEn/nameKo를 받는 범용 함수라 그대로 활용).
+  // ===== 휴식 라운드(bye) 전후 승점 흐름 계산 =====
+  // roundsData(완료된 라운드) + scheduledRounds(아직 안 옮겨졌지만 스코어는 채워진 라운드)를
+  // 라운드 순서대로 훑어서 이 팀의 경기 결과(W/D/L) 시퀀스를 만들고, 그 안에서 휴식 라운드를
+  // 찾아 앞 구간(before)/뒤 구간(after)으로 나눕니다.
+  function computeByeWeekFlow(nameEn, nameKo) {
+    const merged = {};
+    Object.keys(roundsData || {}).forEach(k => { merged[k] = roundsData[k]; });
+    Object.keys(scheduledRounds || {}).forEach(k => { if (!merged[k]) merged[k] = scheduledRounds[k]; });
+
+    const allRoundKeys = Object.keys(merged).sort((a, b) =>
+      parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10));
+    // 휴식 라운드가 '실제로 지난' 경우만 흐름 계산에 넣습니다. scheduledRounds에는
+    // 아직 열리지 않은 미래 라운드까지 미리 채워져 있을 수 있어서, 결과가 하나도
+    // 없는(=아직 안 지난) 라운드는 걸러내야 미래 휴식주가 미리 표시되지 않습니다.
+    const roundKeys = allRoundKeys.filter(k => roundHasAnyResult(k));
+
+    const timeline = [];
+    roundKeys.forEach(key => {
+      const roundNum = parseInt(key.replace('round', ''), 10);
+      const matches = merged[key] || [];
+      for (const m of matches) {
+        if (m.byeEn === nameEn || m.byeKo === nameKo) {
+          timeline.push({ round: roundNum, type: 'bye' });
+          return;
+        }
+        if (m.homeEn === nameEn || m.awayEn === nameEn) {
+          // 연기(postponed)되었거나 아직 스코어가 없는 예정 경기는 결과 시퀀스에 넣지 않습니다.
+          if (m.postponed || typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+          const isHome = m.homeEn === nameEn;
+          const my = isHome ? m.homeScore : m.awayScore;
+          const opp = isHome ? m.awayScore : m.homeScore;
+          const result = my > opp ? 'W' : (my < opp ? 'L' : 'D');
+          timeline.push({
+            round: roundNum, type: 'match', result,
+            opponentEn: isHome ? m.awayEn : m.homeEn,
+            opponentKo: isHome ? m.awayKo : m.homeKo
+          });
+          return;
+        }
+      }
+    });
+
+    const byeIdx = timeline.findIndex(e => e.type === 'bye');
+    if (byeIdx === -1) {
+      // 이번 시즌 아직 휴식 라운드를 치르지 않은 팀: scheduledRounds에 예정된 휴식 라운드가
+      // 있으면 안내용으로 그 주차만 알려줍니다.
+      let upcomingBye = null;
+      allRoundKeys.forEach(key => {
+        const roundNum = parseInt(key.replace('round', ''), 10);
+        (merged[key] || []).forEach(m => {
+          if (!upcomingBye && (m.byeEn === nameEn || m.byeKo === nameKo)) upcomingBye = roundNum;
+        });
+      });
+      return { hasBye: false, upcomingBye };
+    }
+
+    const before = timeline.slice(0, byeIdx).filter(e => e.type === 'match');
+    const after = timeline.slice(byeIdx + 1).filter(e => e.type === 'match');
+
+    function summarize(games) {
+      let won = 0, drawn = 0, lost = 0, points = 0;
+      games.forEach(g => {
+        if (g.result === 'W') { won += 1; points += 3; }
+        else if (g.result === 'D') { drawn += 1; points += 1; }
+        else { lost += 1; }
+      });
+      return { games, played: games.length, won, drawn, lost, points, ppg: games.length ? points / games.length : 0 };
+    }
+
+    return { hasBye: true, byeRound: timeline[byeIdx].round, before: summarize(before), after: summarize(after) };
+  }
+
+  // 휴식 전/후 폼을 하나의 누적 승점 흐름 SVG + 전/후 요약 카드로 그립니다.
+  // 차트는 가독성을 위해 휴식 전 최근 5경기 + 휴식 라운드 + 휴식 후 최대 8경기만 표시하고,
+  // 요약 숫자(경기당 승점 등)는 휴식 전/후 전체 경기를 기준으로 계산합니다.
+  function renderByeWeekFlowCard(t) {
+    const flow = (typeof computeByeWeekFlow === 'function') ? computeByeWeekFlow(t.nameEn, t.nameKo) : null;
+    if (!flow) return '';
+
+    const titleHtml = `<div class="ti-card-title lbl" data-en="Bye Week Flow" data-ko="휴식 주간 전후 흐름">${isKorean ? '휴식 주간 전후 흐름' : 'Bye Week Flow'}</div>`;
+
+    if (!flow.hasBye) {
+      const bodyKo = flow.upcomingBye
+        ? `${flow.upcomingBye}주차에 휴식 라운드가 예정되어 있어요. 그 전후 경기가 쌓이면 여기에 흐름이 표시됩니다.`
+        : '이번 시즌 휴식 라운드 일정이 아직 없어요.';
+      const bodyEn = flow.upcomingBye
+        ? `This team's bye is scheduled for round ${flow.upcomingBye}. The flow will appear here once matches on both sides are played.`
+        : 'No bye round is scheduled for this team yet.';
+      return `
+        <div class="ti-card ti-bye-flow-card">
+          ${titleHtml}
+          <div class="ti-bye-flow-empty lbl" data-en="${bodyEn}" data-ko="${bodyKo}">${isKorean ? bodyKo : bodyEn}</div>
+        </div>`;
+    }
+
+    const resultColor = (r) => r === 'W' ? 'var(--color-teal)' : (r === 'D' ? 'var(--color-neutral-mid)' : 'var(--color-red)');
+
+    const beforeWindow = flow.before.games.slice(-5);
+    const afterWindow = flow.after.games.slice(0, 8);
+    const entries = [
+      ...beforeWindow.map(g => ({ type: 'match', round: g.round, result: g.result })),
+      { type: 'bye', round: flow.byeRound },
+      ...afterWindow.map(g => ({ type: 'match', round: g.round, result: g.result }))
+    ];
+
+    const n = entries.length;
+    const marginL = 44, marginR = 24;
+    const plotW = Math.max(260, (n - 1) * 62);
+    const W = marginL + plotW + marginR;
+    const top = 26, plotH = 120, bottom = 46;
+    const H = top + plotH + bottom;
+
+    let cum = 0;
+    const cumValues = entries.map(e => {
+      if (e.type === 'match') cum += e.result === 'W' ? 3 : (e.result === 'D' ? 1 : 0);
+      return cum;
+    });
+    const cumMax = Math.max(1, Math.max.apply(null, cumValues));
+
+    const xAt = (i) => n > 1 ? marginL + (i * plotW) / (n - 1) : marginL + plotW / 2;
+    const yAt = (v) => top + plotH - (v / cumMax) * plotH;
+    const byeIndex = entries.findIndex(e => e.type === 'bye');
+
+    let linesSvg = '';
+    for (let i = 1; i < n; i++) {
+      const x1 = xAt(i - 1), y1 = yAt(cumValues[i - 1]);
+      const x2 = xAt(i), y2 = yAt(cumValues[i]);
+      const isByeSegment = (i - 1 === byeIndex || i === byeIndex);
+      linesSvg += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${isByeSegment ? 'var(--color-text-faint)' : 'var(--color-teal-dark)'}" stroke-width="2" stroke-linecap="round"${isByeSegment ? ' stroke-dasharray="4 3"' : ''}/>`;
+    }
+
+    let pointsSvg = '', ticksSvg = '';
+    entries.forEach((e, i) => {
+      const x = xAt(i), y = yAt(cumValues[i]);
+      if (e.type === 'bye') {
+        pointsSvg += `<line x1="${x.toFixed(1)}" y1="10" x2="${x.toFixed(1)}" y2="${(top + plotH + 6).toFixed(1)}" stroke="var(--color-gold-strong)" stroke-width="1" stroke-dasharray="3 3"/>`;
+        pointsSvg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="var(--color-surface)" stroke="var(--color-gold-strong)" stroke-width="2"/>`;
+        ticksSvg += `<text x="${x.toFixed(1)}" y="${(H - 8).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="var(--color-gold-strong)">${isKorean ? '휴식' : 'Bye'}</text>`;
+      } else {
+        pointsSvg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5.5" fill="${resultColor(e.result)}"/>`;
+        ticksSvg += `<text x="${x.toFixed(1)}" y="${(H - 8).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--color-text-faint)">${isKorean ? e.round + '주' : 'R' + e.round}</text>`;
+      }
+    });
+
+    const chartSvg = `
+      <svg class="ti-bye-flow-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img">
+        <title>${isKorean ? '휴식 주간 전후 누적 승점 흐름' : 'Cumulative points before and after the bye week'}</title>
+        ${linesSvg}${pointsSvg}${ticksSvg}
+      </svg>`;
+
+    const legendHtml = `
+      <div class="ti-bye-flow-legend">
+        <span><i class="ti-bye-dot" style="background:var(--color-teal)"></i>${isKorean ? '승' : 'W'}</span>
+        <span><i class="ti-bye-dot" style="background:var(--color-neutral-mid)"></i>${isKorean ? '무' : 'D'}</span>
+        <span><i class="ti-bye-dot" style="background:var(--color-red)"></i>${isKorean ? '패' : 'L'}</span>
+        <span><i class="ti-bye-dot ti-bye-dot-hollow"></i>${isKorean ? '휴식' : 'Bye'}</span>
+      </div>`;
+
+    const delta = flow.after.played > 0 ? (flow.after.ppg - flow.before.ppg) : null;
+    let deltaHtml = '';
+    if (delta !== null) {
+      const up = delta > 0.001, down = delta < -0.001;
+      const cls = up ? 'ti-bye-flow-delta-up' : (down ? 'ti-bye-flow-delta-down' : 'ti-bye-flow-delta-flat');
+      const arrow = up ? '▲' : (down ? '▼' : '—');
+      const txtKo = up ? '휴식 후 폼 상승' : (down ? '휴식 후 폼 하락' : '휴식 전후 비슷');
+      const txtEn = up ? 'Form improved after the bye' : (down ? 'Form dipped after the bye' : 'Form roughly unchanged');
+      const sign = delta >= 0 ? '+' : '';
+      deltaHtml = `<div class="ti-bye-flow-delta ${cls} lbl" data-en="${txtEn} (${sign}${delta.toFixed(2)})" data-ko="${txtKo} (${sign}${delta.toFixed(2)})">${arrow} ${sign}${delta.toFixed(2)}</div>`;
+    }
+
+    function sideCardHtml(labelHtml, side, extraHtml) {
+      const formHtml = side.games.slice(-6).map(g =>
+        `<span class="form-badge form-${g.result.toLowerCase()}">${g.result}</span>`
+      ).join('');
+      return `
+        <div class="ti-bye-flow-col">
+          <div class="ti-bye-flow-col-label">${labelHtml}</div>
+          <div class="form-cell">${formHtml || `<span class="ti-bye-flow-nogames lbl" data-en="No matches yet" data-ko="경기 기록 없음">${isKorean ? '경기 기록 없음' : 'No matches yet'}</span>`}</div>
+          <div class="ti-bye-flow-ppg">${side.ppg.toFixed(2)}<span class="ti-bye-flow-ppg-label lbl" data-en="PTS/GAME" data-ko="경기당 승점">${isKorean ? '경기당 승점' : 'PTS/GAME'}</span></div>
+          ${extraHtml || ''}
+        </div>`;
+    }
+
+    const beforeLabelKo = `휴식 전 ${flow.before.played}경기`, beforeLabelEn = `${flow.before.played} before bye`;
+    const afterLabelKo = `휴식 후 ${flow.after.played}경기`, afterLabelEn = `${flow.after.played} after bye`;
+
+    return `
+      <div class="ti-card ti-bye-flow-card">
+        ${titleHtml}
+        <div class="ti-bye-flow-svg-wrap">${chartSvg}</div>
+        ${legendHtml}
+        <div class="ti-bye-flow-summary">
+          ${sideCardHtml(`<span class="lbl" data-en="${beforeLabelEn}" data-ko="${beforeLabelKo}">${isKorean ? beforeLabelKo : beforeLabelEn}</span>`, flow.before, '')}
+          ${sideCardHtml(`<span class="lbl" data-en="${afterLabelEn}" data-ko="${afterLabelKo}">${isKorean ? afterLabelKo : afterLabelEn}</span>`, flow.after, deltaHtml)}
+        </div>
+      </div>`;
+  }
+
   function buildFormGuideCardHtml(t) {
     const gdClass = t.gd > 0 ? 'gd-pos' : (t.gd < 0 ? 'gd-neg' : 'gd-zero');
 
@@ -887,11 +1113,13 @@
     const formGuideHtml = buildFormGuideCardHtml(t);
     const awardsHtml = renderTeamAwardsCard();
     const homeAwayHtml = renderHomeAwaySplitCard(t);
+    const byeFlowHtml = renderByeWeekFlowCard(t);
 
     el.innerHTML = `
       <div class="ti-overview-grid">
         ${formGuideHtml}
         ${homeAwayHtml}
+        ${byeFlowHtml}
         ${awardsHtml}
       </div>
     `;
@@ -917,9 +1145,40 @@
     return isKorean ? `${m}월` : MONTH_LABELS_EN[m - 1];
   }
 
+  // 골키퍼 개인 무실점(클린시트) 기록 카드 마크업 — 독립된 카드로, 스태프 카드 위에 노출합니다.
+  // computeGoalkeeperRecords()가 없거나 기록이 하나도 없으면 빈 문자열을 반환합니다.
+  function renderGoalkeeperRecordCard() {
+    const records = (typeof computeGoalkeeperRecords === 'function') ? computeGoalkeeperRecords() : [];
+    if (!records.length) return '';
+
+    const rowsHtml = records.map(r => {
+      const csRate = r.appearances > 0 ? Math.round((r.cleanSheets / r.appearances) * 100) : 0;
+      return `
+        <div class="ti-gk-row">
+          <div class="ti-gk-row-name">
+            <span class="ti-gk-number">#${r.number}</span>
+            <span class="ti-gk-name">${r.nameKo}</span>
+          </div>
+          <div class="ti-gk-row-stats">
+            <span class="ti-gk-stat"><b>${r.appearances}</b><small class="lbl" data-en="APP" data-ko="출전">${isKorean ? '출전' : 'APP'}</small></span>
+            <span class="ti-gk-stat ti-gk-stat-cs"><b>${r.cleanSheets}</b><small class="lbl" data-en="CS" data-ko="무실점">${isKorean ? '무실점' : 'CS'}</small></span>
+            <span class="ti-gk-stat"><b>${r.goalsConceded}</b><small class="lbl" data-en="CONC" data-ko="실점">${isKorean ? '실점' : 'CONC'}</small></span>
+            <span class="ti-gk-stat"><b>${csRate}%</b><small class="lbl" data-en="CS RATE" data-ko="무실점률">${isKorean ? '무실점률' : 'CS RATE'}</small></span>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="ti-card ti-gk-card">
+        <div class="ti-card-title lbl" data-en="Goalkeeper Clean Sheets" data-ko="골키퍼 무실점 기록">${isKorean ? '골키퍼 무실점 기록' : 'Goalkeeper Clean Sheets'}</div>
+        ${rowsHtml}
+      </div>`;
+  }
+
   // 맨 오브 더 매치 / 이달의 선수 카드 렌더링 (teamAwards 기반)
   function renderTeamAwardsCard() {
     if (typeof teamAwards === 'undefined') return '';
+
 
     const motmKeys = Object.keys(teamAwards.motm || {})
       .filter(key => (teamAwards.motm[key] || []).length)
@@ -954,7 +1213,21 @@
         </div>`;
     }).join('');
 
-    if (!motmHtml && !potmHtml) return '';
+    const gotmKeys = Object.keys(teamAwards.goalOfTheMonth || {}).sort().reverse();
+    const gotmHtml = gotmKeys.map(ymKey => {
+      const [, mNum] = ymKey.split('-').map(Number);
+      const monthLabelKo = `${mNum}월`;
+      const monthLabelEn = MONTH_LABELS_EN[mNum - 1];
+      const monthLabel = isKorean ? monthLabelKo : monthLabelEn;
+      const playerHtml = awardPlayerHtml(teamAwards.goalOfTheMonth[ymKey]);
+      return `
+        <div class="ti-award-row">
+          <span class="ti-award-week lbl" data-en="${monthLabelEn}" data-ko="${monthLabelKo}">${monthLabel}</span>
+          <span class="ti-award-players">${playerHtml}</span>
+        </div>`;
+    }).join('');
+
+    if (!motmHtml && !potmHtml && !gotmHtml) return '';
 
     return `
       <div class="ti-card ti-awards-card">
@@ -963,6 +1236,11 @@
           <div class="ti-award-group">
             <div class="ti-award-group-title lbl" data-en="Player of the Month" data-ko="이달의 선수">${isKorean ? '이달의 선수' : 'Player of the Month'}</div>
             ${potmHtml}
+          </div>` : ''}
+        ${gotmHtml ? `
+          <div class="ti-award-group">
+            <div class="ti-award-group-title lbl" data-en="Goal of the Month" data-ko="이달의 골">${isKorean ? '이달의 골' : 'Goal of the Month'}</div>
+            ${gotmHtml}
           </div>` : ''}
         ${motmHtml ? `
           <div class="ti-award-group">
@@ -1083,29 +1361,29 @@
     attachImageFallback();
   }
 
-  function renderTeamResultsTab() {
-    const el = document.getElementById('teamInfoResultsTab');
-    if (!el) return;
-    const info = getMyRankedTeam();
-
-    let html = '';
-    if (info) {
-      html += `<div class="ti-next-mini">${nextMatchOpponentHtml(info.team, info.rank)}</div>`;
-    }
-
+  // 특정 팀(nameEn/nameKo)이 치른 "이미 끝난 경기" 카드 목록을 만듭니다.
+  // 원래 우리 팀(치주물루) 결과 탭 전용 로직이었으나, 다른 구단 화면에서도
+  // 그대로 재사용할 수 있도록 대상 팀을 인자로 받는 형태로 뽑아뒀습니다.
+  function buildTeamPastResultsHtml(teamEn, teamKo) {
+    const isMine = isMyTeamName(teamEn, teamKo);
     const roundKeys = completedRoundKeysIncludingScheduled();
     const totalRounds = roundKeys.length;
+
+    let html = '';
 
     roundKeys.slice().reverse().forEach((key, revIdx) => {
       const weekNum = totalRounds - revIdx;
       const matches = buildRoundMatches(key);
-      const mine = matches.find(m => !m.isBye && (isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo)));
-      const byeMine = matches.find(m => m.isBye && isMyTeamName(m.teamEn, m.teamKo));
-      if (!mine && !byeMine) return;
+      const teamMatch = matches.find(m => !m.isBye && (
+        (m.homeEn === teamEn || m.homeKo === teamKo) ||
+        (m.awayEn === teamEn || m.awayKo === teamKo)
+      ));
+      const teamBye = matches.find(m => m.isBye && (m.teamEn === teamEn || m.teamKo === teamKo));
+      if (!teamMatch && !teamBye) return;
 
       const weekLabel = isKorean ? `${weekNum}주차` : `Week ${weekNum}`;
 
-      if (byeMine) {
+      if (teamBye) {
         html += `
           <div class="round-match-card round-bye-card">
             <span class="ti-result-week lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${weekLabel}</span>
@@ -1114,15 +1392,15 @@
         return;
       }
 
-      const m = mine;
+      const m = teamMatch;
       const homeWin = m.homeScore > m.awayScore;
       const awayWin = m.awayScore > m.homeScore;
       const isDraw = m.homeScore === m.awayScore;
-      const iAmHome = isMyTeamName(m.homeEn, m.homeKo);
-      const myResult = isDraw ? 'D' : ((iAmHome && homeWin) || (!iAmHome && awayWin) ? 'W' : 'L');
-      const myResultClass = myResult === 'W' ? 'form-w' : (myResult === 'D' ? 'form-d' : 'form-l');
-      const myResultLabelKo = myResult === 'W' ? '승' : (myResult === 'D' ? '무' : '패');
-      const myResultLabel = isKorean ? myResultLabelKo : myResult;
+      const isHomeTeam = (m.homeEn === teamEn || m.homeKo === teamKo);
+      const result = isDraw ? 'D' : ((isHomeTeam && homeWin) || (!isHomeTeam && awayWin) ? 'W' : 'L');
+      const resultClass = result === 'W' ? 'form-w' : (result === 'D' ? 'form-d' : 'form-l');
+      const resultLabelKo = result === 'W' ? '승' : (result === 'D' ? '무' : '패');
+      const resultLabel = isKorean ? resultLabelKo : result;
       const homeLogo = getTeamLogo(m.homeEn);
       const awayLogo = getTeamLogo(m.awayEn);
       const homeName = isKorean ? m.homeKo : m.homeEn;
@@ -1132,9 +1410,9 @@
       const scorersAwayText = (m.scorersAway === '없음' || !m.scorersAway) ? noneLabel : renderScorerNamesHtml(m.scorersAway, isKorean);
 
       html += `
-        <div class="round-match-card my-team">
+        <div class="round-match-card${isMine ? ' my-team' : ''}">
           <div class="ti-result-week lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${weekLabel}</div>
-          <span class="form-badge ${myResultClass} ti-result-badge">${myResultLabel}</span>
+          <span class="form-badge ${resultClass} ti-result-badge">${resultLabel}</span>
           <div class="rmc-teams">
             <div class="rmc-team rmc-home${homeWin ? ' rmc-winner' : ''}">
               ${homeLogo ? `<img class="team-logo-sm" src="${homeLogo}" alt="${m.homeEn}">` : ''}
@@ -1171,6 +1449,20 @@
           </div>` : ''}
         </div>`;
     });
+
+    return html;
+  }
+
+  function renderTeamResultsTab() {
+    const el = document.getElementById('teamInfoResultsTab');
+    if (!el) return;
+    const info = getMyRankedTeam();
+
+    let html = '';
+    if (info) {
+      html += `<div class="ti-next-mini">${nextMatchOpponentHtml(info.team, info.rank)}</div>`;
+      html += buildTeamPastResultsHtml(info.team.nameEn, info.team.nameKo);
+    }
 
     el.innerHTML = `<div class="round-match-list ti-results-list">${html}</div>`;
     attachImageFallback();
@@ -1348,7 +1640,7 @@
   function renderTeamStaffTab() {
     const el = document.getElementById('teamInfoStaffTab');
     if (!el) return;
-    el.innerHTML = renderTeamStaffCard();
+    el.innerHTML = renderGoalkeeperRecordCard() + renderTeamStaffCard();
   }
 
   function renderSquadView() {
@@ -1624,7 +1916,7 @@
         const compareBtn = card.querySelector('.rmc-compare-btn');
         if (compareBtn) {
           compareBtn.addEventListener('click', () => {
-            openMatchCompareModal(m.homeEn, m.homeKo, m.awayEn, m.awayKo);
+            openMatchCompareModal(m.homeEn, m.homeKo, m.awayEn, m.awayKo, currentRoundKey);
           });
         }
         return;
@@ -3588,8 +3880,10 @@
     const recordCardHtml = buildRecordCardHtml(t, rank, total);
     const formGuideHtml = buildFormGuideCardHtml(t);
     const homeAwayHtml = renderHomeAwaySplitCard(t);
+    const byeFlowHtml = renderByeWeekFlowCard(t);
     const scorersHtml = buildTeamScorerCardsHtml(t.nameEn, t.nameKo);
     const nextMatchHtml = nextMatchOpponentHtml(t, rank);
+    const pastResultsHtml = buildTeamPastResultsHtml(t.nameEn, t.nameKo);
 
     const bodyEl = document.getElementById('otherTeamFullBody');
     if (bodyEl) {
@@ -3602,6 +3896,7 @@
           <div class="ti-overview-grid other-team-full-grid">
             ${formGuideHtml}
             ${homeAwayHtml}
+            ${byeFlowHtml}
           </div>
         </div>
         <div class="ti-section">
@@ -3612,6 +3907,10 @@
           <div class="ti-card">
             ${nextMatchHtml}
           </div>
+        </div>
+        <div class="ti-section">
+          <div class="ti-section-title lbl" data-en="Results" data-ko="경기 결과">${isKorean ? '경기 결과' : 'Results'}</div>
+          <div class="round-match-list ti-results-list">${pastResultsHtml}</div>
         </div>`;
     }
 
@@ -3939,7 +4238,70 @@
       </div>`;
   }
 
-  function openMatchCompareModal(homeEn, homeKo, awayEn, awayKo) {
+  // 아직 결과가 안 나온(예정/연기) 경기의 "전적 비교" 모달에서, 우리 팀(치주물루)이 낀
+  // 매치업이라면 matchLineups[roundKey].recentHistory(라운드가 끝난 뒤 채워짐) 또는
+  // upcomingMatchHistory[roundKey].recentHistory(미리 적어둔 메모)에서 그 상대와의
+  // 이전 맞대결 스코어 목록을 그대로 가져옵니다. 우리 팀이 아닌 매치업은 이런 메모가
+  // 없으므로 null을 반환합니다.
+  function getPriorMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey) {
+    if (!roundKey) return null;
+    if (!isMyTeamName(homeEn, homeKo) && !isMyTeamName(awayEn, awayKo)) return null;
+    const fromUpcoming = (typeof upcomingMatchHistory !== 'undefined' && upcomingMatchHistory[roundKey])
+      ? upcomingMatchHistory[roundKey] : null;
+    const fromLineup = (typeof matchLineups !== 'undefined' && matchLineups[roundKey])
+      ? matchLineups[roundKey] : null;
+    const entry = (fromUpcoming && fromUpcoming.recentHistory && fromUpcoming.recentHistory.length) ? fromUpcoming : fromLineup;
+    const list = entry ? entry.recentHistory : null;
+    return (list && list.length) ? { list, historySummary: entry.historySummary || '' } : null;
+  }
+
+  // recentHistory 한 건의 "result" 텍스트(예: "치주물루 승", "치주물루 승(몰수승)", "무승부",
+  // "심보웨 승")를 우리 팀 기준 W/D/L로 분류합니다.
+  function classifyPriorResult(resultText) {
+    const t = String(resultText || '');
+    if (t.indexOf('무승부') !== -1) return 'D';
+    if (t.indexOf('치주물루') !== -1 && t.indexOf('승') !== -1) return 'W';
+    return 'L';
+  }
+
+  // 위에서 찾은 이전 맞대결 목록을 예쁜 카드 목록 + 승무패 요약으로 렌더링합니다(항상 펼쳐진 상태).
+  function priorMeetingsSectionHtml(prior) {
+    if (!prior || !prior.list || !prior.list.length) return '';
+    const list = prior.list;
+    const wdlLabel = { W: isKorean ? '승' : 'W', D: isKorean ? '무' : 'D', L: isKorean ? '패' : 'L' };
+
+    let w = 0, d = 0, l = 0;
+    const rows = list.map(h => {
+      const r = classifyPriorResult(h.result);
+      if (r === 'W') w++; else if (r === 'D') d++; else l++;
+      return `
+        <div class="mc-prior-row mc-prior-row-${r.toLowerCase()}">
+          <span class="mc-prior-badge mc-prior-badge-${r.toLowerCase()}">${wdlLabel[r]}</span>
+          <div class="mc-prior-row-main">
+            <span class="mc-prior-comp">${h.comp || ''}</span>
+            <span class="mc-prior-score">${h.score || ''}</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    const playedTxt = isKorean ? `총 ${list.length}경기` : `${list.length} PLD`;
+
+    return `
+      <div class="mc-prior-block">
+        <div class="mc-prior-header">
+          <span class="mc-prior-title lbl" data-en="Previous Meetings" data-ko="상대전적(이전경기)">${isKorean ? '상대전적(이전경기)' : 'Previous Meetings'}</span>
+          <span class="mc-prior-played">${playedTxt}</span>
+        </div>
+        <div class="mc-prior-wdl">
+          <span class="mc-prior-wdl-item mc-prior-wdl-w"><b>${w}</b>${wdlLabel.W}</span>
+          <span class="mc-prior-wdl-item mc-prior-wdl-d"><b>${d}</b>${wdlLabel.D}</span>
+          <span class="mc-prior-wdl-item mc-prior-wdl-l"><b>${l}</b>${wdlLabel.L}</span>
+        </div>
+        <div class="mc-prior-list">${rows}</div>
+      </div>`;
+  }
+
+  function openMatchCompareModal(homeEn, homeKo, awayEn, awayKo, roundKey) {
     const home = getTeamCompareSnapshot(homeEn, homeKo);
     const away = getTeamCompareSnapshot(awayEn, awayKo);
     if (!home.team || !away.team) return;
@@ -4004,6 +4366,7 @@
         <div class="mc-form-title lbl" data-en="Season Head-to-Head" data-ko="이번 시즌 맞대결">${isKorean ? '이번 시즌 맞대결' : 'Season Head-to-Head'}</div>
         ${h2hHtml}
       </div>
+      ${priorMeetingsSectionHtml(getPriorMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey))}
     `;
 
     document.getElementById('matchCompareModal').style.display = 'flex';

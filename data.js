@@ -289,9 +289,10 @@ const kitData = {
   gkAway: "./2627GK어웨이.jpg"
 };
 
-// ===== 팀 수상 정보 (맨 오브 더 매치 / 이달의 선수) =====
+// ===== 팀 수상 정보 (맨 오브 더 매치 / 이달의 선수 / 이달의 골) =====
 // motm: 라운드별 맨 오브 더 매치 수상자. 값은 squadData의 등번호(number) 배열 (공동 수상 가능)
 // playerOfTheMonth: 'YYYY-MM' 형식의 월별 이달의 선수 수상자. 값은 squadData의 등번호(number)
+// goalOfTheMonth: 'YYYY-MM' 형식의 월별 이달의 골 수상자. 값은 squadData의 등번호(number)
 const teamAwards = {
   motm: {
     round1: [13, 7],
@@ -301,6 +302,9 @@ const teamAwards = {
   },
   playerOfTheMonth: {
     '2026-07': 90
+  },
+  goalOfTheMonth: {
+    '2026-07': 7
   }
 };
 
@@ -1328,6 +1332,59 @@ function computeFormGuide(nameEn, nameKo) {
     currentWinStreak: currentStreak(isWin),
     currentUnbeatenStreak: currentStreak(isUnbeaten)
   };
+}
+
+// ============================================================
+// 골키퍼 개인 무실점(클린시트) 기록 (computeGoalkeeperRecords) 계산
+// ------------------------------------------------------------
+// matchLineups(라운드별 선발 명단 + 스코어)를 훑어서, 그 라운드 선발로
+// 출전한 골키퍼별로 출전 수 / 무실점(클린시트) 횟수 / 실점 / 승수를
+// 집계합니다. matchLineups는 우리 팀(치주물루) 경기만 있으므로
+// 이 기록도 우리 팀 골키퍼 한정입니다.
+// 참고: 경기 중 골키퍼가 교체된 경우(부상 등)에도 그 경기의 실점/클린시트는
+// 편의상 "선발 골키퍼" 기준으로 집계합니다.
+// ============================================================
+function computeGoalkeeperRecords() {
+  const byRoundNum = (a, b) => parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  const roundKeysSorted = Object.keys(matchLineups || {}).sort(byRoundNum);
+
+  const records = {}; // number -> record
+
+  roundKeysSorted.forEach(roundKey => {
+    const lineup = matchLineups[roundKey];
+    if (!lineup) return;
+    const gk = (lineup.starters || []).find(p => p.pos === 'GK');
+    if (!gk) return;
+
+    const parsed = /^(\d+)\s*:\s*(\d+)/.exec((lineup.result || '').trim());
+    if (!parsed) return;
+    const myScore = parseInt(parsed[1], 10);
+    const oppScore = parseInt(parsed[2], 10);
+
+    if (!records[gk.number]) {
+      records[gk.number] = {
+        number: gk.number,
+        nameKo: gk.nameKo,
+        appearances: 0,
+        cleanSheets: 0,
+        goalsConceded: 0,
+        wins: 0,
+        roundKeys: []
+      };
+    }
+    const rec = records[gk.number];
+    rec.appearances++;
+    rec.goalsConceded += oppScore;
+    if (oppScore === 0) rec.cleanSheets++;
+    if (myScore > oppScore) rec.wins++;
+    rec.roundKeys.push(roundKey);
+  });
+
+  return Object.values(records).sort((a, b) => {
+    if (b.cleanSheets !== a.cleanSheets) return b.cleanSheets - a.cleanSheets;
+    if (b.appearances !== a.appearances) return b.appearances - a.appearances;
+    return a.goalsConceded - b.goalsConceded;
+  });
 }
 
 // ============================================================
