@@ -1417,18 +1417,19 @@
   }
 
   // teamYoutubeChannel(data.js)에 설정된 채널의 "최신 업로드 영상"을 YouTube Data API v3로
-  // 가져옵니다. 같은 브라우저 세션 동안은 sessionStorage에 캐시해서(10분) API 호출을 아낍니다.
+  // 가져옵니다. localStorage에 12시간 동안 캐시해서(하루 최대 2번만 API 호출) API 사용량을 아낍니다.
   async function fetchTeamYoutubeChannelVideos() {
     if (typeof teamYoutubeChannel === 'undefined' || !teamYoutubeChannel.apiKey || !teamYoutubeChannel.uploadsPlaylistId) {
       return null;
     }
 
     const cacheKey = 'tiYoutubeChannelCache_' + teamYoutubeChannel.uploadsPlaylistId;
+    const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12시간 = 하루 2회 갱신
     try {
-      const cachedRaw = sessionStorage.getItem(cacheKey);
+      const cachedRaw = localStorage.getItem(cacheKey);
       if (cachedRaw) {
         const cached = JSON.parse(cachedRaw);
-        if (cached && Array.isArray(cached.videos) && (Date.now() - cached.ts) < 10 * 60 * 1000) {
+        if (cached && Array.isArray(cached.videos) && (Date.now() - cached.ts) < CACHE_TTL_MS) {
           return cached.videos;
         }
       }
@@ -1456,7 +1457,7 @@
       });
 
     try {
-      sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), videos }));
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), videos }));
     } catch (e) { /* 저장 실패(용량 등)는 무시 */ }
 
     return videos;
@@ -1469,6 +1470,16 @@
   async function renderTeamYoutubeTab() {
     const el = document.getElementById('teamInfoYoutubeTab');
     if (!el) return;
+
+    const channelLinkEl = document.getElementById('tiYoutubeChannelLink');
+    if (channelLinkEl) {
+      if (typeof teamYoutubeChannel !== 'undefined' && teamYoutubeChannel.channelId) {
+        channelLinkEl.href = `https://www.youtube.com/channel/${encodeURIComponent(teamYoutubeChannel.channelId)}`;
+        channelLinkEl.style.display = '';
+      } else {
+        channelLinkEl.style.display = 'none';
+      }
+    }
 
     if (typeof teamYoutubeChannel === 'undefined' || !teamYoutubeChannel.apiKey) {
       el.innerHTML = `<div class="ti-yt-empty lbl" data-en="Add a YouTube Data API key in data.js (teamYoutubeChannel.apiKey) to show the channel's latest videos." data-ko="data.js의 teamYoutubeChannel.apiKey에 YouTube Data API 키를 넣으면 채널 최신 영상이 표시됩니다.">${isKorean ? 'data.js의 teamYoutubeChannel.apiKey에 YouTube Data API 키를 넣으면 채널 최신 영상이 표시됩니다.' : "Add a YouTube Data API key in data.js (teamYoutubeChannel.apiKey) to show the channel's latest videos."}</div>`;

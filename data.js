@@ -31,8 +31,8 @@ const matchHighlights = {
 // uploadsPlaylistId는 채널ID의 "UC"를 "UU"로 바꾼 값입니다(유튜브의 일반적인 규칙).
 // 이미 계산해서 넣어뒀으니 따로 수정할 필요 없습니다.
 const teamYoutubeChannel = {
-  channelId: 'UC5JtIP2gExbPDMbNMFr3aHA', // 창박골 Changbakgol (@changbakgol)
-  uploadsPlaylistId: 'UU5JtIP2gExbPDMbNMFr3aHA',
+  channelId: 'UCjq01bhRRHe9lx6-FEJE2fA', // 창박골 Changbakgol (@changbakgol)
+  uploadsPlaylistId: 'UUjq01bhRRHe9lx6-FEJE2fA',
   apiKey: 'AIzaSyCKU3vHbw4uw3cCdhreXi4AnJU5htEauMQ', // 여기에 위에서 발급받은 YouTube Data API v3 키를 넣어주세요
   maxResults: 15
 };
