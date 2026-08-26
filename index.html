@@ -82,7 +82,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=006">
+<link rel="stylesheet" href="style.css?v=007">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -311,8 +311,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>
       <span class="lbl" data-en="Share" data-ko="공유">공유</span>
     </button>
+    <button class="share-btn round-share-btn postponed-btn lbl" data-en="Postponed Matches" data-ko="연기된 경기보기" onclick="openPostponedMatchesModal()" aria-label="View postponed matches" title="연기된 경기 보기">
+      <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="4.5" width="17" height="16" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.2H20.5" stroke="currentColor" stroke-width="1.8"/><path d="M7.3 2.6V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.7 2.6V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.2 16.2L11.6 12.8M11.6 12.8L15 16.2M11.6 12.8V16.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="lbl" data-en="Postponed" data-ko="연기된 경기보기">연기된 경기보기</span>
+    </button>
   </div>
   <div class="round-match-list" id="roundMatchList"></div>
+</div>
+<div id="postponedMatchesModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content postponed-modal-content">
+    <div class="modal-header">
+      <h2 class="lbl" data-en="Postponed Matches" data-ko="연기된 경기">연기된 경기</h2>
+      <button class="close-btn" onclick="closePostponedMatchesModal()">&times;</button>
+    </div>
+    <div class="modal-body postponed-modal-body">
+      <div id="postponedMatchesBody" class="postponed-matches-list"></div>
+    </div>
+  </div>
 </div>
 <div id="statsView" style="display:none;">
 <div class="stats-grid">
@@ -809,7 +824,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
-<script src="data.js?v=006"></script>
-<script src="app.js?v=006"></script>
+<script src="data.js?v=007"></script>
+<script src="app.js?v=007"></script>
 </body>
 </html>

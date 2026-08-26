@@ -1465,7 +1465,7 @@
 
   // ===== 구단 유튜브 코너(상대전적 ↔ 경기결과 사이) =====
   // teamYoutubeChannel(data.js)에 지정된 채널의 최신 영상 15개를 가져와 썸네일 카드로
-  // 보여줍니다. 카드 목록을 이어붙여(2배) 좌→우로 끊김 없이 자동으로 흐르게 하고,
+  // 보여줍니다. 카드 목록을 이어붙여(2배) 우→좌로 끊김 없이 자동으로 흐르게 하고,
   // 클릭하면 새 탭에서 해당 유튜브 영상이 열립니다.
   async function renderTeamYoutubeTab() {
     const el = document.getElementById('teamInfoYoutubeTab');
@@ -1537,11 +1537,12 @@
     if (marqueeEl && trackEl) initYoutubeMarqueeScroll(marqueeEl, trackEl);
   }
 
-  // ===== 구단 유튜브 코너: 좌→우 자동 흐름(느린 속도) + 마우스/터치 드래그 스크롤 =====
-  // 카드가 왼쪽(최신)에서 오른쪽(과거)으로 이어져 보이도록, 콘텐츠를 2배로 이어붙인 트랙에서
-  // scrollLeft를 절반 지점(halfWidth)에서 0을 향해 서서히 줄여가며(=시각적으로 오른쪽으로 흐름)
-  // 무한 루프를 흉내냅니다. 사용자가 마우스로 드래그하거나 손가락으로 스와이프하면 자동 흐름을
-  // 잠시 멈추고 자유롭게 좌우로 스크롤할 수 있습니다.
+  // ===== 구단 유튜브 코너: 우→좌 자동 흐름(느린 속도) + 마우스/터치 드래그 스크롤 =====
+  // 카드가 오른쪽(신규 진입)에서 왼쪽(퇴장)으로 흐르며, 새 영상(작은 x)부터 오래된 영상(큰 x)
+  // 순으로 지나가도록, 콘텐츠를 2배로 이어붙인 트랙에서 scrollLeft를 0에서 시작해 서서히
+  // 늘려갑니다(=시각적으로 왼쪽으로 흐름). 절반 지점(halfWidth)에 도달하면 다시 처음 위치로
+  // 점프해 무한 루프를 흉내냅니다. 사용자가 마우스로 드래그하거나 손가락으로 스와이프하면
+  // 자동 흐름을 잠시 멈추고 자유롭게 좌우로 스크롤할 수 있습니다.
   function initYoutubeMarqueeScroll(marqueeEl, trackEl) {
     const DURATION_SECONDS = 60; // 기존 42s보다 느리게
     const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1555,12 +1556,12 @@
       return trackEl.scrollWidth / 2;
     }
 
-    function placeAtMiddle() {
-      const halfWidth = getHalfWidth();
-      if (halfWidth > 0) marqueeEl.scrollLeft = halfWidth;
+    function placeAtStart() {
+      // 맨 앞(x=0, 최신 영상)에서 시작해야 "새 영상부터" 우→좌로 흐릅니다.
+      marqueeEl.scrollLeft = 0;
     }
-    // 레이아웃 확정 후 중간 지점에서 시작
-    requestAnimationFrame(placeAtMiddle);
+    // 레이아웃 확정 후 맨 앞(최신 영상) 지점에서 시작
+    requestAnimationFrame(placeAtStart);
 
     function step(timestamp) {
       if (!prefersReducedMotion && !userInteracting && !hovering) {
@@ -1569,7 +1570,9 @@
         const halfWidth = getHalfWidth();
         if (halfWidth > 0) {
           const speed = halfWidth / DURATION_SECONDS; // px/sec
-          marqueeEl.scrollLeft -= speed * dt;
+          // scrollLeft를 증가시켜 콘텐츠가 우→좌로 흐르게 하고(오른쪽에서 새 카드가 들어와
+          // 왼쪽으로 빠져나감), 새 영상(작은 x)부터 오래된 영상(큰 x) 순으로 지나가게 합니다.
+          marqueeEl.scrollLeft += speed * dt;
         }
       } else {
         lastTime = timestamp;
@@ -2239,6 +2242,78 @@
     });
 
     attachImageFallback();
+  }
+
+
+  // ===== 연기된 경기 모아보기 (Postponed Matches Modal) =====
+  // scheduledRounds를 훑어서 postponed: true로 표시된 경기를 전부 모읍니다.
+  // 결과가 확정되면(=homeScore/awayScore가 채워지면) postponed 플래그도 함께
+  // 지워주면 이 목록에서 자동으로 빠집니다.
+  function getAllPostponedMatches() {
+    const roundKeys = allRoundKeysIncludingScheduled();
+    const list = [];
+    roundKeys.forEach((key, idx) => {
+      const scheduled = (scheduledRounds && scheduledRounds[key]) || [];
+      scheduled.forEach(m => {
+        if (!m.postponed || m.byeKo || m.byeEn) return;
+        list.push({
+          weekNum: idx + 1,
+          homeKo: m.homeKo, homeEn: m.homeEn,
+          awayKo: m.awayKo, awayEn: m.awayEn
+        });
+      });
+    });
+    return list;
+  }
+
+  function renderPostponedMatchesModal() {
+    const body = document.getElementById('postponedMatchesBody');
+    if (!body) return;
+    const list = getAllPostponedMatches();
+
+    if (!list.length) {
+      body.innerHTML = `
+        <div class="postponed-empty lbl" data-en="No postponed matches right now." data-ko="현재 연기된 경기가 없어요.">${isKorean ? '현재 연기된 경기가 없어요.' : 'No postponed matches right now.'}</div>
+      `;
+      return;
+    }
+
+    body.innerHTML = list.map(m => {
+      const weekLabel = isKorean ? `${m.weekNum}주차` : `Week ${m.weekNum}`;
+      const homeLogo = getTeamLogo(m.homeEn);
+      const awayLogo = getTeamLogo(m.awayEn);
+      const homeName = isKorean ? m.homeKo : m.homeEn;
+      const awayName = isKorean ? m.awayKo : m.awayEn;
+      return `
+        <div class="postponed-match-row">
+          <span class="postponed-week-badge lbl" data-en="Week ${m.weekNum}" data-ko="${m.weekNum}주차">${weekLabel}</span>
+          <div class="postponed-match-teams">
+            <div class="postponed-match-team">
+              ${homeLogo ? `<img class="team-logo-sm" src="${homeLogo}" alt="${m.homeEn}">` : ''}
+              <span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span>
+            </div>
+            <span class="postponed-vs">vs</span>
+            <div class="postponed-match-team postponed-match-team-away">
+              <span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span>
+              ${awayLogo ? `<img class="team-logo-sm" src="${awayLogo}" alt="${m.awayEn}">` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    attachImageFallback();
+  }
+
+  function openPostponedMatchesModal() {
+    renderPostponedMatchesModal();
+    const modal = document.getElementById('postponedMatchesModal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function closePostponedMatchesModal() {
+    const modal = document.getElementById('postponedMatchesModal');
+    if (modal) modal.style.display = 'none';
   }
 
 
@@ -4338,6 +4413,10 @@
     if (event.target === venueMapModal) {
       closeVenueMapModal();
     }
+    const postponedMatchesModal = document.getElementById('postponedMatchesModal');
+    if (event.target === postponedMatchesModal) {
+      closePostponedMatchesModal();
+    }
   }
 
   // ===== 라운드 상세(포메이션/득점/최근 전적) 모달 =====
@@ -4776,6 +4855,11 @@
     const otherTeamModal = document.getElementById('otherTeamModal');
     if (otherTeamModal && otherTeamModal.style.display === 'flex') {
       renderOtherTeamGrid();
+    }
+
+    const postponedModal = document.getElementById('postponedMatchesModal');
+    if (postponedModal && postponedModal.style.display === 'flex') {
+      renderPostponedMatchesModal();
     }
   }
 
