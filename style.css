@@ -4441,29 +4441,32 @@
 
   /* ===== 구단 유튜브 코너 (상대전적 ↔ 경기결과 사이, 채널 최신 영상 좌→우 자동 흐름) ===== */
   .ti-yt-marquee {
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
     padding: 2px 0 8px;
     -webkit-mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
     mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scroll-behavior: auto;
+    cursor: grab;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .ti-yt-marquee::-webkit-scrollbar {
+    display: none;
+  }
+  .ti-yt-marquee.ti-yt-dragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
   }
   .ti-yt-track {
     display: flex;
     flex-wrap: nowrap;
     gap: 12px;
     width: max-content;
-    animation: ti-yt-flow 42s linear infinite;
-  }
-  .ti-yt-marquee:hover .ti-yt-track {
-    animation-play-state: paused;
-  }
-  @keyframes ti-yt-flow {
-    from { transform: translateX(-50%); }
-    to { transform: translateX(0%); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ti-yt-track {
-      animation: none;
-    }
     .ti-yt-marquee {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;

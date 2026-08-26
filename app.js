@@ -1498,6 +1498,13 @@
 
     if (!videos || !videos.length) { el.innerHTML = ''; return; }
 
+    // 최신 업로드 순(좌) → 오래된 순(우)으로 정렬되도록 publishedAt 기준 내림차순 정렬을 보장합니다.
+    videos = videos.slice().sort((a, b) => {
+      const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return tb - ta;
+    });
+
     const cardHtml = videos.map(v => {
       const title = escapeHtml(v.title);
       const dateLabel = v.publishedAt
@@ -1518,12 +1525,114 @@
         </a>`;
     }).join('');
 
-    // 카드 목록을 두 번 이어붙여서 애니메이션이 절반 지점을 돌 때 이음매 없이 이어지도록 합니다.
+    // 카드 목록을 두 번 이어붙여서 자동 스크롤이 절반 지점을 돌 때 이음매 없이 이어지도록 합니다.
     el.innerHTML = `
       <div class="ti-yt-marquee">
         <div class="ti-yt-track">${cardHtml}${cardHtml}</div>
       </div>`;
     attachImageFallback();
+
+    const marqueeEl = el.querySelector('.ti-yt-marquee');
+    const trackEl = el.querySelector('.ti-yt-track');
+    if (marqueeEl && trackEl) initYoutubeMarqueeScroll(marqueeEl, trackEl);
+  }
+
+  // ===== 구단 유튜브 코너: 좌→우 자동 흐름(느린 속도) + 마우스/터치 드래그 스크롤 =====
+  // 카드가 왼쪽(최신)에서 오른쪽(과거)으로 이어져 보이도록, 콘텐츠를 2배로 이어붙인 트랙에서
+  // scrollLeft를 절반 지점(halfWidth)에서 0을 향해 서서히 줄여가며(=시각적으로 오른쪽으로 흐름)
+  // 무한 루프를 흉내냅니다. 사용자가 마우스로 드래그하거나 손가락으로 스와이프하면 자동 흐름을
+  // 잠시 멈추고 자유롭게 좌우로 스크롤할 수 있습니다.
+  function initYoutubeMarqueeScroll(marqueeEl, trackEl) {
+    const DURATION_SECONDS = 60; // 기존 42s보다 느리게
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let userInteracting = false;
+    let hovering = false;
+    let lastTime = null;
+    let rafId = null;
+
+    function getHalfWidth() {
+      return trackEl.scrollWidth / 2;
+    }
+
+    function placeAtMiddle() {
+      const halfWidth = getHalfWidth();
+      if (halfWidth > 0) marqueeEl.scrollLeft = halfWidth;
+    }
+    // 레이아웃 확정 후 중간 지점에서 시작
+    requestAnimationFrame(placeAtMiddle);
+
+    function step(timestamp) {
+      if (!prefersReducedMotion && !userInteracting && !hovering) {
+        if (lastTime == null) lastTime = timestamp;
+        const dt = (timestamp - lastTime) / 1000;
+        const halfWidth = getHalfWidth();
+        if (halfWidth > 0) {
+          const speed = halfWidth / DURATION_SECONDS; // px/sec
+          marqueeEl.scrollLeft -= speed * dt;
+        }
+      } else {
+        lastTime = timestamp;
+      }
+      lastTime = timestamp;
+      rafId = requestAnimationFrame(step);
+    }
+    rafId = requestAnimationFrame(step);
+
+    // 이음매 없는 무한 루프: 경계에 가까워지면 반대쪽 대응 지점으로 점프
+    marqueeEl.addEventListener('scroll', () => {
+      const halfWidth = getHalfWidth();
+      if (halfWidth <= 0) return;
+      if (marqueeEl.scrollLeft <= 0) {
+        marqueeEl.scrollLeft += halfWidth;
+      } else if (marqueeEl.scrollLeft >= halfWidth * 2 - marqueeEl.clientWidth) {
+        marqueeEl.scrollLeft -= halfWidth;
+      }
+    });
+
+    // 마우스 호버 시 일시 정지(기존 동작 유지)
+    marqueeEl.addEventListener('mouseenter', () => { hovering = true; });
+    marqueeEl.addEventListener('mouseleave', () => { hovering = false; lastTime = null; });
+
+    // 터치 스와이프: 브라우저 네이티브 스크롤을 사용하고, 터치 중에는 자동 흐름만 멈춥니다.
+    marqueeEl.addEventListener('touchstart', () => { userInteracting = true; }, { passive: true });
+    marqueeEl.addEventListener('touchend', () => { userInteracting = false; lastTime = null; }, { passive: true });
+    marqueeEl.addEventListener('touchcancel', () => { userInteracting = false; lastTime = null; }, { passive: true });
+
+    // 마우스 드래그로 좌우 스크롤 (데스크톱)
+    let isDown = false, startX = 0, startScroll = 0, dragMoved = false;
+    marqueeEl.addEventListener('mousedown', (e) => {
+      isDown = true;
+      userInteracting = true;
+      dragMoved = false;
+      startX = e.pageX;
+      startScroll = marqueeEl.scrollLeft;
+      marqueeEl.classList.add('ti-yt-dragging');
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      const dx = e.pageX - startX;
+      if (Math.abs(dx) > 3) dragMoved = true;
+      marqueeEl.scrollLeft = startScroll - dx;
+    });
+    function endDrag() {
+      if (!isDown) return;
+      isDown = false;
+      userInteracting = false;
+      lastTime = null;
+      marqueeEl.classList.remove('ti-yt-dragging');
+    }
+    window.addEventListener('mouseup', endDrag);
+    marqueeEl.addEventListener('mouseleave', endDrag);
+
+    // 드래그 후 발생하는 클릭(영상 링크 이동)을 방지
+    trackEl.addEventListener('click', (e) => {
+      if (dragMoved) {
+        e.preventDefault();
+        e.stopPropagation();
+        dragMoved = false;
+      }
+    }, true);
   }
 
   // 특정 팀(nameEn/nameKo)이 치른 "이미 끝난 경기" 카드 목록을 만듭니다.
