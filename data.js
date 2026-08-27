@@ -39,7 +39,17 @@ const teamYoutubeChannel = {
 
 // ===== 치주물루 라운드별 상세 (포메이션/득점/교체/최근 상대전적) =====
 // starters: 포지션별 선발. goals: 득점 시간(분) 배열. outMin: 교체 아웃 시간('HT'=하프타임)
-// subsIn: 교체 투입 선수. subsUnused: 미출전 명단(등번호)
+// subsIn: 교체 투입 선수. pos로 어느 포지션에 들어왔는지 표시하며, 같은 pos를 가진 항목을
+//   배열에 나온 순서대로 이어 붙여 이중/삼중 교체 체인을 구성합니다. 자신도 이후 교체되어
+//   나갔다면 outMin을 추가로 적어주세요(다음 pos 일치 항목이 그 자리를 이어받습니다).
+// subsUnused: 미출전 명단(등번호)
+// recentHistory / historySummary: "최근 상대 전적" 표. 이제는 안 채워도 됩니다!
+//   비워두면(필드 자체를 안 써도) 상세보기가 자동으로 다음을 합쳐서 채워줍니다:
+//   [이번 경기 결과(roundsData/scheduledRounds에 채운 스코어에서 자동 계산)]
+//   + [upcomingMatchHistory[해당 roundKey].recentHistory에 미리 적어둔 과거 시즌 상대전적(있다면)]
+//   즉, 8주차부터는 그냥 아래처럼 formation/opponentKo/result/starters/subs만 채우면 끝입니다.
+//   (과거처럼 특정 라운드에서 문구를 직접 다르게 쓰고 싶을 때만 recentHistory를 수동으로 적으면
+//   그 값이 우선 사용됩니다.)
 const matchLineups = {
   round1: {
     formation: "4-2-3-1",
@@ -47,30 +57,31 @@ const matchLineups = {
     result: "3 : 1 승",
     starters: [
       { pos: "ST", number: 22, nameKo: "티모시 카타파" },
-      { pos: "LW", number: 49, nameKo: "쿰부카니 바냐", outMin: "후반 11'" },
+      { pos: "LW", number: 49, nameKo: "쿰부카니 바냐", outMin: "후반" },
       { pos: "CAM", number: 7, nameKo: "디킨스", goals: ["8'", "78'"], outMin: "후반" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
       { pos: "LCM", number: 77, nameKo: "군도", captain: true },
-      { pos: "RCM", number: 98, nameKo: "스티브", outMin: "후반 10'" },
+      { pos: "RCM", number: 98, nameKo: "스티브", outMin: "후반" },
       { pos: "LB", number: 5, nameKo: "라반" },
       { pos: "LCB", number: 13, nameKo: "조셉" },
-      { pos: "RCB", number: 25, nameKo: "모버트", outMin: "후반 15'" },
+      { pos: "RCB", number: 25, nameKo: "모버트", outMin: "후반" },
       { pos: "RB", number: 2, nameKo: "로날드", outMin: "후반" },
       { pos: "GK", number: 88, nameKo: "티나시" }
     ],
     subsIn: [
-      { number: 11, nameKo: "해리", inMin: "후반 11'", goals: ["76'"] },
-      { number: 80, nameKo: "스쿠카", inMin: "후반" },
-      { number: 10, nameKo: "찰스", inMin: "후반 10'" },
-      { number: 15, nameKo: "만토", inMin: "후반 15'" },
-      { number: 3, nameKo: "음롱골라", inMin: "후반" }
+      { number: 11, nameKo: "해리", pos: "LW", inMin: "후반", goals: ["76'"] },
+      { number: 80, nameKo: "스쿠카", pos: "CAM", inMin: "후반" },
+      { number: 10, nameKo: "찰스", pos: "RCM", inMin: "후반" },
+      { number: 15, nameKo: "만토", pos: "RCB", inMin: "후반" },
+      { number: 3, nameKo: "음롱골라", pos: "RB", inMin: "후반" }
     ],
     subsUnused: [9, 20, 66, 90],
     recentHistory: [
+      { comp: "26/27 시즌 NRFA 리그 원 1주차", score: "치주물루 3 : 1 치하메", result: "치주물루 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 23주차", score: "치하메 2 : 1 치주물루", result: "치하메 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 8주차", score: "치주물루 2 : 0 치하메", result: "치주물루 승" }
     ],
-    historySummary: "최근 2경기 전적 2전 1승 0무 1패로 백중세"
+    historySummary: "최근 3경기 전적 2승 0무 1패로 우세"
   },
   round2: {
     formation: "4-2-3-1",
@@ -81,7 +92,7 @@ const matchLineups = {
       { pos: "LW", number: 11, nameKo: "해리" },
       { pos: "CAM", number: 7, nameKo: "디킨스" },
       { pos: "RW", number: 6, nameKo: "벤자민", outMin: "후반" },
-      { pos: "LCM", number: 77, nameKo: "군도", outMin: "34'" },
+      { pos: "LCM", number: 77, nameKo: "군도", outMin: "전반" },
       { pos: "RCM", number: 10, nameKo: "찰스", outMin: "후반" },
       { pos: "LB", number: 5, nameKo: "라반" },
       { pos: "LCB", number: 13, nameKo: "조셉" },
@@ -90,17 +101,18 @@ const matchLineups = {
       { pos: "GK", number: 88, nameKo: "티나시", outMin: "전반", injury: true }
     ],
     subsIn: [
-      { number: 49, nameKo: "바냐", inMin: "후반" },
-      { number: 98, nameKo: "스티브", inMin: "34'" },
-      { number: 80, nameKo: "스쿠카", inMin: "후반" },
-      { number: 90, nameKo: "마야미코", inMin: "전반" }
+      { number: 49, nameKo: "바냐", pos: "RW", inMin: "후반" },
+      { number: 98, nameKo: "스티브", pos: "LCM", inMin: "전반" },
+      { number: 80, nameKo: "스쿠카", pos: "RCM", inMin: "후반" },
+      { number: 90, nameKo: "마야미코", pos: "GK", inMin: "전반" }
     ],
     subsUnused: [15, 20, 66],
     recentHistory: [
+      { comp: "26/27 시즌 NRFA 리그 원 2주차", score: "마푸 1 : 0 치주물루", result: "마푸 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 27주차", score: "심보웨 4 : 2 치주물루", result: "심보웨 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 13주차", score: "치주물루 2 : 1 심보웨", result: "치주물루 승" }
     ],
-    historySummary: "최근 2경기 전적 2전 1승 0무 1패로 백중세"
+    historySummary: "최근 3경기 전적 1승 0무 2패로 열세"
   },
   round3: {
     formation: "4-2-3-1",
@@ -122,10 +134,11 @@ const matchLineups = {
     subsIn: [],
     subsUnused: [9, 10, 20, 25, 66, 77, 88],
     recentHistory: [
+      { comp: "26/27 시즌 NRFA 리그 원 3주차", score: "치주물루 1 : 0 라이플리", result: "치주물루 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 28주차", score: "치주물루 2 : 0 라이플리", result: "치주물루 승" },
       { comp: "2025-26 시즌 MNRF 심소 프리미어 리그 1주차", score: "라이플리 5 : 1 치주물루", result: "라이플리 승" }
     ],
-    historySummary: "최근 2경기 전적 2전 1승 0무 1패로 백중세"
+    historySummary: "최근 3경기 전적 2승 0무 1패로 우세"
   },
   round4: {
     formation: "4-2-3-1",
@@ -145,44 +158,48 @@ const matchLineups = {
       { pos: "GK", number: 90, nameKo: "마야미코" }
     ],
     subsIn: [
-      { number: 10, nameKo: "찰스", inMin: "후반" },
-      { number: 77, nameKo: "군도", inMin: "후반" }
+      { number: 10, nameKo: "찰스", pos: "LW", inMin: "후반" },
+      { number: 77, nameKo: "군도", pos: "RB", inMin: "후반" }
     ],
     subsUnused: [9, 20, 49, 66, 88],
     recentHistory: [
+      { comp: "26/27 시즌 NRFA 리그 원 4주차", score: "루베 0 : 0 치주물루", result: "무승부" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 27주차", score: "치주물루 4 : 1 루베", result: "치주물루 승" },
       { comp: "2025-26 시즌 카스텔컵 지역 단계 3라운드", score: "치주물루 1 : 1 루베 (PSO 4:2)", result: "무승부" },
       { comp: "2025-26 시즌 MNRF 심소 프리미어 리그 2주차", score: "루베 3 : 2 치주물루", result: "루베 승" }
     ],
-    historySummary: "최근 3경기 전적 1승 1무 1패로 백중세"
+    historySummary: "최근 4경기 전적 1승 2무 1패로 백중세"
   },
   round5: {
     formation: "4-2-3-1",
     opponentKo: "에크웬데니 FC",
     result: "2 : 0 승",
     starters: [
-      { pos: "ST", number: 9, nameKo: "임마누엘", outMin: "29'" },
+      { pos: "ST", number: 9, nameKo: "음칸다위레", outMin: "전반" },
       { pos: "LW", number: 49, nameKo: "쿰부카니", goals: ["-"] },
       { pos: "CAM", number: 7, nameKo: "디킨스" },
-      { pos: "RW", number: 6, nameKo: "벤자민" },
+      { pos: "RW", number: 6, nameKo: "벤자민", outMin: "후반" },
       { pos: "LCM", number: 98, nameKo: "스티브", goals: ["-"] },
       { pos: "RCM", number: 3, nameKo: "음롱골라", captain: true },
-      { pos: "LB", number: 20, nameKo: "프란시스", outMin: "-" },
+      { pos: "LB", number: 20, nameKo: "프란시스", outMin: "전반" },
       { pos: "LCB", number: 13, nameKo: "조셉" },
       { pos: "RCB", number: 25, nameKo: "모버트" },
-      { pos: "RB", number: 77, nameKo: "군도" },
+      { pos: "RB", number: 77, nameKo: "군도", outMin: "후반" },
       { pos: "GK", number: 90, nameKo: "마야미코" }
     ],
     subsIn: [
-      { number: 22, nameKo: "티모시 카타파", inMin: "29'" },
-      { number: 5, nameKo: "라반", inMin: "-" }
+      { number: 22, nameKo: "티모시 카타파", pos: "ST", inMin: "전반" },
+      { number: 10, nameKo: "찰스", pos: "RW", inMin: "후반" },
+      { number: 5, nameKo: "라반", pos: "LB", inMin: "전반" },
+      { number: 8, nameKo: "엑스퍼트", pos: "RB", inMin: "후반" }
     ],
-    subsUnused: [8, 10, 11, 66, 80, 88],
+    subsUnused: [11, 66, 80, 88],
     recentHistory: [
+      { comp: "26/27 시즌 NRFA 리그 원 5주차", score: "치주물루 2 : 0 에크웬데니", result: "치주물루 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 28주차", score: "치주물루 5 : 1 에크웬데니", result: "치주물루 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 11주차", score: "에크웬데니 2 : 2 치주물루", result: "무승부" }
     ],
-    historySummary: "최근 2경기 전적 2전 1승 1무 0패로 우세"
+    historySummary: "최근 3경기 전적 2승 1무 0패로 우세"
   },
   round6: {
     formation: "4-2-3-1",
@@ -190,10 +207,10 @@ const matchLineups = {
     result: "0 : 1 패",
     starters: [
       { pos: "ST", number: 22, nameKo: "티모시 카타파" },
-      { pos: "LW", number: 49, nameKo: "쿰부카니" },
-      { pos: "CAM", number: 10, nameKo: "찰스" },
+      { pos: "LW", number: 49, nameKo: "쿰부카니", outMin: "후반" },
+      { pos: "CAM", number: 10, nameKo: "찰스", outMin: "전반" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
-      { pos: "LCM", number: 98, nameKo: "스티브" },
+      { pos: "LCM", number: 98, nameKo: "스티브", outMin: "후반" },
       { pos: "RCM", number: 3, nameKo: "음롱골라", captain: true },
       { pos: "LB", number: 5, nameKo: "라반" },
       { pos: "LCB", number: 13, nameKo: "조셉" },
@@ -201,13 +218,19 @@ const matchLineups = {
       { pos: "RB", number: 2, nameKo: "로날드" },
       { pos: "GK", number: 90, nameKo: "마야미코" }
     ],
-    subsIn: [],
-    subsUnused: [7, 8, 9, 11, 66, 80, 88],
+    subsIn: [
+      { number: 11, nameKo: "해리", pos: "LW", inMin: "후반", outMin: "후반" },
+      { number: 7, nameKo: "디킨스", pos: "CAM", inMin: "전반" },
+      { number: 8, nameKo: "엑스퍼트", pos: "LCM", inMin: "후반" },
+      { number: 9, nameKo: "임마누엘", pos: "LW", inMin: "후반" }
+    ],
+    subsUnused: [66, 80, 88],
     recentHistory: [
+      { comp: "26/27 시즌 NRFA 리그 원 6주차", score: "에우티니 1 : 0 치주물루", result: "에우티니 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 24주차", score: "치주물루 2 : 0 에우티니", result: "치주물루 승(몰수승)" },
       { comp: "2025-26 시즌 MNRF 심소 프리미어 리그 6주차", score: "에우티니 1 : 0 치주물루", result: "에우티니 승" }
     ],
-    historySummary: "최근 2경기 전적 1승 0무 1패로 백중세"
+    historySummary: "최근 3경기 전적 1승 0무 2패로 열세"
   },
   round7: {
     formation: "4-2-3-1",
@@ -228,8 +251,10 @@ const matchLineups = {
     ],
     subsIn: [],
     subsUnused: [8, 9, 10, 11, 20, 66, 80, 88],
-    recentHistory: [],
-    historySummary: "이번 시즌 첫 맞대결"
+    recentHistory: [
+      { comp: "26/27 시즌 NRFA 리그 원 7주차", score: "치주물루 4 : 0 젠다", result: "치주물루 승" }
+    ],
+    historySummary: "최근 1경기 전적 1승 0무 0패로 우세"
   }
 };
 
@@ -2102,6 +2127,71 @@ function computeTeamSeasonH2H(nameEnA, nameKoA, nameEnB, nameKoB) {
   return null;
 }
 
+
+// ===== 상세보기(경기 상세) 모달의 "최근 상대 전적" 자동 생성 =====
+// matchLineups[roundKey]에 recentHistory를 수동으로 채워두지 않아도, 이번 경기 결과(방금
+// 라운드 데이터에 채운 스코어)와 upcomingMatchHistory[roundKey]에 미리 적어둔 과거 시즌
+// 상대전적 메모를 합쳐서 자동으로 만들어줍니다.
+// - matchLineups[roundKey].recentHistory를 직접 채워두면(과거처럼) 그 값을 그대로 우선 사용합니다(수동 오버라이드).
+// - 안 채워져 있으면: [이번 경기 자동 생성 1건] + [upcomingMatchHistory[roundKey].recentHistory(있다면)] 를 합쳐서 사용합니다.
+// 따라서 8, 9, 10주차... 이후로는 라운드가 끝나서 roundsData/scheduledRounds에 스코어만
+// 채워주면(그리고 미리 upcomingMatchHistory에 과거 상대전적 메모를 적어뒀다면) 이 함수가
+// 상세보기의 "최근 상대 전적" 표를 알아서 채워줍니다.
+function buildAutoMatchEntry(roundKey, weekNum, lineup) {
+  const ourKo = '치주물루 유나이티드 FC';
+  const ourEn = 'Chizumulu United FC';
+  const matches = (typeof roundsData !== 'undefined' && roundsData[roundKey])
+    || (typeof scheduledRounds !== 'undefined' && scheduledRounds[roundKey])
+    || [];
+  const found = matches.find(m => {
+    if (m.byeKo || m.byeEn) return false;
+    const isHomeUs = m.homeKo === ourKo || m.homeEn === ourEn;
+    const isAwayUs = m.awayKo === ourKo || m.awayEn === ourEn;
+    if (!isHomeUs && !isAwayUs) return false;
+    const oppKo = isHomeUs ? m.awayKo : m.homeKo;
+    return oppKo === lineup.opponentKo;
+  });
+  if (!found || typeof found.homeScore !== 'number' || typeof found.awayScore !== 'number') return null;
+
+  const shortKo = nameKo => (nameKo || '').trim().split(' ')[0];
+  const homeShort = (found.homeKo === ourKo) ? '치주물루' : shortKo(found.homeKo);
+  const awayShort = (found.awayKo === ourKo) ? '치주물루' : shortKo(found.awayKo);
+  const comp = `26/27 시즌 NRFA 리그 원 ${weekNum}주차`;
+  const score = `${homeShort} ${found.homeScore} : ${found.awayScore} ${awayShort}`;
+  let result;
+  if (found.homeScore === found.awayScore) {
+    result = '무승부';
+  } else {
+    const winnerShort = found.homeScore > found.awayScore ? homeShort : awayShort;
+    result = `${winnerShort} 승`;
+  }
+  return { comp, score, result };
+}
+
+// 상세보기에서 실제로 사용할 "최근 상대 전적" 리스트 + 요약 문구를 반환합니다.
+function getEffectiveRoundHistory(roundKey, weekNum, lineup) {
+  if (lineup.recentHistory && lineup.recentHistory.length) {
+    return { list: lineup.recentHistory, summary: lineup.historySummary || '' };
+  }
+
+  const autoEntry = buildAutoMatchEntry(roundKey, weekNum, lineup);
+  const priorList = (typeof upcomingMatchHistory !== 'undefined'
+    && upcomingMatchHistory[roundKey]
+    && upcomingMatchHistory[roundKey].recentHistory) || [];
+  const list = autoEntry ? [autoEntry, ...priorList] : priorList.slice();
+  if (!list.length) return { list: [], summary: '' };
+
+  let w = 0, d = 0, l = 0;
+  list.forEach(h => {
+    const r = String(h.result || '');
+    if (r.indexOf('무승부') !== -1) d++;
+    else if (r.indexOf('치주물루') !== -1) w++;
+    else l++;
+  });
+  const tone = w > l ? '우세' : (w < l ? '열세' : '백중세');
+  const summary = `최근 ${list.length}경기 전적 ${w}승 ${d}무 ${l}패로 ${tone}`;
+  return { list, summary };
+}
 
 function runMonteCarloSimulation(iterations) {
   const N = iterations || 4000;

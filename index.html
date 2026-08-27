@@ -82,7 +82,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=007">
+<link rel="stylesheet" href="style.css?v=001">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -258,7 +258,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button class="team-info-tab-btn active lbl" id="tiOverviewBtn" data-en="TEAM INFO" data-ko="팀 정보" onclick="scrollToTeamInfoSection('overview')">팀 정보</button>
     <button class="team-info-tab-btn lbl" id="tiRecordBtn" data-en="RECORD" data-ko="기록" onclick="scrollToTeamInfoSection('record')">기록</button>
     <button class="team-info-tab-btn lbl" id="tiSquadBtn" data-en="SQUAD" data-ko="선수단" onclick="scrollToTeamInfoSection('squad')">선수단</button>
-    <button class="team-info-tab-btn lbl" id="tiScorersBtn" data-en="TOP SCORERS" data-ko="득점 순위" onclick="scrollToTeamInfoSection('scorers')">득점 순위</button>
+    <button class="team-info-tab-btn lbl" id="tiScorersBtn" data-en="Player Records" data-ko="선수 기록" onclick="scrollToTeamInfoSection('scorers')">선수 기록</button>
+    <button class="team-info-tab-btn lbl" id="tiAwardsBtn" data-en="AWARDS" data-ko="수상 정보" onclick="scrollToTeamInfoSection('awards')">수상 정보</button>
     <button class="team-info-tab-btn lbl" id="tiH2hBtn" data-en="H2H" data-ko="상대전적" onclick="scrollToTeamInfoSection('h2h')">상대전적</button>
     <button class="team-info-tab-btn lbl" id="tiYoutubeBtn" data-en="YOUTUBE" data-ko="구단 유튜브" onclick="scrollToTeamInfoSection('youtube')">구단 유튜브</button>
     <button class="team-info-tab-btn lbl" id="tiResultsBtn" data-en="RESULTS" data-ko="경기결과" onclick="scrollToTeamInfoSection('results')">경기결과</button>
@@ -271,16 +272,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <section id="tiSection-overview" class="ti-section">
     <div id="teamInfoOverviewTab" class="team-info-tab-content"></div>
   </section>
-  <section id="tiSection-staff" class="ti-section">
-    <div id="teamInfoStaffTab" class="team-info-tab-content"></div>
-  </section>
   <section id="tiSection-squad" class="ti-section">
     <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
+    <div id="teamInfoStaffTab" class="team-info-tab-content"></div>
     <div id="squadGroups" class="team-info-tab-content"></div>
   </section>
   <section id="tiSection-scorers" class="ti-section">
-    <div class="ti-section-title lbl" data-en="Top Scorers" data-ko="득점 순위">득점 순위</div>
+    <div class="ti-section-title lbl" data-en="Player Records" data-ko="선수 기록">선수 기록</div>
     <div id="teamInfoScorersTab" class="team-info-tab-content"></div>
+  </section>
+  <section id="tiSection-awards" class="ti-section">
+    <div id="teamInfoAwardsTab" class="team-info-tab-content"></div>
   </section>
   <section id="tiSection-h2h" class="ti-section">
     <div class="ti-section-title lbl" data-en="Head-to-Head" data-ko="상대전적">상대전적</div>
@@ -824,7 +826,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
-<script src="data.js?v=007"></script>
-<script src="app.js?v=007"></script>
+<script src="data.js?v=001"></script>
+<script src="app.js?v=001"></script>
 </body>
 </html>

@@ -1141,7 +1141,6 @@
     const t = info.team;
 
     const formGuideHtml = buildFormGuideCardHtml(t);
-    const awardsHtml = renderTeamAwardsCard();
     const homeAwayHtml = renderHomeAwaySplitCard(t);
     const byeFlowHtml = renderByeWeekFlowCard(t);
 
@@ -1150,22 +1149,33 @@
         ${formGuideHtml}
         ${homeAwayHtml}
         ${byeFlowHtml}
-        ${awardsHtml}
       </div>
     `;
     attachImageFallback();
   }
 
-  // 등번호로 선수 정보를 찾아 언어에 맞는 이름과 포지션 텍스트를 반환
-  function awardPlayerHtml(number) {
+  function renderTeamAwardsTab() {
+    const el = document.getElementById('teamInfoAwardsTab');
+    if (!el) return;
+    el.innerHTML = renderTeamAwardsCard();
+    attachImageFallback();
+  }
+
+  // 등번호로 선수 정보를 찾아 얼굴 사진이 들어간 수상 카드 마크업을 반환
+  function awardPlayerHtml(number, badgeText) {
     const sq = squadData.find(p => p.number === number);
     if (!sq) return '';
     const name = isKorean ? sq.nameKo : sq.nameEn;
+    const photo = sq.photoSrc
+      ? `<img class="ti-award-card-photo" src="${sq.photoSrc}" alt="${sq.nameEn}">`
+      : `<div class="ti-award-card-photo ti-award-card-photo-placeholder">⭐</div>`;
     return `
-      <span class="ti-award-player">
-        <span class="ti-award-player-number">${sq.number}</span>
-        <span class="ti-award-player-name">${name}</span>
-      </span>`;
+      <div class="ti-award-card-item" data-player-number="${sq.number}">
+        <div class="ti-award-card-badge">${badgeText}</div>
+        ${photo}
+        <div class="ti-award-card-number">#${sq.number}</div>
+        <div class="ti-award-card-name lbl" data-en="${sq.nameEn}" data-ko="${sq.nameKo}">${name}</div>
+      </div>`;
   }
 
   const MONTH_LABELS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1181,15 +1191,19 @@
     const records = (typeof computeGoalkeeperRecords === 'function') ? computeGoalkeeperRecords() : [];
     if (!records.length) return '';
 
-    const rowsHtml = records.map(r => {
+    const cardsHtml = records.map(r => {
       const csRate = r.appearances > 0 ? Math.round((r.cleanSheets / r.appearances) * 100) : 0;
+      const sq = squadData.find(p => p.number === r.number);
+      const photo = sq && sq.photoSrc
+        ? `<img class="ti-gk-card-photo" src="${sq.photoSrc}" alt="${sq.nameEn || r.nameKo}">`
+        : `<div class="ti-gk-card-photo ti-gk-card-photo-placeholder">🧤</div>`;
+
       return `
-        <div class="ti-gk-row">
-          <div class="ti-gk-row-name">
-            <span class="ti-gk-number">#${r.number}</span>
-            <span class="ti-gk-name">${r.nameKo}</span>
-          </div>
-          <div class="ti-gk-row-stats">
+        <div class="ti-gk-card-item" data-player-number="${r.number}">
+          <div class="ti-gk-card-number">#${r.number}</div>
+          ${photo}
+          <div class="ti-gk-card-name lbl" data-en="${sq ? sq.nameEn : r.nameKo}" data-ko="${r.nameKo}">${r.nameKo}</div>
+          <div class="ti-gk-card-stats">
             <span class="ti-gk-stat"><b>${r.appearances}</b><small class="lbl" data-en="APP" data-ko="출전">${isKorean ? '출전' : 'APP'}</small></span>
             <span class="ti-gk-stat ti-gk-stat-cs"><b>${r.cleanSheets}</b><small class="lbl" data-en="CS" data-ko="무실점">${isKorean ? '무실점' : 'CS'}</small></span>
             <span class="ti-gk-stat"><b>${r.goalsConceded}</b><small class="lbl" data-en="CONC" data-ko="실점">${isKorean ? '실점' : 'CONC'}</small></span>
@@ -1201,7 +1215,8 @@
     return `
       <div class="ti-card ti-gk-card">
         <div class="ti-card-title lbl" data-en="Goalkeeper Clean Sheets" data-ko="골키퍼 무실점 기록">${isKorean ? '골키퍼 무실점 기록' : 'Goalkeeper Clean Sheets'}</div>
-        ${rowsHtml}
+        <div class="ti-gk-card-note lbl" data-en="Based on starting appearances" data-ko="선발 출전 기준">${isKorean ? '선발 출전 기준' : 'Based on starting appearances'}</div>
+        <div class="ti-gk-card-row">${cardsHtml}</div>
       </div>`;
   }
 
@@ -1218,43 +1233,26 @@
         return nb - na; // 최신 라운드 먼저
       });
 
+    // 라운드별로 여러 명이 공동 수상할 수 있으므로, 선수 1명당 카드 1개로 펼쳐서
+    // 최신 라운드가 맨 왼쪽에 오도록 좌우 나열합니다.
     const motmHtml = motmKeys.map(key => {
       const weekNum = parseInt(key.replace('round', ''), 10);
-      const weekLabel = isKorean ? `${weekNum}주차` : `Week ${weekNum}`;
-      const playersHtml = teamAwards.motm[key].map(awardPlayerHtml).join('');
-      return `
-        <div class="ti-award-row">
-          <span class="ti-award-week lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${weekLabel}</span>
-          <span class="ti-award-players">${playersHtml}</span>
-        </div>`;
+      const weekLabel = isKorean ? `${weekNum}주차` : `Wk ${weekNum}`;
+      return teamAwards.motm[key].map(number => awardPlayerHtml(number, weekLabel)).join('');
     }).join('');
 
     const potmKeys = Object.keys(teamAwards.playerOfTheMonth || {}).sort().reverse();
     const potmHtml = potmKeys.map(ymKey => {
       const [, mNum] = ymKey.split('-').map(Number);
-      const monthLabelKo = `${mNum}월`;
-      const monthLabelEn = MONTH_LABELS_EN[mNum - 1];
-      const monthLabel = isKorean ? monthLabelKo : monthLabelEn;
-      const playerHtml = awardPlayerHtml(teamAwards.playerOfTheMonth[ymKey]);
-      return `
-        <div class="ti-award-row">
-          <span class="ti-award-week lbl" data-en="${monthLabelEn}" data-ko="${monthLabelKo}">${monthLabel}</span>
-          <span class="ti-award-players">${playerHtml}</span>
-        </div>`;
+      const monthLabel = isKorean ? `${mNum}월` : MONTH_LABELS_EN[mNum - 1];
+      return awardPlayerHtml(teamAwards.playerOfTheMonth[ymKey], monthLabel);
     }).join('');
 
     const gotmKeys = Object.keys(teamAwards.goalOfTheMonth || {}).sort().reverse();
     const gotmHtml = gotmKeys.map(ymKey => {
       const [, mNum] = ymKey.split('-').map(Number);
-      const monthLabelKo = `${mNum}월`;
-      const monthLabelEn = MONTH_LABELS_EN[mNum - 1];
-      const monthLabel = isKorean ? monthLabelKo : monthLabelEn;
-      const playerHtml = awardPlayerHtml(teamAwards.goalOfTheMonth[ymKey]);
-      return `
-        <div class="ti-award-row">
-          <span class="ti-award-week lbl" data-en="${monthLabelEn}" data-ko="${monthLabelKo}">${monthLabel}</span>
-          <span class="ti-award-players">${playerHtml}</span>
-        </div>`;
+      const monthLabel = isKorean ? `${mNum}월` : MONTH_LABELS_EN[mNum - 1];
+      return awardPlayerHtml(teamAwards.goalOfTheMonth[ymKey], monthLabel);
     }).join('');
 
     if (!motmHtml && !potmHtml && !gotmHtml) return '';
@@ -1265,17 +1263,17 @@
         ${potmHtml ? `
           <div class="ti-award-group">
             <div class="ti-award-group-title lbl" data-en="Player of the Month" data-ko="이달의 선수">${isKorean ? '이달의 선수' : 'Player of the Month'}</div>
-            ${potmHtml}
+            <div class="ti-award-card-row ti-award-card-row-compact">${potmHtml}</div>
           </div>` : ''}
         ${gotmHtml ? `
           <div class="ti-award-group">
             <div class="ti-award-group-title lbl" data-en="Goal of the Month" data-ko="이달의 골">${isKorean ? '이달의 골' : 'Goal of the Month'}</div>
-            ${gotmHtml}
+            <div class="ti-award-card-row ti-award-card-row-compact">${gotmHtml}</div>
           </div>` : ''}
         ${motmHtml ? `
           <div class="ti-award-group">
             <div class="ti-award-group-title lbl" data-en="Man of the Match" data-ko="맨 오브 더 매치">${isKorean ? '맨 오브 더 매치' : 'Man of the Match'}</div>
-            ${motmHtml}
+            <div class="ti-award-card-row ti-award-card-row-scroll">${motmHtml}</div>
           </div>` : ''}
       </div>`;
   }
@@ -1760,6 +1758,7 @@
       record: 'tiRecordBtn',
       squad: 'tiSquadBtn',
       scorers: 'tiScorersBtn',
+      awards: 'tiAwardsBtn',
       h2h: 'tiH2hBtn',
       youtube: 'tiYoutubeBtn',
       results: 'tiResultsBtn'
@@ -1776,7 +1775,7 @@
       teamInfoScrollObserver.disconnect();
       teamInfoScrollObserver = null;
     }
-    const sections = ['overview', 'record', 'squad', 'scorers', 'h2h', 'youtube', 'results']
+    const sections = ['overview', 'record', 'squad', 'scorers', 'awards', 'h2h', 'youtube', 'results']
       .map(tab => ({ tab, el: document.getElementById('tiSection-' + tab) }))
       .filter(s => s.el);
     if (sections.length === 0) return;
@@ -1853,6 +1852,7 @@
     renderTeamStaffTab();
     renderSquadView();
     renderTeamScorersTab();
+    renderTeamAwardsTab();
     renderTeamYoutubeTab();
     renderTeamResultsTab();
     setActiveTeamInfoButton(currentTeamInfoTab);
@@ -1909,17 +1909,110 @@
     return `<div class="ti-scorer-card-row">${cards.join('')}</div>`;
   }
 
+  // ===== 출전 기록 카드 (선발 최다 / 교체 최다 / 벤치 대기 최다 / 교체 비율) =====
+  // squadPlayerStats(matchLineups로부터 자동 계산)를 바탕으로 4가지 "출전 스타일" 랭킹을
+  // 뽑아서 보여줍니다. 라운드 데이터가 쌓일수록(matchLineups에 라운드를 추가할 때마다)
+  // 자동으로 갱신됩니다.
+  function computeAppearanceLeaders() {
+    const MIN_APPS_FOR_RATIO = 3; // 표본이 너무 적은 선수는 교체 비율 랭킹에서 제외
+    const rows = squadData.map(p => {
+      const s = squadPlayerStats[p.number] || { starts: 0, subApps: 0, appearances: 0, unusedCount: 0 };
+      const subRatio = s.appearances > 0 ? (s.subApps / s.appearances) : 0;
+      return {
+        number: p.number, nameKo: p.nameKo, nameEn: p.nameEn,
+        starts: s.starts, subApps: s.subApps, unusedCount: s.unusedCount,
+        appearances: s.appearances, subRatio
+      };
+    });
+
+    const byDescThenNum = (key) => (a, b) => (b[key] - a[key]) || (a.number - b.number);
+
+    return {
+      starters: rows.filter(r => r.starts > 0).sort(byDescThenNum('starts')).slice(0, 3),
+      subs: rows.filter(r => r.subApps > 0).sort(byDescThenNum('subApps')).slice(0, 3),
+      bench: rows.filter(r => r.unusedCount > 0).sort(byDescThenNum('unusedCount')).slice(0, 3),
+      subRatio: rows.filter(r => r.appearances >= MIN_APPS_FOR_RATIO && r.subApps > 0)
+        .sort(byDescThenNum('subRatio')).slice(0, 3)
+    };
+  }
+
+  function appearanceLeaderRowsHtml(list, valueFn) {
+    if (!list.length) {
+      return `<div class="ti-appear-empty lbl" data-en="No data yet" data-ko="아직 데이터가 없습니다">${isKorean ? '아직 데이터가 없습니다' : 'No data yet'}</div>`;
+    }
+    const rankClass = ['rank-1', 'rank-2', 'rank-3'];
+    return `<div class="ti-appear-mini-row">${list.map((r, idx) => {
+      const name = isKorean ? r.nameKo : (r.nameEn || r.nameKo);
+      const sq = squadData.find(p => p.number === r.number);
+      const photo = sq && sq.photoSrc
+        ? `<img class="ti-appear-mini-photo" src="${sq.photoSrc}" alt="${r.nameEn || r.nameKo}">`
+        : `<div class="ti-appear-mini-photo ti-appear-mini-photo-placeholder">👤</div>`;
+      return `
+        <div class="ti-appear-mini-card ${rankClass[idx] || ''} lineup-squad-link" data-player-number="${r.number}">
+          <span class="ti-appear-mini-rank">${idx + 1}</span>
+          ${photo}
+          <span class="ti-appear-mini-num">#${r.number}</span>
+          <span class="ti-appear-mini-name lbl" data-en="${r.nameEn || r.nameKo}" data-ko="${r.nameKo}">${name}</span>
+          <span class="ti-appear-mini-value">${valueFn(r)}</span>
+        </div>`;
+    }).join('')}</div>`;
+  }
+
+  function renderAppearanceStatsCard() {
+    const leaders = computeAppearanceLeaders();
+    const gameSuffix = (n) => isKorean ? `${n}경기` : `${n}`;
+
+    const blocks = [
+      {
+        titleKo: '선발 출전 최다', titleEn: 'Most Starts',
+        subKo: '붙박이 주전', subEn: 'Regular starter',
+        rows: appearanceLeaderRowsHtml(leaders.starters, r => gameSuffix(r.starts))
+      },
+      {
+        titleKo: '교체 출전 최다', titleEn: 'Most Sub Appearances',
+        subKo: '조커 / 슈퍼서브', subEn: 'Super sub',
+        rows: appearanceLeaderRowsHtml(leaders.subs, r => gameSuffix(r.subApps))
+      },
+      {
+        titleKo: '벤치 대기 최다', titleEn: 'Most Unused on Bench',
+        subKo: '벤치를 뜨겁게 달구는 중', subEn: 'Warming the bench',
+        rows: appearanceLeaderRowsHtml(leaders.bench, r => gameSuffix(r.unusedCount))
+      },
+      {
+        titleKo: '선발 대비 교체 비율', titleEn: 'Sub Appearance Rate',
+        subKo: `출전 ${3}경기 이상 기준`, subEn: '3+ appearances',
+        rows: appearanceLeaderRowsHtml(leaders.subRatio, r => `${Math.round(r.subRatio * 100)}%`)
+      }
+    ];
+
+    const blocksHtml = blocks.map(b => `
+      <div class="ti-appear-block">
+        <div class="ti-appear-block-head">
+          <span class="ti-appear-block-title lbl" data-en="${b.titleEn}" data-ko="${b.titleKo}">${isKorean ? b.titleKo : b.titleEn}</span>
+          <span class="ti-appear-block-sub lbl" data-en="${b.subEn}" data-ko="${b.subKo}">${isKorean ? b.subKo : b.subEn}</span>
+        </div>
+        <div class="ti-appear-block-rows">${b.rows}</div>
+      </div>`).join('');
+
+    return `
+      <div class="ti-card ti-appear-card">
+        <div class="ti-card-title lbl" data-en="Appearance Stats" data-ko="출전 기록">${isKorean ? '출전 기록' : 'Appearance Stats'}</div>
+        <div class="ti-gk-card-note lbl" data-en="Based on lineup data entered so far" data-ko="지금까지 입력된 라인업 데이터 기준">${isKorean ? '지금까지 입력된 라인업 데이터 기준' : 'Based on lineup data entered so far'}</div>
+        <div class="ti-appear-grid">${blocksHtml}</div>
+      </div>`;
+  }
+
   // ===== 치주물루 팀 정보 페이지의 "득점 순위" 섹션 (선수단 ↔ 상대전적 사이) =====
   function renderTeamScorersTab() {
     const el = document.getElementById('teamInfoScorersTab');
     if (!el) return;
-    el.innerHTML = buildTeamScorerCardsHtml('Chizumulu United FC', '치주물루 유나이티드 FC');
+    el.innerHTML = buildTeamScorerCardsHtml('Chizumulu United FC', '치주물루 유나이티드 FC') + renderGoalkeeperRecordCard() + renderAppearanceStatsCard();
   }
 
   function renderTeamStaffTab() {
     const el = document.getElementById('teamInfoStaffTab');
     if (!el) return;
-    el.innerHTML = renderGoalkeeperRecordCard() + renderTeamStaffCard();
+    el.innerHTML = renderTeamStaffCard();
   }
 
   function renderSquadView() {
@@ -4380,6 +4473,27 @@
     }
   });
 
+  document.addEventListener('click', function(event) {
+    const lineupLink = event.target.closest('.lineup-squad-link');
+    if (lineupLink && lineupLink.dataset.playerNumber) {
+      openSquadPlayerModal(lineupLink.dataset.playerNumber);
+    }
+  });
+
+  document.addEventListener('click', function(event) {
+    const gkCard = event.target.closest('.ti-gk-card-item');
+    if (gkCard && gkCard.dataset.playerNumber) {
+      openSquadPlayerModal(gkCard.dataset.playerNumber);
+    }
+  });
+
+  document.addEventListener('click', function(event) {
+    const awardCard = event.target.closest('.ti-award-card-item');
+    if (awardCard && awardCard.dataset.playerNumber) {
+      openSquadPlayerModal(awardCard.dataset.playerNumber);
+    }
+  });
+
   function toggleInfoTooltip(event, id) {
     event.stopPropagation();
     document.querySelectorAll('.info-tooltip').forEach(el => {
@@ -4434,41 +4548,85 @@
 
   function renderLineupPitch(lineup) {
     const isKo = isKorean;
-    let subIdx = 0;
-    const rowsHtml = POS_ROWS.map(rowPositions => {
-      const cellsHtml = rowPositions.map(pos => {
-        const p = findLineupPlayer(lineup, pos);
-        if (!p) return '';
-        const captainTag = p.captain ? `<span class="lineup-captain-tag">C</span>` : '';
-        const goalMins = (p.goals || []).filter(g => g !== '-');
-        const goalsHtml = (p.goals && p.goals.length)
-          ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>`
-          : '';
-        let outHtml = '';
-        if (p.outMin) {
-          const half = p.outMin.startsWith('전반') ? '전반' : (p.outMin.startsWith('후반') ? '후반' : '');
-          const outLabel = half ? `${half} 교체 아웃` : '교체 아웃';
-          const outTimeHtml = `<span class="lineup-sub-out">${outLabel}${p.injury ? ' 🩹' : ''}</span>`;
-          // subsIn은 starters 배열과 동일한 순서로 기록되어 있으므로 인덱스로 매칭
-          const inPlayer = (lineup.subsIn && lineup.subsIn[subIdx]) ? lineup.subsIn[subIdx] : null;
-          subIdx++;
-          const inHtml = inPlayer
-            ? `<span class="lineup-sub-in">▲ ${inPlayer.number} ${isKo ? inPlayer.nameKo : (inPlayer.nameEn || inPlayer.nameKo)}${isKo ? ' 투입' : ' in'}</span>`
-            : '';
-          outHtml = outTimeHtml + inHtml;
-        }
+
+    const nameFor = (ev) => isKo ? ev.nameKo : (ev.nameEn || ev.nameKo);
+
+    const goalsTag = (ev) => {
+      const goalMins = (ev.goals || []).filter(g => g !== '-');
+      return (ev.goals && ev.goals.length)
+        ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>`
+        : '';
+    };
+
+    const renderCell = (pos) => {
+      const starter = findLineupPlayer(lineup, pos);
+      if (!starter) return '';
+      const captainTag = starter.captain ? `<span class="lineup-captain-tag">C</span>` : '';
+
+      if (!starter.outMin) {
         return `
           <div class="lineup-cell">
             <div class="lineup-pos">${pos}</div>
-            <div class="lineup-player${p.outMin ? ' has-sub' : ''}">
-              <span class="lineup-num">${p.number}</span>
-              <span class="lineup-name">${p.nameKo}</span>
+            <div class="lineup-player">
+              <span class="lineup-num">${starter.number}</span>
+              <span class="lineup-name player-name-link lineup-squad-link" data-player-number="${starter.number}">${nameFor(starter)}</span>
               ${captainTag}
-              ${goalsHtml}
+              ${goalsTag(starter)}
             </div>
-            ${outHtml}
           </div>`;
-      }).join('');
+      }
+
+      // 선발이 교체되어 나간 경우: pos가 같은 subsIn 항목들을 순서대로 이어 붙여
+      // ▼(아웃) / ▲(인) 체인을 구성합니다. subsIn 항목 자체가 outMin을 가지면
+      // 그 자리를 이어받는 다음 pos-일치 항목이 또 투입된 것으로 처리합니다(이중 교체).
+      const subsForPos = (lineup.subsIn || []).filter(s => s.pos === pos);
+      const chain = [starter, ...subsForPos];
+
+      let linesHtml = '';
+      for (let i = 0; i < chain.length; i++) {
+        const ev = chain[i];
+        const evCaptainTag = ev.captain ? `<span class="lineup-captain-tag">C</span>` : '';
+        if (i === 0) {
+          linesHtml += `
+            <div class="lineup-sub-line lineup-sub-line-out">
+              <span class="lineup-sub-arrow">▼</span>
+              <span class="lineup-sub-num">${ev.number}</span>
+              <span class="lineup-sub-name player-name-link lineup-squad-link" data-player-number="${ev.number}">${nameFor(ev)}</span>
+              ${evCaptainTag}
+              ${ev.injury ? '<span class="lineup-sub-injury">🩹</span>' : ''}
+            </div>`;
+        } else {
+          const rawTime = ev.inMin || '';
+          const timeText = rawTime ? (rawTime.endsWith("'") ? rawTime : rawTime + "'") : '';
+          linesHtml += `
+            <div class="lineup-sub-line lineup-sub-line-in">
+              <span class="lineup-sub-arrow">▲</span>
+              ${timeText ? `<span class="lineup-sub-time">${timeText}</span>` : ''}
+              <span class="lineup-sub-num">${ev.number}</span>
+              <span class="lineup-sub-name player-name-link lineup-squad-link" data-player-number="${ev.number}">${nameFor(ev)}</span>
+              ${evCaptainTag}
+              ${goalsTag(ev)}
+            </div>`;
+          if (ev.outMin) {
+            linesHtml += `
+              <div class="lineup-sub-line lineup-sub-line-out">
+                <span class="lineup-sub-arrow">▼</span>
+                <span class="lineup-sub-num">${ev.number}</span>
+                <span class="lineup-sub-name player-name-link lineup-squad-link" data-player-number="${ev.number}">${nameFor(ev)}</span>
+              </div>`;
+          }
+        }
+      }
+
+      return `
+        <div class="lineup-cell">
+          <div class="lineup-pos">${pos}</div>
+          ${linesHtml}
+        </div>`;
+    };
+
+    const rowsHtml = POS_ROWS.map(rowPositions => {
+      const cellsHtml = rowPositions.map(renderCell).join('');
       return `<div class="lineup-row">${cellsHtml}</div>`;
     }).join('');
     return `<div class="lineup-pitch">${rowsHtml}</div>`;
@@ -4482,14 +4640,14 @@
           const goalsHtml = (s.goals && s.goals.length)
             ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>`
             : '';
-          return `<span class="lineup-sub-chip lineup-sub-chip-in">▲ ${s.inMin && s.inMin !== '-' ? s.inMin + ' ' : ''}${s.number} ${s.nameKo}${goalsHtml}</span>`;
+          return `<span class="lineup-sub-chip lineup-sub-chip-in">▲ ${s.inMin && s.inMin !== '-' ? s.inMin + ' ' : ''}${s.number} <span class="player-name-link lineup-squad-link" data-player-number="${s.number}">${s.nameKo}</span>${goalsHtml}</span>`;
         }).join('')
       : `<span class="lineup-sub-empty">${isKo ? '교체 없음' : 'No substitutions'}</span>`;
 
     const unusedHtml = (lineup.subsUnused || []).map(num => {
       const sq = squadData.find(p => p.number === num);
       const name = sq ? (isKo ? sq.nameKo : sq.nameEn) : num;
-      return `<span class="lineup-sub-chip lineup-sub-chip-unused">${num} ${name}</span>`;
+      return `<span class="lineup-sub-chip lineup-sub-chip-unused">${num} <span class="player-name-link lineup-squad-link" data-player-number="${num}">${name}</span></span>`;
     }).join('');
 
     return `
@@ -4503,11 +4661,13 @@
       </div>`;
   }
 
-  function renderLineupHistory(lineup) {
+  function renderLineupHistory(history) {
     const isKo = isKorean;
-    const rows = lineup.recentHistory.map(h => `
+    const list = (history && history.list) || [];
+    if (!list.length) return '';
+    const rows = list.map(h => `
       <tr>
-        <td class="h2h-comp">${h.comp}</td>
+        <td class="h2h-comp">${formatCompLabel(h.comp)}</td>
         <td class="h2h-score">${h.score}</td>
         <td class="h2h-result">${h.result}</td>
       </tr>`).join('');
@@ -4523,9 +4683,26 @@
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
-          <div class="h2h-summary">${lineup.historySummary}</div>
+          <div class="h2h-summary">${history.summary || ''}</div>
         </div>
       </div>`;
+  }
+
+  // 상대전적 "경기" 표기를 짧게 정리합니다.
+  // "2025-26 시즌 음벨와 노던 리전 풋볼 리그 24주차" 같은 "N주차"가 있는 리그 경기는
+  // 리그 이름을 빼고 "25/26 시즌 24주차" 형태로 줄여서 표시합니다.
+  // "2025-26 시즌 카스텔컵 지역 단계 3라운드"처럼 "주차" 표기가 없는 컵대회 등은
+  // 원래 문구 그대로(대회명 포함) 표시합니다.
+  function formatCompLabel(comp) {
+    const text = String(comp || '');
+    const weekMatch = text.match(/(\d+)\s*주차/);
+    if (!weekMatch) return text;
+    const seasonMatch = text.match(/(\d{4})-(\d{2})/) || text.match(/(\d{2})\/(\d{2})/);
+    if (!seasonMatch) return text;
+    const seasonShort = seasonMatch[0].length === 7
+      ? `${seasonMatch[1].slice(2)}/${seasonMatch[2]}`
+      : seasonMatch[0];
+    return `${seasonShort} 시즌 ${weekMatch[1]}주차`;
   }
 
   // 결과 문자열("3 : 1 승" 등) 끝의 승/패/무 표기를 언어에 맞게 변환
@@ -4550,12 +4727,22 @@
     document.getElementById('matchDetailTitle').textContent =
       `${weekLabel} vs ${opponentName} (${resultText})`;
 
+    const historyData = (typeof getEffectiveRoundHistory === 'function')
+      ? getEffectiveRoundHistory(roundKey, weekNum, lineup)
+      : { list: lineup.recentHistory || [], summary: lineup.historySummary || '' };
+
     const bodyEl = document.getElementById('matchDetailBody');
     bodyEl.innerHTML = `
       <div class="lineup-formation-tag">${lineup.formation}</div>
-      ${renderLineupPitch(lineup)}
-      ${renderLineupSubs(lineup)}
-      ${renderLineupHistory(lineup)}
+      <div class="match-detail-layout">
+        <div class="match-detail-left">
+          ${renderLineupPitch(lineup)}
+        </div>
+        <div class="match-detail-right">
+          ${renderLineupSubs(lineup)}
+          ${renderLineupHistory(historyData)}
+        </div>
+      </div>
     `;
 
     document.getElementById('matchDetailModal').style.display = 'flex';
@@ -4643,7 +4830,7 @@
         <div class="mc-prior-row mc-prior-row-${r.toLowerCase()}">
           <span class="mc-prior-badge mc-prior-badge-${r.toLowerCase()}">${wdlLabel[r]}</span>
           <div class="mc-prior-row-main">
-            <span class="mc-prior-comp">${h.comp || ''}</span>
+            <span class="mc-prior-comp">${formatCompLabel(h.comp) || ''}</span>
             <span class="mc-prior-score">${h.score || ''}</span>
           </div>
         </div>`;

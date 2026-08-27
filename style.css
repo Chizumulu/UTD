@@ -854,6 +854,7 @@
     align-items: flex-start;
     gap: 8px;
     flex-wrap: wrap;
+    margin-bottom: 14px;
   }
   .round-share-btn {
     margin-left: 0;
@@ -1174,11 +1175,13 @@
   .ti-streak-value,
   .ti-record-rank-num,
   .ti-record-item-value,
-  .ti-award-player-number,
   .squad-card-number,
   .other-team-grid-rank,
   .ti-scorer-card-goals,
   .ti-scorer-card-rank,
+  .ti-gk-stat b,
+  .ti-gk-card-number,
+  .ti-award-card-number,
   .nms-opp-rank,
   .ti-next-match-rank,
   .lineup-num,
@@ -2017,6 +2020,12 @@
     z-index: 2000;
     backdrop-filter: blur(4px);
   }
+  /* 상세보기(매치 상세) 모달 위에서 선수 이름을 눌러 스쿼드 상세 모달을 띄울 수 있도록
+     스쿼드 상세 모달을 다른 모달보다 항상 위에 오게 합니다. */
+  #squadPlayerModal.modal-overlay,
+  #playerModal.modal-overlay {
+    z-index: 2100;
+  }
   .modal-content {
     background: var(--color-surface);
     width: 92%;
@@ -2186,6 +2195,46 @@
   .match-detail-modal-body {
     padding: 18px 18px 22px;
   }
+  @media (min-width: 721px) {
+    .match-detail-modal-content {
+      width: 90%;
+      max-width: 820px;
+      max-height: 90vh;
+    }
+    .match-detail-modal-body {
+      padding: 24px 28px 28px;
+    }
+  }
+  .match-detail-layout {
+    display: flex;
+    flex-direction: column;
+  }
+  .match-detail-left,
+  .match-detail-right {
+    min-width: 0;
+  }
+  @media (min-width: 721px) {
+    .match-detail-modal-content {
+      max-width: 980px;
+    }
+    .match-detail-layout {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 24px;
+    }
+    .match-detail-left {
+      flex: 1 1 52%;
+    }
+    .match-detail-right {
+      flex: 1 1 48%;
+    }
+    .match-detail-right .lineup-pitch {
+      margin-bottom: 0;
+    }
+    .match-detail-left .lineup-pitch {
+      margin-bottom: 0;
+    }
+  }
   .lineup-formation-tag {
     display: inline-block;
     background: var(--color-teal);
@@ -2258,19 +2307,35 @@
     font-weight: 800;
     color: var(--color-teal-dark);
   }
-  .lineup-sub-out {
-    display: block;
+  .lineup-sub-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 3px;
     font-size: 11px;
-    color: var(--color-danger, #c0392b);
+    font-weight: 700;
     margin-top: 3px;
-    font-weight: 700;
   }
-  .lineup-sub-in {
-    display: block;
-    font-size: 11px;
+  .lineup-sub-line-out {
+    color: var(--color-danger, #c0392b);
+  }
+  .lineup-sub-line-in {
     color: var(--color-teal-dark, #16a085);
-    margin-top: 1px;
-    font-weight: 700;
+  }
+  .lineup-sub-arrow {
+    font-size: 10px;
+    line-height: 1;
+  }
+  .lineup-sub-num {
+    font-weight: 800;
+  }
+  .lineup-sub-time {
+    font-weight: 800;
+    opacity: 0.85;
+  }
+  .lineup-sub-injury {
+    font-size: 10px;
   }
   .lineup-subs-section {
     margin-bottom: 14px;
@@ -2336,6 +2401,7 @@
   }
   .h2h-comp {
     color: var(--color-text-secondary);
+    white-space: nowrap;
   }
   .h2h-score {
     font-weight: 800;
@@ -4208,31 +4274,120 @@
     padding: 3px 8px;
     text-align: center;
   }
-  .ti-award-players {
+  .ti-award-card-row {
     display: flex;
+    gap: 10px;
     flex-wrap: wrap;
-    gap: 8px;
-    flex: 1;
   }
-  .ti-award-player {
-    display: inline-flex;
+  .ti-award-card-row-scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--color-navy-rgb),0.35) transparent;
+    padding-top: 12px;
+    margin-top: -12px;
+    padding-bottom: 4px;
+  }
+  .ti-award-card-row-scroll::-webkit-scrollbar {
+    height: 5px;
+  }
+  .ti-award-card-row-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .ti-award-card-row-scroll::-webkit-scrollbar-thumb {
+    background: rgba(var(--color-navy-rgb),0.35);
+    border-radius: var(--radius-pill);
+  }
+  .ti-award-card-item {
+    position: relative;
+    flex: 1 1 110px;
+    min-width: 100px;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--color-text-secondary);
+    text-align: center;
+    gap: 5px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-xl);
+    padding: 18px 10px 14px;
+    box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.08);
+    cursor: pointer;
+    transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s;
   }
-  .ti-award-player-number {
-    display: inline-flex;
+  .ti-award-card-row-compact .ti-award-card-item {
+    flex: 0 0 120px;
+  }
+  .ti-award-card-row-scroll .ti-award-card-item {
+    flex: 0 0 100px;
+  }
+  .ti-award-card-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+  }
+  .ti-award-card-badge {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--color-teal);
+    padding: 0 8px;
+    height: 22px;
+    border-radius: var(--radius-pill);
+    background: var(--color-gold-strong);
     color: var(--color-white);
     font-size: 10.5px;
     font-weight: 800;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(var(--color-navy-rgb),0.25);
+  }
+  .ti-award-card-photo {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 15%;
+    margin-top: 6px;
+    background: var(--color-bg-subtle, rgba(var(--color-navy-rgb),0.06));
+    border: 1px solid var(--color-border-light);
+  }
+  .ti-award-card-photo-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  .ti-award-card-number {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--color-text-faint);
+  }
+  .ti-award-card-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--color-text-darkest);
+    line-height: 1.25;
+    word-break: keep-all;
+  }
+  @media (max-width: 480px) {
+    .ti-award-card-item {
+      flex: 1 1 88px;
+      min-width: 80px;
+      padding: 16px 6px 12px;
+    }
+    .ti-award-card-row-scroll .ti-award-card-item {
+      flex: 0 0 88px;
+    }
+    .ti-award-card-row-compact .ti-award-card-item {
+      flex: 0 0 104px;
+    }
+    .ti-award-card-photo {
+      width: 44px;
+      height: 44px;
+    }
   }
 
   .ti-staff-card {
@@ -4280,50 +4435,96 @@
 
   .ti-gk-card {
     margin-bottom: 16px;
+    margin-top: 18px;
   }
-  .ti-gk-row {
+  .ti-gk-card .ti-card-title {
+    margin-bottom: 2px;
+  }
+  .ti-gk-card-note {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+    margin-bottom: 10px;
+  }
+  .ti-gk-card-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 10px;
-    padding: 10px 0;
-    border-top: 1px solid var(--color-border-light);
     flex-wrap: wrap;
   }
-  .ti-gk-row:first-of-type {
-    border-top: none;
-    padding-top: 0;
+  .ti-gk-card-item {
+    position: relative;
+    flex: 1 1 140px;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-xl);
+    padding: 20px 12px 16px;
+    box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.08);
+    cursor: pointer;
+    transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s;
   }
-  .ti-gk-row-name {
+  .ti-gk-card-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+  }
+  .ti-gk-card-number {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex: 0 0 auto;
-  }
-  .ti-gk-number {
+    justify-content: center;
+    padding: 0 8px;
+    height: 22px;
+    border-radius: var(--radius-pill);
+    background: var(--color-navy);
+    color: var(--color-white);
     font-size: 11px;
     font-weight: 800;
-    color: var(--color-teal-dark);
-    background: var(--color-bg-table-alt);
-    border-radius: var(--radius-sm);
-    padding: 2px 7px;
+    box-shadow: 0 2px 6px rgba(var(--color-navy-rgb),0.25);
   }
-  .ti-gk-name {
-    font-size: 13.5px;
-    font-weight: 800;
-    color: var(--color-text-secondary);
+  .ti-gk-card-photo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 15%;
+    margin-top: 6px;
+    background: var(--color-bg-subtle, rgba(var(--color-navy-rgb),0.06));
+    border: 1px solid var(--color-border-light);
   }
-  .ti-gk-row-stats {
+  .ti-gk-card-photo-placeholder {
     display: flex;
     align-items: center;
-    gap: 14px;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .ti-gk-card-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--color-text-darkest);
+    line-height: 1.25;
+    word-break: keep-all;
+  }
+  .ti-gk-card-stats {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     flex-wrap: wrap;
+    margin-top: 4px;
   }
   .ti-gk-stat {
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 40px;
+    min-width: 34px;
   }
   .ti-gk-stat b {
     font-size: 14px;
@@ -4332,7 +4533,7 @@
     line-height: 1.1;
   }
   .ti-gk-stat small {
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 700;
     color: var(--color-text-faint);
     text-transform: uppercase;
@@ -4340,6 +4541,178 @@
   }
   .ti-gk-stat-cs b {
     color: var(--color-teal);
+  }
+  @media (max-width: 480px) {
+    .ti-gk-card-item {
+      flex: 1 1 100px;
+      padding: 18px 8px 14px;
+    }
+    .ti-gk-card-photo {
+      width: 46px;
+      height: 46px;
+    }
+    .ti-gk-card-stats {
+      gap: 7px;
+    }
+  }
+
+  /* ===== 출전 기록 카드 (선발/교체/벤치/교체비율) ===== */
+  .ti-appear-card {
+    margin-bottom: 16px;
+    margin-top: 18px;
+  }
+  .ti-appear-card .ti-card-title {
+    margin-bottom: 2px;
+  }
+  .ti-appear-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .ti-appear-block {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: 12px 12px 12px;
+    box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.06);
+  }
+  .ti-appear-block-head {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--color-border-light);
+  }
+  .ti-appear-block-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--color-text-darkest);
+  }
+  .ti-appear-block-sub {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--color-teal-dark, #16a085);
+    margin-top: 2px;
+  }
+  .ti-appear-block-rows {
+    display: flex;
+    flex-direction: column;
+  }
+  .ti-appear-mini-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .ti-appear-mini-card {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 3px;
+    background: var(--color-bg-stripe);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: 16px 6px 10px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  .ti-appear-mini-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 12px rgba(var(--color-navy-rgb),0.12);
+    background: var(--color-surface);
+  }
+  .ti-appear-mini-rank {
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-navy);
+    color: var(--color-white);
+    font-size: 10px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(var(--color-navy-rgb),0.3);
+  }
+  .ti-appear-mini-card.rank-1 .ti-appear-mini-rank {
+    background: linear-gradient(135deg, #f5c542, #e0a72c);
+    color: #4a3200;
+  }
+  .ti-appear-mini-card.rank-2 .ti-appear-mini-rank {
+    background: linear-gradient(135deg, #c9d2da, #9aa7b3);
+    color: #2c333a;
+  }
+  .ti-appear-mini-card.rank-3 .ti-appear-mini-rank {
+    background: linear-gradient(135deg, #d99a63, #b5713a);
+    color: #3a2210;
+  }
+  .ti-appear-mini-photo {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 15%;
+    margin-top: 2px;
+    background: var(--color-bg-subtle, rgba(var(--color-navy-rgb),0.06));
+    border: 1px solid var(--color-border-light);
+  }
+  .ti-appear-mini-photo-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .ti-appear-mini-num {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: var(--color-text-faint);
+  }
+  .ti-appear-mini-name {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--color-text-darkest);
+    line-height: 1.2;
+    word-break: keep-all;
+  }
+  .ti-appear-mini-value {
+    margin-top: 2px;
+    font-size: 13.5px;
+    font-weight: 900;
+    color: var(--color-teal-dark, #16a085);
+  }
+  .ti-appear-empty {
+    font-size: 11px;
+    color: var(--color-text-faint);
+    padding: 6px;
+  }
+  @media (max-width: 560px) {
+    .ti-appear-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 400px) {
+    .ti-appear-mini-card {
+      min-width: 64px;
+      padding: 14px 4px 8px;
+    }
+    .ti-appear-mini-photo {
+      width: 32px;
+      height: 32px;
+    }
+    .ti-appear-mini-name {
+      font-size: 10.5px;
+    }
+    .ti-appear-mini-value {
+      font-size: 12px;
+    }
   }
 
   .ti-record-card {
@@ -4655,7 +5028,6 @@
     background: var(--color-surface);
     border-radius: var(--radius-pill);
     box-shadow: 0 6px 18px rgba(var(--color-navy-rgb),0.12);
-    margin-bottom: 18px;
     width: fit-content;
     max-width: 100%;
     transition: var(--theme-transition);
