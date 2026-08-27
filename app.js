@@ -370,7 +370,7 @@
       const displayName = info ? (isKorean ? info.nameKo : info.nameEn) : rawName;
       const noteHtml = note ? ` ${note}` : '';
 
-      const isLinkable = topScorersData.some(p => p.key === key);
+      const isLinkable = info && topScorersData.some(p => p.key === key);
       if (isLinkable) {
         return `<span class="lbl player-name-link" data-en="${info.nameEn}" data-ko="${info.nameKo}" data-player-key="${key}">${displayName}</span>${noteHtml}`;
       }
@@ -1680,6 +1680,24 @@
         return;
       }
 
+      // 연기(postponed)되었거나 스코어가 아직 없는 경기는 "결과"가 아니므로
+      // 무승부 등으로 잘못 표시하지 않고 연기 배지만 보여줍니다.
+      if (teamMatch.isScheduled) {
+        const m = teamMatch;
+        const homeName = isKorean ? m.homeKo : m.homeEn;
+        const awayName = isKorean ? m.awayKo : m.awayEn;
+        html += `
+          <div class="round-match-card round-match-scheduled">
+            <span class="ti-result-week lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${weekLabel}</span>
+            <span class="rmc-pending-badge lbl" data-en="${m.postponed ? 'Postponed' : 'Upcoming'}" data-ko="${m.postponed ? '경기 연기' : '경기 시작 전'}">${isKorean ? (m.postponed ? '경기 연기' : '경기 시작 전') : (m.postponed ? 'Postponed' : 'Upcoming')}</span>
+            <div class="rmc-teams">
+              <div class="rmc-team rmc-home"><span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span></div>
+              <div class="rmc-team rmc-away"><span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span></div>
+            </div>
+          </div>`;
+        return;
+      }
+
       const m = teamMatch;
       const homeWin = m.homeScore > m.awayScore;
       const awayWin = m.awayScore > m.homeScore;
@@ -2122,6 +2140,18 @@
         if (m.byeKo || m.byeEn) {
           return { isBye: true, teamKo: m.byeKo, teamEn: m.byeEn };
         }
+        // 연기(postponed)되었거나 스코어가 없는 경기는 matchDetails에 애초에
+        // 항목이 존재하지 않으므로, detailIdx를 소비하지 않고 건너뜁니다.
+        // (그렇지 않으면 이후 경기들의 득점자가 한 칸씩 밀려서 엉뚱하게 매칭됩니다.)
+        if (m.postponed || typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') {
+          return {
+            isBye: false, isScheduled: !!m.postponed,
+            homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
+            homeScore: m.homeScore, awayScore: m.awayScore,
+            postponed: m.postponed,
+            scorersHome: undefined, scorersAway: undefined
+          };
+        }
         const d = details[detailIdx] || {};
         detailIdx++;
         return {
@@ -2175,6 +2205,23 @@
       if (roundHasAnyResult(keys[i])) return keys[i];
     }
     return keys[0] || null;
+  }
+
+  // 화면을 열었을 때 기본으로 보여줄 라운드.
+  // 가장 최근에 결과가 들어온 라운드가 이미 통째로 끝나(roundsData로 옮겨져) 있고
+  // 그다음 주차가 존재하면, 이제는 그 다음 주차를 기본으로 보여줍니다.
+  // (예: 7주차가 완전히 끝나면 8주차가 아직 시작 전이어도 바로 뜹니다.)
+  // 다음 주차가 아직 없거나, 최신 라운드가 아직 부분적으로만 끝난 경우엔 그대로 그 라운드를 보여줍니다.
+  function defaultDisplayRoundKey() {
+    const keys = allRoundKeysIncludingScheduled();
+    const latest = latestRoundWithResult();
+    if (!latest) return keys[0] || null;
+    if (roundsData[latest]) {
+      const idx = keys.indexOf(latest);
+      const next = keys[idx + 1];
+      if (next) return next;
+    }
+    return latest;
   }
 
   // roundsData(완전히 끝나 옮겨진 라운드) + scheduledRounds에 남아있어도 이미
@@ -2323,7 +2370,7 @@
     const roundKeys = allRoundKeysIncludingScheduled();
 
     if (!currentRoundKey || !(roundsData[currentRoundKey] || (scheduledRounds && scheduledRounds[currentRoundKey]))) {
-      currentRoundKey = latestRoundWithResult();
+      currentRoundKey = defaultDisplayRoundKey();
     }
 
     tabBar.innerHTML = '';
@@ -2453,15 +2500,17 @@
 
 
   // ===== 연기된 경기 모아보기 (Postponed Matches Modal) =====
-  // scheduledRounds를 훑어서 postponed: true로 표시된 경기를 전부 모읍니다.
+  // roundsData(완전히 끝난 라운드)와 scheduledRounds(진행 중/예정 라운드)를 모두 훑어서
+  // postponed: true로 표시된 경기를 전부 모읍니다. 라운드 전체가 끝나 roundsData로
+  // 옮겨진 뒤에도, 그 안에 postponed 경기가 남아있으면 계속 이 목록에 표시됩니다.
   // 결과가 확정되면(=homeScore/awayScore가 채워지면) postponed 플래그도 함께
   // 지워주면 이 목록에서 자동으로 빠집니다.
   function getAllPostponedMatches() {
     const roundKeys = allRoundKeysIncludingScheduled();
     const list = [];
     roundKeys.forEach((key, idx) => {
-      const scheduled = (scheduledRounds && scheduledRounds[key]) || [];
-      scheduled.forEach(m => {
+      const matches = roundsData[key] || (scheduledRounds && scheduledRounds[key]) || [];
+      matches.forEach(m => {
         if (!m.postponed || m.byeKo || m.byeEn) return;
         list.push({
           weekNum: idx + 1,
@@ -2712,6 +2761,51 @@
     return played;
   }
 
+  // 가장 최근에 '완전히' 끝난 라운드(roundsData의 마지막 라운드)에서 실제로 경기를
+  // 치른 팀들만 이름(nameEn) 집합으로 반환합니다. n주차가 아직 시작 전일 때
+  // n-1주차 순위변동표를 그대로 보여주기 위한 fallback 용도로 사용됩니다.
+  function getLastCompletedRoundPlayedTeams() {
+    const keys = sortedRoundKeys();
+    const lastKey = keys[keys.length - 1];
+    if (!lastKey) return new Set();
+    const matches = roundsData[lastKey] || [];
+    const played = new Set();
+    matches.forEach(m => {
+      if (m.byeKo || m.byeEn) return;
+      if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') {
+        played.add(m.homeEn);
+        played.add(m.awayEn);
+      }
+    });
+    return played;
+  }
+
+  // 순위 변동 표시에 쓸 "이전 순위"와 "표시 대상 팀"을 한 번에 계산합니다.
+  // - n주차(다음 라운드) 경기가 이미 하나라도 입력됐다면: 기존처럼 n-1주차 종료
+  //   시점 대비, 이번 라운드에 경기를 치른 팀만 변동을 보여줍니다.
+  // - n주차 경기가 아직 하나도 입력되지 않았다면(=라운드 시작 전): 화면이 텅 비지
+  //   않도록, 방금 끝난 n-1주차의 순위변동표(= n-2주차 종료 시점 대비 n-1주차
+  //   종료 시점)를 그대로 이어서 보여줍니다.
+  function getRankChangeDisplayData() {
+    const completed = sortedRoundKeys().length;
+    if (completed === 0) return { previousRanks: null, playedTeams: new Set() };
+
+    const currentPlayedTeams = getCurrentRoundPlayedTeams();
+    if (currentPlayedTeams.size > 0) {
+      return { previousRanks: getPreviousRoundRanks(), playedTeams: currentPlayedTeams };
+    }
+
+    // n주차가 아직 시작 전: n-1주차 변동표로 fallback (비교 대상이 없는 시즌
+    // 1주차 종료 직후라면 여전히 표시할 게 없으므로 빈 상태를 반환합니다)
+    if (completed < 2) return { previousRanks: null, playedTeams: new Set() };
+    const history = computeStandingsHistory();
+    const snapshot = history[completed - 2];
+    return {
+      previousRanks: snapshot ? snapshot.ranks : null,
+      playedTeams: getLastCompletedRoundPlayedTeams()
+    };
+  }
+
   // ===== 순위표 필터 전환 (전체 / 홈 / 원정) =====
   function setRankFilter(filterType) {
     if (currentRankFilter === filterType) return;
@@ -2732,8 +2826,9 @@
     // 순위 변동 표시는 '전체' 순위표 기준으로만 의미가 있으므로(홈/원정 분할표는
     // 전주 순위와 직접 비교할 대상이 없음) 필터가 'all'일 때만 계산합니다.
     const showRankChange = currentRankFilter === 'all';
-    const previousRanks = showRankChange ? getPreviousRoundRanks() : null;
-    const playedTeams = showRankChange ? getCurrentRoundPlayedTeams() : null;
+    const rankChangeData = showRankChange ? getRankChangeDisplayData() : null;
+    const previousRanks = rankChangeData ? rankChangeData.previousRanks : null;
+    const playedTeams = rankChangeData ? rankChangeData.playedTeams : null;
 
     const tbody = document.getElementById('leagueTableBody');
     tbody.innerHTML = '';
@@ -5064,6 +5159,67 @@
       </div>`;
   }
 
+  // 승/무/패 확률 막대 (홈-무-원정 3분할, 각 구간 폭 = 확률%)
+  function mcAiProbBarHtml(pred, homeShort, awayShort) {
+    const h = pred.homeWinPct, d = pred.drawPct, a = pred.awayWinPct;
+    const fmtPct = v => (v >= 10 ? Math.round(v) : v.toFixed(1)) + '%';
+    return `
+      <div class="mc-ai-probbar">
+        <div class="mc-ai-prob-seg mc-ai-prob-home" style="flex:${Math.max(h, 0.001)}" title="${homeShort} ${fmtPct(h)}"></div>
+        <div class="mc-ai-prob-seg mc-ai-prob-draw" style="flex:${Math.max(d, 0.001)}" title="${isKorean ? '무승부' : 'Draw'} ${fmtPct(d)}"></div>
+        <div class="mc-ai-prob-seg mc-ai-prob-away" style="flex:${Math.max(a, 0.001)}" title="${awayShort} ${fmtPct(a)}"></div>
+      </div>
+      <div class="mc-ai-prob-labels">
+        <span class="mc-ai-prob-label mc-ai-prob-label-home"><b>${fmtPct(h)}</b> ${homeShort}</span>
+        <span class="mc-ai-prob-label mc-ai-prob-label-draw"><b>${fmtPct(d)}</b> ${isKorean ? '무' : 'Draw'}</span>
+        <span class="mc-ai-prob-label mc-ai-prob-label-away"><b>${fmtPct(a)}</b> ${awayShort}</span>
+      </div>`;
+  }
+
+  // "AI 예측" 블록 전체(제목 배지 + 확률바 + 예상스코어 + 자동 코멘트).
+  // 아직 결과가 안 나온 경기라면 팀/폼/순위 데이터를 모아 predictSingleMatch +
+  // buildAiPredictionNarrative(둘 다 data.js)로 확률과 코멘트를 계산합니다.
+  function aiPredictionBlockHtml(homeEn, homeKo, awayEn, awayKo, home, away) {
+    if (typeof predictSingleMatch !== 'function') return '';
+    const pred = predictSingleMatch(homeEn, homeKo, awayEn, awayKo);
+    if (!pred) return '';
+
+    const homeName = isKorean ? homeKo : homeEn;
+    const awayName = isKorean ? awayKo : awayEn;
+    const homeShort = homeName.split(' ')[0];
+    const awayShort = awayName.split(' ')[0];
+
+    const narrative = (typeof buildAiPredictionNarrative === 'function')
+      ? buildAiPredictionNarrative({
+          homeName: homeShort, awayName: awayShort, pred,
+          homeRank: home.rank, awayRank: away.rank,
+          homeForm: home.form, awayForm: away.form,
+          isKorean
+        })
+      : [];
+
+    const scoreTxt = `${pred.predictedHomeGoals} : ${pred.predictedAwayGoals}`;
+    const xgTxt = isKorean
+      ? `예상 득점 ${pred.expectedHomeGoals.toFixed(2)} : ${pred.expectedAwayGoals.toFixed(2)}`
+      : `Expected goals ${pred.expectedHomeGoals.toFixed(2)} : ${pred.expectedAwayGoals.toFixed(2)}`;
+
+    return `
+      <div class="mc-ai-block">
+        <div class="mc-ai-header">
+          <span class="mc-ai-badge lbl" data-en="AI Prediction" data-ko="AI 예측">🤖 ${isKorean ? 'AI 예측' : 'AI Prediction'}</span>
+          <span class="mc-ai-score">${scoreTxt}</span>
+        </div>
+        ${mcAiProbBarHtml(pred, homeShort, awayShort)}
+        <div class="mc-ai-xg">${xgTxt}</div>
+        <ul class="mc-ai-text">
+          ${narrative.map(l => `<li>${l}</li>`).join('')}
+        </ul>
+        <div class="mc-ai-disclaimer lbl" data-en="Auto-generated from this season's stats (Poisson model) — for fun, not a guarantee." data-ko="이번 시즌 스탯 기반 자동 계산(포아송 모델)이며, 참고용 예측일 뿐 결과를 보장하지 않습니다.">
+          ${isKorean ? '이번 시즌 스탯 기반 자동 계산(포아송 모델)이며, 참고용 예측일 뿐 결과를 보장하지 않습니다.' : "Auto-generated from this season's stats (Poisson model) — for fun, not a guarantee."}
+        </div>
+      </div>`;
+  }
+
   function openMatchCompareModal(homeEn, homeKo, awayEn, awayKo, roundKey) {
     const home = getTeamCompareSnapshot(homeEn, homeKo);
     const away = getTeamCompareSnapshot(awayEn, awayKo);
@@ -5109,27 +5265,34 @@
           <span class="mc-team-rank">${rankTxt(away.rank)}</span>
         </div>
       </div>
-      <div class="mc-stats-block">
-        ${mcStatRow('Points', '승점', home.team.pts, away.team.pts, true)}
-        ${mcStatRow('Record (W-D-L)', '전적(승-무-패)', `${home.team.won}-${home.team.drawn}-${home.team.lost}`, `${away.team.won}-${away.team.drawn}-${away.team.lost}`, null)}
-        ${mcStatRow('Goals For', '득점', home.team.goalsFor, away.team.goalsFor, true)}
-        ${mcStatRow('Goals Against', '실점', home.team.goalsAgainst, away.team.goalsAgainst, false)}
-        ${mcStatRow('Goal Difference', '득실차', home.team.gd, away.team.gd, true)}
-        ${mcStatRow('Clean Sheets', '클린시트', home.team.cleanSheets, away.team.cleanSheets, true)}
-        ${mcStatRow('Failed to Score', '무득점 경기', home.team.failedToScore, away.team.failedToScore, false)}
-      </div>
-      <div class="mc-form-block">
-        <div class="mc-form-title lbl" data-en="Recent Form" data-ko="최근 폼">${isKorean ? '최근 폼' : 'Recent Form'}</div>
-        <div class="mc-form-row">
-          <div class="mc-form-side">${mcFormDotsHtml(home.form)}</div>
-          <div class="mc-form-side">${mcFormDotsHtml(away.form)}</div>
+      <div class="mc-compare-layout">
+        <div class="mc-compare-right">
+          ${aiPredictionBlockHtml(homeEn, homeKo, awayEn, awayKo, home, away)}
+        </div>
+        <div class="mc-compare-left">
+          <div class="mc-stats-block">
+            ${mcStatRow('Points', '승점', home.team.pts, away.team.pts, true)}
+            ${mcStatRow('Record (W-D-L)', '전적(승-무-패)', `${home.team.won}-${home.team.drawn}-${home.team.lost}`, `${away.team.won}-${away.team.drawn}-${away.team.lost}`, null)}
+            ${mcStatRow('Goals For', '득점', home.team.goalsFor, away.team.goalsFor, true)}
+            ${mcStatRow('Goals Against', '실점', home.team.goalsAgainst, away.team.goalsAgainst, false)}
+            ${mcStatRow('Goal Difference', '득실차', home.team.gd, away.team.gd, true)}
+            ${mcStatRow('Clean Sheets', '클린시트', home.team.cleanSheets, away.team.cleanSheets, true)}
+            ${mcStatRow('Failed to Score', '무득점 경기', home.team.failedToScore, away.team.failedToScore, false)}
+          </div>
+          <div class="mc-form-block">
+            <div class="mc-form-title lbl" data-en="Recent Form" data-ko="최근 폼">${isKorean ? '최근 폼' : 'Recent Form'}</div>
+            <div class="mc-form-row">
+              <div class="mc-form-side">${mcFormDotsHtml(home.form)}</div>
+              <div class="mc-form-side">${mcFormDotsHtml(away.form)}</div>
+            </div>
+          </div>
+          <div class="mc-h2h-block">
+            <div class="mc-form-title lbl" data-en="Season Head-to-Head" data-ko="이번 시즌 맞대결">${isKorean ? '이번 시즌 맞대결' : 'Season Head-to-Head'}</div>
+            ${h2hHtml}
+          </div>
+          ${priorMeetingsSectionHtml(getPriorMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey))}
         </div>
       </div>
-      <div class="mc-h2h-block">
-        <div class="mc-form-title lbl" data-en="Season Head-to-Head" data-ko="이번 시즌 맞대결">${isKorean ? '이번 시즌 맞대결' : 'Season Head-to-Head'}</div>
-        ${h2hHtml}
-      </div>
-      ${priorMeetingsSectionHtml(getPriorMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey))}
     `;
 
     document.getElementById('matchCompareModal').style.display = 'flex';

@@ -671,12 +671,41 @@ const matchDetails = {
       scorersAway: "WANANGWA GAMA"
     }
   ],
-  // 7주차는 아직 전체 라운드가 끝나지 않아 scheduledRounds에 남아있습니다.
-  // 개별 경기가 끝나는 대로 scheduledRounds.round7 안의 해당 경기에
-  // homeScore/awayScore/scorersHome/scorersAway만 채우면 득점 순위 등에
-  // 자동으로 반영됩니다 (computeTopScorers 참고). 라운드 전체가 끝나면
-  // scheduledRounds.round7를 통째로 roundsData.round7로 옮기고, 그때 이
-  // matchDetails.round7 항목을 새로 만들어주세요.
+  // 7주차는 전체 라운드가 종료되어 roundsData.round7로 옮겨졌으므로 matchDetails.round7을
+  // 아래에 새로 추가했습니다. 마푸 vs 에크웬데니는 연기(postponed)라 스코어가 없어
+  // matchDetails에는 넣지 않습니다 — 나중에 결과가 나오면 이 목록 맨 뒤에 추가해주세요.
+  round7: [
+    {
+      match: "치주물루 4 : 젠다 0",
+      scorersHome: "STEVEN PHIRI, DICKIES NYIRENDA, BENJAMIN NYIRENDA, TIMOTHY KATAPA",
+      scorersAway: "없음"
+    },
+    {
+      match: "라이플리 3 : 루베 0",
+      scorersHome: "LIMBANI KAMANGA (2골), DAVIE NGOMA",
+      scorersAway: "없음"
+    },
+    {
+      match: "치하메 3 : 에우티니 1",
+      scorersHome: "ROBIN CHIOKO, ACKIM GOMIRE, BABA NKHOMA",
+      scorersAway: "DANIEL CHISOKWE"
+    },
+    {
+      match: "친테체 1 : 치폴로폴로 2",
+      scorersHome: "TEMWA NDHLOVU",
+      scorersAway: "KING NYASULU, MIKE LUHANGA"
+    },
+    {
+      match: "비전 2 : 루비리 0",
+      scorersHome: "GIVEN MWANDIRA, JOMO PHIRI",
+      scorersAway: "없음"
+    },
+    {
+      match: "치바비 2 : 음벨와 1",
+      scorersHome: "KINGSLEY MVULA, DANIEL SIWALE",
+      scorersAway: "SHAIBU JALAH"
+    }
+  ]
 };
 
 // ===== 아직 안 치른(예정된) 경기의 사전 상대전적 메모 =====
@@ -697,16 +726,6 @@ const upcomingMatchHistory = {
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
-  round7: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-08-21", kickoffTime: "15:00", homeScore: 4, awayScore: 0, scorersHome: "STEVEN PHIRI, DICKIES NYIRENDA, BENJAMIN NYIRENDA, TIMOTHY KATAPA", scorersAway: "없음" },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-08-27", kickoffTime: "14:30" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", postponed: true },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-08-22", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "ROBIN CHIOKO, ACKIM GOMIRE, BABA NKHOMA", scorersAway: "DANIEL CHISOKWE" },
-    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "TEMWA NDHLOVU", scorersAway: "KING NYASULU, MIKE LUHANGA" },
-    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "GIVEN MWANDIRA, JOMO PHIRI", scorersAway: "없음" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "KINGSLEY MVULA, DANIEL SIWALE", scorersAway: "SHAIBU JALAH" },
-    { byeKo: "칠룸바 배럭스 FC", byeEn: "Chilumba Barracks FC" }
-  ],
   round8: [
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-08-29", kickoffTime: "14:30" },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-08-29", kickoffTime: "14:30" },
@@ -850,6 +869,22 @@ const roundsData = {
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", homeScore: 1, awayScore: 1 },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", homeScore: 2, awayScore: 1 },
     { byeKo: "라이플리 FC", byeEn: "Raiply FC" }
+  ],
+  // 7주차는 전체 라운드가 종료되어 roundsData.round7로 옮겨졌습니다.
+  // 단, 마푸 vs 에크웬데니 경기는 연기(postponed)되어 스코어가 아직 없습니다.
+  // 이렇게 라운드는 끝났지만 그 안에 연기된 경기가 남아있는 경우, 그 경기는
+  // homeScore/awayScore 없이 postponed: true만 넣어두면 됩니다 — 라운드 결과 화면에는
+  // "예정 경기(연기)" 카드로, 연기된 경기 모아보기에는 계속 표시되고, 스코어가
+  // 채워지기 전까지는 순위/기록 집계에서 자동으로 제외됩니다.
+  round7: [
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-08-21", kickoffTime: "15:00", homeScore: 4, awayScore: 0, scorersHome: "STEVEN PHIRI, DICKIES NYIRENDA, BENJAMIN NYIRENDA, TIMOTHY KATAPA", scorersAway: "없음" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-08-27", kickoffTime: "14:30", homeScore: 3, awayScore: 0, scorersHome: "LIMBANI KAMANGA (2골), DAVIE NGOMA", scorersAway: "없음" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", postponed: true },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-08-22", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "ROBIN CHIOKO, ACKIM GOMIRE, BABA NKHOMA", scorersAway: "DANIEL CHISOKWE" },
+    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "TEMWA NDHLOVU", scorersAway: "KING NYASULU, MIKE LUHANGA" },
+    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "GIVEN MWANDIRA, JOMO PHIRI", scorersAway: "없음" },
+    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "KINGSLEY MVULA, DANIEL SIWALE", scorersAway: "SHAIBU JALAH" },
+    { byeKo: "칠룸바 배럭스 FC", byeEn: "Chilumba Barracks FC" }
   ]
 };
 
@@ -1580,6 +1615,7 @@ const playerDirectory = {
   "EMMANUEL MIOTHA": { nameKo: "임마누엘 미오타", nameEn: "Emmanuel Miotha" },
   "JOLLY MFUNE": { nameKo: "졸리 음푸네", nameEn: "Jolly Mfune" },
   "DAVIE MWANZA": { nameKo: "데이비 므완자", nameEn: "Davie Mwanza" },
+  "DAVIE NGOMA": { nameKo: "데이비 응고마", nameEn: "Davie Ngoma" },
   "SHAIBU JAHALI": { nameKo: "샤이부 자할리", nameEn: "Shaibu Jahali" },
   "MASSA PEREKANI": { nameKo: "마사 페레카니", nameEn: "Massa Perekani" },
   "LUKE JERE": { nameKo: "루크 제레", nameEn: "Luke Jere" },
@@ -2316,4 +2352,155 @@ function runMonteCarloSimulation(iterations) {
     iterations: N,
     remainingFixtureCount: fixtures.length
   };
+}
+
+// ============================================================
+// 개별 경기 "AI 예측" (predictSingleMatch)
+// ------------------------------------------------------------
+// 몬테카를로 시뮬레이션과 동일한 공격/수비 지수 + 홈/원정 배율로 기대 득점을
+// 구한 뒤, 무작위 시뮬레이션 대신 포아송 분포를 직접 계산(grid)해서
+// 승/무/패 확률과 유력 스코어를 결정론적으로 산출합니다.
+// (같은 두 팀이면 새로고침해도 항상 같은 확률이 나옵니다.)
+// ============================================================
+function poissonPmf(k, lambda) {
+  // k! 를 직접 구하지 않고 누적곱으로 계산해 큰 수에서도 안전합니다.
+  let p = Math.exp(-lambda);
+  for (let i = 1; i <= k; i++) p *= lambda / i;
+  return p;
+}
+
+function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
+  const { strengths, leagueAvgGoals } = computeTeamStrengths();
+  const homeS = strengths[homeEn] || { attack: 1, defense: 1 };
+  const awayS = strengths[awayEn] || { attack: 1, defense: 1 };
+
+  const expectedHomeGoals = leagueAvgGoals * homeS.attack * awayS.defense * HOME_ADVANTAGE;
+  const expectedAwayGoals = leagueAvgGoals * awayS.attack * homeS.defense * AWAY_DISADVANTAGE;
+
+  const MAX_GOALS = 8; // 8골 초과 스코어는 확률이 무시 가능한 수준이라 컷오프
+  const grid = [];
+  let homeWinP = 0, drawP = 0, awayWinP = 0;
+  for (let h = 0; h <= MAX_GOALS; h++) {
+    const ph = poissonPmf(h, expectedHomeGoals);
+    for (let a = 0; a <= MAX_GOALS; a++) {
+      const p = ph * poissonPmf(a, expectedAwayGoals);
+      grid.push({ h, a, p });
+      if (h > a) homeWinP += p;
+      else if (h < a) awayWinP += p;
+      else drawP += p;
+    }
+  }
+  const total = homeWinP + drawP + awayWinP || 1;
+  const homeWinPct = (homeWinP / total) * 100;
+  const drawPct = (drawP / total) * 100;
+  const awayWinPct = (awayWinP / total) * 100;
+
+  grid.sort((a, b) => b.p - a.p);
+  const topScorelines = grid.slice(0, 3).map(g => ({
+    home: g.h, away: g.a, pct: (g.p / total) * 100
+  }));
+
+  return {
+    expectedHomeGoals, expectedAwayGoals,
+    homeWinPct, drawPct, awayWinPct,
+    topScorelines,
+    predictedHomeGoals: topScorelines[0].home,
+    predictedAwayGoals: topScorelines[0].away,
+    homeAttack: homeS.attack, homeDefense: homeS.defense,
+    awayAttack: awayS.attack, awayDefense: awayS.defense,
+    leagueAvgGoals
+  };
+}
+
+// 위 확률 계산 결과 + 순위/최근폼을 엮어서 자연어 코멘트를 자동 생성합니다.
+// (진짜 LLM이 아니라, 수치 차이 구간에 따라 미리 정해둔 표현을 조합하는 규칙 기반 코멘트입니다.)
+function buildAiPredictionNarrative(params) {
+  const {
+    homeName, awayName, pred, homeRank, awayRank, homeForm, awayForm, isKorean
+  } = params;
+
+  const favPct = Math.max(pred.homeWinPct, pred.drawPct, pred.awayWinPct);
+  const isDrawFav = pred.drawPct === favPct;
+  const homeFav = !isDrawFav && pred.homeWinPct >= pred.awayWinPct;
+  const favName = isDrawFav ? null : (homeFav ? homeName : awayName);
+  const favPctRounded = Math.round(favPct);
+
+  function formWDL(form) {
+    if (!form || !form.recentForm || !form.recentForm.length) return null;
+    let w = 0, d = 0, l = 0;
+    form.recentForm.forEach(m => {
+      if (m.result === 'W') w++; else if (m.result === 'D') d++; else l++;
+    });
+    return { w, d, l, n: form.recentForm.length };
+  }
+  const hForm = formWDL(homeForm);
+  const aForm = formWDL(awayForm);
+
+  const lines = [];
+
+  if (isDrawFav) {
+    lines.push(isKorean
+      ? `두 팀의 전력이 팽팽해 무승부 확률(${favPctRounded}%)이 가장 높게 나옵니다.`
+      : `Both sides look evenly matched — a draw is the single most likely result (${favPctRounded}%).`);
+  } else if (favPctRounded < 45) {
+    lines.push(isKorean
+      ? `${favName} 쪽이 근소하게 앞서지만(승률 ${favPctRounded}%) 어느 쪽으로도 기울 수 있는 접전으로 보입니다.`
+      : `${favName} has a slight edge (${favPctRounded}% win chance), but this looks like a close, even contest.`);
+  } else if (favPctRounded < 60) {
+    lines.push(isKorean
+      ? `${favName}이(가) 다소 우세한 것으로 예측됩니다(승률 ${favPctRounded}%).`
+      : `${favName} is projected as the moderate favorite (${favPctRounded}% win chance).`);
+  } else {
+    lines.push(isKorean
+      ? `${favName}의 우세가 뚜렷한 경기입니다(승률 ${favPctRounded}%).`
+      : `${favName} looks like a clear favorite here (${favPctRounded}% win chance).`);
+  }
+
+  // 공수 지수 비교
+  const atkDiff = pred.homeAttack - pred.awayAttack;
+  if (Math.abs(atkDiff) >= 0.15) {
+    const strongerAtk = atkDiff > 0 ? homeName : awayName;
+    lines.push(isKorean
+      ? `${strongerAtk}의 공격력 지수가 리그 평균 대비 더 높아 득점 기대치를 끌어올립니다.`
+      : `${strongerAtk}'s attack rating sits well above league average, lifting its expected goals.`);
+  }
+  const defDiff = pred.awayDefense - pred.homeDefense; // 값이 낮을수록(실점 적을수록) 수비가 좋음
+  if (Math.abs(defDiff) >= 0.15) {
+    const strongerDef = defDiff > 0 ? homeName : awayName;
+    lines.push(isKorean
+      ? `${strongerDef}의 실점률이 낮은 편이라 상대 공격을 억제할 가능성이 있습니다.`
+      : `${strongerDef} concedes at a below-average rate, which could keep the opposition quiet.`);
+  }
+
+  // 순위 비교
+  if (homeRank && awayRank && homeRank !== awayRank) {
+    const higher = homeRank < awayRank ? homeName : awayName;
+    const gap = Math.abs(homeRank - awayRank);
+    if (gap >= 3) {
+      lines.push(isKorean
+        ? `순위상으로도 ${higher}이(가) ${gap}계단 앞서 있어 이변이 없다면 순위대로 흐를 가능성이 있습니다.`
+        : `${higher} also sits ${gap} places higher in the table, so the standings favor the same outcome.`);
+    }
+  }
+
+  // 최근 폼 비교
+  if (hForm && aForm) {
+    const hGood = hForm.w >= Math.ceil(hForm.n * 0.6);
+    const aGood = aForm.w >= Math.ceil(aForm.n * 0.6);
+    if (hGood && !aGood) {
+      lines.push(isKorean
+        ? `${homeName}은(는) 최근 ${hForm.n}경기 ${hForm.w}승으로 상승세라는 점도 긍정적인 요소입니다.`
+        : `${homeName} also arrives in good form, with ${hForm.w} wins in its last ${hForm.n} games.`);
+    } else if (aGood && !hGood) {
+      lines.push(isKorean
+        ? `${awayName}은(는) 최근 ${aForm.n}경기 ${aForm.w}승으로 상승세라는 점도 변수입니다.`
+        : `${awayName} arrives in good form too, with ${aForm.w} wins in its last ${aForm.n} games — a potential upset factor.`);
+    }
+  }
+
+  lines.push(isKorean
+    ? `예상 스코어는 ${homeName} ${pred.predictedHomeGoals} : ${pred.predictedAwayGoals} ${awayName}입니다.`
+    : `Most likely scoreline: ${homeName} ${pred.predictedHomeGoals} - ${pred.predictedAwayGoals} ${awayName}.`);
+
+  return lines;
 }
