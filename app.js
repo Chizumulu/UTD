@@ -446,6 +446,11 @@
     const oppName = isKorean ? t.nextMatch.oppKo : t.nextMatch.oppEn;
     const oppNameShort = (isKorean ? t.nextMatch.oppKo : t.nextMatch.oppEn).split(' ')[0];
     const kickoffTxt = formatKickoff(t.nextMatch);
+    const weatherHtml = matchWeatherPlaceholderHtml(
+      t.nextMatch.homeAway === 'H' ? t.nameEn : t.nextMatch.oppEn,
+      t.nextMatch.kickoffDate, t.nextMatch.kickoffTime,
+      'nms-weather', true
+    );
 
     el.innerHTML = `
       <span class="nms-label lbl" data-en="Next · ${weekLbl}" data-ko="다음경기 · ${weekLbl}">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</span>
@@ -463,6 +468,7 @@
       </span>
       <span class="nms-meta-row">
         ${kickoffTxt ? `<span class="nms-kickoff">${kickoffTxt}</span>` : ''}
+        ${weatherHtml}
         <span class="nms-action-group">
           <button class="nms-action-btn" onclick="downloadNextMatchICS()" aria-label="Add to calendar" title="${isKorean ? '캘린더에 추가' : 'Add to calendar'}">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21M7 3V5M17 3V5M6.2 5H17.8C19 5 20 6 20 7.2V18.8C20 20 19 21 17.8 21H6.2C5 21 4 20 4 18.8V7.2C4 6 5 5 6.2 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
@@ -480,6 +486,7 @@
       else liveBar.removeAttribute('data-kickoff-utc');
     }
     updateNextMatchLiveBar();
+    hydrateWeatherWidgets();
   }
 
   // ===== 공유하기 (Web Share API + 클립보드 폴백) =====
@@ -786,6 +793,11 @@
     const escAttr = (s) => String(s || '').replace(/'/g, "\\'");
     const compareBtnHtml = `<button type="button" class="rmc-compare-btn ti-next-match-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교" onclick="openMatchCompareModal('${escAttr(nextMatchHomeEn)}', '${escAttr(nextMatchHomeKo)}', '${escAttr(nextMatchAwayEn)}', '${escAttr(nextMatchAwayKo)}', '${escAttr(nm.roundKey)}')">⚖️ ${isKorean ? '전적 비교' : 'Compare Teams'}</button>`;
 
+    // 우리 팀(치주물루)의 다음 경기 카드에서만 킥오프 현지 날씨 예보를 함께 보여줍니다.
+    const weatherHtml = isMyTeamName(team.nameEn, team.nameKo)
+      ? matchWeatherPlaceholderHtml(nextMatchHomeEn, nm.kickoffDate, nm.kickoffTime, 'ti-next-match-weather')
+      : '';
+
     return `
       <div class="ti-next-match">
         <div class="ti-next-match-label lbl" data-en="Next Match · Week ${nextWeek}" data-ko="다음 경기 · ${nextWeek}주차">${isKorean ? `다음 경기 · ${nextWeek}주차` : `Next Match · Week ${nextWeek}`}</div>
@@ -809,6 +821,7 @@
         </div>
         ${kickoffTxt ? `<div class="ti-next-match-kickoff">${kickoffTxt}</div>` : ''}
         ${nextMatchVenueName ? `<div class="ti-next-match-venue">🏟️ ${nextMatchVenueName}</div>` : ''}
+        ${weatherHtml}
         ${countdownHtml}
         ${h2hHtml}
         ${compareBtnHtml}
@@ -1741,6 +1754,7 @@
 
     el.innerHTML = `<div class="round-match-list ti-results-list">${html}</div>`;
     attachImageFallback();
+    hydrateWeatherWidgets();
   }
 
   function scrollToTeamInfoSection(tab) {
@@ -2206,6 +2220,104 @@
     return `<div class="rmc-venue">🏟️ ${venueName}</div>`;
   }
 
+  // ===== 경기 예정일 현지(구장) 날씨 예보 =====
+  // Open-Meteo(무료, API 키 불필요)로 홈 구장 좌표 + 킥오프 날짜/시간 기준
+  // 예보를 가져옵니다. 우리 팀(치주물루) 다음 경기에서만 사용합니다.
+  const weatherFetchCache = {};
+
+  function weatherCodeInfo(code) {
+    const map = {
+      0: { emoji: '☀️', ko: '맑음', en: 'Clear' },
+      1: { emoji: '🌤️', ko: '대체로 맑음', en: 'Mostly clear' },
+      2: { emoji: '⛅', ko: '부분 흐림', en: 'Partly cloudy' },
+      3: { emoji: '☁️', ko: '흐림', en: 'Overcast' },
+      45: { emoji: '🌫️', ko: '안개', en: 'Fog' },
+      48: { emoji: '🌫️', ko: '안개', en: 'Fog' },
+      51: { emoji: '🌦️', ko: '약한 이슬비', en: 'Light drizzle' },
+      53: { emoji: '🌦️', ko: '이슬비', en: 'Drizzle' },
+      55: { emoji: '🌧️', ko: '강한 이슬비', en: 'Dense drizzle' },
+      61: { emoji: '🌦️', ko: '약한 비', en: 'Light rain' },
+      63: { emoji: '🌧️', ko: '비', en: 'Rain' },
+      65: { emoji: '🌧️', ko: '강한 비', en: 'Heavy rain' },
+      71: { emoji: '🌨️', ko: '약한 눈', en: 'Light snow' },
+      73: { emoji: '🌨️', ko: '눈', en: 'Snow' },
+      75: { emoji: '🌨️', ko: '강한 눈', en: 'Heavy snow' },
+      80: { emoji: '🌦️', ko: '약한 소나기', en: 'Light showers' },
+      81: { emoji: '🌧️', ko: '소나기', en: 'Rain showers' },
+      82: { emoji: '⛈️', ko: '강한 소나기', en: 'Violent showers' },
+      95: { emoji: '⛈️', ko: '뇌우', en: 'Thunderstorm' },
+      96: { emoji: '⛈️', ko: '뇌우(우박 동반)', en: 'Thunderstorm w/ hail' },
+      99: { emoji: '⛈️', ko: '강한 뇌우(우박 동반)', en: 'Severe thunderstorm' }
+    };
+    return map[code] || { emoji: '🌡️', ko: '날씨 정보', en: 'Weather' };
+  }
+
+  async function fetchKickoffWeather(lat, lng, dateStr, timeStr) {
+    const cacheKey = `${lat},${lng},${dateStr},${timeStr}`;
+    if (weatherFetchCache[cacheKey]) return weatherFetchCache[cacheKey];
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,precipitation_probability,weathercode&timezone=Africa%2FBlantyre&start_date=${dateStr}&end_date=${dateStr}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('weather fetch failed');
+      const data = await res.json();
+      const hh = String(timeStr).split(':')[0].padStart(2, '0');
+      const targetTime = `${dateStr}T${hh}:00`;
+      const idx = data.hourly && data.hourly.time ? data.hourly.time.indexOf(targetTime) : -1;
+      if (idx === -1) throw new Error('no matching forecast hour (too far in the future)');
+      const result = {
+        temp: data.hourly.temperature_2m[idx],
+        precip: data.hourly.precipitation_probability[idx],
+        code: data.hourly.weathercode[idx]
+      };
+      weatherFetchCache[cacheKey] = result;
+      return result;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 날씨 위젯의 "자리"만 먼저 그리고, 실제 값은 비동기로 채워 넣습니다.
+  // extraClass로 넣은 컨텍스트(팀정보/라운드뷰/메인 스트립)에 따라 위젯 스타일을 살짝 다르게 줄 수 있고,
+  // compact=true면 이모지+기온만 아주 간단히 보여줍니다(메인화면 다음경기 스트립용).
+  function matchWeatherPlaceholderHtml(homeEn, dateStr, timeStr, extraClass, compact) {
+    const venue = getTeamVenue(homeEn);
+    if (!venue || typeof venue.lat !== 'number' || typeof venue.lng !== 'number' || !dateStr || !timeStr) return '';
+    return `<span class="match-weather${extraClass ? ' ' + extraClass : ''}" data-pending="1" data-lat="${venue.lat}" data-lng="${venue.lng}" data-date="${dateStr}" data-time="${timeStr}"${compact ? ' data-compact="1"' : ''}>
+      <span class="mw-loading lbl" data-en="Loading weather…" data-ko="날씨 불러오는 중…">${compact ? '' : (isKorean ? '날씨 불러오는 중…' : 'Loading weather…')}</span>
+    </span>`;
+  }
+
+  // 화면에 방금 그려 넣은 날씨 위젯 자리(.match-weather[data-pending])를 찾아 실제로 채웁니다.
+  function hydrateWeatherWidgets() {
+    document.querySelectorAll('.match-weather[data-pending="1"]').forEach(el => {
+      el.removeAttribute('data-pending');
+      const lat = el.getAttribute('data-lat');
+      const lng = el.getAttribute('data-lng');
+      const dateStr = el.getAttribute('data-date');
+      const timeStr = el.getAttribute('data-time');
+      const compact = el.getAttribute('data-compact') === '1';
+      fetchKickoffWeather(lat, lng, dateStr, timeStr).then(w => {
+        if (!el.isConnected) return;
+        if (!w) {
+          el.innerHTML = compact ? '' : `<span class="mw-unavailable lbl" data-en="Forecast not available yet" data-ko="아직 예보가 나오지 않았어요">${isKorean ? '아직 예보가 나오지 않았어요' : 'Forecast not available yet'}</span>`;
+          return;
+        }
+        const info = weatherCodeInfo(w.code);
+        if (compact) {
+          el.innerHTML = `<span class="mw-emoji">${info.emoji}</span><span class="mw-temp">${Math.round(w.temp)}°C</span>`;
+          return;
+        }
+        const condTxt = isKorean ? info.ko : info.en;
+        el.innerHTML = `
+          <span class="mw-emoji">${info.emoji}</span>
+          <span class="mw-temp">${Math.round(w.temp)}°C</span>
+          <span class="mw-cond lbl" data-en="${info.en}" data-ko="${info.ko}">${condTxt}</span>
+          <span class="mw-precip">💧 ${w.precip}%</span>
+        `;
+      });
+    });
+  }
+
   function renderRoundsView() {
     const tabBar = document.getElementById('roundTabBar');
     const roundKeys = allRoundKeysIncludingScheduled();
@@ -2282,6 +2394,7 @@
           </div>
           ${kickoffTxt ? `<div class="rmc-kickoff">${kickoffTxt}</div>` : ''}
           ${venueCaptionHtml(m.homeEn)}
+          ${mine ? matchWeatherPlaceholderHtml(m.homeEn, m.kickoffDate, m.kickoffTime, 'rmc-weather') : ''}
           <button type="button" class="rmc-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교">⚖️ ${isKorean ? '전적 비교' : 'Compare Teams'}</button>
         `;
         listEl.appendChild(card);
@@ -2335,6 +2448,7 @@
     });
 
     attachImageFallback();
+    hydrateWeatherWidgets();
   }
 
 
@@ -3110,6 +3224,7 @@
         goalsAgainst: team.goalsAgainst,
         goalsForPerGame: team.played > 0 ? team.goalsFor / team.played : 0,
         goalsAgainstPerGame: team.played > 0 ? team.goalsAgainst / team.played : 0,
+        matchHistory: matches,
         cleanSheets: team.cleanSheets,
         failedToScore: team.failedToScore,
         pts: pts,
@@ -3306,9 +3421,43 @@
 
 
   // ===== SVG 차트 - 공격/수비 산점도 (Scatter Plot) =====
+  // 각 팀의 "이전 라운드까지의" 누적 경기당 득점/실점을 라운드 순서대로 계산합니다.
+  // (마지막 한 경기는 현재 위치이므로 제외하고, 너무 난잡해지지 않도록 직전 3경기까지만 궤적으로 씁니다)
+  const TRAIL_MAX_STEPS = 3;
+
+  // 팀마다 구분되는 궤적 색상 팔레트 (leagueData 순서 기준으로 고정 배정)
+  const TEAM_TRAIL_COLORS = [
+    '#e6194b', '#3cb44b', '#4363d8', '#f58231', '#911eb4',
+    '#17b8c7', '#f032e6', '#9acd32', '#fa8072', '#469990',
+    '#b19cd9', '#c2872b', '#4a4ae8', '#8a8a8a'
+  ];
+  function teamTrailColor(idx) { return TEAM_TRAIL_COLORS[idx % TEAM_TRAIL_COLORS.length]; }
+
+  // 팀 로고를 클릭하면 해당 팀의 궤적만 강조 표시 (다시 클릭하면 해제)
+  let scatterTeamsCache = null;
+  let scatterHighlightIdx = null;
+  function toggleScatterHighlight(idx) {
+    scatterHighlightIdx = (scatterHighlightIdx === idx) ? null : idx;
+    if (scatterTeamsCache) renderScatterPlot(scatterTeamsCache);
+  }
+  function computeTeamTrailStats(team) {
+    const log = team.matchHistory || [];
+    if (log.length < 2) return [];
+    const trail = [];
+    let cumGF = 0, cumGA = 0;
+    for (let i = 0; i < log.length - 1; i++) {
+      cumGF += log[i].gf;
+      cumGA += log[i].ga;
+      const played = i + 1;
+      trail.push({ gf: cumGF / played, ga: cumGA / played });
+    }
+    return trail.slice(-TRAIL_MAX_STEPS);
+  }
+
   function renderScatterPlot(teams) {
     const svg = document.getElementById('scatterSvg');
     if (!svg) return;
+    scatterTeamsCache = teams;
     svg.innerHTML = '';
 
     const W = 700, H = 520;
@@ -3409,6 +3558,7 @@
 
       return {
         team, idx, isMine, ringColor, labelText, labelW, labelH: 12,
+        trailColor: teamTrailColor(idx),
         r: isMine ? 12 : 10,
         cx: xPos(team.goalsAgainstPerGame),
         cy: yPos(team.goalsForPerGame)
@@ -3466,13 +3616,70 @@
     const defs = svgEl('defs', {});
     svg.appendChild(defs);
 
-    points.forEach(p => {
-      const g = svgEl('g', {});
+    // 태풍 경로처럼: 이전 라운드까지의 위치를 흐린 점 + 옅은 선으로 먼저 그려서
+    // 실제 팀 로고/현재 위치 마커보다 아래(뒤)에 깔리도록 합니다.
+    const trailGroup = svgEl('g', { class: 'scatter-trail-group' });
+    svg.appendChild(trailGroup);
+    // 강조된 팀이 있으면 그 팀의 궤적을 맨 마지막에 그려서 다른 궤적 위로 올라오게 합니다.
+    const trailOrder = scatterHighlightIdx === null
+      ? points
+      : points.slice().sort((a, b) => (a.idx === scatterHighlightIdx ? 1 : 0) - (b.idx === scatterHighlightIdx ? 1 : 0));
+    trailOrder.forEach(p => {
+      const trailStats = computeTeamTrailStats(p.team);
+      if (!trailStats.length) return;
+      const isSelected = scatterHighlightIdx === p.idx;
+      const isDimmed = scatterHighlightIdx !== null && !isSelected;
+      const lineW = isSelected ? 3 : 1.5;
+      const dotR = isSelected ? 4.2 : 3.2;
+      const opacityMul = isDimmed ? 0.22 : 1;
+      const opacityBoost = isSelected ? 0.28 : 0;
+
+      const trailPts = trailStats.map(pt => ({ cx: xPos(pt.ga), cy: yPos(pt.gf) }));
+      trailPts.push({ cx: p.cx, cy: p.cy }); // 현재 위치로 이어붙여서 궤적을 완성
+      const n = trailPts.length;
+
+      for (let i = 0; i < n - 1; i++) {
+        const t = (i + 1) / n; // 0(과거)~1(현재 직전)
+        trailGroup.appendChild(svgEl('line', {
+          x1: trailPts[i].cx.toFixed(1), y1: trailPts[i].cy.toFixed(1),
+          x2: trailPts[i + 1].cx.toFixed(1), y2: trailPts[i + 1].cy.toFixed(1),
+          stroke: p.trailColor, 'stroke-width': lineW, 'stroke-linecap': 'round',
+          opacity: (Math.min(1, 0.1 + t * 0.32 + opacityBoost) * opacityMul).toFixed(2)
+        }));
+      }
+      trailPts.slice(0, -1).forEach((pt, i) => {
+        const t = (i + 1) / n;
+        trailGroup.appendChild(svgEl('circle', {
+          cx: pt.cx.toFixed(1), cy: pt.cy.toFixed(1), r: dotR,
+          fill: p.trailColor, opacity: (Math.min(1, 0.16 + t * 0.34 + opacityBoost) * opacityMul).toFixed(2)
+        }));
+      });
+    });
+
+    // 강조된 팀의 마커를 맨 나중에 그려서 다른 마커 위로 올라오게 합니다.
+    const markerOrder = scatterHighlightIdx === null
+      ? points
+      : points.slice().sort((a, b) => (a.idx === scatterHighlightIdx ? 1 : 0) - (b.idx === scatterHighlightIdx ? 1 : 0));
+
+    markerOrder.forEach(p => {
+      const isSelected = scatterHighlightIdx === p.idx;
+      const isDimmed = scatterHighlightIdx !== null && !isSelected;
+
+      const g = svgEl('g', { class: 'scatter-marker-group', opacity: isDimmed ? '0.35' : '1' });
+      g.style.cursor = 'pointer';
       const clipId = 'scatterClip-' + p.idx;
 
       const clipPath = svgEl('clipPath', { id: clipId });
       clipPath.appendChild(svgEl('circle', { cx: p.cx, cy: p.cy, r: p.r - 1.5 }));
       defs.appendChild(clipPath);
+
+      // selected 팀 강조용 헤일로
+      if (isSelected) {
+        g.appendChild(svgEl('circle', {
+          cx: p.cx, cy: p.cy, r: p.r + 4.5, fill: 'none',
+          stroke: p.trailColor, 'stroke-width': 2.5, opacity: '0.55'
+        }));
+      }
 
       // white backdrop behind logo (covers transparent-background logos)
       g.appendChild(svgEl('circle', { cx: p.cx, cy: p.cy, r: p.r - 1.5, fill: '#fff' }));
@@ -3495,16 +3702,18 @@
 
       const ring = svgEl('circle', {
         cx: p.cx, cy: p.cy, r: p.r - 1, fill: 'none',
-        stroke: p.ringColor, 'stroke-width': p.isMine ? 3 : 2
+        stroke: isSelected ? p.trailColor : p.ringColor, 'stroke-width': isSelected ? 3.5 : (p.isMine ? 3 : 2)
       });
 
       const title = svgEl('title', {});
       const name = isKorean ? p.team.nameKo : p.team.nameEn;
-      title.textContent = `${name} — ${isKorean ? '경기당 득점' : 'GF/g'}: ${p.team.goalsForPerGame.toFixed(2)}, ${isKorean ? '경기당 실점' : 'GA/g'}: ${p.team.goalsAgainstPerGame.toFixed(2)}`;
+      title.textContent = `${name} — ${isKorean ? '경기당 득점' : 'GF/g'}: ${p.team.goalsForPerGame.toFixed(2)}, ${isKorean ? '경기당 실점' : 'GA/g'}: ${p.team.goalsAgainstPerGame.toFixed(2)}` +
+        (isKorean ? ' (클릭해서 궤적 강조)' : ' (click to highlight trail)');
 
       g.appendChild(img);
       g.appendChild(ring);
       g.appendChild(title);
+      g.addEventListener('click', () => toggleScatterHighlight(p.idx));
       svg.appendChild(g);
 
       if (Math.abs(p.ly - (p.cy + 3.5)) > 4 || Math.abs(p.lx - (p.cx + p.r + 5)) > 4) {
@@ -3516,7 +3725,8 @@
 
       const label = svgEl('text', {
         x: p.lx, y: p.ly,
-        class: p.isMine ? 'scatter-dot-label-mine' : 'scatter-dot-label'
+        class: p.isMine ? 'scatter-dot-label-mine' : 'scatter-dot-label',
+        opacity: isDimmed ? '0.4' : '1'
       });
       label.textContent = p.labelText;
       svg.appendChild(label);
@@ -4370,6 +4580,7 @@
 
     attachImageFallback();
     applyOtherTeamHeaderAccent(t.nameEn);
+    hydrateWeatherWidgets();
   }
 
   // ===== 타 팀 헤더 색상 (하드코딩) =====

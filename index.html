@@ -82,7 +82,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=001">
+<link rel="stylesheet" href="style.css?v=002">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -532,7 +532,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <span class="lbl" data-en="ATTACK vs DEFENSE (Goals For vs Goals Against per Game)" data-ko="공격 vs 수비 (경기당 득점 vs 경기당 실점)">공격 vs 수비 (경기당 득점 vs 경기당 실점)</span>
     <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'scatterInfo')">ⓘ</span>
     <div class="info-tooltip" id="scatterInfo" onclick="event.stopPropagation()">
-      <span class="lbl" data-ko="X축은 경기당 실점, Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줍니다: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하)." data-en="X-axis is goals conceded per game, Y-axis is goals scored per game. Teams are split into four zones based on the league average: Strong (above average at both ends), Attacking (scores a lot but concedes a lot too), Defensive (low scoring, low conceding), and Weak (below average at both ends).">X축은 경기당 실점, Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줍니다: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하).</span>
+      <span class="lbl" data-ko="X축은 경기당 실점, Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줍니다: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하). 흐린 점과 옅은 선은 이전 라운드까지의 위치 변화(궤적)를 팀마다 다른 색으로 보여줍니다. 팀 로고를 클릭하면 그 팀의 궤적만 크게 강조되고, 다시 클릭하면 해제돼요." data-en="X-axis is goals conceded per game, Y-axis is goals scored per game. Teams are split into four zones based on the league average: Strong (above average at both ends), Attacking (scores a lot but concedes a lot too), Defensive (low scoring, low conceding), and Weak (below average at both ends). The faded dots and trail line, shown in a distinct color per team, show how each team's position has moved round by round. Click a team's logo to highlight just that team's trail — click again to clear it.">X축은 경기당 실점, Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줍니다: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하). 흐린 점과 옅은 선은 이전 라운드까지의 위치 변화(궤적)를 팀마다 다른 색으로 보여줍니다. 팀 로고를 클릭하면 그 팀의 궤적만 크게 강조되고, 다시 클릭하면 해제돼요.</span>
     </div>
   </div>
   <div class="scatter-body">
@@ -826,7 +826,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
-<script src="data.js?v=001"></script>
-<script src="app.js?v=001"></script>
+<script src="data.js?v=002"></script>
+<script src="app.js?v=002"></script>
 </body>
 </html>

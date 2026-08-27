@@ -237,20 +237,26 @@ const matchLineups = {
     opponentKo: "젠다 유나이티드 FC",
     result: "4 : 0 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"] },
-      { pos: "LW", number: 49, nameKo: "쿰부카니" },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"], outMin: "후반" },
+      { pos: "LW", number: 49, nameKo: "쿰부카니", outMin: "후반" },
       { pos: "CAM", number: 7, nameKo: "디킨스", goals: ["-"] },
-      { pos: "RW", number: 6, nameKo: "벤자민", goals: ["-"] },
-      { pos: "LCM", number: 98, nameKo: "스티브", goals: ["-"] },
+      { pos: "RW", number: 6, nameKo: "벤자민", goals: ["-"], outMin: "전반" },
+      { pos: "LCM", number: 98, nameKo: "스티브", goals: ["-"], outMin: "후반" },
       { pos: "RCM", number: 99, nameKo: "패트릭" },
-      { pos: "LB", number: 5, nameKo: "라반" },
+      { pos: "LB", number: 5, nameKo: "라반", outMin: "후반" },
       { pos: "LCB", number: 13, nameKo: "조셉" },
       { pos: "RCB", number: 3, nameKo: "음롱골라", captain: true },
       { pos: "RB", number: 25, nameKo: "모버트" },
       { pos: "GK", number: 90, nameKo: "마야미코" }
     ],
-    subsIn: [],
-    subsUnused: [8, 9, 10, 11, 20, 66, 80, 88],
+    subsIn: [
+      { number: 10, nameKo: "찰스", pos: "RW", inMin: "전반" },
+      { number: 11, nameKo: "해리", pos: "LW", inMin: "후반" },
+      { number: 66, nameKo: "조던", pos: "LB", inMin: "후반" },
+      { number: 8, nameKo: "엑스퍼트", pos: "LCM", inMin: "후반" },
+      { number: 80, nameKo: "스쿠카", pos: "ST", inMin: "후반" }
+    ],
+    subsUnused: [9, 20, 88],
     recentHistory: [
       { comp: "26/27 시즌 NRFA 리그 원 7주차", score: "치주물루 4 : 0 젠다", result: "치주물루 승" }
     ],
