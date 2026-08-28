@@ -9,6 +9,11 @@
 //   주차 표기와 다음 라운드 시작일은 알아서 갱신됩니다.
 const SEASON_START = '2026-07-12';
 
+// ===== 리그 운영 방식 =====
+// 15개 팀이 홈·원정으로 한 번씩 만나는 시즌이라 총 30라운드(팀당 28경기)입니다.
+// 매직넘버는 이 값을 기준으로 남은 경기와 각 팀의 이론상 최대 승점을 계산합니다.
+const SEASON_TOTAL_ROUNDS = 30;
+
 // ===== 라운드별 경기 하이라이트 영상 링크 =====
 // roundKey(round1, round2 ...)를 키로, 해당 라운드의 치주물루 경기 하이라이트 유튜브 링크를 담습니다.
 const matchHighlights = {
@@ -907,7 +912,7 @@ function computeStandingsHistory() {
     return na - nb;
   });
 
-  const history = []; // [{ week, ranks: { nameEn: rank } }]
+  const history = []; // [{ week, ranks: { nameEn: rank }, points: { nameEn: pts } }]
 
   function applyMatches(matches) {
     matches.forEach(m => {
@@ -945,8 +950,10 @@ function computeStandingsHistory() {
 
     const ranks = {};
     standings.forEach((s, i) => { ranks[s.nameEn] = i + 1; });
+    const points = {};
+    standings.forEach(s => { points[s.nameEn] = s.pts; });
 
-    history.push({ week, ranks });
+    history.push({ week, ranks, points });
   }
 
   roundKeys.forEach((roundKey, idx) => {

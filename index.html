@@ -82,7 +82,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=001">
+<link rel="stylesheet" href="style.css?v=0011">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -271,6 +271,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </section>
   <section id="tiSection-overview" class="ti-section">
     <div id="teamInfoOverviewTab" class="team-info-tab-content"></div>
+    <div id="teamInfoMagicNumber" class="team-info-tab-content"></div>
+    <details class="team-points-trend-details">
+      <summary class="team-points-trend-summary lbl" data-en="Cumulative Points by Round" data-ko="라운드별 누적 승점">라운드별 누적 승점</summary>
+      <div class="team-points-trend-card">
+        <svg id="teamInfoPointsHistorySvg" viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </details>
   </section>
   <section id="tiSection-squad" class="ti-section">
     <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
@@ -608,6 +615,34 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div class="rank-hist-legend" id="rankHistLegend"></div>
   </div>
+  <div class="scatter-card" style="margin-top:20px;">
+    <div class="stats-title">
+      <span class="lbl" data-en="CUMULATIVE POINTS BY ROUND" data-ko="라운드별 누적 승점 추이">라운드별 누적 승점 추이</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'pointsHistInfo')">ⓘ</span>
+      <div class="info-tooltip" id="pointsHistInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-en="Tracks each club's points total after every completed round. Select a club below to focus on its line." data-ko="매 라운드 종료 시점의 누적 승점을 보여줍니다. 아래 팀 이름을 누르면 해당 팀의 선만 강조됩니다.">매 라운드 종료 시점의 누적 승점을 보여줍니다. 아래 팀 이름을 누르면 해당 팀의 선만 강조됩니다.</span>
+      </div>
+    </div>
+    <div class="scatter-body"><svg id="pointsHistorySvg" viewBox="0 0 820 410" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="rank-hist-legend" id="pointsHistLegend"></div>
+  </div>
+  <section class="magic-number-stats-section" aria-live="polite">
+    <div class="stats-title advanced">
+      <span class="advanced-tag lbl" data-en="RACE" data-ko="레이스">레이스</span>
+      <span class="lbl" data-en="TITLE & SAFETY MAGIC NUMBERS" data-ko="우승·잔류 확정 매직넘버">우승·잔류 확정 매직넘버</span>
+    </div>
+    <p class="magic-number-stats-note lbl" data-en="A conservative figure based on each rival's maximum possible points. All 15 teams are shown." data-ko="각 상대의 이론상 최대 승점을 기준으로 한 보수적 수치이며, 15개 팀 전체를 보여줍니다.">각 상대의 이론상 최대 승점을 기준으로 한 보수적 수치이며, 15개 팀 전체를 보여줍니다.</p>
+    <div class="scroll-fade-wrap magic-number-stats-fade" id="magicNumberStatsFade">
+      <div class="table-wrap magic-number-stats-wrap" id="magicNumberStatsScroller">
+        <table class="stats-table magic-number-stats-table">
+          <thead><tr>
+            <th class="lbl" data-en="RANK" data-ko="순위">순위</th><th class="lbl" data-en="TEAMS" data-ko="팀">팀</th><th class="lbl" data-en="LEFT" data-ko="잔여 경기">잔여 경기</th><th class="lbl" data-en="TITLE" data-ko="우승 확정">우승 확정</th><th class="lbl" data-en="SAFETY" data-ko="잔류 확정">잔류 확정</th>
+          </tr></thead>
+          <tbody id="magicNumberStatsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 </div>
 
 <div id="venuesView" style="display:none;">
@@ -826,7 +861,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
-<script src="data.js?v=001"></script>
-<script src="app.js?v=001"></script>
+<script src="data.js?v=0011"></script>
+<script src="app.js?v=0011"></script>
 </body>
 </html>
