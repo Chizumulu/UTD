@@ -4995,6 +4995,310 @@
     }
   }
 
+  /* ===== 포지션별 득점 기여도 카드 (도넛 차트) ===== */
+  .ti-position-card {
+    margin-bottom: 16px;
+    margin-top: 18px;
+  }
+  .ti-position-card .ti-card-title {
+    margin-bottom: 2px;
+  }
+  .ti-pos-body {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .ti-pos-donut {
+    position: relative;
+    flex: 0 0 auto;
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.1);
+  }
+  .ti-pos-donut::before {
+    content: '';
+    position: absolute;
+    inset: 20px;
+    border-radius: 50%;
+    background: var(--color-surface);
+    transition: var(--theme-transition);
+  }
+  .ti-pos-donut-hole {
+    position: absolute;
+    inset: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .ti-pos-donut-hole b {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--color-navy);
+    line-height: 1.1;
+  }
+  .ti-pos-donut-hole span {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .ti-pos-legend {
+    flex: 1 1 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 180px;
+  }
+  .ti-pos-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ti-pos-legend-dot {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .ti-pos-legend-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .ti-pos-legend-label {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--color-text-darkest);
+  }
+  .ti-pos-legend-top {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ti-pos-legend-value {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .ti-pos-legend-value b {
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--color-stat-value);
+  }
+  .ti-pos-legend-pct {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--color-text-faint);
+  }
+  @media (max-width: 480px) {
+    .ti-pos-body {
+      gap: 16px;
+    }
+    .ti-pos-donut {
+      width: 100px;
+      height: 100px;
+    }
+    .ti-pos-donut::before,
+    .ti-pos-donut-hole {
+      inset: 16px;
+    }
+    .ti-pos-donut-hole b {
+      font-size: 18px;
+    }
+  }
+
+  /* ===== 핵심 선수 출전/결장 영향도 카드 (With & Without) ===== */
+  .ti-impact-card {
+    margin-bottom: 16px;
+    margin-top: 18px;
+  }
+  .ti-impact-card .ti-card-title {
+    margin-bottom: 2px;
+  }
+  .ti-impact-chip-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px 2px 6px;
+    margin-top: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ti-impact-chip-row::-webkit-scrollbar {
+    height: 4px;
+  }
+  .ti-impact-chip {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 66px;
+    text-align: center;
+    background: var(--color-bg-stripe);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: 8px 4px 7px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s, border-color 0.15s;
+  }
+  .ti-impact-chip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 12px rgba(var(--color-navy-rgb),0.12);
+  }
+  .ti-impact-chip-active {
+    background: var(--color-bg-rank-highlight);
+    border-color: var(--color-gold-strong);
+  }
+  .ti-impact-chip-photo {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 15%;
+    background: var(--color-bg-subtle, rgba(var(--color-navy-rgb),0.06));
+    border: 1px solid var(--color-border-light);
+  }
+  .ti-impact-chip-photo-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+  .ti-impact-chip-name {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--color-text-darkest);
+    line-height: 1.2;
+    word-break: keep-all;
+  }
+  .ti-impact-chip-score {
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--color-text-faint);
+  }
+  .ti-impact-chip-score-pos {
+    color: var(--color-teal-dark);
+  }
+  .ti-impact-chip-score-neg {
+    color: var(--color-red);
+  }
+  .ti-impact-compare {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .ti-impact-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: 12px 8px;
+    box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.06);
+  }
+  .ti-impact-col-with {
+    border-top: 3px solid var(--color-teal);
+  }
+  .ti-impact-col-without {
+    border-top: 3px solid var(--color-red-light);
+  }
+  .ti-impact-col-head {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: var(--color-text-darkest);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  .ti-impact-col-matches {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+    margin-bottom: 2px;
+  }
+  .ti-impact-wdl {
+    display: flex;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .ti-impact-wdl-w { color: var(--color-teal-dark); }
+  .ti-impact-wdl-d { color: var(--color-neutral-mid); }
+  .ti-impact-wdl-l { color: var(--color-red); }
+  .ti-impact-winrate {
+    font-size: 17px;
+    font-weight: 900;
+    color: var(--color-navy);
+    margin-top: 2px;
+  }
+  .ti-impact-winrate span {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-text-faint);
+  }
+  .ti-impact-avg-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--color-border-light);
+    width: 100%;
+    justify-content: center;
+  }
+  .ti-impact-avg-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .ti-impact-avg-item b {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--color-stat-value);
+    line-height: 1.1;
+  }
+  .ti-impact-avg-item span {
+    font-size: 8.5px;
+    font-weight: 700;
+    color: var(--color-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+  .ti-impact-vs {
+    flex: 0 0 auto;
+    align-self: center;
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--color-text-faint-2);
+  }
+  @media (max-width: 400px) {
+    .ti-impact-avg-row {
+      gap: 6px;
+    }
+    .ti-impact-avg-item b {
+      font-size: 12px;
+    }
+    .ti-impact-winrate {
+      font-size: 15px;
+    }
+  }
+
   .ti-record-card {
     background: var(--color-surface);
     border-radius: var(--radius-xl);
@@ -5052,6 +5356,18 @@
     font-size: 15px;
     font-weight: 800;
     color: var(--color-text-darkest);
+  }
+  .idx-good { color: var(--color-teal-dark); }
+  .idx-bad { color: var(--color-red); }
+  .idx-avg { color: var(--color-text-muted); }
+  .ti-record-index-note {
+    flex-basis: 100%;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+    padding-top: 4px;
+    border-top: 1px dashed var(--color-border-light);
+    margin-top: 2px;
   }
   @media (max-width: 600px) {
     .ti-record-card {

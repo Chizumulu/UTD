@@ -451,6 +451,99 @@ function computeSquadPlayerStats() {
 // 스쿼드 선수별 통산 기록 데이터 (matchLineups/teamAwards 로부터 자동 계산됨)
 const squadPlayerStats = computeSquadPlayerStats();
 
+// ============================================================
+// 핵심 선수 출전/결장 영향도 (With & Without Stats)
+// ------------------------------------------------------------
+// matchLineups[].result("3 : 1 승" 형식, 항상 치주물루 스코어가 앞에 옴)를
+// 라운드별로 파싱하고, 해당 라운드에 특정 선수가 "선발로 뛰었는지"
+// "아예 결장(교체 출전조차 없이 미출전)했는지"를 나눠서 팀 성적을 비교합니다.
+// - "선발 출전": starters 배열에 포함된 라운드
+// - "결장(미출전)": starters에도 subsIn에도 없는 라운드 (subsUnused 포함,
+//   즉 그 경기에서 단 1분도 뛰지 않은 라운드)
+// - 교체로만 출전한 라운드는 두 그룹 어디에도 넣지 않고 비교에서 제외합니다
+//   (선발 vs 완전 결장을 비교하는 게 목적이므로).
+// ============================================================
+function parseLineupResult(resultText) {
+  const m = String(resultText || '').trim().match(/^(\d+)\s*:\s*(\d+)\s*(승|무|패)$/);
+  if (!m) return null;
+  const outcome = m[3] === '승' ? 'W' : (m[3] === '무' ? 'D' : 'L');
+  return { ownGoals: parseInt(m[1], 10), oppGoals: parseInt(m[2], 10), outcome };
+}
+
+function emptyImpactGroup() {
+  return { matches: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
+}
+
+function finalizeImpactGroup(g) {
+  const pts = g.wins * 3 + g.draws;
+  return Object.assign({}, g, {
+    winRate: g.matches ? Math.round((g.wins / g.matches) * 100) : 0,
+    ptsPerGame: g.matches ? +(pts / g.matches).toFixed(2) : 0,
+    goalsForAvg: g.matches ? +(g.goalsFor / g.matches).toFixed(1) : 0,
+    goalsAgainstAvg: g.matches ? +(g.goalsAgainst / g.matches).toFixed(1) : 0
+  });
+}
+
+function computeKeyPlayerImpact(number) {
+  const withG = emptyImpactGroup();
+  const withoutG = emptyImpactGroup();
+
+  const roundKeysSorted = Object.keys(matchLineups).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  });
+
+  roundKeysSorted.forEach(roundKey => {
+    const lineup = matchLineups[roundKey];
+    if (!lineup) return;
+    const parsed = parseLineupResult(lineup.result);
+    if (!parsed) return;
+
+    const isStarter = (lineup.starters || []).some(p => p.number === number);
+    const isSubIn = (lineup.subsIn || []).some(p => p.number === number);
+
+    let target = null;
+    if (isStarter) target = withG;
+    else if (!isSubIn) target = withoutG; // subsUnused 포함, 완전 미출전
+
+    if (!target) return; // 교체로만 출전한 라운드는 비교에서 제외
+
+    target.matches++;
+    target.goalsFor += parsed.ownGoals;
+    target.goalsAgainst += parsed.oppGoals;
+    if (parsed.outcome === 'W') target.wins++;
+    else if (parsed.outcome === 'D') target.draws++;
+    else target.losses++;
+  });
+
+  return { with: finalizeImpactGroup(withG), without: finalizeImpactGroup(withoutG) };
+}
+
+// 선발/결장 표본이 둘 다 최소 2경기 이상 쌓여 비교가 의미 있는 선수만 후보로 추립니다.
+// (표본이 너무 적으면 제외; 그런 선수가 하나도 없으면 기준을 1경기로 완화합니다.)
+function computeKeyPlayerImpactCandidates() {
+  function buildList(minEach) {
+    return squadData
+      .map(p => ({ player: p, impact: computeKeyPlayerImpact(p.number) }))
+      .filter(function(o) { return o.impact.with.matches >= minEach && o.impact.without.matches >= minEach; })
+      .map(function(o) {
+        return {
+          number: o.player.number, nameKo: o.player.nameKo, nameEn: o.player.nameEn,
+          position: o.player.position, photoSrc: o.player.photoSrc, impact: o.impact,
+          // "영향력" = 선발 출전 시와 결장 시의 경기당 승점 차이. 클수록 이 선수가
+          // 뛸 때 팀 성적이 더 크게 좋아진다는 뜻이라, 영향력이 큰 선수부터 정렬합니다.
+          impactScore: +(o.impact.with.ptsPerGame - o.impact.without.ptsPerGame).toFixed(2)
+        };
+      })
+      .sort(function(a, b) {
+        return b.impactScore - a.impactScore ||
+          (Math.min(b.impact.with.matches, b.impact.without.matches) -
+           Math.min(a.impact.with.matches, a.impact.without.matches));
+      });
+  }
+  const list = buildList(2);
+  return list.length ? list : buildList(1);
+}
+
 const matchDetails = {
   round1: [
     {
@@ -1807,6 +1900,59 @@ function computeTopScorers() {
 
 // 득점 순위 데이터 (matchDetails 로부터 자동 계산됨. 더 이상 직접 수정할 필요 없음)
 const topScorersData = computeTopScorers();
+
+// ============================================================
+// 포지션별 득점 기여도 (Goals by Position)
+// ------------------------------------------------------------
+// topScorersData(득점 순위, computeTopScorers로 이미 계산됨) 중 치주물루
+// 소속 선수만 골라서, squadData의 position(FW/MF/DF/GK)과 이름으로 연결한 뒤
+// 포지션별 득점을 합산합니다. topScorersData가 바뀔 때마다(=matchDetails에
+// 라운드가 추가될 때마다) 자동으로 갱신되므로 따로 손댈 필요가 없습니다.
+// ============================================================
+const GOALS_BY_POSITION_ORDER = ['FW', 'MF', 'DF', 'GK'];
+const GOALS_BY_POSITION_LABEL = {
+  FW: { ko: '공격수', en: 'Forwards' },
+  MF: { ko: '미드필더', en: 'Midfielders' },
+  DF: { ko: '수비수', en: 'Defenders' },
+  GK: { ko: '골키퍼', en: 'Goalkeepers' }
+};
+
+function computeGoalsByPositionData() {
+  const byPosition = {}; // position -> { goals, players: [{nameKo, nameEn, goals, number, photoSrc}] }
+
+  topScorersData
+    .filter(p => p.teamEn === 'Chizumulu United FC')
+    .forEach(scorer => {
+      const squadMatch = squadData.find(p => p.nameEn.toUpperCase() === scorer.nameEn.toUpperCase());
+      const position = squadMatch ? squadMatch.position : null;
+      if (!position) return; // 스쿼드에서 포지션을 못 찾으면 집계 제외
+
+      if (!byPosition[position]) byPosition[position] = { position, goals: 0, players: [] };
+      byPosition[position].goals += scorer.goals;
+      byPosition[position].players.push({
+        number: squadMatch.number, nameKo: scorer.nameKo, nameEn: scorer.nameEn,
+        goals: scorer.goals, photoSrc: squadMatch.photoSrc || null
+      });
+    });
+
+  const totalGoals = Object.values(byPosition).reduce((sum, g) => sum + g.goals, 0);
+
+  const groups = GOALS_BY_POSITION_ORDER
+    .filter(pos => byPosition[pos])
+    .map(pos => {
+      const g = byPosition[pos];
+      g.players.sort((a, b) => b.goals - a.goals);
+      return Object.assign({}, g, {
+        labelKo: GOALS_BY_POSITION_LABEL[pos].ko, labelEn: GOALS_BY_POSITION_LABEL[pos].en,
+        pct: totalGoals ? Math.round((g.goals / totalGoals) * 100) : 0
+      });
+    })
+    .sort((a, b) => b.goals - a.goals);
+
+  return { totalGoals, groups };
+}
+
+const goalsByPositionData = computeGoalsByPositionData();
 
 // ============================================================
 // 선수별 득점 타임라인 (playerGoalTimelines) 자동 계산

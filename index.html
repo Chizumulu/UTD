@@ -82,7 +82,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=0011">
+<link rel="stylesheet" href="style.css?v=0022">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -441,6 +441,48 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <tbody id="pythagBody"></tbody>
     </table>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('pythag')">더보기</button>
+  </div>
+  <div class="stats-col advanced-col">
+    <div class="stats-title advanced">
+      <span class="advanced-tag lbl" data-en="ADVANCED" data-ko="심화 지표">심화 지표</span>
+      <span class="lbl" data-en="ATTACK INDEX (Highest first)" data-ko="공격 지수 (높은 순)">공격 지수 (높은 순)</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'attackIdxInfo')">ⓘ</span>
+      <div class="info-tooltip" id="attackIdxInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-ko="슈팅 데이터 없이 골 기록만으로 만든 xG류 지표예요. 리그 전체 팀의 경기당 득점 평균을 100%로 놓고, 이 팀의 경기당 득점이 그 대비 몇 %인지를 보여줍니다. 100%보다 높으면 평균보다 골을 잘 넣는 팀이라는 뜻이에요." data-en="An xG-style metric built purely from goal records (no shot data). League-wide average goals per game is set to 100%, and this shows this team's goals per game as a percentage of that average. Above 100% means the team scores more than the league average.">슈팅 데이터 없이 골 기록만으로 만든 xG류 지표예요. 리그 전체 팀의 경기당 득점 평균을 100%로 놓고, 이 팀의 경기당 득점이 그 대비 몇 %인지를 보여줍니다. 100%보다 높으면 평균보다 골을 잘 넣는 팀이라는 뜻이에요.</span>
+      </div>
+    </div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
+          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
+          <th class="lbl" data-en="ATTACK INDEX" data-ko="공격 지수">공격 지수</th>
+        </tr>
+      </thead>
+      <tbody id="attackIdxBody"></tbody>
+    </table>
+    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('attackIdx')">더보기</button>
+  </div>
+  <div class="stats-col advanced-col">
+    <div class="stats-title advanced">
+      <span class="advanced-tag lbl" data-en="ADVANCED" data-ko="심화 지표">심화 지표</span>
+      <span class="lbl" data-en="DEFENSE INDEX (Highest first)" data-ko="수비 지수 (높은 순)">수비 지수 (높은 순)</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'defenseIdxInfo')">ⓘ</span>
+      <div class="info-tooltip" id="defenseIdxInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-ko="리그 평균 경기당 실점을 100%로 놓고, 이 팀이 그 대비 얼마나 덜 실점하는지를 보여주는 지표예요. 숫자가 높을수록 수비가 평균보다 견고하다는 뜻이고, 실점이 0인 팀은 '무실점'으로 표시됩니다." data-en="League-wide average goals conceded per game is set to 100%, and this shows how much less this team concedes relative to that average. A higher number means a stronger-than-average defense; a team with zero goals conceded shows as 'Perfect'.">리그 평균 경기당 실점을 100%로 놓고, 이 팀이 그 대비 얼마나 덜 실점하는지를 보여주는 지표예요. 숫자가 높을수록 수비가 평균보다 견고하다는 뜻이고, 실점이 0인 팀은 '무실점'으로 표시됩니다.</span>
+      </div>
+    </div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
+          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
+          <th class="lbl" data-en="DEFENSE INDEX" data-ko="수비 지수">수비 지수</th>
+        </tr>
+      </thead>
+      <tbody id="defenseIdxBody"></tbody>
+    </table>
+    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('defenseIdx')">더보기</button>
   </div>
   <div class="stats-col">
     <div class="stats-title lbl" data-en="WINNING STREAK (Highest first)" data-ko="연승 (많은 순)">연승 (많은 순)</div>
@@ -861,7 +903,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
-<script src="data.js?v=0011"></script>
-<script src="app.js?v=0011"></script>
+<script src="data.js?v=0022"></script>
+<script src="app.js?v=0022"></script>
 </body>
 </html>

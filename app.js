@@ -7,6 +7,7 @@
   let currentPlayerModalKey = null;
   let currentSquadPlayerModalNumber = null;
   let currentTeamInfoKey = 'Chizumulu United FC';
+  let selectedImpactPlayerNumber = null; // 핵심 선수 영향도 카드에서 선택된 선수 (null이면 첫 후보로 자동 선택)
   const otherTeamAccentCache = {};
 
   // ===== 다크 모드 (Dark Mode) =====
@@ -1373,12 +1374,45 @@
 
   // 기록 카드 마크업 — 우리 팀(치주물루) 뿐 아니라 다른 팀에도 그대로 재사용할 수 있도록
   // team/rank/total을 인자로 받는 형태로 뽑아둡니다.
+  // ===== 공격/수비 지수 (리그 평균 대비 득점력·실점력, 100% = 리그 평균) =====
+  // xG처럼 슈팅 데이터가 없어도, 골 데이터만으로 "리그 평균 대비 이 팀 공격/수비가
+  // 얼마나 강한지"를 한눈에 비교할 수 있는 지수입니다. getRankedTeams('all')로 리그
+  // 전체 팀의 경기당 득점을 평균 내서 기준선(100%)을 잡고, 그 대비 비율(%)로 표시합니다.
+  function computeLeagueAvgGoalsPerGame() {
+    const teams = (typeof getRankedTeams === 'function') ? getRankedTeams('all') : [];
+    let goals = 0, games = 0;
+    teams.forEach(t => { goals += (t.goalsFor || 0); games += (t.played || 0); });
+    return games > 0 ? goals / games : 0;
+  }
+
+  function indexClass(idx) {
+    if (idx === null) return 'idx-avg';
+    if (idx > 105) return 'idx-good';
+    if (idx < 95) return 'idx-bad';
+    return 'idx-avg';
+  }
+
   function buildRecordCardHtml(t, rank, total) {
     const gpg = t.played > 0 ? (t.goalsFor / t.played).toFixed(1) : '0.0';
     const gapg = t.played > 0 ? (t.goalsAgainst / t.played).toFixed(1) : '0.0';
     const gdClass = t.gd > 0 ? 'gd-pos' : (t.gd < 0 ? 'gd-neg' : 'gd-zero');
     const { home, away } = computeHomeAwayRecord(t.nameEn, t.nameKo);
     const homeAwayValue = (rec) => `${rec.won}/${rec.played}${isKorean ? '승' : ' W'}`;
+
+    const leagueAvgGpg = computeLeagueAvgGoalsPerGame();
+    const played = t.played || 0;
+    const gfPerGame = played > 0 ? t.goalsFor / played : 0;
+    const gaPerGame = played > 0 ? t.goalsAgainst / played : 0;
+    const attackIndex = (played > 0 && leagueAvgGpg > 0) ? Math.round((gfPerGame / leagueAvgGpg) * 100) : null;
+    const defensePerfect = played > 0 && t.goalsAgainst === 0;
+    const defenseIndex = (played > 0 && leagueAvgGpg > 0 && !defensePerfect)
+      ? Math.round((leagueAvgGpg / gaPerGame) * 100) : null;
+
+    const attackValue = attackIndex !== null
+      ? `<span class="${indexClass(attackIndex)}">${attackIndex}%</span>` : '-';
+    const defenseValue = defensePerfect
+      ? `<span class="idx-good lbl" data-en="Perfect" data-ko="무실점">${isKorean ? '무실점' : 'Perfect'}</span>`
+      : (defenseIndex !== null ? `<span class="${indexClass(defenseIndex)}">${defenseIndex}%</span>` : '-');
 
     const rows = [
       { ko: '승점', en: 'PTS', value: `<span class="pts">${t.pts}</span>` },
@@ -1391,6 +1425,8 @@
       { ko: '득실차', en: 'GOAL DIFF', value: `<span class="${gdClass}">${t.gd}</span>` },
       { ko: '경기당 득점', en: 'GOALS / GAME', value: gpg },
       { ko: '경기당 실점', en: 'CONCEDED / GAME', value: gapg },
+      { ko: '공격 지수', en: 'ATTACK INDEX', value: attackValue },
+      { ko: '수비 지수', en: 'DEFENSE INDEX', value: defenseValue },
       { ko: '무실점 경기', en: 'CLEAN SHEETS', value: t.cleanSheets },
       { ko: '무득점 경기', en: 'FAILED TO SCORE', value: t.failedToScore }
     ];
@@ -1409,6 +1445,8 @@
             </div>
           `).join('')}
         </div>
+        ${(attackIndex !== null || defenseIndex !== null || defensePerfect) ? `
+        <div class="ti-record-index-note lbl" data-en="Attack/Defense Index — 100% is the league average; higher is stronger" data-ko="공격/수비 지수 — 100%가 리그 평균, 높을수록 강함">${isKorean ? '공격/수비 지수 — 100%가 리그 평균, 높을수록 강함' : 'Attack/Defense Index — 100% is the league average; higher is stronger'}</div>` : ''}
       </div>
     `;
   }
@@ -2095,11 +2133,159 @@
       </div>`;
   }
 
+  // ===== 포지션별 득점 기여도 카드 (도넛 차트) =====
+  // goalsByPositionData(data.js에서 topScorersData + squadData로 자동 계산됨)를
+  // conic-gradient 기반 도넛 차트 + 범례로 보여줍니다.
+  const POSITION_COLOR = {
+    FW: 'var(--color-navy)',
+    MF: 'var(--color-teal)',
+    DF: 'var(--color-gold-strong)',
+    GK: 'var(--color-neutral-mid)'
+  };
+
+  function renderGoalsByPositionCard() {
+    const data = (typeof goalsByPositionData !== 'undefined') ? goalsByPositionData : { totalGoals: 0, groups: [] };
+    if (!data.totalGoals || !data.groups.length) {
+      return `
+        <div class="ti-card ti-position-card">
+          <div class="ti-card-title lbl" data-en="Goals by Position" data-ko="포지션별 득점 기여도">${isKorean ? '포지션별 득점 기여도' : 'Goals by Position'}</div>
+          <div class="ti-appear-empty lbl" data-en="No goal data yet" data-ko="아직 득점 데이터가 없습니다">${isKorean ? '아직 득점 데이터가 없습니다' : 'No goal data yet'}</div>
+        </div>`;
+    }
+
+    let cursor = 0;
+    const stops = data.groups.map((g, idx) => {
+      const color = POSITION_COLOR[g.position] || 'var(--color-text-faint)';
+      const start = cursor;
+      const isLast = idx === data.groups.length - 1;
+      cursor += g.pct;
+      const end = isLast ? 100 : cursor;
+      return `${color} ${start}% ${end}%`;
+    }).join(', ');
+
+    const legendHtml = data.groups.map(g => {
+      const label = isKorean ? g.labelKo : g.labelEn;
+      const topPlayer = g.players[0];
+      const topName = topPlayer ? (isKorean ? topPlayer.nameKo : topPlayer.nameEn) : '';
+      return `
+        <div class="ti-pos-legend-item">
+          <i class="ti-pos-legend-dot" style="background:${POSITION_COLOR[g.position] || 'var(--color-text-faint)'}"></i>
+          <div class="ti-pos-legend-main">
+            <span class="ti-pos-legend-label lbl" data-en="${g.labelEn}" data-ko="${g.labelKo}">${label}</span>
+            ${topName ? `<span class="ti-pos-legend-top">${isKorean ? '최다 득점: ' : 'Top scorer: '}${topName} (${topPlayer.goals}${isKorean ? '골' : ''})</span>` : ''}
+          </div>
+          <div class="ti-pos-legend-value">
+            <b>${g.goals}</b><span class="ti-pos-legend-pct">${g.pct}%</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="ti-card ti-position-card">
+        <div class="ti-card-title lbl" data-en="Goals by Position" data-ko="포지션별 득점 기여도">${isKorean ? '포지션별 득점 기여도' : 'Goals by Position'}</div>
+        <div class="ti-gk-card-note lbl" data-en="Share of team goals scored by each position" data-ko="포지션별로 팀 득점에 기여한 비중">${isKorean ? '포지션별로 팀 득점에 기여한 비중' : 'Share of team goals scored by each position'}</div>
+        <div class="ti-pos-body">
+          <div class="ti-pos-donut" style="background: conic-gradient(${stops});">
+            <div class="ti-pos-donut-hole">
+              <b>${data.totalGoals}</b>
+              <span class="lbl" data-en="Goals" data-ko="골">${isKorean ? '골' : 'Goals'}</span>
+            </div>
+          </div>
+          <div class="ti-pos-legend">${legendHtml}</div>
+        </div>
+      </div>`;
+  }
+
+  // ===== 핵심 선수 출전/결장 영향도 카드 (With & Without Stats) =====
+  // computeKeyPlayerImpactCandidates()/computeKeyPlayerImpact()(data.js)로 계산된
+  // "선발 출전 시" vs "결장(미출전) 시" 팀 성적을 선수 선택 칩과 함께 보여줍니다.
+  function impactStatColHtml(titleKo, titleEn, group, accentClass) {
+    const wdlLabel = { W: isKorean ? '승' : 'W', D: isKorean ? '무' : 'D', L: isKorean ? '패' : 'L' };
+    return `
+      <div class="ti-impact-col ${accentClass}">
+        <div class="ti-impact-col-head lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>
+        <div class="ti-impact-col-matches">${group.matches}${isKorean ? '경기' : ' matches'}</div>
+        <div class="ti-impact-wdl">
+          <span class="ti-impact-wdl-w">${group.wins}${wdlLabel.W}</span>
+          <span class="ti-impact-wdl-d">${group.draws}${wdlLabel.D}</span>
+          <span class="ti-impact-wdl-l">${group.losses}${wdlLabel.L}</span>
+        </div>
+        <div class="ti-impact-winrate">${group.winRate}%<span class="lbl" data-en=" win rate" data-ko=" 승률">${isKorean ? ' 승률' : ' win rate'}</span></div>
+        <div class="ti-impact-avg-row">
+          <div class="ti-impact-avg-item">
+            <b>${group.goalsForAvg}</b>
+            <span class="lbl" data-en="Goals/gm" data-ko="경기당 득점">${isKorean ? '경기당 득점' : 'Goals/gm'}</span>
+          </div>
+          <div class="ti-impact-avg-item">
+            <b>${group.goalsAgainstAvg}</b>
+            <span class="lbl" data-en="Conceded/gm" data-ko="경기당 실점">${isKorean ? '경기당 실점' : 'Conceded/gm'}</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderKeyPlayerImpactCard() {
+    const candidates = (typeof computeKeyPlayerImpactCandidates === 'function') ? computeKeyPlayerImpactCandidates() : [];
+    if (!candidates.length) {
+      return `
+        <div class="ti-card ti-impact-card" id="teamInfoImpactCard">
+          <div class="ti-card-title lbl" data-en="Key Player Impact" data-ko="핵심 선수 영향도">${isKorean ? '핵심 선수 영향도' : 'Key Player Impact'}</div>
+          <div class="ti-appear-empty lbl" data-en="Not enough lineup data yet" data-ko="아직 비교할 만큼 라인업 데이터가 쌓이지 않았습니다">${isKorean ? '아직 비교할 만큼 라인업 데이터가 쌓이지 않았습니다' : 'Not enough lineup data yet'}</div>
+        </div>`;
+    }
+
+    if (selectedImpactPlayerNumber === null || !candidates.some(c => c.number === selectedImpactPlayerNumber)) {
+      selectedImpactPlayerNumber = candidates[0].number;
+    }
+    const current = candidates.find(c => c.number === selectedImpactPlayerNumber);
+
+    const chipsHtml = candidates.map(c => {
+      const name = isKorean ? c.nameKo : c.nameEn;
+      const isActive = c.number === selectedImpactPlayerNumber;
+      const photo = c.photoSrc
+        ? `<img class="ti-impact-chip-photo" src="${c.photoSrc}" alt="${c.nameEn}">`
+        : `<div class="ti-impact-chip-photo ti-impact-chip-photo-placeholder">👤</div>`;
+      const scoreSign = c.impactScore > 0 ? '+' : '';
+      const scoreClass = c.impactScore > 0 ? 'ti-impact-chip-score-pos' : (c.impactScore < 0 ? 'ti-impact-chip-score-neg' : '');
+      return `
+        <div class="ti-impact-chip${isActive ? ' ti-impact-chip-active' : ''}" data-player-number="${c.number}">
+          ${photo}
+          <span class="ti-impact-chip-name lbl" data-en="${c.nameEn}" data-ko="${c.nameKo}">${name}</span>
+          <span class="ti-impact-chip-score ${scoreClass}">${scoreSign}${c.impactScore}</span>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="ti-card ti-impact-card" id="teamInfoImpactCard">
+        <div class="ti-card-title lbl" data-en="Key Player Impact" data-ko="핵심 선수 영향도">${isKorean ? '핵심 선수 영향도' : 'Key Player Impact'}</div>
+        <div class="ti-gk-card-note lbl" data-en="Ranked by impact — points/game with the player starting vs. not featuring at all" data-ko="영향력(선발 출전 시·결장 시 경기당 승점 차이) 높은 순">${isKorean ? '영향력(선발 출전 시·결장 시 경기당 승점 차이) 높은 순' : 'Ranked by impact — points/game with the player starting vs. not featuring at all'}</div>
+        <div class="ti-impact-chip-row">${chipsHtml}</div>
+        <div class="ti-impact-compare">
+          ${impactStatColHtml('선발 출전 시', 'Starting', current.impact.with, 'ti-impact-col-with')}
+          <div class="ti-impact-vs">VS</div>
+          ${impactStatColHtml('결장 시', 'Absent', current.impact.without, 'ti-impact-col-without')}
+        </div>
+      </div>`;
+  }
+
+  document.addEventListener('click', function(event) {
+    const chip = event.target.closest('.ti-impact-chip');
+    if (chip && chip.dataset.playerNumber) {
+      selectedImpactPlayerNumber = parseInt(chip.dataset.playerNumber, 10);
+      const el = document.getElementById('teamInfoImpactCard');
+      if (el) el.outerHTML = renderKeyPlayerImpactCard();
+    }
+  });
+
   // ===== 치주물루 팀 정보 페이지의 "득점 순위" 섹션 (선수단 ↔ 상대전적 사이) =====
   function renderTeamScorersTab() {
     const el = document.getElementById('teamInfoScorersTab');
     if (!el) return;
-    el.innerHTML = buildTeamScorerCardsHtml('Chizumulu United FC', '치주물루 유나이티드 FC') + renderGoalkeeperRecordCard() + renderAppearanceStatsCard();
+    el.innerHTML = buildTeamScorerCardsHtml('Chizumulu United FC', '치주물루 유나이티드 FC')
+      + renderGoalkeeperRecordCard()
+      + renderAppearanceStatsCard()
+      + renderGoalsByPositionCard()
+      + renderKeyPlayerImpactCard();
   }
 
   function renderTeamStaffTab() {
@@ -3437,6 +3623,11 @@
   function collectTeamStats() {
     const matchLog = buildTeamMatchLog();
 
+    // 리그 평균 경기당 득점 (공격/수비 지수의 기준선 = 100%)
+    let totalGoals = 0, totalGames = 0;
+    leagueData.forEach(t => { totalGoals += (t.goalsFor || 0); totalGames += (t.played || 0); });
+    const leagueAvgGpg = totalGames > 0 ? totalGoals / totalGames : 0;
+
     return leagueData.map(team => {
       const pts = (team.won * 3) + (team.drawn * 1);
       const denom = Math.pow(team.goalsFor, 1.072388) + Math.pow(team.goalsAgainst, 1.127248);
@@ -3451,6 +3642,16 @@
       const unbeatenStreak = trailingStreak(matches, m => m.result !== 'L');
       const scoringStreak = trailingStreak(matches, m => m.gf > 0);
       const concedingStreak = trailingStreak(matches, m => m.ga > 0);
+
+      // 공격/수비 지수: 리그 평균 경기당 득점을 100%로 놓고, 이 팀의 득점력/수비력이
+      // 평균 대비 몇 %인지를 나타냅니다. 두 지표 모두 "높을수록 강함"으로 방향을 통일했습니다.
+      const gfPerGame = team.played > 0 ? team.goalsFor / team.played : 0;
+      const gaPerGame = team.played > 0 ? team.goalsAgainst / team.played : 0;
+      const attackIndex = (team.played > 0 && leagueAvgGpg > 0) ? (gfPerGame / leagueAvgGpg) * 100 : 0;
+      const defensePerfect = team.played > 0 && team.goalsAgainst === 0;
+      const defenseIndex = defensePerfect
+        ? 999 // 무실점 팀은 항상 최상위로 정렬되도록 큰 값을 부여 (표시할 때는 "무실점" 배지로 대체)
+        : ((team.played > 0 && leagueAvgGpg > 0) ? (leagueAvgGpg / gaPerGame) * 100 : 0);
 
       return {
         nameKo: team.nameKo,
@@ -3468,6 +3669,9 @@
         ppg: team.played > 0 ? pts / team.played : 0,
         pythagPoints: pythagPoints,
         pythagDiff: pts - pythagPoints,
+        attackIndex: attackIndex,
+        defenseIndex: defenseIndex,
+        defensePerfect: defensePerfect,
         winStreak: winStreak,
         lossStreak: lossStreak,
         drawStreak: drawStreak,
@@ -3493,6 +3697,8 @@
       else if (statType === 'fts') currentValue = team.failedToScore;
       else if (statType === 'ppg') currentValue = team.ppg;
       else if (statType === 'pythag') currentValue = team.pythagPoints;
+      else if (statType === 'attackIdx') currentValue = team.attackIndex;
+      else if (statType === 'defenseIdx') currentValue = team.defenseIndex;
       else if (statType === 'streakWin') currentValue = team.winStreak;
       else if (statType === 'streakLoss') currentValue = team.lossStreak;
       else if (statType === 'streakDraw') currentValue = team.drawStreak;
@@ -3581,6 +3787,23 @@
         valTd2.style.color = diff > 0.05 ? 'var(--color-teal)' : (diff < -0.05 ? 'var(--color-red)' : 'var(--color-text-faint)');
         valTd2.textContent = (diff > 0 ? '+' : '') + diff.toFixed(1);
         tr.appendChild(valTd2);
+      } else if (statType === 'attackIdx') {
+        const valTd = document.createElement('td');
+        valTd.className = 'stat-val';
+        valTd.textContent = `${Math.round(team.attackIndex)}%`;
+        valTd.style.color = team.attackIndex > 105 ? 'var(--color-teal)' : (team.attackIndex < 95 ? 'var(--color-red)' : 'var(--color-text-faint)');
+        tr.appendChild(valTd);
+      } else if (statType === 'defenseIdx') {
+        const valTd = document.createElement('td');
+        valTd.className = 'stat-val';
+        if (team.defensePerfect) {
+          valTd.textContent = isKorean ? '무실점' : 'Perfect';
+          valTd.style.color = 'var(--color-teal)';
+        } else {
+          valTd.textContent = `${Math.round(team.defenseIndex)}%`;
+          valTd.style.color = team.defenseIndex > 105 ? 'var(--color-teal)' : (team.defenseIndex < 95 ? 'var(--color-red)' : 'var(--color-text-faint)');
+        }
+        tr.appendChild(valTd);
       } else if (statType === 'streakWin') {
         const valTd = document.createElement('td');
         valTd.className = 'stat-val';
@@ -3625,6 +3848,8 @@
     statsData.fts = teams.slice().sort(function(a, b) { return (b.failedToScore - a.failedToScore) || teamMineFirst(a, b); });
     statsData.ppg = teams.slice().sort(function(a, b) { return (b.ppg - a.ppg) || teamMineFirst(a, b); });
     statsData.pythag = teams.slice().sort(function(a, b) { return (b.pythagPoints - a.pythagPoints) || teamMineFirst(a, b); });
+    statsData.attackIdx = teams.slice().sort(function(a, b) { return (b.attackIndex - a.attackIndex) || teamMineFirst(a, b); });
+    statsData.defenseIdx = teams.slice().sort(function(a, b) { return (b.defenseIndex - a.defenseIndex) || teamMineFirst(a, b); });
     statsData.streakWin = teams.slice().sort(function(a, b) { return (b.winStreak - a.winStreak) || teamMineFirst(a, b); });
     statsData.streakLoss = teams.slice().sort(function(a, b) { return (b.lossStreak - a.lossStreak) || teamMineFirst(a, b); });
     statsData.streakDraw = teams.slice().sort(function(a, b) { return (b.drawStreak - a.drawStreak) || teamMineFirst(a, b); });
@@ -3638,6 +3863,8 @@
     renderStatsTable('ftsBody', statsData.fts.slice(0, 5), 'fts');
     renderStatsTable('ppgBody', statsData.ppg.slice(0, 5), 'ppg');
     renderStatsTable('pythagBody', statsData.pythag.slice(0, 5), 'pythag');
+    renderStatsTable('attackIdxBody', statsData.attackIdx.slice(0, 5), 'attackIdx');
+    renderStatsTable('defenseIdxBody', statsData.defenseIdx.slice(0, 5), 'defenseIdx');
     renderStatsTable('streakWinBody', statsData.streakWin.slice(0, 5), 'streakWin');
     renderStatsTable('streakLossBody', statsData.streakLoss.slice(0, 5), 'streakLoss');
     renderStatsTable('streakDrawBody', statsData.streakDraw.slice(0, 5), 'streakDraw');
@@ -4583,6 +4810,14 @@
       titleKo: "피타고리안 승점 (전체)", titleEn: "PYTHAGOREAN POINTS (Full List)",
       header1Ko: "기대 승점", header1En: "EXPECTED",
       header2Ko: "실제 대비", header2En: "+/-",
+    },
+    attackIdx: {
+      titleKo: "공격 지수 (전체)", titleEn: "ATTACK INDEX (Full List)",
+      header1Ko: "공격 지수", header1En: "ATTACK INDEX",
+    },
+    defenseIdx: {
+      titleKo: "수비 지수 (전체)", titleEn: "DEFENSE INDEX (Full List)",
+      header1Ko: "수비 지수", header1En: "DEFENSE INDEX",
     },
     streakWin: {
       titleKo: "연승 (전체)", titleEn: "WINNING STREAK (Full List)",
