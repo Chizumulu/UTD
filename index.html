@@ -82,7 +82,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=0022">
+<link rel="stylesheet" href="style.css?v=0023">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -685,6 +685,48 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
     </div>
   </section>
+
+  <section class="ai-track-section" aria-live="polite">
+    <div class="stats-title advanced">
+      <span class="advanced-tag lbl" data-en="TRACK RECORD" data-ko="트랙레코드">트랙레코드</span>
+      <span class="lbl" data-en="AI PREDICTION ACCURACY" data-ko="AI 예측 성적표">AI 예측 성적표</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'aiTrackInfo')">ⓘ</span>
+      <div class="info-tooltip" id="aiTrackInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-en="For every match already played, we recompute what the Poisson model would have predicted using only the data available before that match, then compare it with the actual score. Opening-week matches (no prior data for either side) are shown but excluded from the accuracy stats." data-ko="이미 끝난 모든 경기에 대해, 그 경기가 열리기 전까지의 데이터만 가지고 포아송 모델이 뭐라고 예측했을지 재계산한 뒤 실제 스코어와 비교합니다. 두 팀 다 이전 경기 기록이 없는 개막 라운드는 표에는 나오지만 적중률 통계에서는 제외해요.">이미 끝난 모든 경기에 대해, 그 경기가 열리기 전까지의 데이터만 가지고 포아송 모델이 뭐라고 예측했을지 재계산한 뒤 실제 스코어와 비교합니다. 두 팀 다 이전 경기 기록이 없는 개막 라운드는 표에는 나오지만 적중률 통계에서는 제외해요.</span>
+      </div>
+    </div>
+    <p class="ai-track-note lbl" data-en="Recalculated automatically every time a new round's results are added — no manual logging needed." data-ko="새 라운드 결과가 추가될 때마다 자동으로 다시 계산돼요. 따로 기록할 필요 없어요.">새 라운드 결과가 추가될 때마다 자동으로 다시 계산돼요. 따로 기록할 필요 없어요.</p>
+    <div class="ai-track-summary" id="aiTrackSummary"></div>
+
+    <div class="ai-track-subtitle">
+      <span class="lbl" data-en="AUTO-CORRECTION" data-ko="자동 보정">자동 보정</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'aiTrackCorrectionInfo')">ⓘ</span>
+      <div class="info-tooltip" id="aiTrackCorrectionInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-en="Compares expected goals vs actual goals across completed matches and nudges future predictions (this section, the Monte Carlo simulation, and next-match cards) accordingly. Turns on automatically once enough matches build up, and the adjustment is capped to avoid overreacting to a small sample." data-ko="완료된 경기들의 예상 득점과 실제 득점을 비교해서, 앞으로의 예측(이 섹션, 몬테카를로 시뮬레이션, 다음 경기 카드)에 그 차이만큼 자동으로 반영합니다. 표본이 충분히 쌓이면 자동으로 켜지고, 적은 표본에 과하게 휘둘리지 않도록 보정 폭에는 상한이 있어요.">완료된 경기들의 예상 득점과 실제 득점을 비교해서, 앞으로의 예측(이 섹션, 몬테카를로 시뮬레이션, 다음 경기 카드)에 그 차이만큼 자동으로 반영합니다. 표본이 충분히 쌓이면 자동으로 켜지고, 적은 표본에 과하게 휘둘리지 않도록 보정 폭에는 상한이 있어요.</span>
+      </div>
+    </div>
+    <div class="ai-track-summary" id="aiTrackCorrectionSummary"></div>
+    <div class="ai-track-summary ai-track-summary-corrected" id="aiTrackCorrectedSummary"></div>
+
+    <div class="scroll-fade-wrap ai-track-fade" id="aiTrackTableFade">
+      <div class="table-wrap ai-track-table-wrap" id="aiTrackTableScroller">
+        <table class="stats-table ai-track-table">
+          <thead>
+            <tr>
+              <th class="lbl" data-en="WK" data-ko="주차">주차</th>
+              <th class="lbl" data-en="MATCH" data-ko="경기">경기</th>
+              <th class="lbl" data-en="AI PICK" data-ko="AI 예측">AI 예측</th>
+              <th class="lbl" data-en="ACTUAL" data-ko="실제 결과">실제 결과</th>
+              <th class="lbl" data-en="W/D/L" data-ko="승무패">승무패</th>
+              <th class="lbl" data-en="SCORE" data-ko="스코어">스코어</th>
+              <th class="lbl" data-en="GOAL ERR" data-ko="득점 오차">득점 오차</th>
+            </tr>
+          </thead>
+          <tbody id="aiTrackTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 </div>
 
 <div id="venuesView" style="display:none;">
@@ -903,7 +945,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
-<script src="data.js?v=0022"></script>
-<script src="app.js?v=0022"></script>
+<script src="data.js?v=0023"></script>
+<script src="app.js?v=0023"></script>
 </body>
 </html>

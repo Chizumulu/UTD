@@ -2210,6 +2210,60 @@ const HOME_ADVANTAGE = 1.365;
 const AWAY_DISADVANTAGE = 0.635;
 
 // ============================================================
+// AI 예측 자동 보정 (Auto-Correction)
+// ------------------------------------------------------------
+// AI 예측 성적표(computeAiPredictionTrackRecord)가 쌓아온 "기대 득점 vs 실제 득점"
+// 오차 패턴을 살펴서, 앞으로 열릴 경기 예측(predictSingleMatch, runMonteCarloSimulation)에
+// 자동으로 반영합니다. 예를 들어 실제 홈 득점이 모델 기대치보다 계속 높게 나오는
+// 패턴이 있으면 보정 계수가 1보다 커지면서 다음 예측의 홈 기대 득점을 그만큼
+// 끌어올립니다. 반대로 실제 득점이 모델보다 낮았다면 계수는 1보다 작아집니다.
+//
+// - 표본이 AUTO_CORRECTION_MIN_SAMPLES 경기 미만이면 보정을 적용하지 않습니다
+//   (초반 몇 경기만으로 보정하면 우연한 이상치에 흔들리기 쉬워서요).
+// - 보정 폭은 ±AUTO_CORRECTION_MAX_ADJUST 로 제한합니다(한두 경기의 튀는 결과로
+//   모델이 과도하게 휘둘리지 않도록 하는 안전장치입니다).
+// - computeAiPredictionTrackRecord는 각 라운드를 예측할 때 그 라운드 '직전'까지
+//   쌓인 오차만으로 보정 계수를 다시 계산(walk-forward)하므로, 트랙레코드 표에
+//   나오는 "보정 적용 시" 성적도 미래 결과를 미리 들여다보지 않은 정직한
+//   백테스트입니다.
+// ============================================================
+const AUTO_CORRECTION_MIN_SAMPLES = 8;
+const AUTO_CORRECTION_MAX_ADJUST = 0.2; // ±20%
+
+function clampCorrectionFactor(factor) {
+  return Math.min(1 + AUTO_CORRECTION_MAX_ADJUST, Math.max(1 - AUTO_CORRECTION_MAX_ADJUST, factor));
+}
+
+// totals: { expHome, actHome, expAway, actAway, n } 형태로, 지금까지 쌓인
+// "모델 기대 득점 합"과 "실제 득점 합"을 담습니다. n은 집계에 포함된 경기 수입니다
+// (개막 라운드처럼 양 팀 다 이전 데이터가 없던 경기는 애초에 집계에서 제외됩니다).
+function computeCorrectionFromTotals(totals) {
+  const n = totals ? totals.n : 0;
+  if (!totals || n < AUTO_CORRECTION_MIN_SAMPLES) {
+    return { homeFactor: 1, awayFactor: 1, n, active: false };
+  }
+  const rawHomeFactor = totals.expHome > 0 ? totals.actHome / totals.expHome : 1;
+  const rawAwayFactor = totals.expAway > 0 ? totals.actAway / totals.expAway : 1;
+  return {
+    homeFactor: clampCorrectionFactor(rawHomeFactor),
+    awayFactor: clampCorrectionFactor(rawAwayFactor),
+    n, active: true
+  };
+}
+
+// 지금 시점까지 쌓인 전체 경기 결과를 기준으로 한 "현재" 자동 보정 계수를 반환합니다.
+// predictSingleMatch / runMonteCarloSimulation처럼 앞으로 열릴 경기를 예측할 때 씁니다.
+// (computeAiPredictionTrackRecord가 라운드별로 walk-forward 계산을 하면서 얻은
+// 최신 누적치를 그대로 재사용합니다.)
+function getAutoCorrectionFactors() {
+  if (typeof computeAiPredictionTrackRecord !== 'function') {
+    return { homeFactor: 1, awayFactor: 1, n: 0, active: false };
+  }
+  const track = computeAiPredictionTrackRecord();
+  return track.currentCorrection || { homeFactor: 1, awayFactor: 1, n: 0, active: false };
+}
+
+// ============================================================
 // 팀별 홈/원정 스플릿 (computeHomeAwaySplit) 계산
 // ------------------------------------------------------------
 // roundsData(확정된 라운드)를 훑어서 특정 팀의 홈 성적과 원정 성적을
@@ -2392,6 +2446,8 @@ function runMonteCarloSimulation(iterations) {
   const N = iterations || 4000;
   const fixtures = generateRemainingFixtures();
   const { strengths, leagueAvgGoals } = computeTeamStrengths();
+  // AI 예측 성적표에 쌓인 오차 패턴을 남은 경기 시뮬레이션에도 그대로 반영합니다.
+  const correction = getAutoCorrectionFactors();
 
   const teams = leagueData.map(t => ({
     nameEn: t.nameEn,
@@ -2439,8 +2495,8 @@ function runMonteCarloSimulation(iterations) {
       const homeS = strengths[fx.home.nameEn];
       const awayS = strengths[fx.away.nameEn];
 
-      const homeExpected = leagueAvgGoals * homeS.attack * awayS.defense * HOME_ADVANTAGE;
-      const awayExpected = leagueAvgGoals * awayS.attack * homeS.defense * AWAY_DISADVANTAGE;
+      const homeExpected = leagueAvgGoals * homeS.attack * awayS.defense * HOME_ADVANTAGE * correction.homeFactor;
+      const awayExpected = leagueAvgGoals * awayS.attack * homeS.defense * AWAY_DISADVANTAGE * correction.awayFactor;
 
       const homeGoals = poissonRandom(homeExpected);
       const awayGoals = poissonRandom(awayExpected);
@@ -2503,7 +2559,11 @@ function runMonteCarloSimulation(iterations) {
   return {
     results,
     iterations: N,
-    remainingFixtureCount: fixtures.length
+    remainingFixtureCount: fixtures.length,
+    correctionApplied: correction.active,
+    homeCorrectionFactor: correction.homeFactor,
+    awayCorrectionFactor: correction.awayFactor,
+    correctionSampleSize: correction.n
   };
 }
 
@@ -2522,17 +2582,14 @@ function poissonPmf(k, lambda) {
   return p;
 }
 
-function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
-  const { strengths, leagueAvgGoals } = computeTeamStrengths();
-  const homeS = strengths[homeEn] || { attack: 1, defense: 1 };
-  const awayS = strengths[awayEn] || { attack: 1, defense: 1 };
-
-  const expectedHomeGoals = leagueAvgGoals * homeS.attack * awayS.defense * HOME_ADVANTAGE;
-  const expectedAwayGoals = leagueAvgGoals * awayS.attack * homeS.defense * AWAY_DISADVANTAGE;
-
-  const MAX_GOALS = 8; // 8골 초과 스코어는 확률이 무시 가능한 수준이라 컷오프
+// 기대 득점(람다) 두 개를 넣으면 포아송 분포로 승/무/패 확률과 가장 유력한
+// 스코어를 결정론적으로 계산해줍니다. predictSingleMatch와
+// computeAiPredictionTrackRecord가 공통으로 사용하는 핵심 계산 로직입니다.
+function computePoissonGrid(expectedHomeGoals, expectedAwayGoals, maxGoals) {
+  const MAX_GOALS = maxGoals || 8; // 8골 초과 스코어는 확률이 무시 가능한 수준이라 컷오프
   const grid = [];
   let homeWinP = 0, drawP = 0, awayWinP = 0;
+  let bestP = -1, bestH = 0, bestA = 0;
   for (let h = 0; h <= MAX_GOALS; h++) {
     const ph = poissonPmf(h, expectedHomeGoals);
     for (let a = 0; a <= MAX_GOALS; a++) {
@@ -2541,27 +2598,54 @@ function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
       if (h > a) homeWinP += p;
       else if (h < a) awayWinP += p;
       else drawP += p;
+      if (p > bestP) { bestP = p; bestH = h; bestA = a; }
     }
   }
   const total = homeWinP + drawP + awayWinP || 1;
-  const homeWinPct = (homeWinP / total) * 100;
-  const drawPct = (drawP / total) * 100;
-  const awayWinPct = (awayWinP / total) * 100;
+  return {
+    grid, total,
+    homeWinPct: (homeWinP / total) * 100,
+    drawPct: (drawP / total) * 100,
+    awayWinPct: (awayWinP / total) * 100,
+    bestH, bestA
+  };
+}
 
-  grid.sort((a, b) => b.p - a.p);
-  const topScorelines = grid.slice(0, 3).map(g => ({
+function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
+  const { strengths, leagueAvgGoals } = computeTeamStrengths();
+  const homeS = strengths[homeEn] || { attack: 1, defense: 1 };
+  const awayS = strengths[awayEn] || { attack: 1, defense: 1 };
+
+  const rawExpectedHomeGoals = leagueAvgGoals * homeS.attack * awayS.defense * HOME_ADVANTAGE;
+  const rawExpectedAwayGoals = leagueAvgGoals * awayS.attack * homeS.defense * AWAY_DISADVANTAGE;
+
+  // AI 예측 성적표에 쌓인 "기대 득점 vs 실제 득점" 오차 패턴을 반영해
+  // 기대 득점을 자동으로 보정합니다(표본이 부족하면 보정 계수는 1로 유지됩니다).
+  const correction = getAutoCorrectionFactors();
+  const expectedHomeGoals = rawExpectedHomeGoals * correction.homeFactor;
+  const expectedAwayGoals = rawExpectedAwayGoals * correction.awayFactor;
+
+  const { grid, total, homeWinPct, drawPct, awayWinPct } = computePoissonGrid(expectedHomeGoals, expectedAwayGoals);
+
+  const sortedGrid = grid.slice().sort((a, b) => b.p - a.p);
+  const topScorelines = sortedGrid.slice(0, 3).map(g => ({
     home: g.h, away: g.a, pct: (g.p / total) * 100
   }));
 
   return {
     expectedHomeGoals, expectedAwayGoals,
+    rawExpectedHomeGoals, rawExpectedAwayGoals,
     homeWinPct, drawPct, awayWinPct,
     topScorelines,
     predictedHomeGoals: topScorelines[0].home,
     predictedAwayGoals: topScorelines[0].away,
     homeAttack: homeS.attack, homeDefense: homeS.defense,
     awayAttack: awayS.attack, awayDefense: awayS.defense,
-    leagueAvgGoals
+    leagueAvgGoals,
+    correctionApplied: correction.active,
+    homeCorrectionFactor: correction.homeFactor,
+    awayCorrectionFactor: correction.awayFactor,
+    correctionSampleSize: correction.n
   };
 }
 
@@ -2656,4 +2740,183 @@ function buildAiPredictionNarrative(params) {
     : `Most likely scoreline: ${homeName} ${pred.predictedHomeGoals} - ${pred.predictedAwayGoals} ${awayName}.`);
 
   return lines;
+}
+
+// ============================================================
+// AI 예측 적중률 트래커 (computeAiPredictionTrackRecord)
+// ------------------------------------------------------------
+// "지금까지 쌓인 실제 결과를 바탕으로, 그 경기가 열리기 '직전'까지의
+// 데이터만 가지고 predictSingleMatch와 동일한 포아송 모델을 돌렸다면
+// 어떤 예측이 나왔을까"를 라운드 순서대로 재현(백테스트)한 뒤,
+// 실제 스코어와 비교해 적중률을 계산합니다.
+//
+// 별도 저장소 없이도 매번 roundsData 전체를 훑어 재계산하기 때문에,
+// 새 라운드 결과가 roundsData에 추가되기만 하면 트랙레코드도 자동으로
+// 함께 늘어납니다.
+//
+// 반환값:
+//   rows: 경기별 { weekNum, home/away 정보, 예측 확률/스코어,
+//                  실제 스코어, wdlCorrect, exactScoreCorrect,
+//                  goalErrorHome/Away, lowConfidence }
+//   summary: 표본이 아직 부족한(=두 팀 다 이전 경기 데이터가 0경기인)
+//            개막 라운드를 제외한 통계
+//   summaryAll: 개막 라운드까지 포함한 전체 통계(참고용)
+// ============================================================
+function computeAiPredictionTrackRecord() {
+  const state = {};
+  leagueData.forEach(t => { state[t.nameEn] = { played: 0, gf: 0, ga: 0 }; });
+
+  const roundKeys = Object.keys(roundsData).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  });
+
+  function strengthsFromState() {
+    let totalGoals = 0, totalGames = 0;
+    Object.values(state).forEach(s => { totalGoals += s.gf; totalGames += s.played; });
+    const leagueAvgGoals = totalGames > 0 ? totalGoals / totalGames : 1.3;
+    const strengths = {};
+    Object.keys(state).forEach(nameEn => {
+      const s = state[nameEn];
+      const gfpg = s.played > 0 ? s.gf / s.played : leagueAvgGoals;
+      const gapg = s.played > 0 ? s.ga / s.played : leagueAvgGoals;
+      strengths[nameEn] = {
+        attack: Math.max(0.25, gfpg / leagueAvgGoals),
+        defense: Math.max(0.25, gapg / leagueAvgGoals)
+      };
+    });
+    return { strengths, leagueAvgGoals };
+  }
+
+  const rows = [];
+  // 자동 보정 계수를 그 라운드 '직전'까지 쌓인 오차만으로 다시 계산하기 위한
+  // 누적치입니다(walk-forward). lowConfidence 경기(개막 라운드처럼 양 팀 다
+  // 데이터가 없던 경기)는 모델이 자기 자신을 보정할 근거로 삼기엔 신뢰도가
+  // 낮으므로 애초에 집계에서 제외합니다.
+  const correctionTotals = { expHome: 0, actHome: 0, expAway: 0, actAway: 0, n: 0 };
+
+  roundKeys.forEach((roundKey, idx) => {
+    const weekNum = idx + 1;
+    const matches = roundsData[roundKey] || [];
+    // 이 라운드가 시작되기 '직전'까지 누적된 데이터로 강도 지수를 계산합니다.
+    const { strengths, leagueAvgGoals } = strengthsFromState();
+    // 이 라운드를 예측하는 시점의 자동 보정 계수 — 역시 이 라운드 이전까지
+    // 쌓인 오차만 사용하므로 미래 결과를 미리 들여다보지 않습니다.
+    const correctionForThisRound = computeCorrectionFromTotals(correctionTotals);
+
+    const roundRows = [];
+
+    matches.forEach(m => {
+      if (m.byeKo || m.byeEn) return;
+      if (!m.homeEn || !m.awayEn) return;
+      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+
+      const homeHasHistory = state[m.homeEn] && state[m.homeEn].played > 0;
+      const awayHasHistory = state[m.awayEn] && state[m.awayEn].played > 0;
+      // 두 팀 다 이전 경기 기록이 전혀 없는 개막 라운드는 사실상
+      // "홈 어드밴티지만 반영된" 예측이라 통계에서는 참고용으로만 취급합니다.
+      const lowConfidence = !(homeHasHistory && awayHasHistory);
+
+      const homeS = strengths[m.homeEn] || { attack: 1, defense: 1 };
+      const awayS = strengths[m.awayEn] || { attack: 1, defense: 1 };
+
+      const expectedHomeGoals = leagueAvgGoals * homeS.attack * awayS.defense * HOME_ADVANTAGE;
+      const expectedAwayGoals = leagueAvgGoals * awayS.attack * homeS.defense * AWAY_DISADVANTAGE;
+
+      const raw = computePoissonGrid(expectedHomeGoals, expectedAwayGoals);
+      const actualResult = m.homeScore > m.awayScore ? 'H' : (m.homeScore < m.awayScore ? 'A' : 'D');
+      let predictedResult = 'D';
+      if (raw.homeWinPct >= raw.drawPct && raw.homeWinPct >= raw.awayWinPct) predictedResult = 'H';
+      else if (raw.awayWinPct >= raw.drawPct && raw.awayWinPct >= raw.homeWinPct) predictedResult = 'A';
+
+      // 같은 경기를 그 시점까지 쌓인 자동 보정 계수로 다시 예측했다면 어땠을지도
+      // 함께 계산해서, 트랙레코드에서 "보정 적용 시" 성적을 비교할 수 있게 합니다.
+      const correctedExpectedHomeGoals = expectedHomeGoals * correctionForThisRound.homeFactor;
+      const correctedExpectedAwayGoals = expectedAwayGoals * correctionForThisRound.awayFactor;
+      const corrected = computePoissonGrid(correctedExpectedHomeGoals, correctedExpectedAwayGoals);
+      let correctedPredictedResult = 'D';
+      if (corrected.homeWinPct >= corrected.drawPct && corrected.homeWinPct >= corrected.awayWinPct) correctedPredictedResult = 'H';
+      else if (corrected.awayWinPct >= corrected.drawPct && corrected.awayWinPct >= corrected.homeWinPct) correctedPredictedResult = 'A';
+
+      roundRows.push({
+        roundKey, weekNum,
+        homeEn: m.homeEn, homeKo: m.homeKo, awayEn: m.awayEn, awayKo: m.awayKo,
+        homeScore: m.homeScore, awayScore: m.awayScore,
+        predictedHomeGoals: raw.bestH, predictedAwayGoals: raw.bestA,
+        homeWinPct: raw.homeWinPct, drawPct: raw.drawPct, awayWinPct: raw.awayWinPct,
+        predictedResult, actualResult,
+        wdlCorrect: predictedResult === actualResult,
+        exactScoreCorrect: raw.bestH === m.homeScore && raw.bestA === m.awayScore,
+        expectedHomeGoals, expectedAwayGoals,
+        goalErrorHome: Math.abs(expectedHomeGoals - m.homeScore),
+        goalErrorAway: Math.abs(expectedAwayGoals - m.awayScore),
+        lowConfidence,
+        // ----- 자동 보정 적용 시 (walk-forward, 이 라운드 이전 데이터만 사용) -----
+        correctionActive: correctionForThisRound.active,
+        homeCorrectionFactor: correctionForThisRound.homeFactor,
+        awayCorrectionFactor: correctionForThisRound.awayFactor,
+        correctedPredictedHomeGoals: corrected.bestH,
+        correctedPredictedAwayGoals: corrected.bestA,
+        correctedPredictedResult,
+        correctedWdlCorrect: correctedPredictedResult === actualResult,
+        correctedExactScoreCorrect: corrected.bestH === m.homeScore && corrected.bestA === m.awayScore,
+        correctedGoalErrorHome: Math.abs(correctedExpectedHomeGoals - m.homeScore),
+        correctedGoalErrorAway: Math.abs(correctedExpectedAwayGoals - m.awayScore)
+      });
+    });
+
+    rows.push(...roundRows);
+
+    // 예측이 끝난 뒤에야 이번 라운드 결과를 팀 상태와 보정 누적치에 반영합니다.
+    // (다음 라운드부터는 이 결과까지 포함해 다시 예측 + 다시 보정)
+    roundRows.forEach(r => {
+      if (r.lowConfidence) return;
+      correctionTotals.expHome += r.expectedHomeGoals;
+      correctionTotals.actHome += r.homeScore;
+      correctionTotals.expAway += r.expectedAwayGoals;
+      correctionTotals.actAway += r.awayScore;
+      correctionTotals.n += 1;
+    });
+    matches.forEach(m => {
+      if (m.byeKo || m.byeEn) return;
+      if (!m.homeEn || !m.awayEn) return;
+      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+      const home = state[m.homeEn], away = state[m.awayEn];
+      if (!home || !away) return;
+      home.played += 1; away.played += 1;
+      home.gf += m.homeScore; home.ga += m.awayScore;
+      away.gf += m.awayScore; away.ga += m.homeScore;
+    });
+  });
+
+  function summarize(list, corrected) {
+    const n = list.length;
+    if (!n) return null;
+    const wdlKey = corrected ? 'correctedWdlCorrect' : 'wdlCorrect';
+    const exactKey = corrected ? 'correctedExactScoreCorrect' : 'exactScoreCorrect';
+    const errHomeKey = corrected ? 'correctedGoalErrorHome' : 'goalErrorHome';
+    const errAwayKey = corrected ? 'correctedGoalErrorAway' : 'goalErrorAway';
+    const wdlCorrectCount = list.filter(r => r[wdlKey]).length;
+    const exactCount = list.filter(r => r[exactKey]).length;
+    const avgGoalError = list.reduce((sum, r) => sum + (r[errHomeKey] + r[errAwayKey]) / 2, 0) / n;
+    return {
+      n,
+      wdlAccuracyPct: (wdlCorrectCount / n) * 100,
+      exactScoreAccuracyPct: (exactCount / n) * 100,
+      avgGoalError
+    };
+  }
+
+  const confidentRows = rows.filter(r => !r.lowConfidence);
+
+  return {
+    rows,
+    summary: summarize(confidentRows, false),
+    summaryAll: summarize(rows, false),
+    // "만약 자동 보정을 계속 켜뒀다면" 시나리오의 walk-forward 백테스트 성적.
+    summaryCorrected: summarize(confidentRows, true),
+    summaryAllCorrected: summarize(rows, true),
+    // 지금 이 순간, 앞으로의 예측(predictSingleMatch/runMonteCarloSimulation)에
+    // 실제로 적용될 최신 보정 계수입니다(전체 데이터 기준).
+    currentCorrection: computeCorrectionFromTotals(correctionTotals)
+  };
 }

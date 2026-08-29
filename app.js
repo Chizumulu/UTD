@@ -252,6 +252,7 @@
       renderRankHistoryChart();
       renderPointsHistoryChart();
       renderMagicNumberStats();
+      renderAiTrackRecord();
     } else if (view === 'venues') {
       if (venuesView) venuesView.style.display = '';
       if (venuesBtn) venuesBtn.classList.add('active');
@@ -337,6 +338,156 @@
 
     attachImageFallback();
     refreshScrollFadeHints();
+  }
+
+  // ===== AI 예측 성적표 (Prediction Track Record / Backtest) =====
+  // 이미 끝난 모든 경기에 대해, 그 경기 직전까지의 데이터만으로 AI가
+  // 예측했다면 어떤 결과가 나왔을지 재계산(computeAiPredictionTrackRecord,
+  // data.js)한 뒤 실제 스코어와 비교해서 보여줍니다.
+  function renderAiTrackRecord() {
+    const summaryEl = document.getElementById('aiTrackSummary');
+    const bodyEl = document.getElementById('aiTrackTableBody');
+    if (!summaryEl || !bodyEl) return;
+    if (typeof computeAiPredictionTrackRecord !== 'function') return;
+
+    const track = computeAiPredictionTrackRecord();
+    const s = track.summary;
+
+    function fmtPct(v) { return v.toFixed(1) + '%'; }
+
+    if (!s) {
+      summaryEl.innerHTML = `<div class="ai-track-empty lbl" data-en="Not enough completed matches yet to score prediction accuracy." data-ko="아직 적중률을 계산할 만큼 경기가 쌓이지 않았어요.">${isKorean ? '아직 적중률을 계산할 만큼 경기가 쌓이지 않았어요.' : 'Not enough completed matches yet to score prediction accuracy.'}</div>`;
+      bodyEl.innerHTML = '';
+      return;
+    }
+
+    summaryEl.innerHTML = `
+      <div class="ai-track-chip">
+        <span class="ai-track-chip-val">${fmtPct(s.wdlAccuracyPct)}</span>
+        <span class="ai-track-chip-lbl lbl" data-en="Win/Draw/Loss accuracy" data-ko="승무패 적중률">${isKorean ? '승무패 적중률' : 'Win/Draw/Loss accuracy'}</span>
+      </div>
+      <div class="ai-track-chip">
+        <span class="ai-track-chip-val">${fmtPct(s.exactScoreAccuracyPct)}</span>
+        <span class="ai-track-chip-lbl lbl" data-en="Exact score accuracy" data-ko="정확한 스코어 적중률">${isKorean ? '정확한 스코어 적중률' : 'Exact score accuracy'}</span>
+      </div>
+      <div class="ai-track-chip">
+        <span class="ai-track-chip-val">${s.avgGoalError.toFixed(2)}</span>
+        <span class="ai-track-chip-lbl lbl" data-en="Avg. goal error (xG vs actual)" data-ko="평균 득점 오차(예상-실제)">${isKorean ? '평균 득점 오차(예상-실제)' : 'Avg. goal error (xG vs actual)'}</span>
+      </div>
+      <div class="ai-track-chip ai-track-chip-n">
+        <span class="ai-track-chip-val">${s.n}</span>
+        <span class="ai-track-chip-lbl lbl" data-en="Matches scored" data-ko="집계 경기 수">${isKorean ? '집계 경기 수' : 'Matches scored'}</span>
+      </div>
+    `;
+
+    renderAiAutoCorrection(track, s);
+
+    const wdlLabel = { H: isKorean ? '홈승' : 'Home', D: isKorean ? '무승부' : 'Draw', A: isKorean ? '원정승' : 'Away' };
+    const rowsSorted = track.rows.slice().sort((a, b) => b.weekNum - a.weekNum);
+
+    bodyEl.innerHTML = rowsSorted.map(r => {
+      const homeName = isKorean ? r.homeKo : r.homeEn;
+      const awayName = isKorean ? r.awayKo : r.awayEn;
+      const homeShort = homeName.split(' ')[0];
+      const awayShort = awayName.split(' ')[0];
+      const lowConfTag = r.lowConfidence
+        ? `<span class="ai-track-lowconf lbl" data-en="early season" data-ko="개막 초반">${isKorean ? '개막 초반' : 'early season'}</span>`
+        : '';
+
+      return `
+        <tr class="${r.lowConfidence ? 'ai-track-row-lowconf' : ''}">
+          <td class="ai-track-week">${r.weekNum}</td>
+          <td class="ai-track-match">${homeShort} vs ${awayShort}${lowConfTag}</td>
+          <td class="ai-track-pick">${wdlLabel[r.predictedResult]} · ${r.predictedHomeGoals}-${r.predictedAwayGoals}</td>
+          <td class="ai-track-actual">${wdlLabel[r.actualResult]} · ${r.homeScore}-${r.awayScore}</td>
+          <td class="ai-track-check"><span class="ai-track-badge ${r.wdlCorrect ? 'ai-track-badge-ok' : 'ai-track-badge-no'}">${r.wdlCorrect ? '✓' : '✗'}</span></td>
+          <td class="ai-track-check"><span class="ai-track-badge ${r.exactScoreCorrect ? 'ai-track-badge-ok' : 'ai-track-badge-no'}">${r.exactScoreCorrect ? '✓' : '✗'}</span></td>
+          <td class="ai-track-err">${((r.goalErrorHome + r.goalErrorAway) / 2).toFixed(2)}</td>
+        </tr>`;
+    }).join('');
+
+    refreshScrollFadeHints();
+  }
+
+  // ===== AI 자동 보정 (Auto-Correction) 요약 렌더링 =====
+  // computeAiPredictionTrackRecord()가 함께 계산해주는 두 가지를 보여줍니다.
+  // 1) currentCorrection: 지금 이 순간 앞으로의 예측(경기 예측 카드, 몬테카를로
+  //    시뮬레이션)에 실제로 적용되는 홈/원정 보정 계수.
+  // 2) summaryCorrected: "만약 자동 보정을 계속 켜뒀다면" 라운드별로 다시 계산한
+  //    walk-forward 백테스트 성적 — 위쪽에 이미 표시된 보정 없는 성적(rawSummary)과
+  //    나란히 비교해서, 보정이 실제로 도움이 되고 있는지 눈으로 확인할 수 있습니다.
+  function renderAiAutoCorrection(track, rawSummary) {
+    const corrEl = document.getElementById('aiTrackCorrectionSummary');
+    const compEl = document.getElementById('aiTrackCorrectedSummary');
+    if (!corrEl || !compEl) return;
+
+    const c = track.currentCorrection;
+    const sc = track.summaryCorrected;
+
+    function fmtFactor(f) {
+      const pct = Math.round((f - 1) * 100);
+      const sign = pct > 0 ? '+' : '';
+      return `×${f.toFixed(2)} (${sign}${pct}%)`;
+    }
+    // invert=true는 "평균 득점 오차"처럼 값이 낮을수록 좋은 지표용입니다
+    // (그런 지표는 감소가 초록색 개선 표시가 되어야 합니다).
+    function deltaHtml(correctedVal, rawVal, isPct, invert) {
+      const diff = correctedVal - rawVal;
+      const improved = invert ? diff < -0.05 : diff > 0.05;
+      const worsened = invert ? diff > 0.05 : diff < -0.05;
+      const cls = improved ? 'ai-track-delta-up' : (worsened ? 'ai-track-delta-down' : 'ai-track-delta-flat');
+      const sign = diff > 0 ? '+' : '';
+      const txt = isPct ? `${sign}${diff.toFixed(1)}%p` : `${sign}${diff.toFixed(2)}`;
+      return `<span class="ai-track-delta ${cls}">${txt}</span>`;
+    }
+
+    if (!c || !c.active) {
+      const minSamples = (typeof AUTO_CORRECTION_MIN_SAMPLES === 'number') ? AUTO_CORRECTION_MIN_SAMPLES : 8;
+      const soFar = c ? c.n : 0;
+      const msgKo = `자동 보정은 최소 ${minSamples}경기가 쌓이면 켜져요. 지금까지 ${soFar}경기 집계됨 — 조금만 더 기다려주세요.`;
+      const msgEn = `Auto-correction turns on once at least ${minSamples} matches build up (${soFar} so far).`;
+      corrEl.innerHTML = `<div class="ai-track-empty lbl" data-en="${msgEn}" data-ko="${msgKo}">${isKorean ? msgKo : msgEn}</div>`;
+      compEl.innerHTML = '';
+      return;
+    }
+
+    corrEl.innerHTML = `
+      <div class="ai-track-chip ai-track-chip-correction">
+        <span class="ai-track-chip-val">${fmtFactor(c.homeFactor)}</span>
+        <span class="ai-track-chip-lbl lbl" data-en="Home goal correction" data-ko="홈 득점 보정">${isKorean ? '홈 득점 보정' : 'Home goal correction'}</span>
+      </div>
+      <div class="ai-track-chip ai-track-chip-correction">
+        <span class="ai-track-chip-val">${fmtFactor(c.awayFactor)}</span>
+        <span class="ai-track-chip-lbl lbl" data-en="Away goal correction" data-ko="원정 득점 보정">${isKorean ? '원정 득점 보정' : 'Away goal correction'}</span>
+      </div>
+      <div class="ai-track-chip ai-track-chip-correction ai-track-chip-n">
+        <span class="ai-track-chip-val">${c.n}</span>
+        <span class="ai-track-chip-lbl lbl" data-en="Matches used" data-ko="반영 표본 경기 수">${isKorean ? '반영 표본 경기 수' : 'Matches used'}</span>
+      </div>
+    `;
+
+    if (!sc || !rawSummary) {
+      compEl.innerHTML = '';
+      return;
+    }
+
+    compEl.innerHTML = `
+      <div class="ai-track-chip ai-track-chip-corrected">
+        <span class="ai-track-chip-val">${sc.wdlAccuracyPct.toFixed(1)}%</span>
+        ${deltaHtml(sc.wdlAccuracyPct, rawSummary.wdlAccuracyPct, true)}
+        <span class="ai-track-chip-lbl lbl" data-en="W/D/L accuracy w/ correction" data-ko="보정 적용 시 승무패 적중률">${isKorean ? '보정 적용 시 승무패 적중률' : 'W/D/L accuracy w/ correction'}</span>
+      </div>
+      <div class="ai-track-chip ai-track-chip-corrected">
+        <span class="ai-track-chip-val">${sc.exactScoreAccuracyPct.toFixed(1)}%</span>
+        ${deltaHtml(sc.exactScoreAccuracyPct, rawSummary.exactScoreAccuracyPct, true)}
+        <span class="ai-track-chip-lbl lbl" data-en="Exact score accuracy w/ correction" data-ko="보정 적용 시 정확한 스코어 적중률">${isKorean ? '보정 적용 시 정확한 스코어 적중률' : 'Exact score accuracy w/ correction'}</span>
+      </div>
+      <div class="ai-track-chip ai-track-chip-corrected">
+        <span class="ai-track-chip-val">${sc.avgGoalError.toFixed(2)}</span>
+        ${deltaHtml(sc.avgGoalError, rawSummary.avgGoalError, false, true)}
+        <span class="ai-track-chip-lbl lbl" data-en="Avg. goal error w/ correction" data-ko="보정 적용 시 평균 득점 오차">${isKorean ? '보정 적용 시 평균 득점 오차' : 'Avg. goal error w/ correction'}</span>
+      </div>
+    `;
   }
 
   // ===== 득점 순위 렌더링 (Top Scorers) =====
@@ -781,6 +932,12 @@
     const scoreLabelEn = `Predicted score ${homeShort} ${scoreTxt} ${awayShort}`;
     const scoreLabelKo = `예상 스코어 ${homeShort} ${scoreTxt} ${awayShort}`;
 
+    // AI 예측 성적표에 쌓인 오차 패턴으로 자동 보정이 적용된 경우, 반영됐다는
+    // 사실을 짧게 알려줍니다(계수 자체는 트랙레코드 섹션에서 확인 가능).
+    const correctionNoteHtml = pred.correctionApplied
+      ? `<div class="ti-next-match-predict-correction lbl" data-en="Auto-corrected using past prediction errors" data-ko="지난 예측 오차를 반영해 자동 보정됨">${isKorean ? '지난 예측 오차를 반영해 자동 보정됨' : 'Auto-corrected using past prediction errors'}</div>`
+      : '';
+
     return `
       <div class="ti-next-match-predict">
         <div class="ti-next-match-predict-label lbl" data-en="Match Prediction (fun stat)" data-ko="경기 예측 (참고용)">${isKorean ? '경기 예측 (참고용)' : 'Match Prediction (fun stat)'}</div>
@@ -795,6 +952,7 @@
           <span class="ti-predict-pct ti-predict-pct-away"><b>${awayPct}%</b> ${awayShort}</span>
         </div>
         <div class="ti-next-match-predict-score lbl" data-en="${scoreLabelEn}" data-ko="${scoreLabelKo}">${isKorean ? scoreLabelKo : scoreLabelEn}</div>
+        ${correctionNoteHtml}
         <div class="ti-next-match-predict-note lbl" data-en="Based on recent form &amp; goal averages — just for fun, not a real forecast." data-ko="최근 폼과 득점 평균으로 계산한 참고용 수치예요. 통계적으로 정확하진 않아요.">${isKorean ? '최근 폼과 득점 평균으로 계산한 참고용 수치예요. 통계적으로 정확하진 않아요.' : "Based on recent form & goal averages — just for fun, not a real forecast."}</div>
       </div>`;
   }
@@ -5694,6 +5852,11 @@
       ? `예상 득점 ${pred.expectedHomeGoals.toFixed(2)} : ${pred.expectedAwayGoals.toFixed(2)}`
       : `Expected goals ${pred.expectedHomeGoals.toFixed(2)} : ${pred.expectedAwayGoals.toFixed(2)}`;
 
+    // AI 예측 성적표에 쌓인 오차 패턴으로 자동 보정이 적용됐다면 계수와 함께 알려줍니다.
+    const correctionLineHtml = pred.correctionApplied
+      ? `<div class="mc-ai-correction lbl" data-en="Auto-corrected from past prediction errors (home ×${pred.homeCorrectionFactor.toFixed(2)} / away ×${pred.awayCorrectionFactor.toFixed(2)}, n=${pred.correctionSampleSize})" data-ko="지난 예측 오차를 반영해 자동 보정됨(홈 ×${pred.homeCorrectionFactor.toFixed(2)} · 원정 ×${pred.awayCorrectionFactor.toFixed(2)}, 표본 ${pred.correctionSampleSize}경기)">${isKorean ? `지난 예측 오차를 반영해 자동 보정됨(홈 ×${pred.homeCorrectionFactor.toFixed(2)} · 원정 ×${pred.awayCorrectionFactor.toFixed(2)}, 표본 ${pred.correctionSampleSize}경기)` : `Auto-corrected from past prediction errors (home ×${pred.homeCorrectionFactor.toFixed(2)} / away ×${pred.awayCorrectionFactor.toFixed(2)}, n=${pred.correctionSampleSize})`}</div>`
+      : '';
+
     return `
       <div class="mc-ai-block">
         <div class="mc-ai-header">
@@ -5705,6 +5868,7 @@
         <ul class="mc-ai-text">
           ${narrative.map(l => `<li>${l}</li>`).join('')}
         </ul>
+        ${correctionLineHtml}
         <div class="mc-ai-disclaimer lbl" data-en="Auto-generated from this season's stats (Poisson model) — for fun, not a guarantee." data-ko="이번 시즌 스탯 기반 자동 계산(포아송 모델)이며, 참고용 예측일 뿐 결과를 보장하지 않습니다.">
           ${isKorean ? '이번 시즌 스탯 기반 자동 계산(포아송 모델)이며, 참고용 예측일 뿐 결과를 보장하지 않습니다.' : "Auto-generated from this season's stats (Poisson model) — for fun, not a guarantee."}
         </div>
@@ -5887,6 +6051,7 @@
       renderRankHistoryChart();
       renderPointsHistoryChart();
       renderMagicNumberStats();
+      renderAiTrackRecord();
     } else if (currentView === 'squad') {
       showTeamInfoForKey(currentTeamInfoKey);
     } else if (currentView === 'rounds') {
