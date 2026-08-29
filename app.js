@@ -381,6 +381,7 @@
     `;
 
     renderAiAutoCorrection(track, s);
+    renderAiDCCorrection(track);
 
     const wdlLabel = { H: isKorean ? '홈승' : 'Home', D: isKorean ? '무승부' : 'Draw', A: isKorean ? '원정승' : 'Away' };
     const rowsSorted = track.rows.slice().sort((a, b) => b.weekNum - a.weekNum);
@@ -448,6 +449,8 @@
       const msgEn = `Auto-correction turns on once at least ${minSamples} matches build up (${soFar} so far).`;
       corrEl.innerHTML = `<div class="ai-track-empty lbl" data-en="${msgEn}" data-ko="${msgKo}">${isKorean ? msgKo : msgEn}</div>`;
       compEl.innerHTML = '';
+      const wrapEl = document.getElementById('aiTrackTeamCorrectionWrap');
+      if (wrapEl) wrapEl.style.display = 'none';
       return;
     }
 
@@ -465,6 +468,8 @@
         <span class="ai-track-chip-lbl lbl" data-en="Matches used" data-ko="반영 표본 경기 수">${isKorean ? '반영 표본 경기 수' : 'Matches used'}</span>
       </div>
     `;
+
+    renderAiTeamCorrections(track);
 
     if (!sc || !rawSummary) {
       compEl.innerHTML = '';
@@ -486,6 +491,127 @@
         <span class="ai-track-chip-val">${sc.avgGoalError.toFixed(2)}</span>
         ${deltaHtml(sc.avgGoalError, rawSummary.avgGoalError, false, true)}
         <span class="ai-track-chip-lbl lbl" data-en="Avg. goal error w/ correction" data-ko="보정 적용 시 평균 득점 오차">${isKorean ? '보정 적용 시 평균 득점 오차' : 'Avg. goal error w/ correction'}</span>
+      </div>
+    `;
+  }
+
+  // ===== 팀별(Local) 보정 계수 테이블 렌더링 =====
+  // track.currentTeamCorrections(data.js)에 담긴 "팀마다 축소추정된 홈/원정
+  // 보정 계수"를 표로 보여줍니다. 리그 전역 계수(위 칩)에서 얼마나 벗어나
+  // 있는지, 그리고 표본이 몇 경기인지(표본이 적을수록 전역값에 가깝게
+  // 눌려있음)를 함께 표시합니다.
+  function renderAiTeamCorrections(track) {
+    const wrapEl = document.getElementById('aiTrackTeamCorrectionWrap');
+    const bodyEl = document.getElementById('aiTrackTeamCorrectionBody');
+    if (!wrapEl || !bodyEl) return;
+
+    const teamCorr = track.currentTeamCorrections || {};
+    const teamNames = Object.keys(teamCorr);
+    if (!teamNames.length || typeof leagueData === 'undefined') {
+      wrapEl.style.display = 'none';
+      bodyEl.innerHTML = '';
+      return;
+    }
+
+    function fmtFactor(f) {
+      const pct = Math.round((f - 1) * 100);
+      const sign = pct > 0 ? '+' : '';
+      return `×${f.toFixed(2)} (${sign}${pct}%)`;
+    }
+    function factorCls(f) {
+      if (f > 1.02) return 'ai-track-delta-up';
+      if (f < 0.98) return 'ai-track-delta-down';
+      return 'ai-track-delta-flat';
+    }
+
+    const rows = teamNames
+      .map(nameEn => {
+        const team = leagueData.find(t => t.nameEn === nameEn);
+        const label = team ? (isKorean ? team.nameKo : team.nameEn) : nameEn;
+        return { label, c: teamCorr[nameEn] };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    wrapEl.style.display = '';
+    bodyEl.innerHTML = rows.map(({ label, c }) => `
+      <tr>
+        <td class="ai-track-match">${label}</td>
+        <td><span class="ai-track-delta ${factorCls(c.homeFactor)}">${fmtFactor(c.homeFactor)}</span> <span class="ai-track-chip-lbl">(n=${c.homeN})</span></td>
+        <td><span class="ai-track-delta ${factorCls(c.awayFactor)}">${fmtFactor(c.awayFactor)}</span> <span class="ai-track-chip-lbl">(n=${c.awayN})</span></td>
+      </tr>
+    `).join('');
+  }
+
+  // ===== Dixon-Coles 저득점 보정(ρ) 요약 렌더링 =====
+  // 자동 보정(홈/원정 배율) 위에 ρ까지 켰을 때(summaryDC)와, ρ 없이 자동 보정만
+  // 켰을 때(summaryCorrected)를 나란히 비교해서 ρ가 "추가로" 도움이 되는지
+  // 눈으로 확인할 수 있게 합니다 — renderAiAutoCorrection의 위/아래 비교 패턴과 동일합니다.
+  function renderAiDCCorrection(track) {
+    const rhoEl = document.getElementById('aiTrackDCSummary');
+    const compEl = document.getElementById('aiTrackDCComparedSummary');
+    if (!rhoEl || !compEl) return;
+
+    const baseline = track.summaryCorrected; // ρ 적용 "전" 기준선(자동 보정만 적용된 상태)
+    const withDC = track.summaryDC;          // ρ 적용 "후"
+
+    function deltaHtml(newVal, baseVal, isPct, invert) {
+      const diff = newVal - baseVal;
+      const improved = invert ? diff < -0.05 : diff > 0.05;
+      const worsened = invert ? diff > 0.05 : diff < -0.05;
+      const cls = improved ? 'ai-track-delta-up' : (worsened ? 'ai-track-delta-down' : 'ai-track-delta-flat');
+      const sign = diff > 0 ? '+' : '';
+      const txt = isPct ? `${sign}${diff.toFixed(1)}%p` : `${sign}${diff.toFixed(2)}`;
+      return `<span class="ai-track-delta ${cls}">${txt}</span>`;
+    }
+
+    if (!track.currentDCActive) {
+      const minSamples = (typeof DC_RHO_MIN_SAMPLES === 'number') ? DC_RHO_MIN_SAMPLES : 8;
+      const soFar = track.currentDCSampleSize || 0;
+      let msgKo, msgEn;
+      if (!track.dcSampleOk) {
+        // 표본 자체가 아직 부족한 경우
+        msgKo = `ρ 추정은 최소 ${minSamples}경기가 쌓이면 켜져요. 지금까지 ${soFar}경기 집계됨 — 조금만 더 기다려주세요.`;
+        msgEn = `ρ estimation turns on once at least ${minSamples} matches build up (${soFar} so far).`;
+      } else {
+        // 표본은 충분하지만, 백테스트상 도움이 안 돼서 일부러 꺼둔 경우
+        const wouldBeRho = (typeof track.estimatedDCRho === 'number') ? track.estimatedDCRho.toFixed(3) : '0';
+        msgKo = `표본은 충분하지만(${soFar}경기, 추정 시 ρ=${wouldBeRho}), 백테스트 결과 ρ 보정이 오히려 적중률을 낮춰서 지금은 적용하지 않고 있어요. 아래에서 "적용했다면" 성적을 비교해볼 수 있어요.`;
+        msgEn = `${soFar} matches is enough (would-be ρ=${wouldBeRho}), but the backtest shows ρ would lower accuracy, so it's intentionally left off for now. See the comparison below for what applying it would have looked like.`;
+      }
+      rhoEl.innerHTML = `<div class="ai-track-empty lbl" data-en="${msgEn}" data-ko="${msgKo}">${isKorean ? msgKo : msgEn}</div>`;
+      // 표본이 충분하면(dcSampleOk) "적용했다면" 백테스트 비교는 그래도 보여줍니다.
+      if (!track.dcSampleOk) {
+        compEl.innerHTML = '';
+        return;
+      }
+    } else {
+      rhoEl.innerHTML = `
+        <div class="ai-track-chip ai-track-chip-correction">
+          <span class="ai-track-chip-val">${track.currentDCRho.toFixed(3)}</span>
+          <span class="ai-track-chip-lbl lbl" data-en="Estimated ρ (MLE)" data-ko="추정된 ρ(MLE)">${isKorean ? '추정된 ρ(MLE)' : 'Estimated ρ (MLE)'}</span>
+        </div>
+        <div class="ai-track-chip ai-track-chip-correction ai-track-chip-n">
+          <span class="ai-track-chip-val">${track.currentDCSampleSize}</span>
+          <span class="ai-track-chip-lbl lbl" data-en="Matches used" data-ko="반영 표본 경기 수">${isKorean ? '반영 표본 경기 수' : 'Matches used'}</span>
+        </div>
+      `;
+    }
+
+    if (!withDC || !baseline) {
+      compEl.innerHTML = '';
+      return;
+    }
+
+    compEl.innerHTML = `
+      <div class="ai-track-chip ai-track-chip-corrected">
+        <span class="ai-track-chip-val">${withDC.wdlAccuracyPct.toFixed(1)}%</span>
+        ${deltaHtml(withDC.wdlAccuracyPct, baseline.wdlAccuracyPct, true)}
+        <span class="ai-track-chip-lbl lbl" data-en="W/D/L accuracy w/ ρ (vs correction only)" data-ko="ρ 적용 시 승무패 적중률(자동 보정 대비)">${isKorean ? 'ρ 적용 시 승무패 적중률(자동 보정 대비)' : 'W/D/L accuracy w/ ρ (vs correction only)'}</span>
+      </div>
+      <div class="ai-track-chip ai-track-chip-corrected">
+        <span class="ai-track-chip-val">${withDC.exactScoreAccuracyPct.toFixed(1)}%</span>
+        ${deltaHtml(withDC.exactScoreAccuracyPct, baseline.exactScoreAccuracyPct, true)}
+        <span class="ai-track-chip-lbl lbl" data-en="Exact score accuracy w/ ρ (vs correction only)" data-ko="ρ 적용 시 정확한 스코어 적중률(자동 보정 대비)">${isKorean ? 'ρ 적용 시 정확한 스코어 적중률(자동 보정 대비)' : 'Exact score accuracy w/ ρ (vs correction only)'}</span>
       </div>
     `;
   }

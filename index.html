@@ -82,7 +82,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=0023">
+<link rel="stylesheet" href="style.css?v=0024">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -707,6 +707,31 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div class="ai-track-summary" id="aiTrackCorrectionSummary"></div>
     <div class="ai-track-summary ai-track-summary-corrected" id="aiTrackCorrectedSummary"></div>
+    <div class="ai-track-team-correction-wrap" id="aiTrackTeamCorrectionWrap" style="display:none;">
+      <p class="ai-track-note lbl" data-en="Each team's home/away correction is shrunk toward the league-wide value above until it has enough matches of its own — small samples lean on the league number, bigger samples move toward the team's own." data-ko="팀별 홈/원정 보정은 그 팀 표본이 쌓이기 전까진 위 리그 전체 값 쪽으로 축소추정돼요. 표본이 적으면 리그값에, 쌓이면 그 팀 고유값 쪽으로 이동합니다.">각 팀의 홈/원정 보정은 그 팀 표본이 쌓이기 전까진 위 리그 전체 값 쪽으로 축소추정돼요. 표본이 적으면 리그값에, 쌓이면 그 팀 고유값 쪽으로 이동합니다.</p>
+      <div class="table-wrap ai-track-table-wrap">
+        <table class="stats-table ai-track-table ai-track-team-correction-table">
+          <thead>
+            <tr>
+              <th class="lbl" data-en="TEAM" data-ko="팀">팀</th>
+              <th class="lbl" data-en="HOME CORRECTION" data-ko="홈 보정">홈 보정</th>
+              <th class="lbl" data-en="AWAY CORRECTION" data-ko="원정 보정">원정 보정</th>
+            </tr>
+          </thead>
+          <tbody id="aiTrackTeamCorrectionBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ai-track-subtitle">
+      <span class="lbl" data-en="DIXON-COLES LOW-SCORE FIX (ρ)" data-ko="저득점 보정 (Dixon-Coles ρ)">저득점 보정 (Dixon-Coles ρ)</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'aiTrackDCInfo')">ⓘ</span>
+      <div class="info-tooltip" id="aiTrackDCInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-en="Independent Poisson models tend to misjudge low scorelines (0-0, 1-0, 0-1, 1-1). Instead of using a textbook default, ρ is estimated from this league's own results via maximum likelihood, recalculated walk-forward before each round. Turns on automatically once enough matches build up." data-ko="독립 포아송 모델은 0-0, 1-0, 0-1, 1-1 같은 저득점 스코어를 실제보다 잘못 예측하는 경향이 있습니다. 텍스트북 고정값 대신 이 리그의 실제 결과로 최대우도추정(MLE)을 돌려 ρ를 구하고, 매 라운드 직전까지의 데이터로 다시 계산(walk-forward)합니다. 표본이 충분히 쌓이면 자동으로 켜집니다.">독립 포아송 모델은 0-0, 1-0, 0-1, 1-1 같은 저득점 스코어를 실제보다 잘못 예측하는 경향이 있습니다. 텍스트북 고정값 대신 이 리그의 실제 결과로 최대우도추정(MLE)을 돌려 ρ를 구하고, 매 라운드 직전까지의 데이터로 다시 계산(walk-forward)합니다. 표본이 충분히 쌓이면 자동으로 켜집니다.</span>
+      </div>
+    </div>
+    <div class="ai-track-summary" id="aiTrackDCSummary"></div>
+    <div class="ai-track-summary ai-track-summary-corrected" id="aiTrackDCComparedSummary"></div>
 
     <div class="scroll-fade-wrap ai-track-fade" id="aiTrackTableFade">
       <div class="table-wrap ai-track-table-wrap" id="aiTrackTableScroller">
@@ -945,7 +970,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
-<script src="data.js?v=0023"></script>
-<script src="app.js?v=0023"></script>
+<script src="data.js?v=0024"></script>
+<script src="app.js?v=0024"></script>
 </body>
 </html>

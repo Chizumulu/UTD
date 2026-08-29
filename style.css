@@ -932,6 +932,9 @@
   .ai-track-chip-correction { border-left-color: var(--color-gold-strong); }
   .ai-track-chip-corrected { border-left-color: var(--color-gold-strong); }
   .ai-track-summary-corrected { margin-top: -5px; }
+  .ai-track-team-correction-wrap { margin-top: 14px; }
+  .ai-track-team-correction-table { min-width: 420px; }
+  .ai-track-team-correction-table td { white-space: nowrap; }
   .ai-track-delta {
     display: inline-block;
     margin-top: 2px;
