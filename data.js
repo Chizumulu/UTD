@@ -270,7 +270,7 @@ const matchLineups = {
   round8: {
     formation: "4-2-3-1",
     opponentKo: "치폴로폴로 보이즈 FC",
-    result: "", // TODO: 경기 종료 후 "N : M 승/무/패" 형식으로 채워주세요
+    result: "0 : 0 무",
     starters: [
       { pos: "ST", number: 22, nameKo: "티모시 카타파" },
       { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
@@ -285,7 +285,12 @@ const matchLineups = {
       { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
     ],
     subsIn: [],
-    subsUnused: [8, 9, 10, 11, 66, 80, 88]
+    subsUnused: [8, 9, 10, 11, 66, 80, 88],
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 29주차", score: "치주물루 2 : 0 치폴로폴로", result: "치주물루 승(몰수승)" },
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 12주차", score: "치폴로폴로 4 : 4 치주물루", result: "무승부" }
+    ],
+    historySummary: "최근 2경기 전적 2전 1승 1무 0패로 우세"
   }
 };
 
@@ -823,6 +828,38 @@ const matchDetails = {
       scorersHome: "KINGSLEY MVULA, DANIEL SIWALE",
       scorersAway: "SHAIBU JALAH"
     }
+  ],
+  round8: [
+    {
+      match: "칠룸바 1 : 치바비 0",
+      scorersHome: "BENJAMIN MAPUNDA",
+      scorersAway: "없음"
+    },
+    {
+      match: "루비리 3 : 친테체 0",
+      scorersHome: "PHILIMON PHIRI (2골), SOLOMON MANDA",
+      scorersAway: "없음"
+    },
+    {
+      match: "치폴로폴로 0 : 치주물루 0",
+      scorersHome: "없음",
+      scorersAway: "없음"
+    },
+    {
+      match: "젠다 2 : 치하메 1",
+      scorersHome: "ALICK CHAVULA (2골)",
+      scorersAway: "OFFICIAL PHIRI"
+    },
+    {
+      match: "에우티니 0 : 마푸 2",
+      scorersHome: "없음",
+      scorersAway: "MWAYI SIMKONDA, HEBERT CHIRAMBO"
+    },
+    {
+      match: "에크웬데니 0 : 라이플리 2",
+      scorersHome: "없음",
+      scorersAway: "LIMBANI KAMANGA, PEARSON NYIRENDA"
+    }
   ]
 };
 
@@ -832,28 +869,11 @@ const matchDetails = {
 // roundKey(scheduledRounds 기준)를 키로 미리 적어두면 됩니다. 라운드가 실제로 끝나면
 // 이 항목은 지우고 matchLineups[roundKey].recentHistory로 옮겨주세요.
 const upcomingMatchHistory = {
-  round8: {
-    recentHistory: [
-      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 29주차", score: "치주물루 2 : 0 치폴로폴로", result: "치주물루 승(몰수승)" },
-      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 12주차", score: "치폴로폴로 4 : 4 치주물루", result: "무승부" }
-    ],
-    historySummary: "최근 2경기 전적 2전 1승 1무 0패로 우세"
-  }
 };
 
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
-  round8: [
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-08-29", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "BENJAMIN MAPUNDA", scorersAway: "없음" },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-08-29", kickoffTime: "14:30" },
-    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-08-29", kickoffTime: "14:30", homeScore: 3, awayScore: 0, scorersHome: "PHILIMON PHIRI (2골), SOLOMON MANDA", scorersAway: "없음" },
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-08-30", kickoffTime: "14:30" },
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-08-30", kickoffTime: "14:30" },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-08-30", kickoffTime: "14:30" },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-08-30", kickoffTime: "14:30" },
-    { byeKo: "루베 마스터즈 FC", byeEn: "Lube Masters FC" }
-  ],
   round9: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-04", kickoffTime: "15:00" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-05", kickoffTime: "14:30" },
@@ -1003,6 +1023,16 @@ const roundsData = {
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "GIVEN MWANDIRA, JOMO PHIRI", scorersAway: "없음" },
     { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "KINGSLEY MVULA, DANIEL SIWALE", scorersAway: "SHAIBU JALAH" },
     { byeKo: "칠룸바 배럭스 FC", byeEn: "Chilumba Barracks FC" }
+  ],
+  round8: [
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-08-29", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "BENJAMIN MAPUNDA", scorersAway: "없음" },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-08-29", kickoffTime: "14:30" },
+    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-08-29", kickoffTime: "14:30", homeScore: 3, awayScore: 0, scorersHome: "PHILIMON PHIRI (2골), SOLOMON MANDA", scorersAway: "없음" },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-08-30", kickoffTime: "14:30", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-08-30", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "ALICK CHAVULA (2골)", scorersAway: "OFFICIAL PHIRI" },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-08-30", kickoffTime: "14:30", homeScore: 0, awayScore: 2, scorersHome: "없음", scorersAway: "MWAYI SIMKONDA, HEBERT CHIRAMBO" },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-08-30", kickoffTime: "14:30", homeScore: 0, awayScore: 2, scorersHome: "없음", scorersAway: "LIMBANI KAMANGA, PEARSON NYIRENDA" },
+    { byeKo: "루베 마스터즈 FC", byeEn: "Lube Masters FC" }
   ]
 };
 
@@ -1770,7 +1800,11 @@ const playerDirectory = {
   "CHARLES KAMANGA": { nameKo: "찰스 카망가", nameEn: "Charles Kamanga" },
   "WANANGWA GAMA": { nameKo: "와낭과 가마", nameEn: "Wanangwa Gama" },
   "PHILIMON PHIRI": { nameKo: "필리몬 피리", nameEn: "Philimon Phiri" },
-  "SOLOMON MANDA": { nameKo: "솔로몬 만다", nameEn: "Solomon Manda" }
+  "SOLOMON MANDA": { nameKo: "솔로몬 만다", nameEn: "Solomon Manda" },
+  "ALICK CHAVULA": { nameKo: "앨릭 차불라", nameEn: "Alick Chavula" },
+  "OFFICIAL PHIRI": { nameKo: "오피셜 피리", nameEn: "Official Phiri" },
+  "MWAYI SIMKONDA": { nameKo: "음와이 심콘다", nameEn: "Mwayi Simkonda" },
+  "HEBERT CHIRAMBO": { nameKo: "헤버트 치람보", nameEn: "Hebert Chirambo" }
 };
 
 function toTitleCase(upperName) {
