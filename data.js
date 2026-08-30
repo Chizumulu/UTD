@@ -266,6 +266,26 @@ const matchLineups = {
       { comp: "26/27 시즌 NRFA 리그 원 7주차", score: "치주물루 4 : 0 젠다", result: "치주물루 승" }
     ],
     historySummary: "최근 1경기 전적 1승 0무 0패로 우세"
+  },
+  round8: {
+    formation: "4-2-3-1",
+    opponentKo: "치폴로폴로 보이즈 FC",
+    result: "", // TODO: 경기 종료 후 "N : M 승/무/패" 형식으로 채워주세요
+    starters: [
+      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
+      { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
+      { pos: "CAM", number: 7, nameKo: "디킨스 니렌다" },
+      { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
+      { pos: "LCM", number: 98, nameKo: "스티브 피리" },
+      { pos: "RCM", number: 99, nameKo: "패트릭 지야" },
+      { pos: "LB", number: 5, nameKo: "라반 롱웨" },
+      { pos: "LCB", number: 13, nameKo: "조셉 반다" },
+      { pos: "RCB", number: 3, nameKo: "알란 음롱골라", captain: true },
+      { pos: "RB", number: 25, nameKo: "모버트 카타파" },
+      { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
+    ],
+    subsIn: [],
+    subsUnused: [8, 9, 10, 11, 66, 80, 88]
   }
 };
 
