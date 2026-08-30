@@ -1748,7 +1748,9 @@ const playerDirectory = {
   "JOSEPH BANDA": { nameKo: "조셉 반다", nameEn: "Joseph Banda" },
   "JAMES ZONGA": { nameKo: "제임스 존가", nameEn: "James Zonga" },
   "CHARLES KAMANGA": { nameKo: "찰스 카망가", nameEn: "Charles Kamanga" },
-  "WANANGWA GAMA": { nameKo: "와낭과 가마", nameEn: "Wanangwa Gama" }
+  "WANANGWA GAMA": { nameKo: "와낭과 가마", nameEn: "Wanangwa Gama" },
+  "PHILIMON PHIRI": { nameKo: "필리몬 피리", nameEn: "Philimon Phiri" },
+  "SOLOMON MANDA": { nameKo: "솔로몬 만다", nameEn: "Solomon Manda" }
 };
 
 function toTitleCase(upperName) {
@@ -2310,7 +2312,4 @@ function shrinkTeamIndex(observedIndex, sampleSize, priorWeight) {
 //   수입니다. 팀별 표본(n)이 이 값보다 한참 적으면 사실상 전역값을 쓰고,
 //   많이 쌓이면 팀 고유 값 쪽으로 수렴합니다.
 // - computeAiPredictionTrackRecord는 각 라운드를 예측할 때 그 라운드 '직전'까지
-//   쌓인 오차만으로 전역/팀별 보정 계수를 다시 계산(walk-forward)하므로,
-//   트랙레코드 표에 나오는 "보정 적용 시" 성적도 미래 결과를 미리 들여다보지
-//   않은 정직한 백테스트입니다.
-// ========================================
+//   쌓인 오차만으로 전역/팀별 보정 계수를 다시
