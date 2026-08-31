@@ -204,6 +204,7 @@
     const scorersView = document.getElementById('scorersView');
     const predictView = document.getElementById('predictView');
     const venuesView = document.getElementById('venuesView');
+    const reportView = document.getElementById('reportView');
     const nextMatchStrip = document.getElementById('nextMatchStrip');
     const rankBtn = document.getElementById('viewRankBtn');
     const squadBtn = document.getElementById('viewSquadBtn');
@@ -212,6 +213,7 @@
     const scorersBtn = document.getElementById('viewScorersBtn');
     const predictBtn = document.getElementById('viewPredictBtn');
     const venuesBtn = document.getElementById('viewVenuesBtn');
+    const reportBtn = document.getElementById('viewReportBtn');
 
     rankView.style.display = 'none';
     squadView.style.display = 'none';
@@ -220,6 +222,7 @@
     scorersView.style.display = 'none';
     predictView.style.display = 'none';
     if (venuesView) venuesView.style.display = 'none';
+    if (reportView) reportView.style.display = 'none';
     if (nextMatchStrip) nextMatchStrip.style.display = 'none';
     rankBtn.classList.remove('active');
     squadBtn.classList.remove('active');
@@ -228,6 +231,7 @@
     scorersBtn.classList.remove('active');
     predictBtn.classList.remove('active');
     if (venuesBtn) venuesBtn.classList.remove('active');
+    if (reportBtn) reportBtn.classList.remove('active');
 
     if (view === 'squad') {
       squadView.style.display = '';
@@ -257,6 +261,10 @@
       if (venuesView) venuesView.style.display = '';
       if (venuesBtn) venuesBtn.classList.add('active');
       renderVenuesView();
+    } else if (view === 'report') {
+      if (reportView) reportView.style.display = '';
+      if (reportBtn) reportBtn.classList.add('active');
+      renderRoundResultReport();
     } else {
       rankView.style.display = '';
       rankBtn.classList.add('active');
@@ -614,6 +622,794 @@
         <span class="ai-track-chip-lbl lbl" data-en="Exact score accuracy w/ ρ (vs correction only)" data-ko="ρ 적용 시 정확한 스코어 적중률(자동 보정 대비)">${isKorean ? 'ρ 적용 시 정확한 스코어 적중률(자동 보정 대비)' : 'Exact score accuracy w/ ρ (vs correction only)'}</span>
       </div>
     `;
+  }
+
+  // ===================================================================
+  // ===== 주차별 결과 리포트 (AI 자동 생성 리포트) =====
+  // 진짜 LLM을 호출하지 않고, 이미 계산돼 있는 데이터
+  // (buildRoundMatches / computeFormGuide / computeStandingsHistory)를
+  // 문장 뱅크에서 골라 조립하는 "템플릿 조합형" 방식입니다.
+  // 같은 라운드는 새로고침해도 항상 같은 문장 조합이 나오도록
+  // 라운드+용도를 시드로 쓰는 간단한 PRNG(mulberry32)를 사용합니다.
+  // ===================================================================
+  const REPORT_MIN_MATCHES = 6; // 7경기 중 6경기 이상 스코어가 채워지면 리포트 생성
+  const REPORT_TEAM_EN = 'Chizumulu United FC';
+  const REPORT_TEAM_KO = '치주물루 유나이티드 FC';
+
+  function seedFromString(str) {
+    let h = 1779033703 ^ str.length;
+    for (let i = 0; i < str.length; i++) {
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return h >>> 0;
+  }
+
+  function mulberry32(seed) {
+    let a = seed;
+    return function() {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // pairs: [[ko, en], [ko, en], ...] 중 시드 기반으로 하나를 고릅니다.
+  function pickSentence(rng, pairs) {
+    if (!pairs || !pairs.length) return { ko: '', en: '' };
+    const idx = Math.floor(rng() * pairs.length);
+    return { ko: pairs[idx][0], en: pairs[idx][1] };
+  }
+
+  function countPlayedMatchesInRound(roundKey) {
+    return buildRoundMatches(roundKey).filter(m =>
+      !m.isBye && typeof m.homeScore === 'number' && typeof m.awayScore === 'number'
+    ).length;
+  }
+
+  function isReportReadyRound(roundKey) {
+    return countPlayedMatchesInRound(roundKey) >= REPORT_MIN_MATCHES;
+  }
+
+  // 리포트를 만들 수 있는(=6경기 이상 채워진) 라운드 중 가장 최신 라운드
+  function latestReportReadyRoundKey() {
+    const keys = allRoundKeysIncludingScheduled();
+    for (let i = keys.length - 1; i >= 0; i--) {
+      if (isReportReadyRound(keys[i])) return keys[i];
+    }
+    return null;
+  }
+
+  // list(=computeFormGuide().sequence를 홈/원정 등으로 필터링한 배열)에서
+  // beforeWeekNum "이전"까지 이어지는 연속 기록(predicate 만족) 길이를 구합니다.
+  function trailingStreakBefore(list, beforeWeekNum, predicate) {
+    let count = 0;
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i].weekNum >= beforeWeekNum) continue;
+      if (predicate(list[i].result)) count++;
+      else break;
+    }
+    return count;
+  }
+
+  function ordinalEn(n) {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  function reportTeamByNameEn(nameEn) {
+    return leagueData.find(t => t.nameEn === nameEn) || null;
+  }
+
+  // 다른 팀(내 팀 바로 위/아래 순위) 결과가 이번 주 순위 싸움에 어떤 영향을 줬는지
+  function buildRivalWatch(afterSnap, beforeSnap, matches, rng) {
+    if (!afterSnap || !afterSnap.ranks[REPORT_TEAM_EN]) return [];
+    const myRank = afterSnap.ranks[REPORT_TEAM_EN];
+    const ordered = Object.keys(afterSnap.ranks).sort((a, b) => afterSnap.ranks[a] - afterSnap.ranks[b]);
+    const myIdx = ordered.indexOf(REPORT_TEAM_EN);
+    const watchEns = [ordered[myIdx - 1], ordered[myIdx + 1]].filter(Boolean);
+
+    return watchEns.map(nameEn => {
+      const team = reportTeamByNameEn(nameEn);
+      if (!team) return null;
+      const match = matches.find(m => !m.isBye && (m.homeEn === nameEn || m.awayEn === nameEn));
+      const ptsAfterRival = afterSnap.points[nameEn];
+      const ptsBeforeRival = beforeSnap ? beforeSnap.points[nameEn] : ptsAfterRival;
+      const rivalGainedPts = ptsAfterRival - ptsBeforeRival;
+      const myPtsAfter = afterSnap.points[REPORT_TEAM_EN];
+      const myPtsBefore = beforeSnap ? beforeSnap.points[REPORT_TEAM_EN] : myPtsAfter;
+      const myPtsGained = myPtsAfter - myPtsBefore;
+      const gapAfter = Math.abs(myPtsAfter - ptsAfterRival);
+      const isAbove = afterSnap.ranks[nameEn] < myRank;
+
+      let sentence = null;
+      if (match) {
+        const rivalWon = rivalGainedPts === 3;
+        if (isAbove) {
+          if (rivalWon && myPtsGained < 3) {
+            sentence = pickSentence(rng, [
+              [`위 순위 ${team.nameKo}도 이번 주 승리하며 격차를 지켜냈다. 승점 차는 ${gapAfter}점.`,
+               `${team.nameEn} above also won this week, keeping the gap at ${gapAfter} points.`]
+            ]);
+          } else if (!rivalWon && myPtsGained >= 1) {
+            sentence = pickSentence(rng, [
+              [`위 순위 ${team.nameKo}가 승점을 놓치는 사이 격차를 ${gapAfter}점까지 좁혔다.`,
+               `${team.nameEn} above dropped points, narrowing the gap to ${gapAfter} points.`]
+            ]);
+          }
+        } else {
+          if (rivalWon) {
+            sentence = pickSentence(rng, [
+              [`바로 아래 ${team.nameKo}도 승리하며 추격의 고삐를 늦추지 않았다. 격차는 단 ${gapAfter}점.`,
+               `${team.nameEn} below also picked up a win — the chase is on, with just ${gapAfter} points between the sides.`]
+            ]);
+          } else if (myPtsGained >= 1) {
+            sentence = pickSentence(rng, [
+              [`아래 순위 ${team.nameKo}는 승점을 쌓지 못해 추격이 주춤했다. 격차 ${gapAfter}점.`,
+               `${team.nameEn} below failed to gain ground this week — the gap stands at ${gapAfter} points.`]
+            ]);
+          }
+        }
+      }
+      return { nameKo: team.nameKo, nameEn: team.nameEn, isAbove, gapAfter, played: !!match, sentence };
+    }).filter(Boolean);
+  }
+
+  // 라운드 내 우리 팀 경기 외 "다른 주요 경기"를 문장으로 엮어줍니다.
+  // hasScores=true면 이미 끝난 라운드(결과), false면 예정 라운드(예측)로 취급합니다.
+  function buildOtherFixturesParagraph(roundKey, rankSnapshot, excludeEns, hasScores, rng) {
+    if (!rankSnapshot) return null;
+    const matches = buildRoundMatches(roundKey).filter(m => !m.isBye &&
+      !excludeEns.includes(m.homeEn) && !excludeEns.includes(m.awayEn));
+    const notable = matches.filter(m => {
+      const hr = rankSnapshot[m.homeEn], ar = rankSnapshot[m.awayEn];
+      return (hr && hr <= 6) || (ar && ar <= 6);
+    }).sort((a, b) => {
+      const ra = Math.min(rankSnapshot[a.homeEn] || 99, rankSnapshot[a.awayEn] || 99);
+      const rb = Math.min(rankSnapshot[b.homeEn] || 99, rankSnapshot[b.awayEn] || 99);
+      return ra - rb;
+    }).slice(0, 2);
+    if (!notable.length) return null;
+
+    const describe = (m) => {
+      const homeName = isKorean ? m.homeKo : m.homeEn;
+      const awayName = isKorean ? m.awayKo : m.awayEn;
+      if (hasScores && typeof m.homeScore === 'number' && typeof m.awayScore === 'number') {
+        return isKorean
+          ? `${homeName} ${m.homeScore}-${m.awayScore} ${awayName}`
+          : `${homeName} ${m.homeScore}-${m.awayScore} ${awayName}`;
+      }
+      return isKorean ? `${homeName} vs ${awayName}` : `${homeName} vs ${awayName}`;
+    };
+
+    const detailTxt = notable.map(describe).join(isKorean ? ', ' : ', ');
+
+    if (hasScores) {
+      return pickSentence(rng, [
+        [`같은 라운드 다른 경기에서는 ${detailTxt} 결과가 나오며 상위권 판도에 추가 변수를 만들었다.`,
+         `Elsewhere in the round, ${detailTxt} added another twist to the picture at the top of the table.`]
+      ]);
+    }
+    return pickSentence(rng, [
+      [`같은 라운드에는 ${detailTxt} 매치업도 예정돼 있어, 이번 경기 결과에 따라 상위권 순위가 한 번 더 요동칠 수 있다.`,
+       `Elsewhere that round, ${detailTxt} is also being played, so results across the board could reshape the top of the table.`]
+    ]);
+  }
+
+  // 승격/강등 판도에서 이번 경기가 갖는 의미 (1위=승격권, 하위 2팀=강등권 가정)
+  function buildStakesParagraph(rankSnapshot, myRank, oppRank, totalTeams, rng, isPrediction) {
+    if (!rankSnapshot || myRank == null) return null;
+    const relegationCut = totalTeams - 2;
+    if (myRank === 1 || oppRank === 1) {
+      return pickSentence(rng, isPrediction ? [
+        [`두 팀 중 한쪽은 리그 선두(승격권) 자리를 놓고 다투는 만큼, 이번 경기는 사실상 승격 경쟁의 분수령이 될 수 있다.`,
+         `With top spot — the sole promotion place — on the line for one of these sides, this fixture could prove pivotal in the promotion race.`]
+      ] : [
+        [`이번 결과는 리그 선두(승격권) 다툼에도 곧바로 영향을 미쳤다.`,
+         `The result had an immediate knock-on effect at the top of the table, where the single promotion spot is being contested.`]
+      ]);
+    }
+    if (myRank <= 3 && oppRank <= 3) {
+      return pickSentence(rng, isPrediction ? [
+        [`두 팀 모두 상위권에 자리한 만큼, 이번 경기는 승격 경쟁의 향방을 가를 수 있는 중요한 맞대결이다.`,
+         `With both sides sitting near the top of the table, this is a heavyweight clash that could shape the promotion race.`]
+      ] : [
+        [`상위권 팀 간의 맞대결이었던 만큼, 이번 결과는 승격 경쟁 구도에 곧바로 영향을 미쳤다.`,
+         `As a clash between two sides near the top, the result carried real weight for the promotion picture.`]
+      ]);
+    }
+    if (myRank >= relegationCut || oppRank >= relegationCut) {
+      return pickSentence(rng, isPrediction ? [
+        [`한쪽 팀이 강등권에 걸쳐 있는 만큼, 이번 경기는 잔류를 위한 승점 확보 차원에서도 중요하다.`,
+         `With one side sitting in the relegation zone, this match matters just as much for survival as for the table above.`]
+      ] : [
+        [`강등권 경쟁이 걸린 팀이 포함된 경기였던 만큼, 이번 결과는 잔류 싸움에도 영향을 줬다.`,
+         `With relegation-threatened opposition involved, the result also had implications at the bottom of the table.`]
+      ]);
+    }
+    return null;
+  }
+
+
+  // 리그 1위(승격권)와의 승점 차이 문장 (내가 1위면 선두 자리를 강조)
+  function buildLeaderGapParagraph(myRank, myPts, rng, isPrediction) {
+    if (myRank == null) return null;
+    const leader = getRankedTeams('all')[0];
+    if (!leader) return null;
+    if (myRank === 1) {
+      return pickSentence(rng, [
+        [`현재 승점 ${myPts}점으로 리그 선두(승격권) 자리를 지키고 있다.`,
+         `Chizumulu currently top the table on ${myPts} points, holding the sole promotion spot.`]
+      ]);
+    }
+    const gap = leader.pts - myPts;
+    return pickSentence(rng, [
+      [`리그 1위 ${leader.nameKo}와의 승점 차는 ${gap}점이다.`,
+       `The gap to league leaders ${leader.nameEn} stands at ${gap} point${gap === 1 ? '' : 's'}.`]
+    ]);
+  }
+
+  // 두 팀의 시즌 최다 득점자를 비교하는 문장
+  function buildTopScorerParagraph(teamAEn, teamAKo, teamBEn, teamBKo, rng) {
+    if (typeof topScorersData === 'undefined') return null;
+    const topOf = (teamEn) => topScorersData.filter(p => p.teamEn === teamEn).sort((a, b) => b.goals - a.goals)[0] || null;
+    const a = topOf(teamAEn);
+    const b = topOf(teamBEn);
+    if (!a && !b) return null;
+    const aName = isKorean ? teamAKo : teamAEn;
+    const bName = isKorean ? teamBKo : teamBEn;
+    if (a && b) {
+      return pickSentence(rng, [
+        [`${aName}의 최다 득점자는 ${a.goals}골을 넣은 ${isKorean ? a.nameKo : a.nameEn}, ${bName}은(는) ${b.goals}골의 ${isKorean ? b.nameKo : b.nameEn}가 공격을 이끌고 있다.`,
+         `${aName}\u2019s top scorer is ${isKorean ? a.nameKo : a.nameEn} with ${a.goals} goals, while ${isKorean ? b.nameKo : b.nameEn} leads the line for ${bName} with ${b.goals}.`]
+      ]);
+    }
+    const only = a || b;
+    const onlyTeamName = a ? aName : bName;
+    return pickSentence(rng, [
+      [`${onlyTeamName}에서는 ${only.goals}골을 넣은 ${isKorean ? only.nameKo : only.nameEn}가 공격을 이끌고 있다.`,
+       `${isKorean ? only.nameKo : only.nameEn} leads the way for ${onlyTeamName} with ${only.goals} goals this season.`]
+    ]);
+  }
+
+  // 경기당 득점/실점 평균 비교 문장
+  function buildGoalAverageParagraph(myTeam, oppTeam, rng) {
+    if (!myTeam || !oppTeam || !myTeam.played || !oppTeam.played) return null;
+    const myGF = (myTeam.goalsFor / myTeam.played).toFixed(1);
+    const myGA = (myTeam.goalsAgainst / myTeam.played).toFixed(1);
+    const oppGF = (oppTeam.goalsFor / oppTeam.played).toFixed(1);
+    const oppGA = (oppTeam.goalsAgainst / oppTeam.played).toFixed(1);
+    const oppName = isKorean ? oppTeam.nameKo : oppTeam.nameEn;
+    return pickSentence(rng, [
+      [`치주물루는 경기당 평균 ${myGF}득점 ${myGA}실점을 기록 중이며, ${oppName}는 경기당 평균 ${oppGF}득점 ${oppGA}실점을 기록하고 있다.`,
+       `Chizumulu are averaging ${myGF} goals scored and ${myGA} conceded per game, compared with ${oppGF} scored and ${oppGA} conceded for ${oppName}.`]
+    ]);
+  }
+
+
+  function buildRoundResultReport(roundKey) {
+    if (!roundKey) return null;
+    const weekNum = parseInt(roundKey.replace('round', ''), 10);
+    const matches = buildRoundMatches(roundKey);
+    const myBye = matches.find(m => m.isBye && isMyTeamName(m.teamEn, m.teamKo));
+    const myMatch = matches.find(m => !m.isBye &&
+      (isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo)));
+
+    const history = computeStandingsHistory();
+    const afterSnap = history.find(h => h.week === weekNum);
+    const beforeSnap = history.find(h => h.week === weekNum - 1);
+    const rankAfter = afterSnap ? afterSnap.ranks[REPORT_TEAM_EN] : null;
+    const rankBefore = beforeSnap ? beforeSnap.ranks[REPORT_TEAM_EN] : null;
+    const ptsAfter = afterSnap ? afterSnap.points[REPORT_TEAM_EN] : null;
+    const ptsBefore = beforeSnap ? beforeSnap.points[REPORT_TEAM_EN] : null;
+
+    const rngResult = mulberry32(seedFromString(roundKey + ':result'));
+    const rngRival = mulberry32(seedFromString(roundKey + ':rival'));
+
+    // ---- 부전승(BYE) 주간 ----
+    if (myBye) {
+      return {
+        roundKey, weekNum, isBye: true, rankAfter, rankBefore, ptsAfter,
+        headline: { ko: `${weekNum}주차: 이번 주는 부전승 주간`, en: `Round ${weekNum}: Bye week` },
+        paragraphs: [pickSentence(rngResult, [
+          ['이번 주차는 치주물루의 경기가 없는 부전승 주간이었다. 다른 팀들의 결과를 지켜보며 다음 경기를 준비할 시간이다.',
+           'Chizumulu had no fixture this week due to the bye round — a chance to rest up and watch how the rest of the league moved.']
+        ])],
+        rivalWatch: buildRivalWatch(afterSnap, beforeSnap, matches, rngRival)
+      };
+    }
+    if (!myMatch) return null;
+
+    const isHome = isMyTeamName(myMatch.homeEn, myMatch.homeKo);
+    const myGoals = isHome ? myMatch.homeScore : myMatch.awayScore;
+    const oppGoals = isHome ? myMatch.awayScore : myMatch.homeScore;
+    const oppKo = isHome ? myMatch.awayKo : myMatch.homeKo;
+    const oppEn = isHome ? myMatch.awayEn : myMatch.homeEn;
+    const result = myGoals > oppGoals ? 'W' : (myGoals < oppGoals ? 'L' : 'D');
+    const diff = myGoals - oppGoals;
+    const scorersRaw = isHome ? myMatch.scorersHome : myMatch.scorersAway;
+
+    // ---- 폼가이드 기반 마일스톤/스트릭 감지 ----
+    const guide = (typeof computeFormGuide === 'function') ? computeFormGuide(REPORT_TEAM_EN, REPORT_TEAM_KO) : null;
+    const seq = guide ? guide.sequence : [];
+    const awaySeq = seq.filter(m => m.homeAway === 'A');
+    const homeSeq = seq.filter(m => m.homeAway === 'H');
+    const awayBefore = awaySeq.filter(m => m.weekNum < weekNum);
+
+    const milestones = [];
+    let awayDroughtLen = 0;
+    if (!isHome) {
+      const firstAwayWinEver = result === 'W' && awayBefore.length > 0 && awayBefore.every(m => m.result !== 'W');
+      const firstAwayGoalEver = myGoals > 0 && awayBefore.length > 0 && awayBefore.every(m => m.myGoals === 0);
+      awayDroughtLen = trailingStreakBefore(awaySeq, weekNum, r => r !== 'W');
+      if (firstAwayWinEver) milestones.push('firstAwayWin');
+      else if (result === 'W' && awayDroughtLen >= 3) milestones.push('awayDroughtBroken');
+      if (firstAwayGoalEver) milestones.push('firstAwayGoal');
+    } else {
+      const homeUnbeatenBefore = trailingStreakBefore(homeSeq, weekNum, r => r === 'W' || r === 'D');
+      if ((result === 'W' || result === 'D') && homeUnbeatenBefore >= 4) milestones.push('homeFortress');
+    }
+    if (oppGoals === 0 && (result === 'W' || result === 'D')) milestones.push('cleanSheet');
+    if (guide && guide.currentWinStreak >= 3) milestones.push('winStreak');
+    else if (guide && guide.currentUnbeatenStreak >= 4) milestones.push('unbeatenStreak');
+    const lossStreakLen = trailingStreakBefore(seq.concat([{ weekNum: weekNum + 1, result }]), weekNum + 1, r => r === 'L');
+    if (lossStreakLen >= 3) milestones.push('lossStreak');
+
+    // 멀티골 득점자(N골) 패턴 감지
+    let braceScorer = null;
+    if (scorersRaw && scorersRaw !== '없음') {
+      const m2 = scorersRaw.match(/([^,()]+)\s*\((\d+)골\)/);
+      if (m2 && parseInt(m2[2], 10) >= 2) braceScorer = { name: m2[1].trim(), goals: parseInt(m2[2], 10) };
+    }
+
+    const resultTag = result === 'W'
+      ? (diff >= 3 ? 'winDominant' : (diff === 1 ? 'winClose' : 'winNormal'))
+      : result === 'D'
+        ? (myGoals >= 2 ? 'drawHighScoring' : 'drawTight')
+        : (diff <= -3 ? 'lossHeavy' : (diff === -1 ? 'lossClose' : 'lossNormal'));
+
+    const RESULT_SENTENCES = {
+      winDominant: [
+        ['시종일관 경기를 주도하며 완승을 거뒀다.', 'Chizumulu were in control from start to finish for a dominant win.'],
+        ['상대를 압도하며 손쉽게 승점 3점을 챙겼다.', 'A one-sided affair saw the three points secured with ease.']
+      ],
+      winClose: [
+        ['한 골 차 접전 끝에 힘겹게 승리를 지켜냈다.', 'A tight one-goal margin was enough to see the game out.'],
+        ['살얼음판 승부에서 끝까지 집중력을 잃지 않았다.', 'It was a nervy, narrow win, but concentration held to the final whistle.']
+      ],
+      winNormal: [
+        ['안정적인 경기 운영으로 승점 3점을 확보했다.', 'A composed performance was enough to secure the three points.'],
+        ['균형 잡힌 경기 끝에 승리를 가져왔다.', 'A balanced contest ultimately swung Chizumulu\u2019s way.']
+      ],
+      drawHighScoring: [
+        ['골이 많이 터진 경기였지만 끝내 승자를 가리지 못했다.', 'Goals flowed on both sides, but neither side could find a winner.']
+      ],
+      drawTight: [
+        ['치열한 경기 끝에 승점을 나눠가졌다.', 'A tightly fought contest ended in a share of the spoils.']
+      ],
+      lossHeavy: [
+        ['크게 밀리며 완패를 당했다.', 'It was a heavy, one-sided defeat.']
+      ],
+      lossClose: [
+        ['한 골 차로 아쉽게 패배했다.', 'A narrow one-goal margin decided the game.']
+      ],
+      lossNormal: [
+        ['분전했지만 패배를 막지 못했다.', 'A spirited effort wasn\u2019t enough to avoid defeat.']
+      ]
+    };
+
+    const paragraphs = [pickSentence(rngResult, RESULT_SENTENCES[resultTag])];
+
+    if (braceScorer) {
+      paragraphs.push(pickSentence(rngResult, [
+        [`${braceScorer.name} 선수가 ${braceScorer.goals}골을 몰아치며 이날 경기의 주인공이 됐다.`,
+         `${braceScorer.name} was the star of the day with a ${braceScorer.goals}-goal haul.`]
+      ]));
+    }
+
+    if (rankBefore != null && rankAfter != null && rankBefore !== rankAfter) {
+      const delta = rankBefore - rankAfter; // 양수면 순위 상승
+      if (delta > 0) {
+        paragraphs.push(pickSentence(rngResult, [
+          [`이번 결과로 순위가 ${rankBefore}위에서 ${rankAfter}위로 ${delta}계단 상승했다.`,
+           `The result lifted Chizumulu ${delta} place${delta > 1 ? 's' : ''} up the table, from ${ordinalEn(rankBefore)} to ${ordinalEn(rankAfter)}.`]
+        ]));
+      } else {
+        paragraphs.push(pickSentence(rngResult, [
+          [`아쉽게도 순위는 ${rankBefore}위에서 ${rankAfter}위로 ${Math.abs(delta)}계단 내려앉았다.`,
+           `The table now reads ${ordinalEn(rankAfter)}, down ${Math.abs(delta)} place${Math.abs(delta) > 1 ? 's' : ''} from ${ordinalEn(rankBefore)}.`]
+        ]));
+      }
+    }
+
+    const MILESTONE_SENTENCES = {
+      firstAwayWin: [['시즌 첫 원정 승리를 신고하는 순간이었다. 홈에서만 강했던 흐름을 원정에서도 이어갈 계기가 될 수 있다.',
+        'This was the first away win of the season — a potential turning point for a side that had leaned heavily on home form.']],
+      awayDroughtBroken: [[`최근 원정 ${awayDroughtLen}경기 무승 행진을 마감하는 값진 원정 승리였다.`,
+        `This win ended a run of ${awayDroughtLen} away games without a win — a much-needed breakthrough on the road.`]],
+      firstAwayGoal: [['시즌 첫 원정 득점이기도 했다. 낯선 그라운드에서 골맛을 봤다는 건 심리적으로도 큰 의미가 있다.',
+        'It also marked the team\u2019s first away goal of the season — a psychological boost on unfamiliar turf.']],
+      homeFortress: [['홈 무패 행진이 이어지고 있다. 홈에서 승점을 꾸준히 쌓는 팀이 결국 순위 싸움에서 유리한 고지를 점하기 마련이다.',
+        'The unbeaten home run continues — sides that consistently protect home points tend to hold the edge come the business end of the season.']],
+      cleanSheet: [['상대에게 실점을 허용하지 않는 클린시트를 지켜냈다. 무실점 경기가 쌓일수록 승점 확보 확률도 함께 오른다.',
+        'A clean sheet was kept at the back — and the more clean sheets pile up, the more points tend to follow.']],
+      winStreak: [[`${guide ? guide.currentWinStreak : ''}연승을 달리고 있다. 상승세가 무섭다.`,
+        `That's ${guide ? guide.currentWinStreak : ''} wins in a row — momentum is firmly on Chizumulu's side.`]],
+      unbeatenStreak: [[`${guide ? guide.currentUnbeatenStreak : ''}경기 무패 행진을 이어가고 있다.`,
+        `The unbeaten run has been extended to ${guide ? guide.currentUnbeatenStreak : ''} games.`]],
+      lossStreak: [[`최근 ${lossStreakLen}경기 연속 패배로 좋지 않은 흐름이 이어지고 있다. 반등이 필요한 시점이다.`,
+        `This is a ${lossStreakLen}th straight defeat — a difficult run that needs turning around soon.`]]
+    };
+    milestones.forEach(tag => {
+      if (MILESTONE_SENTENCES[tag]) paragraphs.push(pickSentence(rngResult, MILESTONE_SENTENCES[tag]));
+    });
+
+    // ---- 리그 판도(선두 격차), 득점 스탯, 시즌 최다 득점자 비교 ----
+    const leaderGapPara = buildLeaderGapParagraph(rankAfter, ptsAfter, rngResult, false);
+    if (leaderGapPara) paragraphs.push(leaderGapPara);
+    const oppTeamObj = reportTeamByNameEn(oppEn);
+    const myTeamObj = reportTeamByNameEn(REPORT_TEAM_EN);
+    const goalAvgPara = buildGoalAverageParagraph(myTeamObj, oppTeamObj, rngResult);
+    if (goalAvgPara) paragraphs.push(goalAvgPara);
+    const topScorerPara = buildTopScorerParagraph(REPORT_TEAM_EN, REPORT_TEAM_KO, oppEn, oppKo, rngResult);
+    if (topScorerPara) paragraphs.push(topScorerPara);
+
+    // ---- 같은 라운드 다른 상위권/강등권 경기, 판도에 미치는 의미 ----
+    const totalTeamsResult = leagueData.length;
+    const stakesPara = buildStakesParagraph(afterSnap ? afterSnap.ranks : null, rankAfter, null, totalTeamsResult, rngResult, false);
+    if (stakesPara) paragraphs.push(stakesPara);
+    const otherFixturesPara = buildOtherFixturesParagraph(
+      roundKey, afterSnap ? afterSnap.ranks : null,
+      [REPORT_TEAM_EN, myMatch.homeEn, myMatch.awayEn], true, rngResult
+    );
+    if (otherFixturesPara) paragraphs.push(otherFixturesPara);
+
+    return {
+      roundKey, weekNum, isBye: false, isHome, oppKo, oppEn, myGoals, oppGoals, result,
+      rankBefore, rankAfter, ptsBefore, ptsAfter, milestones,
+      headline: {
+        ko: `${weekNum}주차: 치주물루 ${isHome ? myGoals + ' - ' + oppGoals : oppGoals + ' - ' + myGoals} ${oppKo} (${isHome ? '홈' : '원정'})`,
+        en: `Round ${weekNum}: Chizumulu ${isHome ? myGoals + '-' + oppGoals : oppGoals + '-' + myGoals} ${oppEn} (${isHome ? 'Home' : 'Away'})`
+      },
+      paragraphs,
+      rivalWatch: buildRivalWatch(afterSnap, beforeSnap, matches, rngRival)
+    };
+  }
+
+  function renderRoundResultReport() {
+    const container = document.getElementById('reportViewContent');
+    if (!container) return;
+    const roundKey = latestReportReadyRoundKey();
+    if (!roundKey) {
+      container.innerHTML = `<div class="report-empty lbl" data-en="Not enough matches played yet this round — the report appears automatically once at least 6 of the 7 fixtures are in." data-ko="아직 이번 주차 결과가 충분히 모이지 않았어요. 7경기 중 6경기 이상 스코어가 채워지면 리포트가 자동으로 생성됩니다.">${isKorean ? '아직 이번 주차 결과가 충분히 모이지 않았어요. 7경기 중 6경기 이상 스코어가 채워지면 리포트가 자동으로 생성됩니다.' : 'Not enough matches played yet this round — the report appears automatically once at least 6 of the 7 fixtures are in.'}</div>`;
+      return;
+    }
+    const report = buildRoundResultReport(roundKey);
+    if (!report) { container.innerHTML = ''; return; }
+
+    const resultBadgeCls = report.isBye ? 'report-badge-bye'
+      : (report.result === 'W' ? 'report-badge-win' : report.result === 'D' ? 'report-badge-draw' : 'report-badge-loss');
+    const resultBadgeText = report.isBye ? 'BYE'
+      : (report.result === 'W' ? (isKorean ? '승' : 'W') : report.result === 'D' ? (isKorean ? '무' : 'D') : (isKorean ? '패' : 'L'));
+
+    const paragraphsHtml = report.paragraphs.map(p => `<p class="report-paragraph">${isKorean ? p.ko : p.en}</p>`).join('');
+
+    const rivalItems = (report.rivalWatch || []).filter(r => r.sentence);
+    const rivalHtml = rivalItems.map(r => `
+      <div class="report-rival-item">
+        <span class="report-rival-tag ${r.isAbove ? 'report-rival-above' : 'report-rival-below'}">${r.isAbove ? (isKorean ? '위 순위' : 'Above') : (isKorean ? '아래 순위' : 'Below')}</span>
+        <span class="report-rival-text">${isKorean ? r.sentence.ko : r.sentence.en}</span>
+      </div>
+    `).join('');
+
+    const resultCardHtml = `
+      <section class="report-card report-card-result">
+        <div class="report-card-head">
+          <span class="report-kicker lbl" data-en="WEEKLY REPORT" data-ko="주차별 결과 리포트">${isKorean ? '주차별 결과 리포트' : 'WEEKLY REPORT'}</span>
+          <span class="report-badge ${resultBadgeCls}">${resultBadgeText}</span>
+        </div>
+        <h3 class="report-headline">${isKorean ? report.headline.ko : report.headline.en}</h3>
+        <div class="report-body">${paragraphsHtml}</div>
+        ${rivalItems.length ? `<div class="report-rival-block">
+          <div class="report-rival-title lbl" data-en="What it means for the race" data-ko="다른 팀 결과가 미친 영향">${isKorean ? '다른 팀 결과가 미친 영향' : 'What it means for the race'}</div>
+          ${rivalHtml}
+        </div>` : ''}
+      </section>
+    `;
+
+    const predictionCardHtml = renderRoundPredictionReportHtml();
+
+    container.innerHTML = `
+      <div class="report-grid">
+        ${resultCardHtml}
+        ${predictionCardHtml}
+      </div>
+    `;
+  }
+
+  // ===================================================================
+  // ===== 다음 주차 예측 리포트 (AI 자동 생성 리포트) =====
+  // 결과 리포트 오른쪽(PC 기준)에 나란히 표시되는 카드입니다.
+  // 아직 열리지 않은 우리 팀(치주물루)의 다음 예정 경기를 computeNextMatchPreview로
+  // 찾아서, 이미 다른 화면(경기 비교 모달)에서 쓰던 predictSingleMatch +
+  // aiPredictionBlockHtml(포아송 모델 기반) 그대로 재사용해 예측 내용을 채웁니다.
+  // ===================================================================
+  function buildRoundPredictionReport() {
+    if (typeof computeNextMatchPreview !== 'function') return null;
+    const preview = computeNextMatchPreview(REPORT_TEAM_EN, REPORT_TEAM_KO);
+    if (!preview) return null;
+    const weekNum = parseInt(preview.roundKey.replace('round', ''), 10);
+
+    if (preview.isBye) {
+      return { isBye: true, weekNum, roundKey: preview.roundKey };
+    }
+
+    const isHome = preview.homeAway === 'H';
+    return {
+      isBye: false,
+      weekNum,
+      roundKey: preview.roundKey,
+      homeEn: isHome ? REPORT_TEAM_EN : preview.oppEn,
+      homeKo: isHome ? REPORT_TEAM_KO : preview.oppKo,
+      awayEn: isHome ? preview.oppEn : REPORT_TEAM_EN,
+      awayKo: isHome ? preview.oppKo : REPORT_TEAM_KO,
+      oppEn: preview.oppEn,
+      oppKo: preview.oppKo,
+      homeAway: preview.homeAway,
+      kickoffDate: preview.kickoffDate,
+      kickoffTime: preview.kickoffTime
+    };
+  }
+
+  function renderRoundPredictionReportHtml() {
+    const pred = buildRoundPredictionReport();
+
+    if (!pred) {
+      return `<section class="report-card report-card-prediction report-card-prediction-empty">
+        <div class="report-card-head">
+          <span class="report-kicker lbl" data-en="PREDICTION REPORT" data-ko="다음 주차 예측 리포트">${isKorean ? '다음 주차 예측 리포트' : 'PREDICTION REPORT'}</span>
+        </div>
+        <div class="report-empty-inline lbl" data-en="No upcoming fixture to preview yet." data-ko="아직 예측할 다음 경기 일정이 없어요.">${isKorean ? '아직 예측할 다음 경기 일정이 없어요.' : 'No upcoming fixture to preview yet.'}</div>
+      </section>`;
+    }
+
+    const weekLabel = isKorean ? `${pred.weekNum}주차` : `Round ${pred.weekNum}`;
+
+    if (pred.isBye) {
+      return `<section class="report-card report-card-prediction">
+        <div class="report-card-head">
+          <span class="report-kicker lbl" data-en="PREDICTION REPORT" data-ko="다음 주차 예측 리포트">${isKorean ? '다음 주차 예측 리포트' : 'PREDICTION REPORT'}</span>
+          <span class="report-badge report-badge-bye">BYE</span>
+        </div>
+        <h3 class="report-headline">${isKorean ? `${weekLabel}: 다음 주는 부전승 주간` : `${weekLabel}: Bye week`}</h3>
+        <div class="report-body"><p class="report-paragraph">${isKorean
+          ? '다음 라운드에는 치주물루의 경기가 없어요. 다른 팀들의 결과를 지켜보며 그다음 경기를 준비할 시간입니다.'
+          : 'Chizumulu have no fixture next round — a chance to rest up before the following match.'}</p></div>
+      </section>`;
+    }
+
+    const oppName = isKorean ? pred.oppKo : pred.oppEn;
+    const haText = pred.homeAway === 'H' ? (isKorean ? '홈' : 'Home') : (isKorean ? '원정' : 'Away');
+    const kickoffTxt = (pred.kickoffDate && pred.kickoffTime) ? formatKickoff(pred) : '';
+
+    const home = getTeamCompareSnapshot(pred.homeEn, pred.homeKo);
+    const away = getTeamCompareSnapshot(pred.awayEn, pred.awayKo);
+    const aiHtml = (typeof aiPredictionBlockHtml === 'function')
+      ? aiPredictionBlockHtml(pred.homeEn, pred.homeKo, pred.awayEn, pred.awayKo, home, away)
+      : '';
+
+    const narrativeParagraphs = buildPredictionReportNarrative(pred, home, away);
+    const narrativeHtml = narrativeParagraphs.length
+      ? `<div class="report-body report-body-prediction">${narrativeParagraphs.map(p => `<p class="report-paragraph">${isKorean ? p.ko : p.en}</p>`).join('')}</div>`
+      : '';
+
+    const watchFixtureHtml = renderWatchFixtureHtml(pred);
+
+    return `
+      <section class="report-card report-card-prediction">
+        <div class="report-card-head">
+          <span class="report-kicker lbl" data-en="PREDICTION REPORT" data-ko="다음 주차 예측 리포트">${isKorean ? '다음 주차 예측 리포트' : 'PREDICTION REPORT'}</span>
+          <span class="report-badge report-badge-predict">${haText}</span>
+        </div>
+        <h3 class="report-headline">${isKorean
+          ? `${weekLabel}: 치주물루 vs ${oppName} (${haText}) 예측`
+          : `${weekLabel}: Chizumulu vs ${oppName} (${haText}) Preview`}</h3>
+        ${kickoffTxt ? `<div class="report-kickoff">${kickoffTxt}</div>` : ''}
+        ${aiHtml}
+        ${narrativeHtml}
+        ${watchFixtureHtml}
+      </section>
+    `;
+  }
+
+  // ===== 이번 라운드의 "함께 주목할 경기" =====
+  // 치주물루 순위/승점 바로 위·아래 팀이 같은 라운드에 치르는 경기를 찾아,
+  // 그 경기 결과가 우리 순위·승점 경쟁에 어떤 영향을 줄 수 있는지와 함께
+  // AI 예측(aiPredictionBlockHtml)을 그대로 붙여줍니다.
+  function findWatchFixture(pred) {
+    const ranked = getRankedTeams('all');
+    const orderedEns = ranked.map(t => t.nameEn);
+    const myIdx = orderedEns.indexOf(REPORT_TEAM_EN);
+    if (myIdx === -1) return null;
+
+    const rivalInfos = [
+      orderedEns[myIdx - 1] ? { nameEn: orderedEns[myIdx - 1], isAbove: true } : null,
+      orderedEns[myIdx + 1] ? { nameEn: orderedEns[myIdx + 1], isAbove: false } : null
+    ].filter(Boolean);
+
+    const matches = buildRoundMatches(pred.roundKey).filter(m => !m.isBye &&
+      m.homeEn !== REPORT_TEAM_EN && m.awayEn !== REPORT_TEAM_EN);
+
+    for (const rival of rivalInfos) {
+      const match = matches.find(m => m.homeEn === rival.nameEn || m.awayEn === rival.nameEn);
+      if (match) {
+        const rivalTeam = reportTeamByNameEn(rival.nameEn);
+        const myTeam = reportTeamByNameEn(REPORT_TEAM_EN);
+        const gap = rivalTeam && myTeam ? Math.abs((rivalTeam.pts || 0) - (myTeam.pts || 0)) : null;
+        return { match, isAbove: rival.isAbove, rivalNameKo: rivalTeam ? rivalTeam.nameKo : rival.nameEn, rivalNameEn: rival.nameEn, gap };
+      }
+    }
+    return null;
+  }
+
+  function renderWatchFixtureHtml(pred) {
+    const watch = findWatchFixture(pred);
+    if (!watch) return '';
+    const { match, isAbove, rivalNameKo, rivalNameEn, gap } = watch;
+
+    const homeName = isKorean ? match.homeKo : match.homeEn;
+    const awayName = isKorean ? match.awayKo : match.awayEn;
+    const kickoffTxt = (match.kickoffDate && match.kickoffTime) ? formatKickoff(match) : '';
+
+    const noteHtml = pickSentence(mulberry32(seedFromString(pred.roundKey + ':watch')), isAbove ? [
+      [`위 순위 ${rivalNameKo}가 이번 라운드 어떤 결과를 내는지에 따라 승점 차(현재 ${gap}점)가 좁혀지거나 벌어질 수 있다.`,
+       `How ${rivalNameEn} — currently just above Chizumulu — fare here could shrink or stretch the current ${gap}-point gap.`]
+    ] : [
+      [`아래 순위 ${rivalNameKo}가 이번 라운드 승점을 챙기는지에 따라 추격의 강도(현재 격차 ${gap}점)가 달라질 수 있다.`,
+       `Whether ${rivalNameEn} — right behind Chizumulu — pick up points here will shape how tight the chase (currently ${gap} points) becomes.`]
+    ]);
+
+    const home = getTeamCompareSnapshot(match.homeEn, match.homeKo);
+    const away = getTeamCompareSnapshot(match.awayEn, match.awayKo);
+    const aiHtml = (typeof aiPredictionBlockHtml === 'function')
+      ? aiPredictionBlockHtml(match.homeEn, match.homeKo, match.awayEn, match.awayKo, home, away)
+      : '';
+
+    return `
+      <div class="report-watch-block">
+        <div class="report-watch-title lbl" data-en="Also worth watching this round" data-ko="이번 주차 함께 주목할 경기">${isKorean ? '이번 주차 함께 주목할 경기' : 'Also worth watching this round'}</div>
+        <div class="report-watch-match">${homeName} vs ${awayName}</div>
+        ${kickoffTxt ? `<div class="report-kickoff">${kickoffTxt}</div>` : ''}
+        <p class="report-paragraph">${isKorean ? noteHtml.ko : noteHtml.en}</p>
+        ${aiHtml}
+      </div>
+    `;
+  }
+
+  // 예측 리포트의 "AI 예측" 블록 아래에 붙는 서술형 문단.
+  // 결과 리포트(buildRoundResultReport)와 같은 문장 뱅크 조합 방식이며,
+  // 라운드+용도를 시드로 써서 새로고침해도 같은 문장 조합이 나오도록 합니다.
+  function buildPredictionReportNarrative(pred, home, away) {
+    const rng = mulberry32(seedFromString(pred.roundKey + ':predict-narrative'));
+    const paragraphs = [];
+
+    const myIsHome = pred.homeAway === 'H';
+    const mySnap = myIsHome ? home : away;
+    const oppSnap = myIsHome ? away : home;
+    const oppName = isKorean ? pred.oppKo : pred.oppEn;
+    const oppNameShort = oppName.split(' ')[0];
+
+    // ---- 순위/승점 비교 ----
+    if (mySnap.rank != null && oppSnap.rank != null) {
+      const rankDiff = oppSnap.rank - mySnap.rank; // 양수면 내가 더 위 순위
+      const ptsDiff = Math.abs((mySnap.team.pts || 0) - (oppSnap.team.pts || 0));
+      if (rankDiff > 0) {
+        paragraphs.push(pickSentence(rng, [
+          [`현재 치주물루가 ${mySnap.rank}위로 ${oppNameShort}(${oppSnap.rank}위)보다 앞서 있다. 승점 차는 ${ptsDiff}점.`,
+           `Chizumulu currently sit ${ordinalEn(mySnap.rank)}, above ${oppNameShort} (${ordinalEn(oppSnap.rank)}) by ${ptsDiff} point${ptsDiff === 1 ? '' : 's'}.`]
+        ]));
+      } else if (rankDiff < 0) {
+        paragraphs.push(pickSentence(rng, [
+          [`상대 ${oppNameShort}가 ${oppSnap.rank}위로 치주물루(${mySnap.rank}위)보다 앞서 있는 만큼, 순위표상으로는 쉽지 않은 상대다. 승점 차는 ${ptsDiff}점.`,
+           `${oppNameShort} sit above Chizumulu in the table (${ordinalEn(oppSnap.rank)} vs ${ordinalEn(mySnap.rank)}), making this a tough test on paper — the gap is ${ptsDiff} point${ptsDiff === 1 ? '' : 's'}.`]
+        ]));
+      } else {
+        paragraphs.push(pickSentence(rng, [
+          [`두 팀이 나란히 ${mySnap.rank}위에 자리해 있어, 이번 경기 결과에 따라 순위 변동이 생길 수 있다.`,
+           `Both sides are level in the table at ${ordinalEn(mySnap.rank)}, so this result could shuffle the standings either way.`]
+        ]));
+      }
+    }
+
+    // ---- 최근 폼 비교 ----
+    const myStreakTxt = mySnap.form && mySnap.form.recentForm && mySnap.form.recentForm.length
+      ? mySnap.form.recentForm.map(m => m.result).join('')
+      : null;
+    if (myStreakTxt) {
+      if (mySnap.form.currentWinStreak >= 2) {
+        paragraphs.push(pickSentence(rng, [
+          [`최근 ${mySnap.form.currentWinStreak}연승으로 상승세를 타고 있어 이번 경기도 기세를 이어갈지 주목된다.`,
+           `Chizumulu head into this one on a ${mySnap.form.currentWinStreak}-game winning streak, looking to keep the momentum going.`]
+        ]));
+      } else if (mySnap.form.currentUnbeatenStreak >= 3) {
+        paragraphs.push(pickSentence(rng, [
+          [`최근 ${mySnap.form.currentUnbeatenStreak}경기 무패 행진 중이라 자신감 있게 이번 경기를 준비할 수 있다.`,
+           `An unbeaten run of ${mySnap.form.currentUnbeatenStreak} games has Chizumulu heading in with confidence.`]
+        ]));
+      } else {
+        const recentLosses = mySnap.form.recentForm.filter(m => m.result === 'L').length;
+        if (recentLosses >= 3) {
+          paragraphs.push(pickSentence(rng, [
+            [`최근 경기 결과가 좋지 않았던 만큼, 이번 경기에서 흐름을 바꿔야 한다.`,
+             `Recent results haven\u2019t gone Chizumulu\u2019s way, so this is a chance to turn things around.`]
+          ]));
+        }
+      }
+    }
+
+    // ---- 상대 전적(이번 시즌) ----
+    const h2h = (typeof computeTeamSeasonH2H === 'function')
+      ? computeTeamSeasonH2H(REPORT_TEAM_EN, REPORT_TEAM_KO, pred.oppEn, pred.oppKo)
+      : null;
+    if (h2h) {
+      const myScore = h2h.aIsHome ? h2h.aScore : h2h.bScore;
+      const oppScore = h2h.aIsHome ? h2h.bScore : h2h.aScore;
+      const h2hResult = myScore > oppScore ? 'W' : (myScore < oppScore ? 'L' : 'D');
+      const weekLbl = isKorean ? `${h2h.weekNum}주차` : `Round ${h2h.weekNum}`;
+      if (h2hResult === 'W') {
+        paragraphs.push(pickSentence(rng, [
+          [`이번 시즌 ${weekLbl} 맞대결에서 ${myScore}-${oppScore}로 승리했던 만큼, 상대전적에서는 앞서 있다.`,
+           `Chizumulu won the earlier meeting this season ${myScore}-${oppScore} (${weekLbl}), giving them the edge in this rivalry.`]
+        ]));
+      } else if (h2hResult === 'L') {
+        paragraphs.push(pickSentence(rng, [
+          [`이번 시즌 ${weekLbl} 맞대결에서는 ${oppScore}-${myScore}로 패했던 만큼, 이번엔 설욕이 필요하다.`,
+           `${oppNameShort} won the earlier meeting this season ${oppScore}-${myScore} (${weekLbl}) — Chizumulu will be looking for revenge.`]
+        ]));
+      } else {
+        paragraphs.push(pickSentence(rng, [
+          [`이번 시즌 ${weekLbl} 맞대결은 ${myScore}-${oppScore} 무승부로 끝났다.`,
+           `The earlier meeting this season (${weekLbl}) finished level, ${myScore}-${oppScore}.`]
+        ]));
+      }
+    } else {
+      paragraphs.push(pickSentence(rng, [
+        [`이번 시즌 두 팀의 첫 맞대결이다.`,
+         `This will be the first meeting between the two sides this season.`]
+      ]));
+    }
+
+    // ---- 리그 판도(선두 격차), 득점 스탯, 시즌 최다 득점자 비교 ----
+    const leaderGapPara = buildLeaderGapParagraph(mySnap.rank, mySnap.team ? mySnap.team.pts : null, rng, true);
+    if (leaderGapPara) paragraphs.push(leaderGapPara);
+    const goalAvgPara = buildGoalAverageParagraph(mySnap.team, oppSnap.team, rng);
+    if (goalAvgPara) paragraphs.push(goalAvgPara);
+    const topScorerPara = buildTopScorerParagraph(REPORT_TEAM_EN, REPORT_TEAM_KO, pred.oppEn, pred.oppKo, rng);
+    if (topScorerPara) paragraphs.push(topScorerPara);
+
+    // ---- 홈/원정 이점 ----
+    paragraphs.push(pickSentence(rng, myIsHome ? [
+      ['홈에서 열리는 경기인 만큼 홈 팬들의 응원이 힘을 보탤 수 있다.',
+       'Playing at home, Chizumulu should draw extra energy from the crowd.']
+    ] : [
+      ['원정 경기인 만큼 낯선 환경을 얼마나 잘 극복하느냐가 관건이다.',
+       'On the road, how well Chizumulu handle the away-day challenge will be key.']
+    ]));
+
+    // ---- 승격/강등 판도, 같은 라운드 다른 경기 ----
+    const totalTeamsPred = leagueData.length;
+    const stakesPara = buildStakesParagraph(null, mySnap.rank, oppSnap.rank, totalTeamsPred, rng, true);
+    if (stakesPara) paragraphs.push(stakesPara);
+    const currentRanks = {};
+    getRankedTeams('all').forEach((t, idx) => { currentRanks[t.nameEn] = idx + 1; });
+    const otherFixturesPara = buildOtherFixturesParagraph(
+      pred.roundKey, currentRanks, [REPORT_TEAM_EN, pred.oppEn], false, rng
+    );
+    if (otherFixturesPara) paragraphs.push(otherFixturesPara);
+
+    return paragraphs;
   }
 
   // ===== 득점 순위 렌더링 (Top Scorers) =====
@@ -6182,6 +6978,8 @@
       showTeamInfoForKey(currentTeamInfoKey);
     } else if (currentView === 'rounds') {
       renderRoundsView();
+    } else if (currentView === 'report') {
+      renderRoundResultReport();
     } else if (currentView === 'venues') {
       renderVenuesView();
       const venueModal = document.getElementById('venueMapModal');

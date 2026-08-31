@@ -3863,6 +3863,168 @@
     letter-spacing: 0.3px;
     margin-bottom: 12px;
   }
+
+  /* ===== 주차별 결과 리포트 (Weekly Report) ===== */
+  .report-empty {
+    padding: 32px 18px;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 13.5px;
+    font-weight: 600;
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--card-shadow);
+    transition: var(--theme-transition);
+  }
+  .report-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .report-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--card-shadow);
+    padding: 20px;
+    transition: var(--theme-transition);
+  }
+  .report-card-prediction-empty {
+    display: flex;
+    flex-direction: column;
+  }
+  .report-empty-inline {
+    color: var(--color-text-muted);
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 12px 0 4px;
+  }
+  .report-badge-predict { background: var(--color-navy); }
+  .report-watch-block {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border-light);
+  }
+  .report-watch-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--color-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 8px;
+  }
+  .report-watch-match {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--color-text-darkest);
+    margin-bottom: 2px;
+  }
+  .report-watch-block .report-paragraph {
+    margin: 10px 0 12px;
+  }
+  .report-body-prediction {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border-light);
+    margin-bottom: 0;
+  }
+  .report-kickoff {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--color-text-faint);
+    margin: -8px 0 14px;
+  }
+  /* PC 화면(721px 이상)에서는 결과 리포트와 예측 리포트를 좌우로 나란히 배치 */
+  @media (min-width: 721px) {
+    .report-grid {
+      flex-direction: row;
+      align-items: flex-start;
+      max-width: 1100px;
+    }
+    .report-grid .report-card {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+  .report-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .report-kicker {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--color-teal-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .report-badge {
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 12px;
+    border-radius: var(--radius-pill);
+    color: var(--color-white);
+  }
+  .report-badge-win { background: var(--color-teal); }
+  .report-badge-draw { background: var(--color-neutral-mid); }
+  .report-badge-loss { background: var(--color-red); }
+  .report-badge-bye { background: var(--color-gold-strong); }
+  .report-headline {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--color-text-darkest);
+    margin: 0 0 14px;
+    line-height: 1.35;
+  }
+  .report-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .report-paragraph {
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--color-text-secondary);
+  }
+  .report-rival-block {
+    border-top: 1px solid var(--color-border-light);
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .report-rival-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--color-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .report-rival-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--color-text-secondary);
+  }
+  .report-rival-tag {
+    flex: none;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    color: var(--color-white);
+    white-space: nowrap;
+    margin-top: 1px;
+  }
+  .report-rival-above { background: var(--color-navy); }
+  .report-rival-below { background: var(--color-teal-dark); }
+
   .ti-ha-split-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
