@@ -363,6 +363,18 @@
       width: 12px;
       height: 12px;
     }
+    .match-alert-btn {
+      width: auto;
+      height: auto;
+      padding: 5px 12px;
+    }
+    .match-alert-btn-text {
+      font-size: 11px;
+    }
+    .match-alert-btn svg {
+      width: 12px;
+      height: 12px;
+    }
   }
   @media (max-width: 360px) {
     .league-logo,
@@ -534,6 +546,24 @@
   .theme-toggle-btn .icon-moon { display: block; color: var(--color-cream); }
   :root[data-theme="dark"] .theme-toggle-btn .icon-sun { display: block; }
   :root[data-theme="dark"] .theme-toggle-btn .icon-moon { display: none; }
+  .match-alert-btn {
+    width: auto;
+    height: auto;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    gap: 6px;
+  }
+  .match-alert-btn-text {
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+  .match-alert-btn svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+  }
   .lang-toggle-wrap {
     gap: 8px;
   }
@@ -6538,6 +6568,11 @@
     .theme-toggle-btn {
       width: 38px;
       height: 38px;
+    }
+    .theme-toggle-btn.match-alert-btn {
+      width: auto;
+      height: auto;
+      padding: 7px 14px;
     }
     .info-icon-btn {
       width: 22px;
