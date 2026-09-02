@@ -1,0 +1,21 @@
+name: Match Day Notification
+
+on:
+  schedule:
+    - cron: '5 * * * *'   # 매시 5분에 실행 (예: 14:05, 15:05, 16:05 ...)
+  workflow_dispatch: {}    # 수동 테스트용
+
+jobs:
+  check-and-notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75    # 최대 대기시간(60분)보다 여유 있게 설정
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Wait for kickoff & send notification
+        env:
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
+        run: node .github/scripts/check-match-day.js
