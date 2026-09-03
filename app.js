@@ -6703,12 +6703,16 @@
     const rows = list.map(h => {
       const r = classifyPriorResult(h.result);
       if (r === 'W') w++; else if (r === 'D') d++; else l++;
+      const isForfeit = String(h.result || '').indexOf('몰수') !== -1;
+      const forfeitTag = isForfeit
+        ? `<span class="mc-prior-forfeit-tag">${isKorean ? '(몰수승)' : '(Forfeit)'}</span>`
+        : '';
       return `
         <div class="mc-prior-row mc-prior-row-${r.toLowerCase()}">
           <span class="mc-prior-badge mc-prior-badge-${r.toLowerCase()}">${wdlLabel[r]}</span>
           <div class="mc-prior-row-main">
             <span class="mc-prior-comp">${formatCompLabel(h.comp) || ''}</span>
-            <span class="mc-prior-score">${h.score || ''}</span>
+            <span class="mc-prior-score">${h.score || ''}${forfeitTag}</span>
           </div>
         </div>`;
     }).join('');
