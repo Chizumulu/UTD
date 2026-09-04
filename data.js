@@ -1824,9 +1824,13 @@ function computeSeasonFactSummary() {
 
   let totalMatches = 0;
   let totalGoals = 0;
+  let totalHomeGoals = 0, totalAwayGoals = 0;
   let homeWins = 0, awayWins = 0, draws = 0;
-  let highestScoring = null; // 합산 득점이 가장 많은 경기
-  let biggestMargin = null;  // 득점 차가 가장 큰 경기
+  let goallessDraws = 0;    // 0-0 무승부 경기 수
+  let cleanSheetCount = 0;  // 리그 전체 무실점 "팀 경기" 합계 (한 경기당 최대 2까지 가능)
+  let highestScoring = null;  // 합산 득점이 가장 많은 경기
+  let biggestMargin = null;   // 득점 차가 가장 큰 경기
+  let bestTeamPerformance = null; // 한 경기에서 한 팀이 가장 많이 넣은 골
 
   Object.keys(merged).forEach(roundKey => {
     (merged[roundKey] || []).forEach(m => {
@@ -1838,14 +1842,20 @@ function computeSeasonFactSummary() {
       totalMatches += 1;
       const combined = m.homeScore + m.awayScore;
       totalGoals += combined;
+      totalHomeGoals += m.homeScore;
+      totalAwayGoals += m.awayScore;
 
       if (m.homeScore > m.awayScore) homeWins += 1;
       else if (m.awayScore > m.homeScore) awayWins += 1;
       else draws += 1;
 
+      if (combined === 0) goallessDraws += 1;
+      if (m.awayScore === 0) cleanSheetCount += 1; // 홈팀 무실점
+      if (m.homeScore === 0) cleanSheetCount += 1; // 원정팀 무실점
+
+      const week = parseInt(roundKey.replace('round', ''), 10);
       const entry = {
-        roundKey,
-        week: parseInt(roundKey.replace('round', ''), 10),
+        roundKey, week,
         homeEn: m.homeEn, homeKo: m.homeKo,
         awayEn: m.awayEn, awayKo: m.awayKo,
         homeScore: m.homeScore, awayScore: m.awayScore,
@@ -1861,6 +1871,15 @@ function computeSeasonFactSummary() {
           (entry.margin === biggestMargin.margin && entry.totalGoals > biggestMargin.totalGoals)) {
         biggestMargin = entry;
       }
+
+      [
+        { side: 'home', teamEn: m.homeEn, teamKo: m.homeKo, oppEn: m.awayEn, oppKo: m.awayKo, goals: m.homeScore },
+        { side: 'away', teamEn: m.awayEn, teamKo: m.awayKo, oppEn: m.homeEn, oppKo: m.homeKo, goals: m.awayScore }
+      ].forEach(perf => {
+        if (!bestTeamPerformance || perf.goals > bestTeamPerformance.goals) {
+          bestTeamPerformance = Object.assign({ roundKey, week }, perf);
+        }
+      });
     });
   });
 
@@ -1868,12 +1887,17 @@ function computeSeasonFactSummary() {
     totalMatches,
     totalGoals,
     avgGoalsPerGame: totalMatches > 0 ? totalGoals / totalMatches : 0,
+    avgHomeGoals: totalMatches > 0 ? totalHomeGoals / totalMatches : 0,
+    avgAwayGoals: totalMatches > 0 ? totalAwayGoals / totalMatches : 0,
     homeWins, awayWins, draws,
     homeWinPct: totalMatches > 0 ? (homeWins / totalMatches) * 100 : 0,
     awayWinPct: totalMatches > 0 ? (awayWins / totalMatches) * 100 : 0,
     drawPct: totalMatches > 0 ? (draws / totalMatches) * 100 : 0,
+    goallessDraws,
+    cleanSheetCount,
     highestScoring,
-    biggestMargin
+    biggestMargin,
+    bestTeamPerformance
   };
 }
 

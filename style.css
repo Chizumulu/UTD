@@ -240,7 +240,7 @@
   .banner::before {
     content: "";
     position: absolute;
-    inset: 0;
+    inset: -40px -40px -40px -80px;
     z-index: 0;
     background:
       repeating-linear-gradient(
@@ -253,6 +253,13 @@
       radial-gradient(ellipse 60% 90% at 100% 0%, rgba(var(--color-teal-rgb), 0.35) 0%, transparent 60%),
       radial-gradient(ellipse 55% 85% at 0% 100%, rgba(var(--color-gold-rgb), 0.22) 0%, transparent 65%);
     opacity: 0.9;
+    animation: bannerPitchDrift 22s linear infinite;
+    will-change: background-position;
+  }
+  /* 대각선 핏치 라인이 아주 천천히 흘러가며 "살아있는 스타디움" 질감을 만듭니다 */
+  @keyframes bannerPitchDrift {
+    0%   { background-position: 0 0, 0 0, 0 0; }
+    100% { background-position: 136px 68px, 0 0, 0 0; }
   }
   .banner::after {
     content: "";
@@ -263,6 +270,19 @@
     opacity: 0.35;
     border-radius: 50%;
     z-index: 0;
+    animation: bannerFloodlightPulse 6.5s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+  /* 플러드라이트 조명이 은은하게 숨쉬듯 커졌다 작아지는 효과 */
+  @keyframes bannerFloodlightPulse {
+    0%, 100% { transform: scale(1);    opacity: 0.30; }
+    50%      { transform: scale(1.12); opacity: 0.48; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .banner::before,
+    .banner::after {
+      animation: none;
+    }
   }
   .banner > * {
     position: relative;
@@ -277,6 +297,8 @@
     height: 108px;
     z-index: 2;
     filter: drop-shadow(0 3px 8px rgba(var(--color-black-rgb),0.25));
+    animation: crestEntrance 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+    transition: filter 0.25s ease, transform 0.25s ease;
   }
   .club-logo {
     position: absolute;
@@ -287,6 +309,40 @@
     height: 108px;
     z-index: 2;
     filter: drop-shadow(0 3px 8px rgba(var(--color-black-rgb),0.25));
+    animation: crestEntrance 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.3) 0.12s both;
+    transition: filter 0.25s ease, transform 0.25s ease;
+  }
+  /* 입장 시 크레스트가 살짝 튕기듯 자리를 잡는 연출 (좌: 리그, 우: 구단 순으로 살짝 딜레이) */
+  @keyframes crestEntrance {
+    0%   { opacity: 0; transform: translateY(-50%) scale(0.55) rotate(-10deg); }
+    100% { opacity: 1; transform: translateY(-50%) scale(1) rotate(0deg); }
+  }
+  @media (max-width: 600px) {
+    .league-logo,
+    .club-logo {
+      animation-name: crestEntranceSmall;
+    }
+    @keyframes crestEntranceSmall {
+      0%   { opacity: 0; transform: scale(0.55) rotate(-10deg); }
+      100% { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+  }
+  .league-logo:hover,
+  .club-logo:hover {
+    transform: translateY(-50%) scale(1.08);
+    filter: drop-shadow(0 4px 10px rgba(var(--color-black-rgb),0.3)) drop-shadow(0 0 14px rgba(var(--color-teal-rgb),0.55));
+  }
+  @media (max-width: 600px) {
+    .league-logo:hover,
+    .club-logo:hover {
+      transform: scale(1.08);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .league-logo,
+    .club-logo {
+      animation: none;
+    }
   }
   @media (max-width: 600px) {
     .banner {
@@ -425,6 +481,8 @@
   }
   .fan-badge {
     display: inline-block;
+    position: relative;
+    overflow: hidden;
     background: var(--color-gold);
     color: var(--color-navy);
     font-weight: 700;
@@ -432,6 +490,35 @@
     letter-spacing: 0.5px;
     padding: 6px 16px;
     border-radius: var(--radius-pill);
+    animation: fanBadgeIn 0.5s ease 0.35s both;
+  }
+  @keyframes fanBadgeIn {
+    0%   { opacity: 0; transform: translateY(4px) scale(0.9); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .fan-badge::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 45%;
+    height: 100%;
+    background: linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.65) 50%, rgba(255,255,255,0) 100%);
+    transform: translateX(-220%) skewX(-15deg);
+    animation: fanBadgeShine 7s ease-in-out infinite;
+  }
+  /* 시즌 배지가 몇 초에 한 번씩 은은하게 반짝이며 살아있는 느낌을 줍니다 */
+  @keyframes fanBadgeShine {
+    0%, 8%   { transform: translateX(-220%) skewX(-15deg); }
+    22%, 100% { transform: translateX(320%) skewX(-15deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fan-badge {
+      animation: none;
+    }
+    .fan-badge::after {
+      display: none;
+    }
   }
   .info-bar {
     display: flex;
@@ -444,6 +531,12 @@
     border: 1px solid rgba(var(--color-gold-rgb),0.35);
     border-radius: var(--radius-pill);
     backdrop-filter: blur(4px);
+    animation: fanBadgeIn 0.5s ease 0.42s both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .info-bar {
+      animation: none;
+    }
   }
   .info-item {
     display: flex;
@@ -483,9 +576,41 @@
     letter-spacing: 0.6px;
     text-transform: uppercase;
     margin-bottom: 1px;
+    animation: titleLineIn 0.6s ease 0.05s both;
   }
   .league-title h1 .main-line {
     display: inline-block;
+    animation: titleLineIn 0.6s ease 0.18s both;
+  }
+  /* 후원사명 → 리그명 순서로 살짝 아래에서 떠오르며 등장 */
+  @keyframes titleLineIn {
+    0%   { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  /* 타이틀 아래에서 골드 라인이 한 번 그어지며 자리를 잡는 언더라인 연출 */
+  .league-title h1::after {
+    content: "";
+    display: block;
+    width: 46px;
+    height: 2px;
+    margin: 6px auto 0;
+    background: var(--color-gold);
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: center;
+    animation: titleUnderlineIn 0.5s ease 0.5s both;
+  }
+  @keyframes titleUnderlineIn {
+    to { transform: scaleX(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .league-title h1 .sponsor-line,
+    .league-title h1 .main-line,
+    .league-title h1::after {
+      animation: none;
+      transform: none;
+      opacity: 1;
+    }
   }
   .league-title p {
     color: var(--color-gold);
@@ -679,8 +804,18 @@
     font-size: 10px;
     line-height: 1;
   }
-  .rank-change-up { color: var(--color-red); }
-  .rank-change-down { color: #3b82f6; }
+  .rank-change-up {
+    color: var(--color-white);
+    background: var(--color-red);
+    padding: 2px 7px;
+    border-radius: var(--radius-pill);
+  }
+  .rank-change-down {
+    color: var(--color-white);
+    background: #3b82f6;
+    padding: 2px 7px;
+    border-radius: var(--radius-pill);
+  }
   .rank-change-same { color: var(--color-text-muted); font-weight: 800; }
   .rank-change-up,
   .rank-change-down {
@@ -1422,6 +1557,24 @@
     letter-spacing: 0.01em;
   }
 
+  /* ===== 순위표 행 등장 애니메이션 =====
+     테이블이 그려질 때(초기 로드/필터 전환) 위에서부터 순서대로 살짝 떠오르며
+     나타나 "표가 채워지고 있다"는 생동감을 줍니다. JS에서 각 행에 심어주는
+     --row-index 변수로 지연 시간을 계산합니다. */
+  #leagueTableBody tr {
+    animation: rankRowIn 0.4s ease both;
+    animation-delay: calc(var(--row-index, 0) * 26ms);
+  }
+  @keyframes rankRowIn {
+    0%   { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #leagueTableBody tr {
+      animation: none;
+    }
+  }
+
   /* ===== Rank Highlighting (Top 3 / My Team / Promo-Releg) ===== */
   .rank-cell {
     font-weight: 700;
@@ -1438,9 +1591,51 @@
   }
   tr.promo {
     box-shadow: inset 4px 0 0 var(--color-green);
+    animation: promoRowGlow 3s ease-in-out infinite;
   }
   tr.releg {
     box-shadow: inset 4px 0 0 var(--color-red);
+    animation: relegRowGlow 3.4s ease-in-out infinite;
+  }
+  /* 승격권 팀 순위 칸 옆에서 살짝 위로 오르내리는 화살표로 "승격이 가깝다"는 느낌을 줍니다 */
+  tr.promo .rank-cell::after {
+    content: "▲";
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 8.5px;
+    color: var(--color-green);
+    animation: promoChevronBob 1.6s ease-in-out infinite;
+  }
+  tr.releg .rank-cell::after {
+    content: "▼";
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 8.5px;
+    color: var(--color-red);
+    animation: relegChevronBob 1.8s ease-in-out infinite;
+  }
+  @keyframes promoRowGlow {
+    0%, 100% { box-shadow: inset 4px 0 0 var(--color-green); }
+    50%      { box-shadow: inset 6px 0 0 var(--color-green), 0 0 12px rgba(46,125,50,0.22); }
+  }
+  @keyframes relegRowGlow {
+    0%, 100% { box-shadow: inset 4px 0 0 var(--color-red); }
+    50%      { box-shadow: inset 6px 0 0 var(--color-red), 0 0 12px rgba(192,57,43,0.2); }
+  }
+  @keyframes promoChevronBob {
+    0%, 100% { transform: translateY(0);   opacity: 0.7; }
+    50%      { transform: translateY(-3px); opacity: 1; }
+  }
+  @keyframes relegChevronBob {
+    0%, 100% { transform: translateY(0);  opacity: 0.7; }
+    50%      { transform: translateY(3px); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    tr.promo, tr.releg,
+    tr.promo .rank-cell::after,
+    tr.releg .rank-cell::after {
+      animation: none;
+    }
   }
   tr.my-team {
     background: linear-gradient(90deg, var(--color-bg-myteam-1) 0%, var(--color-bg-myteam-2) 100%) !important;
@@ -1469,6 +1664,16 @@
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
     mask-position: center;
+    animation: myTeamStarGlow 2.4s ease-in-out infinite;
+  }
+  @keyframes myTeamStarGlow {
+    0%, 100% { filter: drop-shadow(0 0 0 rgba(204,156,77,0)); }
+    50%      { filter: drop-shadow(0 0 4px rgba(204,156,77,0.85)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    tr.my-team td.team::after {
+      animation: none;
+    }
   }
   tr.my-team td.team .team-logo {
     box-shadow: 0 0 0 2px var(--color-teal);
@@ -1680,6 +1885,10 @@
     color: var(--color-navy);
     line-height: 1.1;
   }
+  .sfs-quickstat-ratio {
+    font-size: 17px !important;
+    white-space: nowrap;
+  }
   .sfs-quickstat span {
     font-size: 10.5px;
     font-weight: 700;
@@ -1700,7 +1909,7 @@
   }
   .sfs-highlights {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
     margin-top: 18px;
     padding-top: 16px;
@@ -4692,17 +4901,123 @@
   .ti-next-match-weather {
     margin-bottom: 2px;
   }
+  /* ===== '다음 경기' 카드 카운트다운 스코어보드 (D-N 칩 + HH:MM:SS 디지털 박스) ===== */
   .ti-next-match-countdown {
     margin-top: 10px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .cd-daychip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    background: var(--color-navy);
+    color: var(--color-white);
+    border-radius: var(--radius-md);
+    padding: 4px 9px;
+  }
+  .cd-daychip b {
     font-size: 15px;
     font-weight: 800;
-    letter-spacing: 0.3px;
-    color: var(--color-teal-dark);
     font-variant-numeric: tabular-nums;
+  }
+  .cd-daychip small {
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    opacity: 0.82;
+    margin-top: 1px;
+    letter-spacing: 0.2px;
+  }
+  .cd-clock {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cd-seg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
     background: rgba(7,150,150,0.1);
     border-radius: var(--radius-md);
-    padding: 6px 10px;
+    padding: 4px 8px;
+    min-width: 30px;
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+  .cd-num {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--color-teal-dark);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s ease;
+  }
+  .cd-seg small {
+    font-size: 8px;
+    font-weight: 700;
+    color: var(--color-text-faint);
+    text-transform: uppercase;
+    margin-top: 1px;
+    letter-spacing: 0.2px;
+  }
+  .cd-colon {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--color-text-faint-2);
+    padding-bottom: 8px;
+  }
+  /* 초 단위 박스가 매초 살짝 숨쉬듯 움직이며 "실시간으로 흐르는" 느낌을 줍니다 */
+  .ti-next-match-countdown:not(.is-live) .cd-seg:last-child {
+    animation: cdTick 1s ease-in-out infinite;
+  }
+  @keyframes cdTick {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.07); }
+  }
+  /* 킥오프 1시간 이내 — 다급함을 알리는 레드 톤 전환 */
+  .ti-next-match-countdown.is-urgent .cd-seg {
+    background: rgba(192, 57, 43, 0.12);
+  }
+  .ti-next-match-countdown.is-urgent .cd-num {
+    color: var(--color-red);
+  }
+  .ti-next-match-countdown.is-urgent .cd-daychip {
+    background: var(--color-red);
+  }
+  /* 킥오프 시각 도달 — 축포 느낌의 킥오프 배지 */
+  .cd-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--color-white);
+    background: var(--color-teal-dark);
+    padding: 5px 14px;
+    border-radius: var(--radius-pill);
+    animation: cdLivePulse 1.4s ease-in-out infinite;
+  }
+  @keyframes cdLivePulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--color-teal-rgb), 0.4); }
+    50%      { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(var(--color-teal-rgb), 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ti-next-match-countdown:not(.is-live) .cd-seg:last-child,
+    .cd-live {
+      animation: none;
+    }
+  }
+  @media (max-width: 600px) {
+    .cd-seg {
+      min-width: 26px;
+      padding: 3px 6px;
+    }
+    .cd-num {
+      font-size: 14px;
+    }
   }
   .ti-next-match-h2h {
     margin-top: 10px;
@@ -4869,6 +5184,167 @@
     border-radius: var(--radius-xl);
     box-shadow: var(--card-shadow);
     padding: var(--card-padding);
+  }
+
+  /* ===== PC 화면(721px 이상) "다음 경기" 카드 전용 레이아웃 =====
+     모바일용 1열 스택 구조를 그대로 두고, 넓은 화면에서만 좌(일정/장소/날씨/카운트다운)·
+     우(경기 예측) 2단 그리드로 재배치합니다. 요소 순서는 HTML 그대로 두고
+     grid-column/grid-row 지정만으로 위치를 바꿔서 배치합니다. */
+  @media (min-width: 721px) {
+    .ti-next-mini .ti-next-match {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      column-gap: 36px;
+      padding: 30px 40px 26px;
+    }
+    .ti-next-mini .ti-next-match-label {
+      grid-column: 1 / -1;
+      display: inline-flex;
+      justify-self: start;
+      font-size: 12.5px;
+      padding: 6px 14px;
+      background: rgba(var(--color-teal-rgb), 0.1);
+      border-radius: var(--radius-pill);
+      margin-bottom: 22px;
+    }
+    .ti-next-mini .ti-next-match-body {
+      grid-column: 1 / -1;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 28px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--color-border-light);
+      margin-bottom: 24px;
+    }
+    .ti-next-mini .ti-next-match-team {
+      gap: 12px;
+      font-size: 16px;
+    }
+    .ti-next-mini .ti-next-match-team .team-logo {
+      width: 68px;
+      height: 68px;
+    }
+    .ti-next-mini .ti-next-match-vs {
+      gap: 12px;
+    }
+    .ti-next-mini .ti-next-match-vs-text {
+      font-size: 14px;
+    }
+    .ti-next-mini .ti-next-match-rank {
+      font-size: 12px;
+      padding: 3px 10px;
+    }
+
+    /* 왼쪽 열: 킥오프 → 경기장 → 날씨 → 카운트다운 순으로 세로 배치 */
+    .ti-next-mini .ti-next-match-kickoff {
+      grid-column: 1;
+      grid-row: 3;
+      text-align: left;
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+      font-size: 14px;
+    }
+    .ti-next-mini .ti-next-match-kickoff::before {
+      content: "\1F4C5\2002";
+    }
+    .ti-next-mini .ti-next-match-venue {
+      grid-column: 1;
+      grid-row: 4;
+      text-align: left;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    .ti-next-mini .ti-next-match-weather {
+      grid-column: 1;
+      grid-row: 5;
+      justify-content: flex-start;
+      margin: 14px 0 0;
+    }
+    .ti-next-mini .ti-next-match-countdown {
+      grid-column: 1;
+      grid-row: 6;
+      justify-content: flex-start;
+      margin-top: 20px;
+    }
+
+    /* 오른쪽 열: 경기 예측을 하나의 패널로 묶어서 강조 */
+    .ti-next-mini .ti-next-match-predict {
+      grid-column: 2;
+      grid-row: 3 / 7;
+      align-self: start;
+      margin-top: 0;
+      padding: 20px 22px;
+      border-top: none;
+      background: rgba(var(--color-teal-rgb), 0.05);
+      border-radius: var(--radius-lg);
+    }
+    .ti-next-mini .ti-next-match-predict-label {
+      font-size: 12.5px;
+      margin-bottom: 12px;
+    }
+    .ti-next-mini .ti-next-match-predict-bar {
+      height: 12px;
+    }
+    .ti-next-mini .ti-next-match-predict-pcts {
+      font-size: 12.5px;
+      margin-top: 10px;
+    }
+    .ti-next-mini .ti-predict-pct b {
+      font-size: 14.5px;
+    }
+    .ti-next-mini .ti-next-match-predict-score {
+      font-size: 15px;
+      margin-top: 12px;
+    }
+    .ti-next-mini .ti-next-match-predict-note {
+      font-size: 10.5px;
+    }
+
+    /* 하단: 상대전적 / 체감 난이도는 각각 전체 폭에 걸쳐 한 줄씩(둘 다 있을 수도, 하나만 있을 수도 있음),
+       비교 버튼은 맨 아래 전체 폭으로 배치합니다. */
+    .ti-next-mini .ti-next-match-h2h {
+      grid-column: 1 / -1;
+      grid-row: 7;
+      max-width: 640px;
+      margin: 22px auto 0;
+      padding-top: 18px;
+      font-size: 12px;
+    }
+    .ti-next-mini .ti-fdr-single {
+      grid-column: 1 / -1;
+      grid-row: 8;
+      margin-top: 18px;
+      padding-top: 18px;
+    }
+    .ti-next-mini .rmc-compare-btn.ti-next-match-compare-btn {
+      grid-column: 1 / -1;
+      grid-row: 9;
+      margin-top: 24px;
+      padding: 11px;
+      font-size: 13px;
+      border-radius: var(--radius-md);
+    }
+  }
+
+  /* 다른 팀 프로필의 "다음 경기" 카드(예측/날씨 없이 대진만 보여주는 단순 버전)는
+     2단 그리드까지는 필요 없지만, PC에서 너무 넓게 늘어지지 않도록 폭만 적당히 제한합니다. */
+  @media (min-width: 721px) {
+    .ti-card > .ti-next-match {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 8px 4px;
+    }
+    .ti-card > .ti-next-match .ti-next-match-team {
+      font-size: 15px;
+    }
+    .ti-card > .ti-next-match .ti-next-match-team .team-logo {
+      width: 52px;
+      height: 52px;
+    }
+    .ti-card > .ti-next-match .ti-next-match-kickoff,
+    .ti-card > .ti-next-match .ti-next-match-venue {
+      font-size: 13px;
+    }
   }
 
   .ti-form-card-head {
@@ -6897,3 +7373,146 @@
       padding-bottom: 8px;
     }
   }
+
+/* =====================================================
+   ===== 몰입감 강화 (Immersion Layer) — 구단 정보 페이지 =====
+   기존 디자인 시스템(네이비/틸/골드 토큰, radius, shadow 변수)을
+   그대로 재사용하며, 새 색을 추가하지 않고 "경기장 조명 아래 서있는"
+   느낌을 목표로 합니다: 히어로 조명감, 스크롤에 반응하는 탭 인디케이터,
+   섹션 진입 시 한 번씩 떠오르는 리빌 모션, 카드 호버 시 팀컬러 엣지.
+   prefers-reduced-motion에서는 모든 모션을 즉시 최종 상태로 대체합니다.
+   ===================================================== */
+
+/* --- 히어로: 구단 정보 헤더 조명감 --- */
+.team-info-header {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 160% at 12% -20%, rgba(var(--color-teal-rgb), 0.35) 0%, rgba(var(--color-teal-rgb), 0) 45%),
+    radial-gradient(90% 140% at 100% 120%, rgba(var(--color-gold-rgb), 0.28) 0%, rgba(var(--color-gold-rgb), 0) 50%),
+    linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
+  isolation: isolate;
+}
+.team-info-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    100deg,
+    rgba(255,255,255,0.05) 0px,
+    rgba(255,255,255,0.05) 1px,
+    transparent 1px,
+    transparent 42px
+  );
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+.team-info-header::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  width: 60%;
+  height: 220%;
+  background: linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.16) 50%, rgba(255,255,255,0) 100%);
+  transform: translateX(-120%) rotate(8deg);
+  animation: ti-header-sweep 1.9s ease-in-out 0.15s 1 both;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes ti-header-sweep {
+  0%   { transform: translateX(-120%) rotate(8deg); }
+  100% { transform: translateX(260%) rotate(8deg); }
+}
+.team-info-header > * { position: relative; z-index: 1; }
+
+.team-info-header .squad-header-logo {
+  animation: ti-crest-glow 3.2s ease-in-out 0.3s 1;
+  border-radius: 50%;
+}
+@keyframes ti-crest-glow {
+  0%   { filter: drop-shadow(0 2px 5px rgba(var(--color-black-rgb),0.3)) drop-shadow(0 0 0 rgba(var(--color-gold-rgb),0)); }
+  35%  { filter: drop-shadow(0 2px 5px rgba(var(--color-black-rgb),0.3)) drop-shadow(0 0 14px rgba(var(--color-gold-rgb),0.85)); }
+  100% { filter: drop-shadow(0 2px 5px rgba(var(--color-black-rgb),0.3)) drop-shadow(0 0 0 rgba(var(--color-gold-rgb),0)); }
+}
+
+/* 퀵스탯 숫자: 카운트업 중에는 살짝 확대된 상태에서 자연 크기로 안착 */
+.ti-stat-value { display: inline-block; }
+.ti-stat-value.is-counting { color: var(--color-gold); }
+
+/* --- 탭 바: 스크롤에 붙어 따라오며, 활성 탭 아래로 인디케이터가 흐르듯 이동 --- */
+.team-info-tab-bar {
+  position: sticky;
+  top: 8px;
+  z-index: 6;
+}
+.team-info-tab-bar.ti-has-indicator {
+  position: sticky;
+}
+.ti-tab-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-teal);
+  box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.2);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.ti-tab-indicator.is-ready { opacity: 1; }
+.team-info-tab-bar.ti-has-indicator .team-info-tab-btn {
+  position: relative;
+  z-index: 1;
+}
+.team-info-tab-bar.ti-has-indicator .team-info-tab-btn.active {
+  background: transparent;
+  color: var(--color-white);
+  box-shadow: none;
+}
+
+/* --- 섹션/카드 등장 리빌: 스크롤로 진입할 때 한 번, 완만하게 떠오름 --- */
+.ti-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--ti-reveal-delay, 0s);
+}
+.ti-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* --- 카드 호버: 팀 컬러 엣지 라이트 --- */
+.ti-card {
+  position: relative;
+  border-left: 3px solid transparent;
+  transition: var(--theme-transition), transform 0.25s ease, box-shadow 0.25s ease, border-left-color 0.25s ease;
+}
+.ti-card:hover {
+  transform: translateY(-3px);
+  border-left-color: var(--color-teal);
+  box-shadow: 0 12px 26px rgba(var(--color-navy-rgb), 0.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .team-info-header::after,
+  .team-info-header .squad-header-logo {
+    animation: none !important;
+  }
+  .ti-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .ti-card:hover { transform: none; }
+  .ti-tab-indicator { transition: none; }
+}
+
+@media (max-width: 720px) {
+  .team-info-tab-bar { top: 4px; }
+}

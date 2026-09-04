@@ -1741,6 +1741,7 @@
         <span class="ti-stat-label lbl" data-en="${s.en}" data-ko="${s.ko}">${isKorean ? s.ko : s.en}</span>
       </div>
     `).join('');
+    animateStatValues(wrap);
   }
 
   // ===== 다음 경기 카운트다운 (말라위 표준시 CAT = UTC+2 고정, 서머타임 없음) =====
@@ -1751,30 +1752,43 @@
     return Date.UTC(y, mo - 1, d, hh - 2, mm, 0);
   }
 
-  function formatCountdownText(diffMs) {
-    if (diffMs === null) return '';
-    if (diffMs <= 0) return isKorean ? '⚽ 킥오프!' : '⚽ Kickoff!';
+  // 화면에 떠 있는 모든 카운트다운 엘리먼트를 1초마다 갱신합니다.
+  function updateAllNextMatchCountdowns() {
+    document.querySelectorAll('.ti-next-match-countdown[data-kickoff-utc]').forEach(el => {
+      const kickoffMs = Number(el.getAttribute('data-kickoff-utc'));
+      if (!kickoffMs) return;
+      const diffMs = kickoffMs - Date.now();
+      el.innerHTML = countdownScoreboardHtml(kickoffMs);
+      el.classList.toggle('is-urgent', diffMs > 0 && diffMs <= 60 * 60 * 1000);
+      el.classList.toggle('is-live', diffMs <= 0);
+    });
+    updateNextMatchLiveBar();
+  }
+
+  // '다음 경기' 카드의 카운트다운 스코어보드(D-N 칩 / HH:MM:SS 디지털 박스) 마크업을 만듭니다.
+  // 킥오프 시각에 도달하면 숫자 대신 "⚽ 킥오프!" 배지로 전환됩니다.
+  function countdownScoreboardHtml(kickoffMs) {
+    if (!kickoffMs) return '';
+    const diffMs = kickoffMs - Date.now();
+    if (diffMs <= 0) {
+      return `<span class="cd-live">⚽ ${isKorean ? '킥오프!' : 'KICK-OFF!'}</span>`;
+    }
     const totalSec = Math.floor(diffMs / 1000);
     const days = Math.floor(totalSec / 86400);
     const hours = Math.floor((totalSec % 86400) / 3600);
     const mins = Math.floor((totalSec % 3600) / 60);
     const secs = totalSec % 60;
     const pad = (n) => String(n).padStart(2, '0');
-    const clock = `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
-    if (days > 0) {
-      return isKorean ? `D-${days} · ${clock}` : `D-${days} · ${clock}`;
-    }
-    return isKorean ? `오늘 · ${clock} 남음` : `Today · ${clock}`;
-  }
-
-  // 화면에 떠 있는 모든 카운트다운 엘리먼트를 1초마다 갱신합니다.
-  function updateAllNextMatchCountdowns() {
-    document.querySelectorAll('.ti-next-match-countdown[data-kickoff-utc]').forEach(el => {
-      const kickoffMs = Number(el.getAttribute('data-kickoff-utc'));
-      if (!kickoffMs) return;
-      el.textContent = formatCountdownText(kickoffMs - Date.now());
-    });
-    updateNextMatchLiveBar();
+    const dayChip = days > 0
+      ? `<span class="cd-daychip"><b>${days}</b><small>${isKorean ? '일 전' : 'D'}</small></span>`
+      : '';
+    return `${dayChip}<span class="cd-clock">
+        <span class="cd-seg"><span class="cd-num">${pad(hours)}</span><small>${isKorean ? '시간' : 'H'}</small></span>
+        <span class="cd-colon">:</span>
+        <span class="cd-seg"><span class="cd-num">${pad(mins)}</span><small>${isKorean ? '분' : 'M'}</small></span>
+        <span class="cd-colon">:</span>
+        <span class="cd-seg"><span class="cd-num">${pad(secs)}</span><small>${isKorean ? '초' : 'S'}</small></span>
+      </span>`;
   }
 
   // ===== 다음 경기 문자중계 링크 바 (킥오프 30분 전 ~ 3시간 후에만 노출) =====
@@ -1955,7 +1969,7 @@
 
     const kickoffMs = kickoffUTCMillis(nm.kickoffDate, nm.kickoffTime);
     const countdownHtml = kickoffMs
-      ? `<div class="ti-next-match-countdown" data-kickoff-utc="${kickoffMs}">${formatCountdownText(kickoffMs - Date.now())}</div>`
+      ? `<div class="ti-next-match-countdown" data-kickoff-utc="${kickoffMs}">${countdownScoreboardHtml(kickoffMs)}</div>`
       : '';
     const h2hHtml = isMyTeamName(team.nameEn, team.nameKo) ? nextMatchH2HSummaryHtml(nm.h2h) : '';
     // 승/무/패 확률 미니 예측도 우리 팀(치주물루) 카드에서만, 상대가 이번 시즌 리그 소속일 때만 보여줍니다.
@@ -3022,7 +3036,35 @@
       const btnEl = document.getElementById(buttons[key]);
       if (btnEl) btnEl.classList.toggle('active', key === tab);
     });
+    updateTabIndicator();
   }
+
+  // ===== 탭 바 슬라이딩 인디케이터 =====
+  // 활성 탭(.active) 아래로 흐르듯 이동하는 필(pill) 배경을 만듭니다.
+  // 탭 바 안에 인디케이터 엘리먼트가 없으면 한 번 생성해 넣고, 이후에는
+  // 활성 버튼의 위치/너비에 맞춰 transform·width만 갱신합니다.
+  function updateTabIndicator() {
+    const tabBar = document.getElementById('teamInfoTabBar');
+    if (!tabBar) return;
+    let indicator = tabBar.querySelector('.ti-tab-indicator');
+    if (!indicator) {
+      indicator = document.createElement('span');
+      indicator.className = 'ti-tab-indicator';
+      indicator.setAttribute('aria-hidden', 'true');
+      tabBar.insertBefore(indicator, tabBar.firstChild);
+      tabBar.classList.add('ti-has-indicator');
+    }
+    const activeBtn = tabBar.querySelector('.team-info-tab-btn.active');
+    if (!activeBtn) { indicator.classList.remove('is-ready'); return; }
+    const left = activeBtn.offsetLeft;
+    const width = activeBtn.offsetWidth;
+    indicator.style.transform = `translateX(${left - 4}px)`;
+    indicator.style.width = width + 'px';
+    indicator.classList.add('is-ready');
+  }
+  window.addEventListener('resize', () => {
+    if (document.getElementById('teamInfoTabBar')) updateTabIndicator();
+  });
 
   let teamInfoScrollObserver = null;
   function setupTeamInfoScrollSpy() {
@@ -3053,6 +3095,83 @@
     });
 
     sections.forEach(s => teamInfoScrollObserver.observe(s.el));
+  }
+
+  // ===== 몰입감 강화: 카드/섹션 리빌 옵저버 =====
+  // 구단 정보 페이지의 카드류가 화면에 들어올 때 한 번, 완만하게 떠오르도록
+  // .ti-reveal 클래스를 부여하고 IntersectionObserver로 관찰합니다.
+  // prefers-reduced-motion이면 아무 것도 하지 않고 그냥 보이게 둡니다(CSS에서 처리).
+  let teamInfoRevealObserver = null;
+  function setupTeamInfoRevealObserver() {
+    if (teamInfoRevealObserver) {
+      teamInfoRevealObserver.disconnect();
+      teamInfoRevealObserver = null;
+    }
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const root = document.getElementById('squadView');
+    if (!root) return;
+    const targets = root.querySelectorAll(
+      '.ti-card, .ti-scorer-card, .ti-award-card-item, .ti-gk-card-item, .squad-card, .ti-section-title, .ti-section-title-row'
+    );
+    if (!targets.length) return;
+    if (reduceMotion) {
+      targets.forEach(el => el.classList.add('ti-reveal', 'is-visible'));
+      return;
+    }
+
+    // 같은 섹션(.ti-section) 안에서는 등장 순서대로 살짝씩 지연시켜
+    // 카드가 한꺼번에 뜨지 않고 순서대로 떠오르는 느낌을 줍니다.
+    const perSectionIndex = new WeakMap();
+    targets.forEach(el => {
+      const section = el.closest('.ti-section') || root;
+      const idx = perSectionIndex.get(section) || 0;
+      perSectionIndex.set(section, idx + 1);
+      el.classList.add('ti-reveal');
+      el.style.setProperty('--ti-reveal-delay', Math.min(idx * 0.06, 0.3) + 's');
+    });
+
+    teamInfoRevealObserver = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          obs.unobserve(entry.target);
+        }
+      });
+    }, { root: null, rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+
+    targets.forEach(el => teamInfoRevealObserver.observe(el));
+  }
+
+  // ===== 몰입감 강화: 퀵스탯 숫자 카운트업 =====
+  // "순위/승점/경기/승/무/패" 등 헤더 숫자를 0에서 최종값까지 짧게 세어 올라가듯
+  // 보여줍니다. 숫자가 아닌 접미사(예: "1위"의 "위")는 그대로 유지합니다.
+  function animateStatValues(wrap) {
+    if (!wrap) return;
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    wrap.querySelectorAll('.ti-stat-value').forEach(el => {
+      const raw = el.textContent || '';
+      const match = raw.match(/^(-?\d+)(.*)$/);
+      if (!match) return;
+      const target = parseInt(match[1], 10);
+      const suffix = match[2] || '';
+      if (reduceMotion || !Number.isFinite(target)) { el.textContent = raw; return; }
+      const duration = 500;
+      const start = performance.now();
+      el.classList.add('is-counting');
+      function tick(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(target * eased);
+        el.textContent = current + suffix;
+        if (progress < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          el.textContent = target + suffix;
+          el.classList.remove('is-counting');
+        }
+      }
+      requestAnimationFrame(tick);
+    });
   }
 
   function renderTeamSponsors() {
@@ -3116,6 +3235,7 @@
     renderTeamResultsTab();
     setActiveTeamInfoButton(currentTeamInfoTab);
     setupTeamInfoScrollSpy();
+    setupTeamInfoRevealObserver();
   }
 
   // ===== 팀별 득점 순위 카드 (재사용 가능한 빌더) =====
@@ -4338,6 +4458,7 @@
 
       const tr = document.createElement('tr');
       if(trClass.trim() !== '') tr.className = trClass.trim();
+      tr.style.setProperty('--row-index', index);
 
       const name = isKorean ? team.nameKo : team.nameEn;
       
@@ -5008,7 +5129,7 @@
   // computeSeasonFactSummary()(data.js)가 계산한 값을 그대로 그리기만 합니다.
   function seasonFactHighlightHtml(kind, entry) {
     if (!entry) {
-      const emptyKo = kind === 'highest' ? '아직 집계할 경기가 없어요' : '아직 집계할 경기가 없어요';
+      const emptyKo = '아직 집계할 경기가 없어요';
       return `<div class="sfs-highlight-box sfs-highlight-empty">${isKorean ? emptyKo : 'Not enough matches yet'}</div>`;
     }
     const homeName = isKorean ? entry.homeKo : entry.homeEn;
@@ -5032,6 +5153,32 @@
           <span class="sfs-highlight-team${awayWin ? ' sfs-highlight-win' : ''} lbl" data-en="${entry.awayEn}" data-ko="${entry.awayKo}">${awayName}</span>
         </div>
         <div class="sfs-highlight-sub lbl" data-en="${subEn}" data-ko="${subKo}">${isKorean ? subKo : subEn}</div>
+      </div>`;
+  }
+
+  // 한 경기에서 한 팀이 가장 많이 넣은 골(팀 단위 최고 득점) 하이라이트 박스.
+  // 위의 seasonFactHighlightHtml과 달리 "팀 vs 상대팀 스코어" 형태가 아니라
+  // 그 팀의 득점 수 자체를 강조합니다.
+  function seasonFactBestTeamHtml(entry) {
+    if (!entry) {
+      return `<div class="sfs-highlight-box sfs-highlight-empty">${isKorean ? '아직 집계할 경기가 없어요' : 'Not enough matches yet'}</div>`;
+    }
+    const teamName = isKorean ? entry.teamKo : entry.teamEn;
+    const oppName = isKorean ? entry.oppKo : entry.oppEn;
+    const weekTxt = isKorean ? `${entry.week}주차` : `Week ${entry.week}`;
+    const vsKo = `${oppName} 상대`;
+    const vsEn = `vs ${oppName}`;
+    return `
+      <div class="sfs-highlight-box">
+        <div class="sfs-highlight-head">
+          <span class="sfs-highlight-title lbl" data-en="Best Single-Team Haul" data-ko="한 경기 최다 득점(팀)">${isKorean ? '한 경기 최다 득점(팀)' : 'Best Single-Team Haul'}</span>
+          <span class="sfs-highlight-week">${weekTxt}</span>
+        </div>
+        <div class="sfs-highlight-score">
+          <span class="sfs-highlight-team sfs-highlight-win lbl" data-en="${entry.teamEn}" data-ko="${entry.teamKo}">${teamName}</span>
+          <span class="sfs-highlight-num">${entry.goals}${isKorean ? '골' : ' GOALS'}</span>
+        </div>
+        <div class="sfs-highlight-sub lbl" data-en="${vsEn}" data-ko="${vsKo}">${isKorean ? vsKo : vsEn}</div>
       </div>`;
   }
 
@@ -5097,6 +5244,18 @@
             <b>${fmt1(s.avgGoalsPerGame)}</b>
             <span class="lbl" data-en="Goals / Game" data-ko="경기당 평균 골">${isKorean ? '경기당 평균 골' : 'Goals / Game'}</span>
           </div>
+          <div class="sfs-quickstat">
+            <b>${s.cleanSheetCount}</b>
+            <span class="lbl" data-en="Clean Sheets" data-ko="총 무실점 경기">${isKorean ? '총 무실점 경기' : 'Clean Sheets'}</span>
+          </div>
+          <div class="sfs-quickstat">
+            <b>${s.goallessDraws}</b>
+            <span class="lbl" data-en="0-0 Draws" data-ko="무득점 무승부">${isKorean ? '무득점 무승부' : '0-0 Draws'}</span>
+          </div>
+          <div class="sfs-quickstat">
+            <b class="sfs-quickstat-ratio">${fmt1(s.avgHomeGoals)} : ${fmt1(s.avgAwayGoals)}</b>
+            <span class="lbl" data-en="Home : Away Avg Goals" data-ko="홈 : 원정 평균 득점">${isKorean ? '홈 : 원정 평균 득점' : 'Home : Away Avg Goals'}</span>
+          </div>
         </div>
 
         <div class="sfs-donut-section">
@@ -5115,6 +5274,7 @@
         <div class="sfs-highlights">
           ${seasonFactHighlightHtml('highest', s.highestScoring)}
           ${seasonFactHighlightHtml('margin', s.biggestMargin)}
+          ${seasonFactBestTeamHtml(s.bestTeamPerformance)}
         </div>
       </div>`;
 
@@ -7152,7 +7312,12 @@
     const diff = longer.getBoundingClientRect().width - shorter.getBoundingClientRect().width;
     const charCount = shorter.textContent.trim().length;
     if (charCount > 1 && diff > 0) {
-      shorter.style.letterSpacing = (diff / (charCount - 1)) + 'px';
+      // 두 줄의 너비를 맞추려고 글자 사이를 너무 많이 벌리면(특히 짧은 영문 대문자 줄에서)
+      // 글자가 뚝뚝 떨어져 보여 오히려 지저분해 보입니다. 자연스러운 정도로만 벌어지도록
+      // 글자당 letter-spacing에 상한을 둡니다.
+      const MAX_LETTER_SPACING = 2.2;
+      const spacing = Math.min(diff / (charCount - 1), MAX_LETTER_SPACING);
+      shorter.style.letterSpacing = spacing + 'px';
     }
   }
 
