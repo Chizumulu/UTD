@@ -859,6 +859,17 @@
     border-radius: var(--radius-pill);
     box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.10);
   }
+  .rank-form-note {
+    margin: -6px 0 12px;
+    padding: 8px 12px;
+    background: rgba(var(--color-teal-rgb), 0.08);
+    border: 1px solid rgba(var(--color-teal-rgb), 0.25);
+    border-radius: var(--radius-md);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-teal-dark);
+    line-height: 1.4;
+  }
   .team-magic-number-card {
     margin: 0 0 14px;
     padding: 16px;
@@ -1642,6 +1653,143 @@
     gap: 20px;
     align-items: start;
   }
+  .sfs-card {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  .sfs-quickstats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .sfs-quickstat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 12px 8px;
+    background: rgba(var(--color-navy-rgb), 0.05);
+    border-radius: var(--radius-md);
+    text-align: center;
+  }
+  .sfs-quickstat b {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--color-navy);
+    line-height: 1.1;
+  }
+  .sfs-quickstat span {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--color-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  .sfs-donut-section {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border-light);
+  }
+  .sfs-donut-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    margin-bottom: 4px;
+  }
+  .sfs-highlights {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border-light);
+  }
+  .sfs-highlight-box {
+    background: rgba(var(--color-gold-rgb), 0.12);
+    border: 1px solid rgba(var(--color-gold-rgb), 0.35);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sfs-highlight-empty {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+    min-height: 60px;
+  }
+  .sfs-highlight-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .sfs-highlight-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--color-gold-strong);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  .sfs-highlight-week {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--color-text-faint);
+    flex: none;
+  }
+  .sfs-highlight-score {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+  }
+  .sfs-highlight-team {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sfs-highlight-team.sfs-highlight-win {
+    color: var(--color-navy);
+    font-weight: 900;
+  }
+  .sfs-highlight-num {
+    flex: none;
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--color-text-darkest);
+    font-variant-numeric: tabular-nums;
+  }
+  .sfs-highlight-sub {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--color-text-faint);
+  }
+  @media (max-width: 480px) {
+    .sfs-highlights {
+      grid-template-columns: 1fr;
+    }
+    .sfs-highlight-score {
+      flex-wrap: wrap;
+      justify-content: center;
+      text-align: center;
+    }
+    .sfs-highlight-team {
+      flex: 1 1 100%;
+      white-space: normal;
+    }
+  }
+
   .scatter-card {
     width: 100%;
     margin-top: 20px;
@@ -4582,6 +4730,41 @@
   .ti-next-match-h2h-gd {
     font-weight: 700;
   }
+  /* 경기 하나짜리 체감 난이도 배지(도트 + 숫자). 다음 경기 카드/라운드 카드에서 공용으로 씁니다. */
+  .ti-fdr-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 9.5px;
+    font-weight: 800;
+    color: var(--color-white);
+    line-height: 1;
+    flex: none;
+  }
+  .ti-fdr-tier-easy { background: var(--color-teal); }
+  .ti-fdr-tier-mid { background: #d9a021; }
+  .ti-fdr-tier-hard { background: var(--color-red); }
+
+  .ti-fdr-single {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+  .ti-fdr-single-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: var(--color-text-faint);
+    text-transform: uppercase;
+  }
+
   .ti-next-match-team-form {
     display: flex;
     align-items: center;
@@ -6173,6 +6356,23 @@
     letter-spacing: 0.2px;
     padding: 4px 9px;
     border-radius: var(--radius-md);
+  }
+  .rmc-fdr-row {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .rmc-fdr-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: var(--color-text-faint);
+    text-transform: uppercase;
+  }
+  .rmc-fdr-side {
+    display: inline-flex;
   }
   .rmc-kickoff {
     margin-top: 10px;

@@ -1693,6 +1693,191 @@ function computeNextMatchPreview(nameEn, nameKo) {
 }
 
 // ============================================================
+// 일정 난이도 지수 (Fixture Difficulty Rating, FDR) 계산
+// ------------------------------------------------------------
+// FPL(판타지 프리미어리그)의 FDR과 비슷한 개념으로, 앞으로 치를 N경기
+// (기본 5경기)의 "체감 난이도"를 1~5단계로 계산합니다. 승부 예측이 아니라
+// 참고용 체감 지표라, 아래 요소들을 단순 가중합으로 섞어서 계산합니다.
+//
+//   난이도 = 상대 순위 점수 × 순위 가중치 + 상대 최근 폼 점수 × 폼 가중치
+//            + 홈/원정 보정
+//
+// - 순위 점수(1~5): 상대가 1위면 5점(가장 어려움), 꼴찌면 1점(가장 쉬움)으로
+//   선형 매핑합니다. 15팀 리그라 표본이 작아 순위 차이가 점수 차이를
+//   과장할 수 있으므로, 1~5 범위로 완만하게 압축해 극단적으로 벌어지지
+//   않게 합니다.
+// - 폼 점수(1~5): 상대의 최근 5경기 승점(승3·무1·패0) 합계를 0~5 스케일로
+//   정규화합니다. 시즌 초반이라 5경기 표본이 다 안 쌓였으면(sampleConfidence),
+//   그만큼 폼 가중치를 줄이고 순위 가중치 쪽으로 옮겨서 신뢰도가 낮은
+//   폼 점수가 과도하게 반영되지 않도록 폴백합니다.
+// - 홈/원정 보정: 원정 경기면 조금 더 어렵게, 홈 경기면 조금 더 쉽게
+//   가감합니다.
+//
+// 최종 합산 점수는 1~5로 반올림해 level로 반환하고, tier는
+// easy(1~2, 초록) / mid(3, 노랑) / hard(4~5, 빨강)로 매핑합니다.
+// 팬사이트 톤에 맞춰 "예측"이 아니라 "체감 난이도"로만 씁니다.
+// ============================================================
+// 순위 스냅샷(computeStandingsHistory 최신 결과)을 한 번만 계산해서 넘겨쓰는
+// 내부 헬퍼. rankOf(oppEn)를 돌려줍니다. (시즌 극초반이라 아직 완료된 라운드가
+// 없으면 leagueData에 나열된 순서를 잠정 순위로 폴백합니다.)
+function _fdrRankLookup() {
+  const totalTeams = leagueData.length;
+  const history = (typeof computeStandingsHistory === 'function') ? computeStandingsHistory() : [];
+  const latestRanks = history.length ? history[history.length - 1].ranks : null;
+  return function rankOf(oppEn) {
+    if (latestRanks && latestRanks[oppEn]) return latestRanks[oppEn];
+    const idx = leagueData.findIndex(t => t.nameEn === oppEn);
+    return idx !== -1 ? idx + 1 : Math.ceil(totalTeams / 2);
+  };
+}
+
+// 경기 하나(상대 oppEn/oppKo, 홈/원정 isHome)에 대한 체감 난이도를 계산합니다.
+// computeFixtureDifficulty(다음 N경기 목록)와 개별 경기(라운드 카드, 다음 경기 카드
+// 등에서 "이 경기 하나"만 표시할 때) 양쪽에서 재사용하는 공용 로직입니다.
+function computeSingleFixtureDifficulty(oppEn, oppKo, isHome, rankOfFn) {
+  const totalTeams = leagueData.length;
+  const rankOf = rankOfFn || _fdrRankLookup();
+  const oppTeam = leagueData.find(t => t.nameEn === oppEn);
+
+  const oppRank = rankOf(oppEn);
+  const rankScore = totalTeams > 1
+    ? 5 - ((oppRank - 1) / (totalTeams - 1)) * 4
+    : 3;
+
+  const oppForm = (typeof computeFormGuide === 'function') ? computeFormGuide(oppEn, oppKo) : null;
+  const recentForm = oppForm ? oppForm.recentForm : [];
+  const sampleSize = recentForm.length;
+  const samplePts = recentForm.reduce((sum, m) => sum + (m.result === 'W' ? 3 : (m.result === 'D' ? 1 : 0)), 0);
+  const formScore = sampleSize ? (samplePts / (sampleSize * 3)) * 5 : rankScore;
+
+  // 폼 표본이 5경기보다 적을수록(시즌 초반) 신뢰도를 낮춰 폼 가중치를 줄이고
+  // 그만큼을 순위 가중치로 이전합니다(폴백).
+  const formConfidence = Math.min(1, sampleSize / 5);
+  const rankWeight = 0.5 + 0.35 * (1 - formConfidence);
+  const formWeight = 0.35 * formConfidence;
+
+  // 홈/원정 보정: 원정이면 조금 더 어렵게(+), 홈이면 조금 더 쉽게(-)
+  const haBonus = isHome ? -0.5 : 0.6;
+
+  let composite = (rankScore * rankWeight) + (formScore * formWeight) + haBonus;
+  composite = Math.max(1, Math.min(5, composite));
+  const level = Math.max(1, Math.min(5, Math.round(composite)));
+  const tier = level <= 2 ? 'easy' : (level === 3 ? 'mid' : 'hard');
+
+  return {
+    isHome,
+    oppEn, oppKo,
+    oppLogo: oppTeam ? oppTeam.logoSrc : null,
+    oppRank,
+    level,
+    tier,
+    score: Math.round(composite * 10) / 10
+  };
+}
+
+function computeFixtureDifficulty(nameEn, nameKo, count) {
+  const n = count || 5;
+  if (typeof scheduledRounds === 'undefined') return [];
+  const rankOf = _fdrRankLookup();
+
+  const scheduledKeysSorted = Object.keys(scheduledRounds).sort((a, b) => {
+    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+  });
+
+  const fixtures = [];
+  scheduledKeysSorted.forEach(roundKey => {
+    if (fixtures.length >= n) return;
+    const matches = scheduledRounds[roundKey] || [];
+    const found = matches.find(m => !(m.byeKo || m.byeEn) &&
+      (m.homeEn === nameEn || m.homeKo === nameKo || m.awayEn === nameEn || m.awayKo === nameKo));
+    if (!found) return;
+
+    const alreadyPlayed = typeof found.homeScore === 'number' && typeof found.awayScore === 'number';
+    if (alreadyPlayed || found.postponed) return;
+
+    const isHome = found.homeEn === nameEn || found.homeKo === nameKo;
+    const oppEn = isHome ? found.awayEn : found.homeEn;
+    const oppKo = isHome ? found.awayKo : found.homeKo;
+
+    const single = computeSingleFixtureDifficulty(oppEn, oppKo, isHome, rankOf);
+    fixtures.push(Object.assign({ roundKey, week: parseInt(roundKey.replace('round', ''), 10) }, single));
+  });
+
+  return fixtures;
+}
+
+// ============================================================
+// 리그 시즌 팩트 요약 (Season Fact Summary) 계산
+// ------------------------------------------------------------
+// roundsData(완료된 라운드) + scheduledRounds(진행 중이라도 스코어가 이미
+// 채워진 경기)를 훑어서 리그 전체(모든 팀 합산) 기준으로
+//  - 총 경기 수 / 총 득점 수 / 경기당 평균 골 수
+//  - 홈 승리 / 원정 승리 / 무승부 비율
+//  - 최다 득점 경기(양 팀 합산 골이 가장 많은 경기)
+//  - 최다 점수차 경기(득점 차가 가장 큰 경기)
+// 를 한 번에 계산합니다. "팀기록" 화면 최상단 요약 위젯에서 사용합니다.
+// ============================================================
+function computeSeasonFactSummary() {
+  const merged = {};
+  Object.keys(roundsData || {}).forEach(k => { merged[k] = roundsData[k]; });
+  Object.keys(scheduledRounds || {}).forEach(k => { if (!merged[k]) merged[k] = scheduledRounds[k]; });
+
+  let totalMatches = 0;
+  let totalGoals = 0;
+  let homeWins = 0, awayWins = 0, draws = 0;
+  let highestScoring = null; // 합산 득점이 가장 많은 경기
+  let biggestMargin = null;  // 득점 차가 가장 큰 경기
+
+  Object.keys(merged).forEach(roundKey => {
+    (merged[roundKey] || []).forEach(m => {
+      if (m.byeKo || m.byeEn) return;
+      if (!m.homeEn || !m.awayEn) return;
+      if (m.postponed) return;
+      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+
+      totalMatches += 1;
+      const combined = m.homeScore + m.awayScore;
+      totalGoals += combined;
+
+      if (m.homeScore > m.awayScore) homeWins += 1;
+      else if (m.awayScore > m.homeScore) awayWins += 1;
+      else draws += 1;
+
+      const entry = {
+        roundKey,
+        week: parseInt(roundKey.replace('round', ''), 10),
+        homeEn: m.homeEn, homeKo: m.homeKo,
+        awayEn: m.awayEn, awayKo: m.awayKo,
+        homeScore: m.homeScore, awayScore: m.awayScore,
+        totalGoals: combined,
+        margin: Math.abs(m.homeScore - m.awayScore)
+      };
+
+      // 동률이면 더 이른 주차(먼저 나온 기록)를 유지합니다.
+      if (!highestScoring || entry.totalGoals > highestScoring.totalGoals) {
+        highestScoring = entry;
+      }
+      if (!biggestMargin || entry.margin > biggestMargin.margin ||
+          (entry.margin === biggestMargin.margin && entry.totalGoals > biggestMargin.totalGoals)) {
+        biggestMargin = entry;
+      }
+    });
+  });
+
+  return {
+    totalMatches,
+    totalGoals,
+    avgGoalsPerGame: totalMatches > 0 ? totalGoals / totalMatches : 0,
+    homeWins, awayWins, draws,
+    homeWinPct: totalMatches > 0 ? (homeWins / totalMatches) * 100 : 0,
+    awayWinPct: totalMatches > 0 ? (awayWins / totalMatches) * 100 : 0,
+    drawPct: totalMatches > 0 ? (draws / totalMatches) * 100 : 0,
+    highestScoring,
+    biggestMargin
+  };
+}
+
+// ============================================================
 // 득점 순위 (topScorersData) 자동 계산
 // ------------------------------------------------------------
 // 더 이상 득점 순위를 직접 세어 하드코딩하지 않습니다.

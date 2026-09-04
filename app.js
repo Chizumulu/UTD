@@ -1890,6 +1890,42 @@
       </div>`;
   }
 
+  // ===== 일정 난이도 지수(FDR) 배지 =====
+  // computeSingleFixtureDifficulty()로 계산한 "경기 하나"의 체감 난이도를
+  // 색깔 도트 + 숫자(1~5)로 그립니다. 색상만으로 구분하면 색맹 사용자에게
+  // 불리하므로 숫자를 항상 함께 표기합니다.
+  function fdrTierLabel(tier) {
+    if (tier === 'easy') return isKorean ? '쉬움' : 'Easy';
+    if (tier === 'hard') return isKorean ? '어려움' : 'Hard';
+    return isKorean ? '보통' : 'Average';
+  }
+
+  // teamEn/teamKo 팀 입장에서, oppEn/oppKo를 홈(isHome=true)/원정으로 만나는
+  // "경기 하나"에 대한 난이도 배지 하나만 그립니다(다음 경기 카드, 라운드
+  // 카드처럼 특정 매치업 하나만 보여줘야 하는 자리에 씁니다).
+  function buildFdrBadgeHtml(teamEn, teamKo, oppEn, oppKo, isHome) {
+    if (typeof computeSingleFixtureDifficulty !== 'function') return '';
+    const f = computeSingleFixtureDifficulty(oppEn, oppKo, isHome);
+    if (!f) return '';
+    const tierTxt = fdrTierLabel(f.tier);
+    const titleTxt = isKorean
+      ? `체감 난이도 ${f.level} (${tierTxt})`
+      : `Difficulty ${f.level} (${tierTxt})`;
+    return `<span class="ti-fdr-badge ti-fdr-tier-${f.tier}" title="${titleTxt}">${f.level}</span>`;
+  }
+
+  // 다음 경기 카드용: 라벨과 안내 문구까지 포함한 단일 배지 블록.
+  function buildFdrNextMatchHtml(team, nm) {
+    if (!nm || nm.isBye || !leagueData.some(t => t.nameEn === nm.oppEn)) return '';
+    const badge = buildFdrBadgeHtml(team.nameEn, team.nameKo, nm.oppEn, nm.oppKo, nm.homeAway === 'H');
+    if (!badge) return '';
+    return `
+      <div class="ti-fdr-single">
+        <span class="ti-fdr-single-label lbl" data-en="Fixture Difficulty" data-ko="체감 난이도">${isKorean ? '체감 난이도' : 'Fixture Difficulty'}</span>
+        ${badge}
+      </div>`;
+  }
+
   // scheduledRounds에서 다음 상대를 자동으로 찾아(computeNextMatchPreview) 홈/원정,
   // 그 상대와의 H2H, 킥오프까지 남은 시간(카운트다운)까지 한 카드로 묶어 보여줍니다.
   function nextMatchOpponentHtml(team, myRank) {
@@ -1973,6 +2009,7 @@
         ${countdownHtml}
         ${predictHtml}
         ${h2hHtml}
+        ${buildFdrNextMatchHtml(team, nm)}
         ${compareBtnHtml}
       </div>`;
   }
@@ -4039,12 +4076,44 @@
     });
   }
 
+  // ===== 최근 N경기 폼 순위표 (Form Table) =====
+  // 시즌 전체 누적이 아니라, 각 팀의 "최근 N경기(기본 5경기)" 결과만으로
+  // 경기수/승/무/패/득점/실점/승점을 다시 집계합니다. buildTeamMatchLog()가
+  // 만들어주는 팀별 시간순 경기 로그의 뒤에서부터 N개만 잘라 쓰면 됩니다.
+  // 표는 getRankedTeams()가 반환하는 pts/gd 필드를 그대로 재사용해 정렬하므로,
+  // 다른 필터(전체/홈/원정)와 동일한 렌더링 파이프라인을 그대로 탑니다.
+  function computeFormStandings(count) {
+    const n = count || 5;
+    const matchLog = buildTeamMatchLog();
+    return leagueData.map(team => {
+      const log = (matchLog[team.nameEn] || []).slice(-n);
+      let won = 0, drawn = 0, lost = 0, gf = 0, ga = 0;
+      log.forEach(m => {
+        gf += m.gf; ga += m.ga;
+        if (m.result === 'W') won += 1;
+        else if (m.result === 'D') drawn += 1;
+        else lost += 1;
+      });
+      return {
+        nameKo: team.nameKo,
+        nameEn: team.nameEn,
+        logoSrc: team.logoSrc,
+        nextMatch: team.nextMatch,
+        played: log.length,
+        won, drawn, lost,
+        goalsFor: gf,
+        goalsAgainst: ga,
+        form: log.map(m => m.result)
+      };
+    });
+  }
+
   // 승점·득실차 계산 후 정렬된 순위표를 반환 (테이블 렌더링과 이미지 내보내기가 공용으로 사용)
   function getRankedTeams(filterType) {
     const filter = filterType || currentRankFilter;
     const baseData = filter === 'all'
       ? leagueData
-      : computeLocationStandings(filter);
+      : (filter === 'form' ? computeFormStandings(5) : computeLocationStandings(filter));
 
     const processedData = baseData.map(team => {
       team.pts = (team.won * 3) + (team.drawn * 1);
@@ -4151,9 +4220,11 @@
     document.querySelectorAll('.rank-filter-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.filter === filterType);
     });
-    // 홈/원정 분할표에서는 순위 변동 열 자체를 숨깁니다(전주 순위와 비교할 기준이 없음).
+    // 홈/원정/최근5 분할표에서는 순위 변동 열 자체를 숨깁니다(전주 순위와 비교할 기준이 없음).
     const table = document.getElementById('mainTable');
     if (table) table.classList.toggle('hide-rank-change', filterType !== 'all');
+    const formNote = document.getElementById('rankFormNote');
+    if (formNote) formNote.style.display = filterType === 'form' ? '' : 'none';
     renderLeagueTable();
   }
 
@@ -4449,6 +4520,7 @@
       const dateText = (document.getElementById('dateLabel') || {}).textContent || '';
       const filterLabel = currentRankFilter === 'home' ? (isKorean ? '홈 경기' : 'HOME')
         : currentRankFilter === 'away' ? (isKorean ? '원정 경기' : 'AWAY')
+        : currentRankFilter === 'form' ? (isKorean ? '최근 5경기' : 'LAST 5')
         : '';
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.font = '600 13px "Segoe UI", "Noto Sans KR", Arial, sans-serif';
@@ -4710,7 +4782,7 @@
     return count;
   }
 
-  // ===== 팀 기록 통계 (Team Records / Stats) =====
+  // ===== 리그 기록 통계 (League Records / Stats) =====
   function collectTeamStats() {
     const matchLog = buildTeamMatchLog();
 
@@ -4931,7 +5003,126 @@
     });
   }
 
+  // ===== 리그 시즌 팩트 요약 (Season Fact Summary) 위젯 =====
+  // "리그 기록" 화면 최상단에서 리그 전체(모든 팀 합산) 기준의 팩트를 한눈에 보여줍니다.
+  // computeSeasonFactSummary()(data.js)가 계산한 값을 그대로 그리기만 합니다.
+  function seasonFactHighlightHtml(kind, entry) {
+    if (!entry) {
+      const emptyKo = kind === 'highest' ? '아직 집계할 경기가 없어요' : '아직 집계할 경기가 없어요';
+      return `<div class="sfs-highlight-box sfs-highlight-empty">${isKorean ? emptyKo : 'Not enough matches yet'}</div>`;
+    }
+    const homeName = isKorean ? entry.homeKo : entry.homeEn;
+    const awayName = isKorean ? entry.awayKo : entry.awayEn;
+    const homeWin = entry.homeScore > entry.awayScore;
+    const awayWin = entry.awayScore > entry.homeScore;
+    const weekTxt = isKorean ? `${entry.week}주차` : `Week ${entry.week}`;
+    const titleKo = kind === 'highest' ? '최다 득점 경기' : '최다 점수 차 경기';
+    const titleEn = kind === 'highest' ? 'Highest-Scoring Match' : 'Biggest Margin of Victory';
+    const subKo = kind === 'highest' ? `총 ${entry.totalGoals}골` : `${entry.margin}골 차`;
+    const subEn = kind === 'highest' ? `${entry.totalGoals} goals` : `${entry.margin}-goal margin`;
+    return `
+      <div class="sfs-highlight-box">
+        <div class="sfs-highlight-head">
+          <span class="sfs-highlight-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</span>
+          <span class="sfs-highlight-week">${weekTxt}</span>
+        </div>
+        <div class="sfs-highlight-score">
+          <span class="sfs-highlight-team${homeWin ? ' sfs-highlight-win' : ''} lbl" data-en="${entry.homeEn}" data-ko="${entry.homeKo}">${homeName}</span>
+          <span class="sfs-highlight-num">${entry.homeScore} - ${entry.awayScore}</span>
+          <span class="sfs-highlight-team${awayWin ? ' sfs-highlight-win' : ''} lbl" data-en="${entry.awayEn}" data-ko="${entry.awayKo}">${awayName}</span>
+        </div>
+        <div class="sfs-highlight-sub lbl" data-en="${subEn}" data-ko="${subKo}">${isKorean ? subKo : subEn}</div>
+      </div>`;
+  }
+
+  function renderSeasonFactSummary() {
+    const host = document.getElementById('seasonFactSummary');
+    if (!host) return;
+    if (typeof computeSeasonFactSummary !== 'function') { host.innerHTML = ''; return; }
+    const s = computeSeasonFactSummary();
+
+    if (!s.totalMatches) {
+      host.innerHTML = '';
+      return;
+    }
+
+    const fmt1 = (n) => (Math.round(n * 10) / 10).toFixed(1);
+    const fmtPct = (n) => Math.round(n) + '%';
+
+    // 홈승/무/원정승 도넛(conic-gradient). ti-pos-donut과 동일한 시각 언어를 재사용합니다.
+    const segments = [
+      { pct: s.homeWinPct, color: 'var(--color-teal)' },
+      { pct: s.drawPct, color: 'var(--color-gold-strong)' },
+      { pct: s.awayWinPct, color: 'var(--color-navy)' }
+    ];
+    let cursor = 0;
+    const stops = segments.map((seg, idx) => {
+      const start = cursor;
+      const isLast = idx === segments.length - 1;
+      cursor += seg.pct;
+      const end = isLast ? 100 : cursor;
+      return `${seg.color} ${start}% ${end}%`;
+    }).join(', ');
+
+    const legendRow = (label, dotColor, count, pct) => `
+      <div class="ti-pos-legend-item">
+        <i class="ti-pos-legend-dot" style="background:${dotColor}"></i>
+        <div class="ti-pos-legend-main">
+          <span class="ti-pos-legend-label">${label}</span>
+        </div>
+        <div class="ti-pos-legend-value">
+          <b>${count}</b><span class="ti-pos-legend-pct">${fmtPct(pct)}</span>
+        </div>
+      </div>`;
+
+    const legendHtml =
+      legendRow(isKorean ? '홈 승' : 'Home win', 'var(--color-teal)', s.homeWins, s.homeWinPct) +
+      legendRow(isKorean ? '무승부' : 'Draw', 'var(--color-gold-strong)', s.draws, s.drawPct) +
+      legendRow(isKorean ? '원정 승' : 'Away win', 'var(--color-navy)', s.awayWins, s.awayWinPct);
+
+    host.innerHTML = `
+      <div class="ti-card sfs-card">
+        <div class="ti-card-title lbl" data-en="Season at a Glance" data-ko="리그 시즌 팩트 요약">${isKorean ? '리그 시즌 팩트 요약' : 'Season at a Glance'}</div>
+
+        <div class="sfs-quickstats">
+          <div class="sfs-quickstat">
+            <b>${s.totalMatches}</b>
+            <span class="lbl" data-en="Matches Played" data-ko="총 경기 수">${isKorean ? '총 경기 수' : 'Matches Played'}</span>
+          </div>
+          <div class="sfs-quickstat">
+            <b>${s.totalGoals}</b>
+            <span class="lbl" data-en="Total Goals" data-ko="총 득점 수">${isKorean ? '총 득점 수' : 'Total Goals'}</span>
+          </div>
+          <div class="sfs-quickstat">
+            <b>${fmt1(s.avgGoalsPerGame)}</b>
+            <span class="lbl" data-en="Goals / Game" data-ko="경기당 평균 골">${isKorean ? '경기당 평균 골' : 'Goals / Game'}</span>
+          </div>
+        </div>
+
+        <div class="sfs-donut-section">
+          <div class="sfs-donut-title lbl" data-en="Home Win vs Draw vs Away Win" data-ko="홈 승 · 무승부 · 원정 승 비율">${isKorean ? '홈 승 · 무승부 · 원정 승 비율' : 'Home Win vs Draw vs Away Win'}</div>
+          <div class="ti-pos-body">
+            <div class="ti-pos-donut" style="background: conic-gradient(${stops});">
+              <div class="ti-pos-donut-hole">
+                <b>${s.totalMatches}</b>
+                <span class="lbl" data-en="Matches" data-ko="경기">${isKorean ? '경기' : 'Matches'}</span>
+              </div>
+            </div>
+            <div class="ti-pos-legend">${legendHtml}</div>
+          </div>
+        </div>
+
+        <div class="sfs-highlights">
+          ${seasonFactHighlightHtml('highest', s.highestScoring)}
+          ${seasonFactHighlightHtml('margin', s.biggestMargin)}
+        </div>
+      </div>`;
+
+    attachImageFallback();
+  }
+
   function buildStatsTables() {
+    renderSeasonFactSummary();
     const teams = collectTeamStats();
     statsData.goalsFor = teams.slice().sort(function(a, b) { return (b.goalsForPerGame - a.goalsForPerGame) || teamMineFirst(a, b); });
     statsData.goalsAgainst = teams.slice().sort(function(a, b) { return (a.goalsAgainstPerGame - b.goalsAgainstPerGame) || teamMineFirst(a, b); });

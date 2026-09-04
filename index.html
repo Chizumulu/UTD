@@ -35,7 +35,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <!-- 1. 타이틀 & 검색 설명 -->
 <!-- id="pageTitle"/"metaDescription"은 app.js의 updateDocumentMeta()에서 언어(ko/en)에 맞춰 갱신합니다. -->
 <title id="pageTitle">치주물루 유나이티드 FC 팬사이트 | NRFA 리그원 순위·경기결과·갤러리</title>
-<meta id="metaDescription" name="description" content="치주물루 유나이티드 FC(Chizumulu United FC) 비공식 팬사이트. 26/27 시즌 NRFA 리그 원 팀 순위, 경기 결과, 득점 순위, 경기 예측과 갤러리 소식까지 한 곳에서 확인하세요.">
+<meta id="metaDescription" name="description" content="치주물루 유나이티드 FC(Chizumulu United FC) 비공식 팬사이트. 26/27 시즌 NRFA 리그 원 순위표, 경기 결과, 득점 순위, 경기 예측과 갤러리 소식까지 한 곳에서 확인하세요.">
 <meta name="keywords" content="치주물루 유나이티드 FC, 치즈물루 유나이티드, Chizumulu United FC, NRFA, NRFA 리그 원, 리그원 순위, 리그 원 순위, 축구 팬사이트, 경기 결과, 치주물루 갤러리">
 
 <!-- 2. 대표 URL (도메인 적용) -->
@@ -45,7 +45,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <meta id="ogType" property="og:type" content="website">
 <meta id="ogLocale" property="og:locale" content="ko_KR">
 <meta id="ogTitle" property="og:title" content="치주물루 유나이티드 FC - 팬사이트">
-<meta id="ogDescription" property="og:description" content="NRFA 리그 원 치주물루 유나이티드 FC의 팀 순위, 경기 결과, 득점 순위, 갤러리를 확인하세요.">
+<meta id="ogDescription" property="og:description" content="NRFA 리그 원 치주물루 유나이티드 FC의 리그 순위, 경기 결과, 득점 순위, 갤러리를 확인하세요.">
 <meta property="og:image" content="https://chizumulu.github.io/UTD/og-image.jpg"> <!-- 1200x630 사이즈 이미지 추천 -->
 <meta property="og:url" content="https://chizumulu.github.io/UTD/">
 <meta id="ogSiteName" property="og:site_name" content="치주물루 유나이티드 FC 팬사이트">
@@ -83,7 +83,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=0012">
+<link rel="stylesheet" href="style.css?v=0013">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -169,11 +169,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 <div class="scroll-fade-wrap" id="viewToggleFade">
 <div class="view-toggle-wrap" id="viewToggleWrap">
-  <button class="view-toggle-btn active lbl" id="viewRankBtn" data-en="TEAM RANKING" data-ko="팀 순위" onclick="showView('rank')">팀 순위</button>
-  <button class="view-toggle-btn lbl" id="viewSquadBtn" data-en="TEAM INFO" data-ko="팀 정보" onclick="showView('squad')">팀 정보</button>
-  <button class="view-toggle-btn lbl" id="viewRoundsBtn" data-en="ROUND RESULTS" data-ko="라운드별 결과" onclick="showView('rounds')">라운드별 결과</button>
+  <button class="view-toggle-btn active lbl" id="viewRankBtn" data-en="LEAGUE RANKING" data-ko="리그 순위" onclick="showView('rank')">리그 순위</button>
+  <button class="view-toggle-btn lbl" id="viewSquadBtn" data-en="CLUB INFO" data-ko="구단 정보" onclick="showView('squad')">구단 정보</button>
+  <button class="view-toggle-btn lbl" id="viewRoundsBtn" data-en="LEAGUE SCHEDULE" data-ko="리그 일정" onclick="showView('rounds')">리그 일정</button>
   <button class="view-toggle-btn lbl" id="viewReportBtn" data-en="WEEKLY REPORT" data-ko="주차별 리포트" onclick="showView('report')">주차별 리포트</button>
-  <button class="view-toggle-btn lbl" id="viewStatsBtn" data-en="TEAM RECORDS" data-ko="팀 기록" onclick="showView('stats')">팀 기록</button>
+  <button class="view-toggle-btn lbl" id="viewStatsBtn" data-en="LEAGUE RECORDS" data-ko="리그 기록" onclick="showView('stats')">리그 기록</button>
   <button class="view-toggle-btn lbl" id="viewScorersBtn" data-en="TOP SCORERS" data-ko="득점 순위" onclick="showView('scorers')">득점 순위</button>
   <button class="view-toggle-btn lbl" id="viewPredictBtn" data-en="MATCH PROJECTIONS" data-ko="리그 예측" onclick="showView('predict')">리그 예측</button>
   <button class="view-toggle-btn lbl" id="viewVenuesBtn" data-en="CLUB VENUES" data-ko="구단 위치" onclick="showView('venues')">구단 위치</button>
@@ -198,11 +198,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <button class="rank-filter-btn active lbl" data-filter="all" data-en="ALL" data-ko="전체" onclick="setRankFilter('all')">전체</button>
   <button class="rank-filter-btn lbl" data-filter="home" data-en="HOME" data-ko="홈" onclick="setRankFilter('home')">홈</button>
   <button class="rank-filter-btn lbl" data-filter="away" data-en="AWAY" data-ko="원정" onclick="setRankFilter('away')">원정</button>
+  <button class="rank-filter-btn lbl" data-filter="form" data-en="FORM 5" data-ko="최근5" onclick="setRankFilter('form')">최근5</button>
   <button class="share-btn lbl" data-en="Share" data-ko="공유하기" onclick="shareRankTable()" aria-label="Share standings" title="순위표 공유">
     <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>
     <span class="lbl" data-en="Share" data-ko="공유">공유</span>
   </button>
 </div>
+<div class="rank-form-note lbl" id="rankFormNote" style="display:none" data-en="Form table — standings based on each team's last 5 matches only." data-ko="최근 5경기 폼 순위표 — 시즌 누적이 아닌 각 팀의 최근 5경기 결과만으로 매긴 순위입니다.">최근 5경기 폼 순위표 — 시즌 누적이 아닌 각 팀의 최근 5경기 결과만으로 매긴 순위입니다.</div>
 <table id="mainTable">
   <thead>
     <tr>
@@ -283,7 +285,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 
   <div class="team-info-tab-bar" id="teamInfoTabBar">
-    <button class="team-info-tab-btn active lbl" id="tiOverviewBtn" data-en="TEAM INFO" data-ko="팀 정보" onclick="scrollToTeamInfoSection('overview')">팀 정보</button>
+    <button class="team-info-tab-btn active lbl" id="tiOverviewBtn" data-en="CLUB INFO" data-ko="구단 정보" onclick="scrollToTeamInfoSection('overview')">구단 정보</button>
     <button class="team-info-tab-btn lbl" id="tiRecordBtn" data-en="RECORD" data-ko="기록" onclick="scrollToTeamInfoSection('record')">기록</button>
     <button class="team-info-tab-btn lbl" id="tiSquadBtn" data-en="SQUAD" data-ko="선수단" onclick="scrollToTeamInfoSection('squad')">선수단</button>
     <button class="team-info-tab-btn lbl" id="tiScorersBtn" data-en="Player Records" data-ko="선수 기록" onclick="scrollToTeamInfoSection('scorers')">선수 기록</button>
@@ -370,6 +372,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 <div id="statsView" style="display:none;">
+<div id="seasonFactSummary"></div>
 <div class="stats-grid">
   <div class="stats-col">
     <div class="stats-title lbl" data-en="GOALS PER GAME (Highest first)" data-ko="경기당 득점 (높은 순)">경기당 득점 (높은 순)</div>
@@ -1001,7 +1004,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
-<script src="data.js?v=0012"></script>
-<script src="app.js?v=0012"></script>
+<script src="data.js?v=0013"></script>
+<script src="app.js?v=0013"></script>
 </body>
 </html>
