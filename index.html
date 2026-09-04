@@ -33,21 +33,22 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </script>
 
 <!-- 1. 타이틀 & 검색 설명 -->
-<title>치주물루 유나이티드 FC 팬사이트 | NRFA 리그원 순위·경기결과·갤러리</title>
-<meta name="description" content="치주물루 유나이티드 FC(Chizumulu United FC) 비공식 팬사이트. 26/27 시즌 NRFA 리그 원 팀 순위, 경기 결과, 득점 순위, 경기 예측과 갤러리 소식까지 한 곳에서 확인하세요.">
+<!-- id="pageTitle"/"metaDescription"은 app.js의 updateDocumentMeta()에서 언어(ko/en)에 맞춰 갱신합니다. -->
+<title id="pageTitle">치주물루 유나이티드 FC 팬사이트 | NRFA 리그원 순위·경기결과·갤러리</title>
+<meta id="metaDescription" name="description" content="치주물루 유나이티드 FC(Chizumulu United FC) 비공식 팬사이트. 26/27 시즌 NRFA 리그 원 팀 순위, 경기 결과, 득점 순위, 경기 예측과 갤러리 소식까지 한 곳에서 확인하세요.">
 <meta name="keywords" content="치주물루 유나이티드 FC, 치즈물루 유나이티드, Chizumulu United FC, NRFA, NRFA 리그 원, 리그원 순위, 리그 원 순위, 축구 팬사이트, 경기 결과, 치주물루 갤러리">
 
 <!-- 2. 대표 URL (도메인 적용) -->
 <link rel="canonical" href="https://chizumulu.github.io/UTD/">
 
 <!-- 3. Open Graph (카카오톡, 페이스북, 네이버 공유용) -->
-<meta property="og:type" content="website">
-<meta property="og:locale" content="ko_KR">
-<meta property="og:title" content="치주물루 유나이티드 FC - 팬사이트">
-<meta property="og:description" content="NRFA 리그 원 치주물루 유나이티드 FC의 팀 순위, 경기 결과, 득점 순위, 갤러리를 확인하세요.">
+<meta id="ogType" property="og:type" content="website">
+<meta id="ogLocale" property="og:locale" content="ko_KR">
+<meta id="ogTitle" property="og:title" content="치주물루 유나이티드 FC - 팬사이트">
+<meta id="ogDescription" property="og:description" content="NRFA 리그 원 치주물루 유나이티드 FC의 팀 순위, 경기 결과, 득점 순위, 갤러리를 확인하세요.">
 <meta property="og:image" content="https://chizumulu.github.io/UTD/og-image.jpg"> <!-- 1200x630 사이즈 이미지 추천 -->
 <meta property="og:url" content="https://chizumulu.github.io/UTD/">
-<meta property="og:site_name" content="치주물루 유나이티드 FC 팬사이트">
+<meta id="ogSiteName" property="og:site_name" content="치주물루 유나이티드 FC 팬사이트">
 
 <!-- 구조화된 데이터 (구글 검색 결과 리치 스니펫 용도) -->
 <script type="application/ld+json">
@@ -77,12 +78,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="치주물루 UTD">
+<meta id="appleWebAppTitle" name="apple-mobile-web-app-title" content="치주물루 UTD">
 <!-- 한글 웹폰트 (Noto Sans KR) - 기기별 시스템 폰트 차이 없이 통일된 디자인을 위해 로드 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=0011">
+<link rel="stylesheet" href="style.css?v=0012">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -160,11 +161,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.5 14.5C19.3 15 18 15.3 16.6 15.1C12.9 14.6 10.1 11.4 10.1 7.5C10.1 6.1 10.4 4.8 11 3.6C6.9 4.4 3.8 8 3.8 12.4C3.8 17.3 7.8 21.3 12.7 21.3C16.6 21.3 19.9 18.8 21 15.3C20.8 15.1 20.6 14.8 20.5 14.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity="0.15"/></svg>
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity="0.15"/><path d="M12 2.5V4.5M12 19.5V21.5M4.5 12H2.5M21.5 12H19.5M5.6 5.6L7 7M17 17L18.4 18.4M18.4 5.6L17 7M7 17L5.6 18.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
-      <button class="theme-toggle-btn match-alert-btn" onclick="subscribeMatchAlerts()" id="matchAlertBtn" title="경기 알림 받기" aria-label="Subscribe to match kickoff alerts">
-        <span class="lbl match-alert-btn-text" data-en="Match Alerts" data-ko="경기알람받기">경기알람받기</span>
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="theme-toggle-btn install-app-btn" onclick="installApp()" id="installAppBtn" title="앱으로 저장" aria-label="Install app" style="display:none;">
+      <button class="theme-toggle-btn install-app-btn" onclick="installApp()" id="installAppBtn" title="앱으로 저장" aria-label="Install app" data-title-ko="앱으로 저장" data-title-en="Save as app" style="display:none;">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V15M12 15L8 11M12 15L16 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16V17.8C4 19.567 5.433 21 7.2 21H16.8C18.567 21 20 19.567 20 17.8V16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
@@ -963,7 +960,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 <!-- PWA 설치 유도 배너 -->
-<div id="pwaInstallBanner" class="pwa-install-banner" style="display:none;" role="dialog" aria-label="앱 설치 안내">
+<div id="pwaInstallBanner" class="pwa-install-banner" style="display:none;" role="dialog" aria-label="앱 설치 안내" data-aria-ko="앱 설치 안내" data-aria-en="Install app prompt">
   <div class="pwa-install-banner-icon"><img src="./dd.svg" alt=""></div>
   <div class="pwa-install-banner-text">
     <p class="pwa-install-banner-title lbl" data-en="Add to Home Screen" data-ko="홈 화면에 추가해보세요">홈 화면에 추가해보세요</p>
@@ -971,7 +968,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
   <div class="pwa-install-banner-actions">
     <button class="pwa-install-banner-btn lbl" data-en="Install" data-ko="설치" onclick="installApp()">설치</button>
-    <button class="pwa-install-banner-close" onclick="dismissInstallBanner()" aria-label="닫기">&times;</button>
+    <button class="pwa-install-banner-close" onclick="dismissInstallBanner()" aria-label="닫기" data-aria-ko="닫기" data-aria-en="Close">&times;</button>
   </div>
 </div>
 
@@ -1004,7 +1001,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
-<script src="data.js?v=0011"></script>
-<script src="app.js?v=0011"></script>
+<script src="data.js?v=0012"></script>
+<script src="app.js?v=0012"></script>
 </body>
 </html>

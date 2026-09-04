@@ -382,7 +382,8 @@ const teamAwards = {
     round7: [98]
   },
   playerOfTheMonth: {
-    '2026-07': 90
+    '2026-07': 90,
+    '2026-08': 13
   },
   goalOfTheMonth: {
     '2026-07': 7
@@ -1257,6 +1258,10 @@ function applyComputedLeagueStats() {
       const hasScore = typeof m.homeScore === 'number' && typeof m.awayScore === 'number';
       if (hasScore) {
         accumulate(m);
+      } else if (m.postponed) {
+        // 연기된 경기는 아직 새 날짜가 없으므로 "다음 경기" 후보가 되지 않습니다.
+        // (재편성되어 날짜가 확정되면 postponed를 지우면 자연스럽게 다음 경기 후보로 다시 잡힙니다.)
+        return;
       } else {
         if (!nextMatchFound[m.homeEn]) {
           nextMatchFound[m.homeEn] = { isBye: false, homeAway: 'H', oppKo: m.awayKo, oppEn: m.awayEn, kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime };
@@ -1659,6 +1664,10 @@ function computeNextMatchPreview(nameEn, nameKo) {
     // "다음 경기"가 아니라 이미 끝난 경기이므로, 건너뛰고 그다음 라운드에서 진짜 다음 경기를 찾습니다.
     const alreadyPlayed = typeof found.homeScore === 'number' && typeof found.awayScore === 'number';
     if (alreadyPlayed) continue;
+
+    // 연기(postponed)된 경기는 아직 새 날짜가 확정되지 않았으므로 "다음 경기"가 아닙니다.
+    // 재편성되어 postponed가 지워지면 자연스럽게 다음 경기 후보로 다시 잡힙니다.
+    if (found.postponed) continue;
 
     const isHome = found.homeEn === nameEn || found.homeKo === nameKo;
     const oppKo = isHome ? found.awayKo : found.homeKo;

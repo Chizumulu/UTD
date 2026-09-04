@@ -1,5 +1,16 @@
   // ===== 전역 상태 (Global State) =====
-  let isKorean = true;
+  // URL에 ?lang=en 이 붙어 있으면 처음부터 영문으로 시작합니다.
+  // 예: https://your-domain.com/?lang=en
+  function getInitialLangIsKorean() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const lang = (params.get('lang') || '').toLowerCase();
+      if (lang === 'en' || lang === 'english') return false;
+      if (lang === 'ko' || lang === 'kr' || lang === 'korean') return true;
+    } catch (e) {}
+    return true;
+  }
+  let isKorean = getInitialLangIsKorean();
   let currentView = 'rank';
   let currentTeamInfoTab = 'overview';
   let statsData = {};
@@ -1040,7 +1051,7 @@
       unbeatenStreak: [[`${guide ? guide.currentUnbeatenStreak : ''}경기 무패 행진을 이어가고 있다.`,
         `The unbeaten run has been extended to ${guide ? guide.currentUnbeatenStreak : ''} games.`]],
       lossStreak: [[`최근 ${lossStreakLen}경기 연속 패배로 좋지 않은 흐름이 이어지고 있다. 반등이 필요한 시점이다.`,
-        `This is a ${lossStreakLen}th straight defeat — a difficult run that needs turning around soon.`]]
+        `This is a ${ordinalEn(lossStreakLen)} straight defeat — a difficult run that needs turning around soon.`]]
     };
     milestones.forEach(tag => {
       if (MILESTONE_SENTENCES[tag]) paragraphs.push(pickSentence(rngResult, MILESTONE_SENTENCES[tag]));
@@ -2491,7 +2502,7 @@
     const attackValue = attackIndex !== null
       ? `<span class="${indexClass(attackIndex)}">${attackIndex}%</span>` : '-';
     const defenseValue = defensePerfect
-      ? `<span class="idx-good lbl" data-en="Perfect" data-ko="무실점">${isKorean ? '무실점' : 'Perfect'}</span>`
+      ? `<span class="idx-good lbl" data-en="Clean Sheet" data-ko="무실점">${isKorean ? '무실점' : 'Clean Sheet'}</span>`
       : (defenseIndex !== null ? `<span class="${indexClass(defenseIndex)}">${defenseIndex}%</span>` : '-');
 
     const rows = [
@@ -4877,7 +4888,7 @@
         const valTd = document.createElement('td');
         valTd.className = 'stat-val';
         if (team.defensePerfect) {
-          valTd.textContent = isKorean ? '무실점' : 'Perfect';
+          valTd.textContent = isKorean ? '무실점' : 'Clean Sheet';
           valTd.style.color = 'var(--color-teal)';
         } else {
           valTd.textContent = `${Math.round(team.defenseIndex)}%`;
@@ -6069,7 +6080,13 @@
         ? `<span class="timeline-goals-badge">${isKorean ? entry.goals + '골' : (entry.goals > 1 ? entry.goals + ' goals' : entry.goals + ' goal')}</span>`
         : '';
       const capTag = entry.isCaptain ? `<span class="timeline-pk-tag">${isKorean ? 'C' : 'C'}</span>` : '';
-      const motmTag = entry.wasMotm ? `<span class="timeline-pk-tag">MOTM</span>` : '';
+      const motmTag = entry.wasMotm ? `<span class="timeline-pk-tag timeline-motm-tag">MOTM</span>` : '';
+
+      const oppTeam = leagueData.find(t => t.nameKo === entry.opponentKo);
+      const opponentName = oppTeam ? (isKorean ? oppTeam.nameKo : oppTeam.nameEn) : entry.opponentKo;
+      const resultDisplay = isKorean
+        ? entry.result
+        : entry.result.replace('승', 'W').replace('무', 'D').replace('패', 'L');
 
       const row = document.createElement('div');
       row.className = 'timeline-row';
@@ -6079,8 +6096,8 @@
         </div>
         <div class="timeline-match">
           <span class="ha-badge ${entry.wasStarter ? 'ha-home' : 'ha-away'}">${roleLabel}</span>
-          <span class="timeline-opp-name">vs ${entry.opponentKo}</span>
-          <span class="timeline-score">${entry.result}</span>
+          <span class="timeline-opp-name">vs ${opponentName}</span>
+          <span class="timeline-score">${resultDisplay}</span>
         </div>
         <div class="timeline-goals">
           ${goalsTag}
@@ -7072,9 +7089,12 @@
     renderNextMatchStrip();
   
     document.querySelectorAll('.lbl').forEach(el => {
-      el.innerHTML = el.getAttribute('data-ko');
+      el.innerHTML = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');
     });
-    document.getElementById('langBtnText').textContent = 'View in English';
+    document.querySelectorAll('.opp-logo').forEach(el => {
+      el.title = isKorean ? el.getAttribute('data-ko-name') : el.getAttribute('data-en-name');
+    });
+    document.getElementById('langBtnText').textContent = isKorean ? 'View in English' : '한국어로 보기';
 
     applyTheme(isDarkTheme() ? 'dark' : 'light');
     
