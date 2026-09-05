@@ -1927,6 +1927,7 @@
   const NEXT_MATCH_LIVE_BAR_TAIL_MS = 3 * 60 * 60 * 1000; // 킥오프 후 3시간까지
   function updateNextMatchLiveBar() {
     const el = document.getElementById('nextMatchLiveBar');
+    updateSideLiveBadge(el ? Number(el.getAttribute('data-kickoff-utc')) : null);
     if (!el) return;
     const kickoffMs = Number(el.getAttribute('data-kickoff-utc'));
     if (!kickoffMs) {
@@ -1936,6 +1937,18 @@
     const now = Date.now();
     const inWindow = now >= (kickoffMs - NEXT_MATCH_LIVE_BAR_LEAD_MS) && now <= (kickoffMs + NEXT_MATCH_LIVE_BAR_TAIL_MS);
     el.style.display = inWindow ? '' : 'none';
+  }
+
+  // ===== 사이드바 라이브 배지 (킥오프 순간 ~ 종료 후 3시간까지, 화면을 어디로 옮겨도 보이도록) =====
+  // "문자중계 바"와 창은 같지만 시작 시점만 다릅니다 — 문자중계 바는 킥오프 30분 전
+  // 대기 상태부터 보여주는 반면, 사이드바 LIVE 배지는 실제 킥오프 이후에만 켜져
+  // "진짜 진행 중"이라는 신호로 정확히 쓰이게 합니다.
+  function updateSideLiveBadge(kickoffMs) {
+    const badge = document.getElementById('sideLiveBadge');
+    if (!badge) return;
+    const now = Date.now();
+    const isLiveNow = !!kickoffMs && now >= kickoffMs && now <= (kickoffMs + NEXT_MATCH_LIVE_BAR_TAIL_MS);
+    badge.classList.toggle('is-visible', isLiveNow);
   }
 
   // 상대전적(H2H) 요약 한 줄 — computeH2HHistory 결과 하나를 받아 렌더링합니다.

@@ -83,7 +83,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=001">
+<link rel="stylesheet" href="style.css?v=002">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -138,6 +138,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="side-crest-text">
       <h1 class="lbl" data-ko="<span class=&quot;sponsor-line&quot;>치웨미 인베스트먼트</span><span class=&quot;main-line&quot;>NRFA 리그 원</span>" data-en="<span class=&quot;sponsor-line&quot;>CHIWEMI INVESTMENT</span><span class=&quot;main-line&quot;>NRFA LEAGUE ONE</span>"><span class="sponsor-line">치웨미 인베스트먼트</span><span class="main-line">NRFA 리그 원</span></h1>
       <span class="fan-badge lbl" data-ko="26/27 시즌" data-en="26/27 Season">26/27 시즌</span>
+      <span class="side-live-badge lbl" id="sideLiveBadge" data-en="<span class=&quot;side-live-dot&quot;></span>LIVE" data-ko="<span class=&quot;side-live-dot&quot;></span>LIVE"><span class="side-live-dot"></span>LIVE</span>
     </div>
     <div class="side-week-badge" id="sideWeekBadge">
       <span class="side-week-badge-num" id="weekBadgeNum">5</span>
@@ -450,6 +451,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="stats-grid">
   <div class="stats-col">
     <div class="stats-title lbl" data-en="GOALS PER GAME (Highest first)" data-ko="경기당 득점 (높은 순)">경기당 득점 (높은 순)</div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -461,10 +463,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="scoreBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('goalsFor')">더보기</button>
   </div>
   <div class="stats-col">
     <div class="stats-title lbl" data-en="GOALS CONCEDED PER GAME (Lowest first)" data-ko="경기당 실점 (낮은 순)">경기당 실점 (낮은 순)</div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -476,10 +480,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="concedeBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('goalsAgainst')">더보기</button>
   </div>
   <div class="stats-col">
     <div class="stats-title lbl" data-en="CLEAN SHEETS (Highest first)" data-ko="무실점 경기수 (많은 순)">무실점 경기수 (많은 순)</div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -490,10 +496,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="csBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('cs')">더보기</button>
   </div>
   <div class="stats-col">
     <div class="stats-title lbl" data-en="FAILED TO SCORE (Highest first)" data-ko="무득점 경기수 (많은 순)">무득점 경기수 (많은 순)</div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -504,6 +512,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="ftsBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('fts')">더보기</button>
   </div>
   <div class="stats-col advanced-col">
@@ -515,6 +524,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="lbl" data-ko="PPG(경기당 승점)는 승점을 경기수로 나눈 값이에요. 일반적으로 시즌 평균 PPG가 2.00을 넘으면 우승 경쟁권 페이스로 봅니다. 경기수가 다른 팀끼리도 공정하게 비교할 수 있는 지표예요." data-en="PPG (Points Per Game) is points divided by games played. A season average above 2.00 is generally considered title-race pace. It lets you fairly compare teams that have played a different number of matches.">PPG(경기당 승점)는 승점을 경기수로 나눈 값이에요. 일반적으로 시즌 평균 PPG가 2.00을 넘으면 우승 경쟁권 페이스로 봅니다. 경기수가 다른 팀끼리도 공정하게 비교할 수 있는 지표예요.</span>
       </div>
     </div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -526,6 +536,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="ppgBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('ppg')">더보기</button>
   </div>
   <div class="stats-col advanced-col">
@@ -537,6 +548,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="lbl" data-ko="득점과 실점만으로 &quot;이론상 받았어야 할 승점&quot;을 추정하는 지표예요. 실제 승점이 기대치보다 높으면(+) 접전에서 운이 따랐거나 승부처에서 강했다는 뜻이고, 낮으면(-) 경기 내용에 비해 승점을 덜 챙겼다는 뜻입니다. 시즌이 진행될수록 실제 승점은 기대 승점 쪽으로 수렴하는 경향이 있어요." data-en="Estimates the points a team &quot;should&quot; have earned based purely on goals scored and conceded. A positive (+) difference means the team has outperformed its underlying numbers (close-game luck or clutch play); negative (-) means it's picking up fewer points than its output suggests. Over a season, actual points tend to drift back toward this expected value.">득점과 실점만으로 "이론상 받았어야 할 승점"을 추정하는 지표예요. 실제 승점이 기대치보다 높으면(+) 접전에서 운이 따랐거나 승부처에서 강했다는 뜻이고, 낮으면(-) 경기 내용에 비해 승점을 덜 챙겼다는 뜻입니다. 시즌이 진행될수록 실제 승점은 기대 승점 쪽으로 수렴하는 경향이 있어요.</span>
       </div>
     </div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -548,6 +560,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="pythagBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('pythag')">더보기</button>
   </div>
   <div class="stats-col advanced-col">
@@ -559,6 +572,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="lbl" data-ko="슈팅 데이터 없이 골 기록만으로 만든 xG류 지표예요. 리그 전체 팀의 경기당 득점 평균을 100%로 놓고, 이 팀의 경기당 득점이 그 대비 몇 %인지를 보여줍니다. 100%보다 높으면 평균보다 골을 잘 넣는 팀이라는 뜻이에요." data-en="An xG-style metric built purely from goal records (no shot data). League-wide average goals per game is set to 100%, and this shows this team's goals per game as a percentage of that average. Above 100% means the team scores more than the league average.">슈팅 데이터 없이 골 기록만으로 만든 xG류 지표예요. 리그 전체 팀의 경기당 득점 평균을 100%로 놓고, 이 팀의 경기당 득점이 그 대비 몇 %인지를 보여줍니다. 100%보다 높으면 평균보다 골을 잘 넣는 팀이라는 뜻이에요.</span>
       </div>
     </div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -569,6 +583,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="attackIdxBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('attackIdx')">더보기</button>
   </div>
   <div class="stats-col advanced-col">
@@ -580,6 +595,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="lbl" data-ko="리그 평균 경기당 실점을 100%로 놓고, 이 팀이 그 대비 얼마나 덜 실점하는지를 보여주는 지표예요. 숫자가 높을수록 수비가 평균보다 견고하다는 뜻이고, 실점이 0인 팀은 '무실점'으로 표시됩니다." data-en="League-wide average goals conceded per game is set to 100%, and this shows how much less this team concedes relative to that average. A higher number means a stronger-than-average defense; a team with zero goals conceded shows as 'Perfect'.">리그 평균 경기당 실점을 100%로 놓고, 이 팀이 그 대비 얼마나 덜 실점하는지를 보여주는 지표예요. 숫자가 높을수록 수비가 평균보다 견고하다는 뜻이고, 실점이 0인 팀은 '무실점'으로 표시됩니다.</span>
       </div>
     </div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -590,10 +606,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="defenseIdxBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('defenseIdx')">더보기</button>
   </div>
   <div class="stats-col">
     <div class="stats-title lbl" data-en="WINNING STREAK (Highest first)" data-ko="연승 (많은 순)">연승 (많은 순)</div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -604,10 +622,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="streakWinBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakWin')">더보기</button>
   </div>
   <div class="stats-col">
     <div class="stats-title lbl" data-en="LOSING STREAK (Highest first)" data-ko="연패 (많은 순)">연패 (많은 순)</div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -618,10 +638,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="streakLossBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakLoss')">더보기</button>
   </div>
   <div class="stats-col">
     <div class="stats-title lbl" data-en="DRAWING STREAK (Highest first)" data-ko="연속 무승부 (많은 순)">연속 무승부 (많은 순)</div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -632,6 +654,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="streakDrawBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakDraw')">더보기</button>
   </div>
   <div class="stats-col">
@@ -643,6 +666,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="lbl" data-ko="가장 최근 패배 이후 이어지고 있는 무패(승 또는 무) 경기 수예요. 연승과 연무를 합쳐서 팀의 안정적인 컨디션을 한눈에 보여줍니다." data-en="Consecutive matches without a loss (win or draw) since the most recent defeat. Combines winning and drawing streaks to show a team's overall run of form.">가장 최근 패배 이후 이어지고 있는 무패(승 또는 무) 경기 수예요. 연승과 연무를 합쳐서 팀의 안정적인 컨디션을 한눈에 보여줍니다.</span>
       </div>
     </div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -653,10 +677,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="streakUnbeatenBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakUnbeaten')">더보기</button>
   </div>
   <div class="stats-col">
     <div class="stats-title lbl" data-en="SCORING STREAK (Highest first)" data-ko="연속 득점 (많은 순)">연속 득점 (많은 순)</div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -667,10 +693,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="streakScoringBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakScoring')">더보기</button>
   </div>
   <div class="stats-col">
     <div class="stats-title lbl" data-en="CONCEDING STREAK (Highest first)" data-ko="연속 실점 (많은 순)">연속 실점 (많은 순)</div>
+        <div class="table-wrap">
     <table class="stats-table">
       <thead>
         <tr>
@@ -681,6 +709,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </thead>
       <tbody id="streakConcedingBody"></tbody>
     </table>
+    </div>
     <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakConceding')">더보기</button>
   </div>
 </div>
@@ -900,6 +929,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="close-btn" onclick="closeModal()">&times;</button>
     </div>
     <div class="modal-body">
+            <div class="table-wrap">
       <table class="stats-table">
         <thead>
           <tr>
@@ -911,6 +941,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </thead>
         <tbody id="modalTableBody"></tbody>
       </table>
+      </div>
     </div>
   </div>
 </div>
@@ -1075,7 +1106,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 </div>
-<script src="data.js?v=001"></script>
-<script src="app.js?v=001"></script>
+<script src="data.js?v=002"></script>
+<script src="app.js?v=002"></script>
 </body>
 </html>
