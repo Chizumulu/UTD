@@ -209,6 +209,7 @@
   function showView(view) {
     currentView = view;
     const rankView = document.getElementById('rankView');
+    const leagueRankView = document.getElementById('leagueRankView');
     const squadView = document.getElementById('squadView');
     const roundsView = document.getElementById('roundsView');
     const statsView = document.getElementById('statsView');
@@ -218,6 +219,7 @@
     const reportView = document.getElementById('reportView');
     const nextMatchStrip = document.getElementById('nextMatchStrip');
     const rankBtn = document.getElementById('viewRankBtn');
+    const leagueRankBtn = document.getElementById('viewLeagueRankBtn');
     const squadBtn = document.getElementById('viewSquadBtn');
     const roundsBtn = document.getElementById('viewRoundsBtn');
     const statsBtn = document.getElementById('viewStatsBtn');
@@ -227,6 +229,7 @@
     const reportBtn = document.getElementById('viewReportBtn');
 
     rankView.style.display = 'none';
+    if (leagueRankView) leagueRankView.style.display = 'none';
     squadView.style.display = 'none';
     roundsView.style.display = 'none';
     statsView.style.display = 'none';
@@ -236,6 +239,7 @@
     if (reportView) reportView.style.display = 'none';
     if (nextMatchStrip) nextMatchStrip.style.display = 'none';
     rankBtn.classList.remove('active');
+    if (leagueRankBtn) leagueRankBtn.classList.remove('active');
     squadBtn.classList.remove('active');
     roundsBtn.classList.remove('active');
     statsBtn.classList.remove('active');
@@ -276,10 +280,15 @@
       if (reportView) reportView.style.display = '';
       if (reportBtn) reportBtn.classList.add('active');
       renderRoundResultReport();
+    } else if (view === 'leagueRank') {
+      if (leagueRankView) leagueRankView.style.display = '';
+      if (leagueRankBtn) leagueRankBtn.classList.add('active');
+      renderLeagueTable();
     } else {
       rankView.style.display = '';
       rankBtn.classList.add('active');
       if (nextMatchStrip) nextMatchStrip.style.display = '';
+      renderMainMiniTable();
     }
 
     refreshScrollFadeHints();
@@ -1473,6 +1482,7 @@
     const dateObj = new Date(y, mo - 1, d);
     const weekdayKo = WEEKDAY_KO[dateObj.getDay()];
     const weekdayEn = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+    const monthEn = dateObj.toLocaleDateString('en-US', { month: 'short' });
 
     // 말라위(CAT, UTC+2) → KST(UTC+9)는 +7시간
     const kstDate = new Date(y, mo - 1, d, hh + 7, mm);
@@ -1480,6 +1490,7 @@
     const kstD = kstDate.getDate();
     const kstWeekdayKo = WEEKDAY_KO[kstDate.getDay()];
     const kstWeekdayEn = kstDate.toLocaleDateString('en-US', { weekday: 'short' });
+    const kstMonthEn = kstDate.toLocaleDateString('en-US', { month: 'short' });
     const kstTime = `${String(kstDate.getHours()).padStart(2, '0')}:${String(kstDate.getMinutes()).padStart(2, '0')}`;
     const dayShifted = kstD !== d;
 
@@ -1492,10 +1503,10 @@
       return `${catTxt}<br>${kstTxt}`;
     }
     if (!dayShifted) {
-      return `${weekdayEn}, Aug ${d} · ${nextMatch.kickoffTime} CAT / ${kstTime} KST`;
+      return `${weekdayEn}, ${monthEn} ${d} · ${nextMatch.kickoffTime} CAT / ${kstTime} KST`;
     }
-    const catTxt = `${weekdayEn}, Aug ${d} · ${nextMatch.kickoffTime} CAT`;
-    const kstTxt = `${kstWeekdayEn}, Aug ${kstD} · ${kstTime} KST`;
+    const catTxt = `${weekdayEn}, ${monthEn} ${d} · ${nextMatch.kickoffTime} CAT`;
+    const kstTxt = `${kstWeekdayEn}, ${kstMonthEn} ${kstD} · ${kstTime} KST`;
     return `${catTxt}<br>${kstTxt}`;
   }
 
@@ -1516,9 +1527,8 @@
 
     if (t.nextMatch.isBye) {
       el.innerHTML = `
-        <span class="nms-label lbl" data-en="Next" data-ko="다음경기">${isKorean ? '다음경기' : 'Next'}</span>
-        <span class="nms-bye lbl" data-en="Bye week — no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week — no match this round'}</span>
-        <span class="nms-meta-row"></span>`;
+        <div class="nmh-eyebrow lbl" data-en="Next" data-ko="다음경기">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</div>
+        <div class="nmh-bye lbl" data-en="Bye week — no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week — no match this round'}</div>`;
       const liveBarBye = document.getElementById('nextMatchLiveBar');
       if (liveBarBye) liveBarBye.removeAttribute('data-kickoff-utc');
       updateNextMatchLiveBar();
@@ -1529,32 +1539,44 @@
     const oppIdx = ranked.findIndex(rt => rt.nameEn === t.nextMatch.oppEn);
     const oppRank = oppIdx !== -1 ? oppIdx + 1 : null;
     const oppRankTxt = oppRank ? (isKorean ? `${oppRank}위` : `#${oppRank}`) : '';
+    const myRankTxt = info.rank ? (isKorean ? `${info.rank}위` : `#${info.rank}`) : '';
     const haClass = t.nextMatch.homeAway === 'H' ? 'ha-home' : 'ha-away';
-    const oppName = isKorean ? t.nextMatch.oppKo : t.nextMatch.oppEn;
-    const oppNameShort = (isKorean ? t.nextMatch.oppKo : t.nextMatch.oppEn).split(' ')[0];
+    const haLabel = t.nextMatch.homeAway === 'H' ? (isKorean ? '홈' : 'HOME') : (isKorean ? '원정' : 'AWAY');
+    const oppNameFull = isKorean ? t.nextMatch.oppKo : t.nextMatch.oppEn;
+    const myNameFull = isKorean ? t.nameKo : t.nameEn;
+    const oppName = oppNameFull.split(' ')[0];
+    const myName = myNameFull.split(' ')[0];
     const kickoffTxt = formatKickoff(t.nextMatch);
     const weatherHtml = matchWeatherPlaceholderHtml(
       t.nextMatch.homeAway === 'H' ? t.nameEn : t.nextMatch.oppEn,
       t.nextMatch.kickoffDate, t.nextMatch.kickoffTime,
       'nms-weather', true
     );
+    const kickoffMs = (typeof kickoffUTCMillis === 'function')
+      ? kickoffUTCMillis(t.nextMatch.kickoffDate, t.nextMatch.kickoffTime) : null;
+    const daysLeft = kickoffMs ? Math.max(0, Math.ceil((kickoffMs - Date.now()) / 86400000)) : null;
+    const ddayTxt = daysLeft === null ? '' : (daysLeft === 0 ? (isKorean ? 'D-DAY' : 'D-DAY') : `D-${daysLeft}`);
 
     el.innerHTML = `
-      <span class="nms-label lbl" data-en="Next · ${weekLbl}" data-ko="다음경기 · ${weekLbl}">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</span>
-      <span class="nms-match-row">
-        <span class="nms-team">
-          <img class="team-logo team-logo-sm" src="./dd.svg" alt="Chizumulu United FC">
-          <span class="lbl" data-en="Chizumulu United FC" data-ko="치주물루">${isKorean ? '치주물루' : 'Chizumulu'}</span>
-        </span>
-        <span class="ha-badge ${haClass} nms-ha">${t.nextMatch.homeAway}</span>
-        <span class="nms-team">
-          <img class="team-logo team-logo-sm opp-logo" data-en-name="${t.nextMatch.oppEn}" data-ko-name="${t.nextMatch.oppKo}" title="${oppName}" src="${t.nextMatch.oppLogo}" alt="${t.nextMatch.oppEn}">
-          <span title="${oppName}">${oppNameShort}</span>
+      <div class="nmh-eyebrow lbl" data-en="Next · ${weekLbl}" data-ko="다음경기 · ${weekLbl}">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</div>
+      <div class="nmh-top">
+        <div class="nmh-team">
+          <img class="team-logo nmh-crest" src="./dd.svg" alt="Chizumulu United FC">
+          <span class="lbl" data-en="Chizumulu" data-ko="치주물루" title="${myNameFull}">${myName}</span>
+          ${myRankTxt ? `<span class="nms-opp-rank">${myRankTxt}</span>` : ''}
+        </div>
+        <div class="nmh-center">
+          ${ddayTxt ? `<div class="nmh-dday">${ddayTxt}</div>` : ''}
+          <div class="nmh-meta">${kickoffTxt || ''}</div>
+        </div>
+        <div class="nmh-team">
+          <img class="team-logo nmh-crest opp-logo" data-en-name="${t.nextMatch.oppEn}" data-ko-name="${t.nextMatch.oppKo}" title="${oppNameFull}" src="${t.nextMatch.oppLogo}" alt="${t.nextMatch.oppEn}">
+          <span title="${oppNameFull}">${oppName}</span>
           ${oppRankTxt ? `<span class="nms-opp-rank">${oppRankTxt}</span>` : ''}
-        </span>
-      </span>
-      <span class="nms-meta-row">
-        ${kickoffTxt ? `<span class="nms-kickoff">${kickoffTxt}</span>` : ''}
+        </div>
+      </div>
+      <div class="nmh-bottom">
+        <span class="ha-badge ${haClass} nms-ha">${haLabel}</span>
         ${weatherHtml}
         <span class="nms-action-group">
           <button class="nms-action-btn" onclick="downloadNextMatchICS()" aria-label="Add to calendar" title="${isKorean ? '캘린더에 추가' : 'Add to calendar'}">
@@ -1564,7 +1586,7 @@
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="18" cy="5" r="2.4" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="19" r="2.4" stroke="currentColor" stroke-width="1.6"/></svg>
           </button>
         </span>
-      </span>`;
+      </div>`;
 
     const liveBar = document.getElementById('nextMatchLiveBar');
     if (liveBar) {
@@ -1789,6 +1811,113 @@
         <span class="cd-colon">:</span>
         <span class="cd-seg"><span class="cd-num">${pad(secs)}</span><small>${isKorean ? '초' : 'S'}</small></span>
       </span>`;
+  }
+
+  // ===== 홈: 최근 5경기 / 예정 5경기 미니 카드 =====
+  function getMyRecentMatches(n) {
+    const info = getMyRankedTeam();
+    if (!info) return [];
+    const t = info.team;
+    const guide = (typeof computeFormGuide === 'function') ? computeFormGuide(t.nameEn, t.nameKo) : null;
+    const seq = guide && guide.recentForm ? guide.recentForm : [];
+    return seq.slice(-n).map(m => ({
+      oppEn: m.oppEn,
+      oppKo: m.oppKo,
+      oppLogo: getTeamLogo(m.oppEn),
+      weekNum: m.weekNum,
+      myGoals: m.myGoals,
+      oppGoals: m.oppGoals,
+      result: m.result
+    }));
+  }
+
+  function getMyUpcomingMatches(n) {
+    const info = getMyRankedTeam();
+    if (!info) return [];
+    const t = info.team;
+    if (typeof scheduledRounds === 'undefined') return [];
+    const nameEn = t.nameEn, nameKo = t.nameKo;
+    const keys = Object.keys(scheduledRounds).sort((a, b) => {
+      return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+    });
+    const out = [];
+    keys.forEach(roundKey => {
+      if (out.length >= n) return;
+      const matches = scheduledRounds[roundKey] || [];
+      const found = matches.find(m => !(m.byeKo || m.byeEn) &&
+        (m.homeEn === nameEn || m.homeKo === nameKo || m.awayEn === nameEn || m.awayKo === nameKo));
+      if (!found) return;
+      const played = typeof found.homeScore === 'number' && typeof found.awayScore === 'number';
+      if (played) return;
+      if (found.postponed) return; // 연기된 경기는 새 날짜가 확정되기 전까지 홈 화면 "예정 경기" 카드에서 제외
+      const isHome = found.homeEn === nameEn || found.homeKo === nameKo;
+      const oppEn = isHome ? found.awayEn : found.homeEn;
+      const oppKo = isHome ? found.awayKo : found.homeKo;
+      out.push({
+        oppEn, oppKo,
+        oppLogo: getTeamLogo(oppEn),
+        homeAway: isHome ? 'H' : 'A',
+        kickoffDate: found.kickoffDate,
+        kickoffTime: found.kickoffTime,
+        roundKey
+      });
+    });
+    return out;
+  }
+
+  function shortDateLabel(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    return `${parts[1]}.${parts[2]}`;
+  }
+
+  function homeMatchTeamName(en, ko) {
+    const full = isKorean ? (ko || en) : (en || ko);
+    // 다른 곳(순위표 축약 라벨 등)과 동일하게 팀명 첫 단어만 간략하게 사용
+    return full ? full.split(' ')[0] : full;
+  }
+
+  function renderHomeMatchCards() {
+    const recentEl = document.getElementById('homeRecentStrip');
+    const upcomingEl = document.getElementById('homeUpcomingStrip');
+    if (!recentEl && !upcomingEl) return;
+
+    if (recentEl) {
+      const recent = getMyRecentMatches(5);
+      recentEl.innerHTML = recent.map(m => {
+        const resultClass = m.result === 'W' ? 'win' : (m.result === 'L' ? 'loss' : 'draw');
+        const resultLabel = m.result === 'W' ? (isKorean ? '승' : 'W') : (m.result === 'L' ? (isKorean ? '패' : 'L') : (isKorean ? '무' : 'D'));
+        const oppName = homeMatchTeamName(m.oppEn, m.oppKo);
+        const weekTxt = isKorean ? `${m.weekNum}주차` : `WK${m.weekNum}`;
+        return `
+          <div class="home-match-item">
+            <img class="team-logo home-match-crest" src="${m.oppLogo}" alt="${m.oppEn}" title="${oppName}">
+            <span class="home-match-name" title="${oppName}">${oppName}</span>
+            <span class="home-match-score">${m.myGoals}-${m.oppGoals}</span>
+            <span class="home-match-result ${resultClass}">${resultLabel}</span>
+            <span class="home-match-date">${weekTxt}</span>
+          </div>`;
+      }).join('') || `<div class="home-match-empty lbl" data-en="No matches played yet" data-ko="아직 치른 경기가 없습니다">${isKorean ? '아직 치른 경기가 없습니다' : 'No matches played yet'}</div>`;
+    }
+
+    if (upcomingEl) {
+      const upcoming = getMyUpcomingMatches(5);
+      upcomingEl.innerHTML = upcoming.map(m => {
+        const oppName = homeMatchTeamName(m.oppEn, m.oppKo);
+        const haClass = m.homeAway === 'H' ? 'home' : 'away';
+        const haLabel = m.homeAway === 'H' ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A');
+        const weekNum = parseInt(String(m.roundKey).replace('round', ''), 10);
+        const weekTxt = isKorean ? `${weekNum}주차` : `WK${weekNum}`;
+        return `
+          <div class="home-match-item">
+            <img class="team-logo home-match-crest" src="${m.oppLogo}" alt="${m.oppEn}" title="${oppName}">
+            <span class="home-match-name" title="${oppName}">${oppName}</span>
+            <span class="home-match-ha ${haClass}">${haLabel}</span>
+            <span class="home-match-date">${weekTxt}</span>
+          </div>`;
+      }).join('') || `<div class="home-match-empty lbl" data-en="No upcoming fixtures" data-ko="예정된 경기가 없습니다">${isKorean ? '예정된 경기가 없습니다' : 'No upcoming fixtures'}</div>`;
+    }
   }
 
   // ===== 다음 경기 문자중계 링크 바 (킥오프 30분 전 ~ 3시간 후에만 노출) =====
@@ -4531,6 +4660,49 @@
 
     attachImageFallback();
     refreshScrollFadeHints();
+  }
+
+  // ===== 메인 화면용 간략 순위표 (Mini League Table for Main view) =====
+  // 상세 순위표(리그 순위 탭)와 달리 홈/원정/최근5 필터 없이 항상 시즌 전체 기준으로,
+  // 순위/팀명/경기/승/무/패/득실차/승점 8개 열만 보여줍니다.
+  function renderMainMiniTable() {
+    const tbody = document.getElementById('mainMiniTableBody');
+    if (!tbody) return;
+    const processedData = getRankedTeams('all');
+
+    tbody.innerHTML = processedData.map((team, index) => {
+      const rank = index + 1;
+      let trClass = '';
+      if (rank === 1) trClass += 'rank-1 promo ';
+      else if (rank === 2) trClass += 'rank-2 ';
+      else if (rank === 3) trClass += 'rank-3 ';
+      else if (rank >= processedData.length - 2) trClass += 'releg ';
+      if (team.nameEn === 'Chizumulu United FC' || team.nameKo === '치주물루 유나이티드 FC') {
+        trClass += 'my-team ';
+      }
+      const name = isKorean ? team.nameKo : team.nameEn;
+      const nameShortKo = team.nameKo.split(' ')[0];
+      const nameShortEn = team.nameEn.split(' ')[0];
+      const nameShort = isKorean ? nameShortKo : nameShortEn;
+      const gdClass = team.gd > 0 ? 'gd-pos' : (team.gd < 0 ? 'gd-neg' : 'gd-zero');
+      return `
+        <tr${trClass.trim() ? ` class="${trClass.trim()}"` : ''}>
+          <td class="rank-cell">${rank}</td>
+          <td class="team team-clickable" onclick="goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')}">
+            <img class="team-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}">
+            <span class="lbl team-name-full" data-en="${team.nameEn}" data-ko="${team.nameKo}">${name}</span>
+            <span class="lbl team-name-short" data-en="${nameShortEn}" data-ko="${nameShortKo}">${nameShort}</span>
+          </td>
+          <td>${team.played}</td>
+          <td>${team.won}</td>
+          <td>${team.drawn}</td>
+          <td>${team.lost}</td>
+          <td class="${gdClass}">${team.gd}</td>
+          <td class="pts">${team.pts}</td>
+        </tr>`;
+    }).join('');
+
+    attachImageFallback();
   }
 
   // ===== 순위표 이미지로 내보내기 (Export Standings as PNG) =====
@@ -7282,9 +7454,11 @@
     const week = (nextRoundStart && today >= nextRoundStart) ? completedRounds + 1 : completedRounds;
 
     const weekEl = document.getElementById('weekLabel');
+    const weekBadgeNumEl = document.getElementById('weekBadgeNum');
     const dateEl = document.getElementById('dateLabel');
     const dateShortEl = document.getElementById('dateLabelShort');
     if (weekEl) weekEl.textContent = isKorean ? `${week}주차` : `Week ${week}`;
+    if (weekBadgeNumEl) weekBadgeNumEl.textContent = week;
     if (dateEl) {
       dateEl.textContent = isKorean
         ? `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
@@ -7336,7 +7510,9 @@
     equalizeTitleLines();
     
     renderLeagueTable();
+    renderMainMiniTable();
     renderNextMatchStrip();
+    renderHomeMatchCards();
     
     if (currentView === 'stats') {
       buildStatsTables();
@@ -7442,7 +7618,9 @@
   // ===== 초기 실행 (App Init) =====
   document.addEventListener('DOMContentLoaded', function() {
     renderLeagueTable();
+    renderMainMiniTable();
     renderNextMatchStrip();
+    renderHomeMatchCards();
   
     document.querySelectorAll('.lbl').forEach(el => {
       el.innerHTML = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');
