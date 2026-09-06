@@ -870,6 +870,41 @@ const matchDetails = {
       scorersHome: "없음",
       scorersAway: "LIMBANI KAMANGA, PEARSON NYIRENDA"
     }
+  ],
+  // 9주차는 전체 라운드가 종료되어 roundsData.round9로 옮겨졌으므로 matchDetails.round9를
+  // 아래에 새로 추가했습니다. 치주물루 vs 루비리는 연기(postponed)라 스코어가 없어
+  // matchDetails에는 넣지 않습니다 — 나중에 결과가 나오면 이 목록 맨 뒤에 추가해주세요.
+  round9: [
+    {
+      match: "라이플리 6 : 에우티니 0",
+      scorersHome: "YAMIKANI NYIRENDA, ZAKARIA MPHAMBA, MOFFAT MVULA, LIMBANI KAMANGA (2골), PEARSON NYIRENDA",
+      scorersAway: "없음"
+    },
+    {
+      match: "마푸 1 : 젠다 0",
+      scorersHome: "HERBERT CHIRAMBO",
+      scorersAway: "없음"
+    },
+    {
+      match: "치하메 2 : 치폴로폴로 2",
+      scorersHome: "ROBIN CHIOKO, SAMAN NYIRENDA",
+      scorersAway: "ZIKANI KASAMBALA, KING NYASULU"
+    },
+    {
+      match: "루베 2 : 에크웬데니 3",
+      scorersHome: "FORTUNE CHIRAMBO, AUSTIN MPAWEMI",
+      scorersAway: "DAVIE MWANZA, BEYADI CHIRAMBO, MUWEMI MWALE"
+    },
+    {
+      match: "친테체 0 : 음벨와 1",
+      scorersHome: "없음",
+      scorersAway: "MLEZA NYIRONGO"
+    },
+    {
+      match: "비전 0 : 칠룸바 1",
+      scorersHome: "없음",
+      scorersAway: "AZIZI PINDANI"
+    }
   ]
 };
 
@@ -884,16 +919,6 @@ const upcomingMatchHistory = {
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
-  round9: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-04", kickoffTime: "15:00", postponed: true },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-05", kickoffTime: "14:30", homeScore: 6, awayScore: 0, scorersHome: "YAMIKANI NYIRENDA, ZAKARIA MPHAMBA, MOFFAT MVULA, LIMBANI KAMANGA (2골), PEARSON NYIRENDA", scorersAway: "없음" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-09-05", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "HERBERT CHIRAMBO", scorersAway: "없음" },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 2, awayScore: 2, scorersHome: "ROBIN CHIOKO, SAMAN NYIRENDA", scorersAway: "ZIKANI KASAMBALA, KING NYASULU" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FORTUNE CHIRAMBO, AUSTIN MPAWEMI", scorersAway: "DAVIE MWANZA, BEYADI CHIRAMBO, MUWEMI MWALE" },
-    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-06", kickoffTime: "14:30" },
-    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 0, awayScore: 1, scorersHome: "없음", scorersAway: "AZIZI PINDANI" },
-    { byeKo: "치바비 리얼 스타스 FC", byeEn: "Chibavi Real Stars FC" }
-  ],
   round10: [
     { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-09-12", kickoffTime: "14:30" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-12", kickoffTime: "14:30" },
@@ -1043,6 +1068,20 @@ const roundsData = {
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-08-30", kickoffTime: "14:30", homeScore: 0, awayScore: 2, scorersHome: "없음", scorersAway: "MWAYI SIMKONDA, HEBERT CHIRAMBO" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-08-30", kickoffTime: "14:30", homeScore: 0, awayScore: 2, scorersHome: "없음", scorersAway: "LIMBANI KAMANGA, PEARSON NYIRENDA" },
     { byeKo: "루베 마스터즈 FC", byeEn: "Lube Masters FC" }
+  ],
+  // 9주차는 전체 라운드가 종료되어 roundsData.round9로 옮겨졌습니다.
+  // 단, 치주물루 vs 루비리 경기는 연기(postponed)되어 스코어가 아직 없습니다.
+  // (round7의 마푸 vs 에크웬데니와 동일한 패턴 — 새 날짜가 확정되고 스코어가
+  // 채워지면 postponed를 지우고 matchDetails.round9 목록 맨 뒤에 추가해주세요.)
+  round9: [
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-04", kickoffTime: "15:00", postponed: true },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-05", kickoffTime: "14:30", homeScore: 6, awayScore: 0, scorersHome: "YAMIKANI NYIRENDA, ZAKARIA MPHAMBA, MOFFAT MVULA, LIMBANI KAMANGA (2골), PEARSON NYIRENDA", scorersAway: "없음" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-09-05", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "HERBERT CHIRAMBO", scorersAway: "없음" },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 2, awayScore: 2, scorersHome: "ROBIN CHIOKO, SAMAN NYIRENDA", scorersAway: "ZIKANI KASAMBALA, KING NYASULU" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FORTUNE CHIRAMBO, AUSTIN MPAWEMI", scorersAway: "DAVIE MWANZA, BEYADI CHIRAMBO, MUWEMI MWALE" },
+    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 0, awayScore: 1, scorersHome: "없음", scorersAway: "MLEZA NYIRONGO" },
+    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 0, awayScore: 1, scorersHome: "없음", scorersAway: "AZIZI PINDANI" },
+    { byeKo: "치바비 리얼 스타스 FC", byeEn: "Chibavi Real Stars FC" }
   ]
 };
 
@@ -2041,7 +2080,9 @@ const playerDirectory = {
   "HERBERT CHIRAMBO": { nameKo: "허버트 치람보", nameEn: "Herbert Chirambo" },
   "AZIZI PINDANI": { nameKo: "아지지 핀다니", nameEn: "Azizi Pindani" },
   "SAMAN NYIRENDA": { nameKo: "사만 니렌다", nameEn: "Saman Nyirenda" },
-  "ZIKANI KASAMBALA": { nameKo: "지카니 카삼발라", nameEn: "Zikani Kasambala" }
+  "ZIKANI KASAMBALA": { nameKo: "지카니 카삼발라", nameEn: "Zikani Kasambala" },
+  "MLEZA NYIRONGO": { nameKo: "믈레자 니롱고", nameEn: "Mleza Nyirongo" },
+  "ANDREW KAMANGA": { nameKo: "앤드류 카망가", nameEn: "Andrew Kamanga" }
 };
 
 function toTitleCase(upperName) {
@@ -2312,6 +2353,12 @@ function computePlayerGoalTimelines() {
 
     matches.forEach(m => {
       if (m.byeKo || m.byeEn) return; // 부전승 라운드는 득점 기록이 없으므로 스킵
+      // 스코어가 아직 없는 경기(연기 여부와 무관하게)는 matchDetails에 애초에
+      // 항목을 만들지 않으므로(round7/round9 주석 참고), 여기서도 건너뛰어야
+      // detailIdx가 matchDetails 배열과 계속 같은 순서로 맞물립니다.
+      // (건너뛰지 않으면 이 경기가 매치디테일 슬롯 하나를 잘못 소비해서
+      // 그 뒤 모든 경기의 득점자가 한 칸씩 밀려버립니다.)
+      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
 
       const d = details[detailIdx] || {};
       detailIdx++;
@@ -2423,6 +2470,8 @@ function generateRemainingFixtures() {
   const fixtures = [];
 
   // 1라운드 잔여분: roundsData로 아직 안 옮겨진(=결과가 안 나온) scheduledRounds 라운드를 그대로 사용
+  // (scheduledRounds의 라운드 키는 라운드 번호 순서대로 등록돼 있어서, 아래 순서 그대로가
+  // 실제 "몇 주차에 열리는지"와 일치합니다 — leg: 1로 표시해 이 순서를 신뢰할 수 있음을 남겨둡니다.)
   Object.keys(scheduledRounds || {}).forEach(roundKey => {
     if (roundsData[roundKey]) return; // 이미 결과가 확정된 라운드는 제외
     (scheduledRounds[roundKey] || []).forEach(m => {
@@ -2432,11 +2481,31 @@ function generateRemainingFixtures() {
       if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
       const home = teamByEn[m.homeEn];
       const away = teamByEn[m.awayEn];
-      if (home && away) fixtures.push({ home, away });
+      if (home && away) fixtures.push({ home, away, leg: 1 });
+    });
+  });
+
+  // 이미 라운드 전체가 종료 처리되어 roundsData로 옮겨진 뒤에도, 그 라운드 안에
+  // 연기(postponed)되어 아직 스코어가 없는 경기가 남아있을 수 있습니다(라운드의
+  // 나머지 경기는 다 끝났지만 이 경기만 새 날짜를 기다리는 경우). 이런 경기는 위
+  // scheduledRounds 루프에서는 걸러지지 않으므로 별도로 찾아서 추가합니다.
+  // 원래 소속된 라운드가 1라운드(leg 1) 경기이므로 leg: 1로 표시합니다.
+  Object.keys(roundsData || {}).forEach(roundKey => {
+    (roundsData[roundKey] || []).forEach(m => {
+      if (m.byeKo || m.byeEn) return;
+      if (!m.postponed) return;
+      if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
+      const home = teamByEn[m.homeEn];
+      const away = teamByEn[m.awayEn];
+      if (home && away) fixtures.push({ home, away, leg: 1 });
     });
   });
 
   // 2라운드(재대결) 전체: 1라운드에서 홈이었던 팀을 원정으로 뒤집어 생성
+  // 주의: 이 경기들은 실제로 몇 주차에 열릴지 알 수 있는 라운드 정보가 없습니다.
+  // 아래 이중 루프(i<j)는 순전히 "팀 목록 순서"대로 대진을 나열할 뿐이라, 배열 안에서의
+  // 등장 순서가 실제 경기 순서를 전혀 반영하지 않습니다(leg: 2로 표시해 이 사실을
+  // computeFixtureFormWeights 등 순서에 의존하는 로직에 전달합니다).
   const leg1Homes = computeLeg1Homes();
   for (let i = 0; i < leagueData.length; i++) {
     for (let j = i + 1; j < leagueData.length; j++) {
@@ -2448,9 +2517,9 @@ function generateRemainingFixtures() {
       const leg1Home = leg1Homes[key];
       if (!leg1Home) continue; // 1라운드 매치업 정보가 없으면 스킵 (있을 수 없는 경우)
       if (leg1Home === teamA.nameEn) {
-        fixtures.push({ home: teamB, away: teamA });
+        fixtures.push({ home: teamB, away: teamA, leg: 2 });
       } else {
-        fixtures.push({ home: teamA, away: teamB });
+        fixtures.push({ home: teamA, away: teamB, leg: 2 });
       }
     }
   }
@@ -3021,6 +3090,148 @@ function computeIterativeStrengthEstimates(matches, teamNames, homeBaseline, awa
 //   적은 팀은 리그 평균(=1.0) 쪽으로, 표본이 쌓인 팀은 자기 고유 성향(반복
 //   연산으로 SOS까지 반영된 값) 쪽으로 지수가 이동합니다.
 // ============================================================
+// ============================================================
+// 최근 폼(Recent Form) 보정 — 최근 5경기 득점/실점을 팀별 지수에 반영
+// ------------------------------------------------------------
+// computeTeamHomeAwayStrengths()의 홈/원정 지수는 "이번 시즌 전체" 경기를
+// 똑같은 비중으로 반영합니다(오래된 1경기나 어제 경기나 가중치가 같음).
+// 이 블록은 거기에 "최근 흐름"을 살짝 얹어주는 보정 레이어입니다.
+// - computeFormGuide()가 이미 만들어주는 recentForm(최근 최대 5경기,
+//   홈/원정 합산, 상대 무관하게 실제로 넣고 내준 골 기록)을 그대로 재사용합니다.
+// - 팀의 "최근 평균 득점/실점"을 "리그 평균 득점"과 비교해 비율을 구하고,
+//   그 비율이 1보다 크면(최근에 더 많이 넣었다/내줬다) 해당 방향으로
+//   공격·수비 지수를 살짝 밀어줍니다.
+// - RECENT_FORM_MAX_ADJUST로 보정 폭 자체를 좁게 제한하고,
+//   RECENT_FORM_WINDOW(5경기)보다 표본이 적으면(시즌 초반) 그 비율만큼
+//   영향력도 함께 줄여서, 반짝 대승/대패 한두 경기에 시즌 전체 지수가
+//   과도하게 휘둘리지 않도록 합니다.
+// - 이 보정은 "현재 시점" 예측(predictSingleMatch, runMonteCarloSimulation)에만
+//   적용됩니다. computeAiPredictionTrackRecord의 walk-forward 백테스트는
+//   이 함수를 거치지 않는 자체 strengthsFromState()를 쓰므로 영향받지 않습니다.
+// ============================================================
+const RECENT_FORM_WINDOW = 5;
+const RECENT_FORM_MAX_ADJUST = 0.04; // 최근 폼으로 인한 지수 보정 폭 상한 (±4%) — 리그 예측에 대한 최근 5경기 반영 비율을 대폭 낮춤(기존 ±15%)
+
+function clampRecentFormFactor(factor) {
+  return Math.min(1 + RECENT_FORM_MAX_ADJUST, Math.max(1 - RECENT_FORM_MAX_ADJUST, factor));
+}
+
+// 팀별 { attackFactor, defenseFactor, n }을 반환합니다.
+// attackFactor > 1  → 최근 N경기 평균 득점이 리그 평균보다 높음(공격 폼 상승)
+// defenseFactor > 1 → 최근 N경기 평균 실점이 리그 평균보다 높음(수비 폼 하락)
+function computeRecentFormFactors(leagueAvgGoals) {
+  const factors = {};
+  leagueData.forEach(t => {
+    const guide = (typeof computeFormGuide === 'function') ? computeFormGuide(t.nameEn, t.nameKo) : null;
+    const recent = (guide && guide.recentForm) ? guide.recentForm : [];
+    const n = recent.length;
+
+    if (!n || !leagueAvgGoals) {
+      factors[t.nameEn] = { attackFactor: 1, defenseFactor: 1, n: 0 };
+      return;
+    }
+
+    const avgFor = recent.reduce((s, m) => s + m.myGoals, 0) / n;
+    const avgAgainst = recent.reduce((s, m) => s + m.oppGoals, 0) / n;
+    const attackRatio = avgFor / leagueAvgGoals;
+    const defenseRatio = avgAgainst / leagueAvgGoals;
+
+    // 표본이 RECENT_FORM_WINDOW(5경기)보다 적으면 그 비율만큼만 반영합니다.
+    const sampleWeight = Math.min(n, RECENT_FORM_WINDOW) / RECENT_FORM_WINDOW;
+
+    factors[t.nameEn] = {
+      attackFactor: clampRecentFormFactor(1 + sampleWeight * (attackRatio - 1)),
+      defenseFactor: clampRecentFormFactor(1 + sampleWeight * (defenseRatio - 1)),
+      n
+    };
+  });
+  return factors;
+}
+
+// 시즌 지수(seasonIndex)에 최근 폼 배율(formFactor)을 얼마나 반영할지(weight, 0~1)
+// 정해서 곱해줍니다. weight=1이면 formFactor를 온전히 반영, weight=0이면 최근 폼
+// 영향 없이 시즌 지수 그대로입니다. 아래 두 호출부(개별 경기 예측 / 리그 시뮬레이션)가
+// 이 weight를 서로 다르게 줘서 "다음 한 경기"와 "남은 시즌 전체"를 구분합니다.
+function applyRecentFormWeight(seasonIndex, formFactor, weight) {
+  return seasonIndex * (1 + weight * (formFactor - 1));
+}
+
+// ------------------------------------------------------------
+// 리그 시뮬레이션(runMonteCarloSimulation) 전용: "폼 감쇠(decay)"
+// ------------------------------------------------------------
+// 개별 경기 예측은 딱 "바로 다음 한 경기"만 보므로 최근 폼을 100% 반영해도
+// 괜찮습니다. 하지만 리그 시뮬레이션은 팀당 남은 8~10경기를 한 번에 도는데,
+// 최근 폼 배율을 시즌 지수에 고정으로 곱해버리면 "지금의 반짝 호조/부진"이
+// 남은 시즌 내내 똑같이 적용되고, 매 경기 조금씩 유리(불리)한 효과가
+// 복리처럼 누적되어 최종 순위 확률이 비현실적으로 한쪽으로 쏠립니다.
+// (예: ±15%의 작은 배율도 10경기 연속 곱해지면 우승 확률을 몇 배로 튀게 만듦)
+//
+// 그래서 리그 시뮬레이션에서는 팀별로 "남은 경기 중 몇 번째 경기인지"를 세어,
+// 바로 다음 경기는 폼을 100% 반영하고 그 다음부터는 RECENT_FORM_DECAY_PER_MATCH
+// 비율로 점점 줄여서(지수 감쇠) 몇 경기 지나면 사실상 순수 시즌 지수로
+// 돌아가게 합니다. "최근 폼은 오래가지 않는다"는 상식을 모델에 반영한 것입니다.
+// ------------------------------------------------------------
+const RECENT_FORM_DECAY_PER_MATCH = 0.55; // 경기 하나 지날 때마다 폼 영향력이 이 비율로 감쇠
+
+// decay^0 + decay^1 + ... + decay^(count-1) 의 평균값(등비수열 평균)을 구합니다.
+// "몇 번째 경기인지는 모르지만 count번 중 하나"일 때 기대할 수 있는 평균 감쇠
+// 가중치를 구하는 데 씁니다(순서를 모르는 2라운드 대진에 사용).
+function averageGeometricWeight(decay, count) {
+  if (count <= 0) return 0;
+  if (decay === 1) return 1;
+  return (1 - Math.pow(decay, count)) / (count * (1 - decay));
+}
+
+// fixtures(runMonteCarloSimulation의 남은 대진 목록)를 훑어서 대진별 홈/원정
+// 감쇠 가중치(homeWeight/awayWeight, 0~1)를 미리 계산해둡니다.
+// - leg:1(1라운드 잔여분)은 scheduledRounds의 실제 라운드 순서를 그대로
+//   신뢰할 수 있으므로, 배열에 등장하는 순서 = 실제 경기 순서로 보고
+//   "몇 번째 남은 경기인지"에 따라 정확하게 감쇠시킵니다.
+// - leg:2(2라운드 재대결)는 실제로 몇 주차에 열릴지 알 수 있는 정보가 전혀
+//   없습니다(generateRemainingFixtures 참고 — 배열 순서가 팀 인덱스 조합
+//   순서일 뿐 경기 순서가 아님). 이런 경기에 leg:1과 같은 방식으로 "배열
+//   등장 순서" 기준 감쇠를 적용하면, 실제로는 시즌 후반에 열릴 경기인데도
+//   배열상 앞쪽에 있다는 이유만으로 폼 효과를 과하게 받는(혹은 반대로
+//   과소하게 받는) 오류가 생깁니다. 그래서 leg:2 경기들은 "그 팀의 leg:1
+//   잔여 경기가 모두 끝난 뒤, leg:2 경기들 중 순서를 모르는 채로 하나"라고
+//   보고, 가능한 모든 순서에 대한 평균 감쇠 가중치(averageGeometricWeight)를
+//   똑같이 적용합니다 — 배열 순서에 따른 편향 없이, "이 팀에게 남은 leg:2
+//   경기들은 평균적으로 이 정도 감쇠를 받는다"는 값으로 균일하게 처리합니다.
+function computeFixtureFormWeights(fixtures) {
+  // 팀별 leg:1 잔여 경기 수(L), leg:2 경기 수(M2)를 먼저 집계합니다.
+  const leg1Count = {};
+  const leg2Count = {};
+  fixtures.forEach(fx => {
+    const bucket = fx.leg === 2 ? leg2Count : leg1Count;
+    bucket[fx.home.nameEn] = (bucket[fx.home.nameEn] || 0) + 1;
+    bucket[fx.away.nameEn] = (bucket[fx.away.nameEn] || 0) + 1;
+  });
+
+  // 팀별 leg:2 평균 감쇠 가중치(= decay^L * averageGeometricWeight(decay, M2))를
+  // 미리 한 번만 계산해둡니다. 이 값은 그 팀의 모든 leg:2 경기에 동일하게 쓰입니다.
+  const leg2AvgWeightByTeam = {};
+  leagueData.forEach(t => {
+    const L = leg1Count[t.nameEn] || 0;
+    const M2 = leg2Count[t.nameEn] || 0;
+    leg2AvgWeightByTeam[t.nameEn] = Math.pow(RECENT_FORM_DECAY_PER_MATCH, L) * averageGeometricWeight(RECENT_FORM_DECAY_PER_MATCH, M2);
+  });
+
+  const leg1Occurrence = {};
+  return fixtures.map(fx => {
+    function weightFor(nameEn, isLeg2) {
+      if (isLeg2) return leg2AvgWeightByTeam[nameEn] || 0;
+      leg1Occurrence[nameEn] = (leg1Occurrence[nameEn] || 0) + 1;
+      return Math.pow(RECENT_FORM_DECAY_PER_MATCH, leg1Occurrence[nameEn] - 1);
+    }
+    const isLeg2 = fx.leg === 2;
+    // leg:1 쪽 occurrence 카운터는 배열 순서대로 두 번(홈/원정) 다 증가시켜야
+    // 하므로, 홈을 먼저 계산한 뒤 원정을 계산합니다(순서 중요).
+    const homeWeight = weightFor(fx.home.nameEn, isLeg2);
+    const awayWeight = weightFor(fx.away.nameEn, isLeg2);
+    return { homeWeight, awayWeight };
+  });
+}
+
 function computeTeamHomeAwayStrengths() {
   const { leagueAvgGoals } = computeTeamStrengths();
   const homeBaseline = leagueAvgGoals * HOME_ADVANTAGE;   // 리그 평균 "홈팀" 득점
@@ -3029,20 +3240,32 @@ function computeTeamHomeAwayStrengths() {
   const teamNames = leagueData.map(t => t.nameEn);
   const playedMatches = collectPlayedMatches();
   const iterative = computeIterativeStrengthEstimates(playedMatches, teamNames, homeBaseline, awayBaseline);
+  const recentForm = computeRecentFormFactors(leagueAvgGoals);
 
   const teamHomeAway = {};
   leagueData.forEach(t => {
     // 관측 지수(raw): 이제 단순 "내 득점/리그 평균"이 아니라, 반복 연산으로
     // 상대 전력까지 반영해 추정된 값입니다(computeIterativeStrengthEstimates).
     const est = iterative[t.nameEn] || { homeAttack: 1, homeDefense: 1, awayAttack: 1, awayDefense: 1, homePlayed: 0, awayPlayed: 0 };
+    const form = recentForm[t.nameEn] || { attackFactor: 1, defenseFactor: 1, n: 0 };
 
+    // 여기서는 "시즌 전체" 지수만 계산해서 그대로 둡니다(최근 폼을 곱해서
+    // 박아넣지 않음). 최근 폼 배율(form.attackFactor/defenseFactor)은 별도
+    // 필드로만 실어두고, 실제로 얼마나/어떻게 반영할지는 호출부
+    // (predictSingleMatch는 100%, runMonteCarloSimulation은 경기당 감쇠)가
+    // applyRecentFormWeight()로 각자 다르게 결정합니다. 안 그러면 리그 시뮬
+    // 처럼 같은 지수를 남은 경기 내내 재사용하는 곳에서 폼 효과가 경기 수만큼
+    // 복리로 누적되어 버립니다.
     teamHomeAway[t.nameEn] = {
       homeAttack: shrinkTeamIndex(est.homeAttack, est.homePlayed, HOME_AWAY_STRENGTH_PRIOR_WEIGHT),
       homeDefense: shrinkTeamIndex(est.homeDefense, est.homePlayed, HOME_AWAY_STRENGTH_PRIOR_WEIGHT),
       awayAttack: shrinkTeamIndex(est.awayAttack, est.awayPlayed, HOME_AWAY_STRENGTH_PRIOR_WEIGHT),
       awayDefense: shrinkTeamIndex(est.awayDefense, est.awayPlayed, HOME_AWAY_STRENGTH_PRIOR_WEIGHT),
       homeSample: est.homePlayed,
-      awaySample: est.awayPlayed
+      awaySample: est.awayPlayed,
+      recentFormAttackFactor: form.attackFactor,
+      recentFormDefenseFactor: form.defenseFactor,
+      recentFormSample: form.n
     };
   });
 
@@ -3186,6 +3409,11 @@ function runMonteCarloSimulation(iterations) {
   // 다시 한 번 더 돌지 않도록 합니다 — 위 주석대로 "한 번만 호출"을 실제로 지킵니다.)
   const dc = getDCRho(correctionTrack);
 
+  // 최근 폼 감쇠 가중치도 대진별로(고정) 한 번만 미리 계산해둡니다 — 팀별로
+  // "이 대진이 남은 경기 중 몇 번째인지"만 따지므로 시뮬레이션 반복(iteration)과
+  // 무관한 고정값입니다(fixtureCorrections와 동일한 패턴).
+  const fixtureFormWeights = computeFixtureFormWeights(fixtures);
+
   const teams = leagueData.map(t => ({
     nameEn: t.nameEn,
     nameKo: t.nameKo,
@@ -3235,9 +3463,19 @@ function runMonteCarloSimulation(iterations) {
       const homeHA = teamHomeAway[fx.home.nameEn];
       const awayHA = teamHomeAway[fx.away.nameEn];
       const fxCorrection = fixtureCorrections[fxIdx];
+      const fxFormWeight = fixtureFormWeights[fxIdx];
 
-      const homeExpected = homeBaseline * homeHA.homeAttack * awayHA.awayDefense * fxCorrection.homeFactor;
-      const awayExpected = awayBaseline * awayHA.awayAttack * homeHA.homeDefense * fxCorrection.awayFactor;
+      // 최근 폼 배율을 감쇠 가중치만큼만 반영합니다 — 이 대진이 각 팀의
+      // "다음 경기"면 weight=1(거의 온전히 반영), 그 다음 대진으로 갈수록
+      // weight가 점점 0에 가까워져(시즌 지수로 수렴) 폼 효과가 남은 시즌
+      // 내내 복리로 쌓이는 것을 막아줍니다.
+      const homeAttackAdj = applyRecentFormWeight(homeHA.homeAttack, homeHA.recentFormAttackFactor, fxFormWeight.homeWeight);
+      const homeDefenseAdj = applyRecentFormWeight(homeHA.homeDefense, homeHA.recentFormDefenseFactor, fxFormWeight.homeWeight);
+      const awayAttackAdj = applyRecentFormWeight(awayHA.awayAttack, awayHA.recentFormAttackFactor, fxFormWeight.awayWeight);
+      const awayDefenseAdj = applyRecentFormWeight(awayHA.awayDefense, awayHA.recentFormDefenseFactor, fxFormWeight.awayWeight);
+
+      const homeExpected = homeBaseline * homeAttackAdj * awayDefenseAdj * fxCorrection.homeFactor;
+      const awayExpected = awayBaseline * awayAttackAdj * homeDefenseAdj * fxCorrection.awayFactor;
 
       let homeGoals, awayGoals;
       if (dc.active && dc.rho !== 0) {
@@ -3375,11 +3613,19 @@ function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
   // 더/덜 넣는지. HOME_ADVANTAGE/AWAY_DISADVANTAGE는 homeBaseline/
   // awayBaseline 안에 이미 반영되어 있으므로 별도로 다시 곱하지 않습니다.
   const { teamHomeAway, leagueAvgGoals, homeBaseline, awayBaseline } = computeTeamHomeAwayStrengths();
-  const homeHA = teamHomeAway[homeEn] || { homeAttack: 1, homeDefense: 1, awayAttack: 1, awayDefense: 1, homeSample: 0, awaySample: 0 };
-  const awayHA = teamHomeAway[awayEn] || { homeAttack: 1, homeDefense: 1, awayAttack: 1, awayDefense: 1, homeSample: 0, awaySample: 0 };
+  const homeHA = teamHomeAway[homeEn] || { homeAttack: 1, homeDefense: 1, awayAttack: 1, awayDefense: 1, homeSample: 0, awaySample: 0, recentFormAttackFactor: 1, recentFormDefenseFactor: 1 };
+  const awayHA = teamHomeAway[awayEn] || { homeAttack: 1, homeDefense: 1, awayAttack: 1, awayDefense: 1, homeSample: 0, awaySample: 0, recentFormAttackFactor: 1, recentFormDefenseFactor: 1 };
 
-  const rawExpectedHomeGoals = homeBaseline * homeHA.homeAttack * awayHA.awayDefense;
-  const rawExpectedAwayGoals = awayBaseline * awayHA.awayAttack * homeHA.homeDefense;
+  // 이 함수는 "바로 다음 한 경기"만 예측하는 것이므로, 최근 폼 배율을
+  // 감쇠 없이(weight=1) 그대로 반영합니다. 시즌 지수와 최근 폼을 섞은
+  // 최종 공격/수비 지수를 홈/원정 각각 구합니다.
+  const homeAttackAdj = applyRecentFormWeight(homeHA.homeAttack, homeHA.recentFormAttackFactor, 1);
+  const homeDefenseAdj = applyRecentFormWeight(homeHA.homeDefense, homeHA.recentFormDefenseFactor, 1);
+  const awayAttackAdj = applyRecentFormWeight(awayHA.awayAttack, awayHA.recentFormAttackFactor, 1);
+  const awayDefenseAdj = applyRecentFormWeight(awayHA.awayDefense, awayHA.recentFormDefenseFactor, 1);
+
+  const rawExpectedHomeGoals = homeBaseline * homeAttackAdj * awayDefenseAdj;
+  const rawExpectedAwayGoals = awayBaseline * awayAttackAdj * homeDefenseAdj;
 
   // computeAiPredictionTrackRecord()는 라운드 전체를 처음부터 다시 훑는 비용이
   // 큰 함수라, runMonteCarloSimulation과 동일하게 여기서도 딱 한 번만 호출해서
@@ -3413,8 +3659,9 @@ function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
     predictedHomeGoals: topScorelines[0].home,
     predictedAwayGoals: topScorelines[0].away,
     // 이 매치업 맥락(홈팀의 홈 성향 vs 원정팀의 원정 성향)에 해당하는 지수
-    homeAttack: homeHA.homeAttack, homeDefense: homeHA.homeDefense,
-    awayAttack: awayHA.awayAttack, awayDefense: awayHA.awayDefense,
+    // (최근 폼까지 반영된 최종값 — 실제 기대 득점 계산에 쓰인 값과 동일)
+    homeAttack: homeAttackAdj, homeDefense: homeDefenseAdj,
+    awayAttack: awayAttackAdj, awayDefense: awayDefenseAdj,
     homeSample: homeHA.homeSample, awaySample: awayHA.awaySample,
     leagueAvgGoals,
     correctionApplied: correction.active,
@@ -3425,7 +3672,13 @@ function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
     awayCorrectionTeamSample: correction.awayTeamSample || 0,
     dcApplied: dc.active,
     dcRho: dc.rho,
-    dcSampleSize: dc.n
+    dcSampleSize: dc.n,
+    // 최근 5경기 폼이 이 매치업의 공격/수비 지수에 실제로 얼마나 반영됐는지
+    // (1.0이면 최근 폼 영향 없음, RECENT_FORM_MAX_ADJUST 범위 내에서 가감됨)
+    homeRecentFormAttackFactor: homeHA.recentFormAttackFactor,
+    homeRecentFormDefenseFactor: homeHA.recentFormDefenseFactor,
+    awayRecentFormAttackFactor: awayHA.recentFormAttackFactor,
+    awayRecentFormDefenseFactor: awayHA.recentFormDefenseFactor
   };
 }
 
@@ -4012,3 +4265,4 @@ const squadPlayerStatsSeason = computeSeasonPlayerStats();
 // function buildHeadToHeadHistory(teamAEn, teamBEn) {
 //   // competitions.filter(c => c.active).forEach(c => competitionData[c.id].roundsData 훑기)
 // }
+
