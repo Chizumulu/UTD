@@ -887,11 +887,11 @@ const scheduledRounds = {
   round9: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-04", kickoffTime: "15:00", postponed: true },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-05", kickoffTime: "14:30", homeScore: 6, awayScore: 0, scorersHome: "YAMIKANI NYIRENDA, ZAKARIA MPHAMBA, MOFFAT MVULA, LIMBANI KAMANGA (2골), PEARSON NYIRENDA", scorersAway: "없음" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-09-05", kickoffTime: "14:30" },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-06", kickoffTime: "14:30" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-09-05", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "HERBERT CHIRAMBO", scorersAway: "없음" },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 2, awayScore: 2, scorersHome: "ROBIN CHIOKO, SAMAN NYIRENDA", scorersAway: "ZIKANI KASAMBALA, KING NYASULU" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FORTUNE CHIRAMBO, AUSTIN MPAWEMI", scorersAway: "DAVIE MWANZA, BEYADI CHIRAMBO, MUWEMI MWALE" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-06", kickoffTime: "14:30" },
-    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-09-06", kickoffTime: "14:30" },
+    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 0, awayScore: 1, scorersHome: "없음", scorersAway: "AZIZI PINDANI" },
     { byeKo: "치바비 리얼 스타스 FC", byeEn: "Chibavi Real Stars FC" }
   ],
   round10: [
@@ -2037,7 +2037,11 @@ const playerDirectory = {
   "FORTUNE CHIRAMBO": { nameKo: "포춘 치람보", nameEn: "Fortune Chirambo" },
   "AUSTIN MPAWEMI": { nameKo: "오스틴 음파웨미", nameEn: "Austin Mpawemi" },
   "BEYADI CHIRAMBO": { nameKo: "베야디 치람보", nameEn: "Beyadi Chirambo" },
-  "MUWEMI MWALE": { nameKo: "무웨미 므왈레", nameEn: "Muwemi Mwale" }
+  "MUWEMI MWALE": { nameKo: "무웨미 므왈레", nameEn: "Muwemi Mwale" },
+  "HERBERT CHIRAMBO": { nameKo: "허버트 치람보", nameEn: "Herbert Chirambo" },
+  "AZIZI PINDANI": { nameKo: "아지지 핀다니", nameEn: "Azizi Pindani" },
+  "SAMAN NYIRENDA": { nameKo: "사만 니렌다", nameEn: "Saman Nyirenda" },
+  "ZIKANI KASAMBALA": { nameKo: "지카니 카삼발라", nameEn: "Zikani Kasambala" }
 };
 
 function toTitleCase(upperName) {
