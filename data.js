@@ -386,7 +386,8 @@ const teamAwards = {
     '2026-08': 13
   },
   goalOfTheMonth: {
-    '2026-07': 7
+    '2026-07': 7,
+    '2026-08': 7
   }
 };
 
@@ -469,6 +470,14 @@ function computeSquadPlayerStats() {
       const s = ensure(number);
       s.unusedCount++;
     });
+  });
+
+  // 이달의 선수 / 이달의 골 수상 횟수를 집계합니다.
+  Object.values(teamAwards.playerOfTheMonth || {}).forEach(number => {
+    ensure(number).potmCount = (ensure(number).potmCount || 0) + 1;
+  });
+  Object.values(teamAwards.goalOfTheMonth || {}).forEach(number => {
+    ensure(number).gotmCount = (ensure(number).gotmCount || 0) + 1;
   });
 
   return stats;
@@ -3853,3 +3862,149 @@ function computeAiPredictionTrackRecord() {
     estimatedDCRho
   };
 }
+
+// ============================================================================
+// ===== 대회(컵대회 포함) 구조 뼈대 (Competitions Scaffold) =====
+// ----------------------------------------------------------------------------
+// 아직 컵대회 일정/방식이 확정되지 않아 실제 데이터는 비어 있습니다.
+// 지금 존재하는 리그 관련 전역 변수(matchLineups, leagueData, roundsData,
+// scheduledRounds, teamAwards, topScorersData 등)는 전혀 건드리지 않았고,
+// 이 스캐폴드는 "앞으로 컵대회가 생기면 이런 모양으로 확장한다"는 뼈대만
+// 미리 잡아둔 것입니다. 실제 컵 일정/데이터가 나오면:
+//   1) competitions 배열에 컵 항목(들)을 추가하고
+//   2) competitionData.cupXXX 에 실제 데이터를 채우고
+//   3) 아래 TODO 함수들을 구현하면 됩니다.
+// 컵은 하나가 아니라 여러 개일 수 있으므로, 전부 배열/id-키 구조로 설계했습니다.
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// 1) 대회 레지스트리
+//    - type: 'league' (승점표 방식) | 'cup' (토너먼트/조별 등, 방식은 추후 확정)
+//    - order: 화면 탭 노출 순서
+//    - 지금은 리그 하나만 실제로 활성화되어 있습니다. 컵이 확정되면
+//      이 배열에 { id: 'cupA', ... } 형태로 항목을 추가하면 됩니다.
+// ----------------------------------------------------------------------------
+const competitions = [
+  {
+    id: 'league',
+    nameKo: 'NRFA 리그 원',
+    nameEn: 'NRFA League One',
+    type: 'league',
+    order: 0,
+    active: true
+  }
+  // 컵대회 예시 (일정/방식 확정 전까지는 주석 처리, 확정되면 아래처럼 추가):
+  // {
+  //   id: 'cupA',
+  //   nameKo: '카스텔컵',
+  //   nameEn: 'Castel Cup',
+  //   type: 'cup',
+  //   order: 1,
+  //   active: false   // 데이터가 준비되면 true로 전환
+  // }
+];
+
+// ----------------------------------------------------------------------------
+// 2) 대회별 데이터 컨테이너 (id로 키잉)
+//    - league 항목은 기존 전역 변수를 그대로 참조만 해서, 기존 코드가
+//      깨지지 않도록 합니다 (데이터를 복제하지 않음).
+//    - cup 항목은 컵이 생기면 동일한 모양(roundsData/scheduledRounds/
+//      matchLineups/teamAwards/topScorersData)으로 채우면 됩니다.
+//    - 컵은 리그와 달리 승점표(leagueTable)가 없을 수 있고, 대신
+//      bracket(토너먼트 대진표) 같은 필드가 필요할 수 있습니다.
+//      방식이 확정되면 이 모양에 맞춰 필드를 추가하세요.
+// ----------------------------------------------------------------------------
+const competitionData = {
+  league: {
+    roundsData: (typeof roundsData !== 'undefined') ? roundsData : {},
+    scheduledRounds: (typeof scheduledRounds !== 'undefined') ? scheduledRounds : {},
+    matchLineups: (typeof matchLineups !== 'undefined') ? matchLineups : {},
+    leagueTable: (typeof leagueData !== 'undefined') ? leagueData : [],
+    teamAwards: (typeof teamAwards !== 'undefined') ? teamAwards : { motm: {} },
+    topScorersData: (typeof topScorersData !== 'undefined') ? topScorersData : []
+  }
+  // cupA: {
+  //   roundsData: {},        // 확정 경기 (roundsData와 동일 포맷)
+  //   scheduledRounds: {},   // 예정 경기 (scheduledRounds와 동일 포맷)
+  //   matchLineups: {},      // 라운드별 라인업 (matchLineups와 동일 포맷)
+  //   bracket: [],           // 토너먼트 대진표 (방식 확정 후 설계)
+  //   teamAwards: { motm: {} },
+  //   topScorersData: []
+  // }
+};
+
+// ----------------------------------------------------------------------------
+// 3) 시즌 통합 스탯 (선수별 리그+컵 합산)
+//    - byCompetition[competitionId][number] 형태로 대회별 기록을 담고,
+//      season[number]에 전체 대회 합산 기록을 담습니다.
+//    - 지금은 활성 대회가 league 하나뿐이라 season === byCompetition.league
+//      와 사실상 같지만, 컵이 추가되면 자동으로 합산되도록 구현할 예정입니다.
+// ----------------------------------------------------------------------------
+const squadPlayerStatsByCompetition = {
+  // 지금 당장은 기존 squadPlayerStats(리그 전용)를 그대로 연결해둡니다.
+  league: (typeof squadPlayerStats !== 'undefined') ? squadPlayerStats : {}
+  // cupA: {}   // 컵 데이터가 생기면 computeSquadPlayerStats(competitionId)로 채움
+};
+
+// TODO: 컵대회가 추가되면, 아래 함수가 competitions 배열을 순회하며
+// byCompetition을 합산해 진짜 "시즌 통합" 스탯을 계산하도록 구현합니다.
+// 지금은 리그 데이터만 있으므로 season === byCompetition.league 를 그대로 반환합니다.
+function computeSeasonPlayerStats() {
+  const season = {};
+  Object.keys(squadPlayerStatsByCompetition).forEach(compId => {
+    const compStats = squadPlayerStatsByCompetition[compId];
+    Object.keys(compStats).forEach(number => {
+      const s = compStats[number];
+      if (!season[number]) {
+        season[number] = {
+          number: Number(number),
+          appearances: 0, starts: 0, subApps: 0, goals: 0,
+          captainCount: 0, motmCount: 0, potmCount: 0, gotmCount: 0,
+          unusedCount: 0, history: []
+        };
+      }
+      const acc = season[number];
+      acc.appearances += s.appearances || 0;
+      acc.starts += s.starts || 0;
+      acc.subApps += s.subApps || 0;
+      acc.goals += s.goals || 0;
+      acc.captainCount += s.captainCount || 0;
+      acc.motmCount += s.motmCount || 0;
+      acc.potmCount += s.potmCount || 0;
+      acc.gotmCount += s.gotmCount || 0;
+      acc.unusedCount += s.unusedCount || 0;
+      acc.history = acc.history.concat(
+        (s.history || []).map(h => Object.assign({ competitionId: compId }, h))
+      );
+    });
+  });
+  return season;
+}
+
+// 시즌 통합(리그+컵 전체 합산) 선수 스탯. 컵이 없는 지금은 리그 스탯과 동일합니다.
+const squadPlayerStatsSeason = computeSeasonPlayerStats();
+
+// ----------------------------------------------------------------------------
+// 4) 대회별 "다음 경기" (메인 화면 / 구단 정보 다음경기 파트에서 사용 예정)
+//    - 지금은 leagueData의 team.nextMatch를 그대로 활용합니다.
+//    - 컵이 추가되면 각 대회의 scheduledRounds를 훑어 대회별 다음 경기를
+//      계산하고, 그중 날짜가 가장 가까운 경기를 메인에 노출하도록 구현합니다.
+//      (컵 배지를 붙여서 리그 경기와 구분 표시할 예정)
+// ----------------------------------------------------------------------------
+// TODO: 컵대회가 추가되면 구현
+// function computeNextMatchAcrossCompetitions(teamNameEn) {
+//   // competitions.filter(c => c.active).map(c => 대회별 다음 경기 계산)
+//   // → 날짜 오름차순 정렬 후 가장 가까운 경기 + 소속 대회 정보를 함께 반환
+// }
+
+// ----------------------------------------------------------------------------
+// 5) 상대 전적(recentHistory)에 컵 경기 반영
+//    - 지금 recentHistory는 각 라운드 데이터 안에 comp(대회명 문자열)를 담는
+//      방식이라 별도 구조 변경 없이도 컵 경기를 자연스럽게 섞을 수 있습니다.
+//    - 컵이 추가되면, 상대팀 매치 로그를 만드는 함수가 competitions 배열
+//      전체(리그 + 활성화된 컵들)의 roundsData를 훑도록 확장할 예정입니다.
+// ----------------------------------------------------------------------------
+// TODO: 컵대회가 추가되면 구현
+// function buildHeadToHeadHistory(teamAEn, teamBEn) {
+//   // competitions.filter(c => c.active).forEach(c => competitionData[c.id].roundsData 훑기)
+// }

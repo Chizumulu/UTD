@@ -1464,7 +1464,23 @@
 
       const info = (typeof playerDirectory !== 'undefined') ? playerDirectory[key] : null;
       const displayName = info ? (isKorean ? info.nameKo : info.nameEn) : rawName;
-      const noteHtml = note ? ` ${note}` : '';
+
+      // 득점 개수(N골)나 자책골 표기는 언어에 맞게 번역하고, PK처럼 언어 구분이
+      // 필요 없는 표기는 그대로 둡니다.
+      let noteHtml = '';
+      if (note) {
+        const inner = note.slice(1, -1).trim();
+        const goalCountMatch = inner.match(/^(\d+)\s*골$/);
+        let displayNote;
+        if (goalCountMatch) {
+          displayNote = isKorean ? `${goalCountMatch[1]}골` : `${goalCountMatch[1]} goals`;
+        } else if (inner === '자책골') {
+          displayNote = isKorean ? '자책골' : 'OG';
+        } else {
+          displayNote = inner;
+        }
+        noteHtml = ` (${displayNote})`;
+      }
 
       const isLinkable = info && topScorersData.some(p => p.key === key);
       if (isLinkable) {
@@ -2557,7 +2573,7 @@
         <div class="ti-gk-card-item" data-player-number="${r.number}">
           <div class="ti-gk-card-number">#${r.number}</div>
           ${photo}
-          <div class="ti-gk-card-name lbl" data-en="${sq ? sq.nameEn : r.nameKo}" data-ko="${r.nameKo}">${r.nameKo}</div>
+          <div class="ti-gk-card-name lbl" data-en="${sq ? sq.nameEn : r.nameKo}" data-ko="${r.nameKo}">${isKorean ? r.nameKo : (sq ? sq.nameEn : r.nameKo)}</div>
           <div class="ti-gk-card-stats">
             <span class="ti-gk-stat"><b>${r.appearances}</b><small class="lbl" data-en="APP" data-ko="출전">${isKorean ? '출전' : 'APP'}</small></span>
             <span class="ti-gk-stat ti-gk-stat-cs"><b>${r.cleanSheets}</b><small class="lbl" data-en="CS" data-ko="무실점">${isKorean ? '무실점' : 'CS'}</small></span>
@@ -4211,7 +4227,26 @@
 
 
   // ===== 득점 순위표 렌더링 (Top Scorers Table) =====
+  // scorersGroupMode: 'flat'(전체 한 줄 순위) | 'team'(팀별로 묶어서 보기)
+  let scorersGroupMode = 'flat';
+
+  function setScorersGroupMode(mode) {
+    if (scorersGroupMode === mode) return;
+    scorersGroupMode = mode;
+    document.querySelectorAll('.scorers-mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+    });
+    const table = document.getElementById('scorersTable');
+    if (table) table.classList.toggle('grouped-by-team', mode === 'team');
+    renderScorersTable();
+  }
+
   function renderScorersTable() {
+    if (scorersGroupMode === 'team') {
+      renderScorersTableByTeam();
+      return;
+    }
+
     const tbody = document.getElementById('scorersTableBody');
     tbody.innerHTML = '';
 
@@ -4230,6 +4265,10 @@
 
       const playerName = isKorean ? player.nameKo : player.nameEn;
       const teamName = isKorean ? player.teamKo : player.teamEn;
+      // 모바일에서는 팀 로고 + 짧은 이름(첫 단어)만 보여줘서 공간을 아낍니다.
+      const teamShortEn = (player.teamEn || '').split(' ')[0];
+      const teamShortKo = (player.teamKo || '').split(' ')[0];
+      const teamShortName = isKorean ? teamShortKo : teamShortEn;
 
       const tr = document.createElement('tr');
       if (player.teamEn === 'Chizumulu United FC' || player.teamKo === '치주물루 유나이티드 FC') {
@@ -4247,9 +4286,10 @@
           ${scorerPhoto}
           <span class="lbl player-name-link" data-en="${player.nameEn}" data-ko="${player.nameKo}" data-player-key="${player.key}">${playerName}</span>
         </td>
-        <td class="team">
+        <td class="team scorers-col-team">
           ${player.teamLogo ? `<img class="team-logo" src="${player.teamLogo}" alt="${player.teamEn}">` : ''}
-          <span class="lbl" data-en="${player.teamEn}" data-ko="${player.teamKo}">${teamName}</span>
+          <span class="lbl scorer-team-full" data-en="${player.teamEn}" data-ko="${player.teamKo}">${teamName}</span>
+          <span class="lbl scorer-team-short" data-en="${teamShortEn}" data-ko="${teamShortKo}">${teamShortName}</span>
         </td>
         <td class="pts">${player.goals}</td>
       `;
@@ -4261,6 +4301,109 @@
       tr.innerHTML = `<td colspan="4" style="padding:24px; color:var(--color-text-faint);">${isKorean ? '득점 데이터가 아직 없습니다.' : 'No scorer data yet.'}</td>`;
       tbody.appendChild(tr);
     }
+
+    refreshScrollFadeHints();
+  }
+
+  // 팀별로 보기에서 각 팀 그룹의 접힘/펼침 상태를 저장합니다. (기본값: 접힘)
+  const scorersTeamCollapsed = {};
+
+  function toggleScorersTeamGroup(teamKey) {
+    scorersTeamCollapsed[teamKey] = !(scorersTeamCollapsed[teamKey] !== false);
+    renderScorersTableByTeam();
+  }
+
+  // 득점 순위를 팀별로 묶어서 보여줍니다. 팀 순서는 현재 리그 순위(승점 순)를 따르고,
+  // 같은 팀 안에서는 득점 수 내림차순으로 정렬합니다.
+  function renderScorersTableByTeam() {
+    const tbody = document.getElementById('scorersTableBody');
+    tbody.innerHTML = '';
+
+    if (topScorersData.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="3" style="padding:24px; color:var(--color-text-faint);">${isKorean ? '득점 데이터가 아직 없습니다.' : 'No scorer data yet.'}</td>`;
+      tbody.appendChild(tr);
+      refreshScrollFadeHints();
+      return;
+    }
+
+    const groups = {};
+    topScorersData.forEach(p => {
+      const key = p.teamEn || p.teamKo;
+      if (!groups[key]) {
+        groups[key] = { teamEn: p.teamEn, teamKo: p.teamKo, teamLogo: p.teamLogo, players: [] };
+      }
+      groups[key].players.push(p);
+    });
+
+    const ranked = (typeof getRankedTeams === 'function') ? getRankedTeams('all') : [];
+    const rankIndex = {};
+    ranked.forEach((t, i) => { rankIndex[t.nameEn] = i; });
+
+    const groupList = Object.values(groups).sort((a, b) => {
+      const ra = rankIndex[a.teamEn]; const rb = rankIndex[b.teamEn];
+      if (ra === undefined && rb === undefined) return 0;
+      if (ra === undefined) return 1;
+      if (rb === undefined) return -1;
+      return ra - rb;
+    });
+
+    groupList.forEach(g => {
+      g.players.sort((a, b) => (b.goals - a.goals) || playerMineFirst(a, b));
+      const totalGoals = g.players.reduce((sum, p) => sum + p.goals, 0);
+      const teamName = isKorean ? g.teamKo : g.teamEn;
+      const isMine = g.teamEn === 'Chizumulu United FC' || g.teamKo === '치주물루 유나이티드 FC';
+      const totalLabelKo = `${totalGoals}골`;
+      const totalLabelEn = `${totalGoals} ${totalGoals === 1 ? 'GOAL' : 'GOALS'}`;
+      const teamKey = g.teamEn || g.teamKo;
+      // 기본값은 접힘(true) 상태입니다.
+      const isCollapsed = scorersTeamCollapsed[teamKey] !== false;
+      const toggleLabelKo = isCollapsed ? '펼치기' : '접기';
+      const toggleLabelEn = isCollapsed ? 'Expand' : 'Collapse';
+
+      const headTr = document.createElement('tr');
+      headTr.className = 'scorers-team-group-row' + (isMine ? ' my-team' : '') + (isCollapsed ? ' collapsed' : '');
+      headTr.innerHTML = `
+        <td colspan="3" class="scorers-team-group-head">
+          <span class="scorers-team-group-toggle" aria-hidden="true">&#9656;</span>
+          ${g.teamLogo ? `<img class="team-logo" src="${g.teamLogo}" alt="${g.teamEn}">` : ''}
+          <span class="lbl" data-en="${g.teamEn}" data-ko="${g.teamKo}">${teamName}</span>
+          <span class="scorers-team-group-total lbl" data-en="${totalLabelEn}" data-ko="${totalLabelKo}">${isKorean ? totalLabelKo : totalLabelEn}</span>
+          <span class="scorers-team-group-toggle-label lbl" data-en="${toggleLabelEn}" data-ko="${toggleLabelKo}">${isKorean ? toggleLabelKo : toggleLabelEn}</span>
+        </td>`;
+      headTr.style.cursor = 'pointer';
+      headTr.addEventListener('click', () => toggleScorersTeamGroup(teamKey));
+      tbody.appendChild(headTr);
+
+      if (isCollapsed) return;
+
+      let displayRank = 1;
+      let prevGoals = null;
+      g.players.forEach((player, idx) => {
+        if (idx > 0 && player.goals !== prevGoals) {
+          displayRank = idx + 1;
+        }
+        prevGoals = player.goals;
+
+        const playerName = isKorean ? player.nameKo : player.nameEn;
+        const scorerPhoto = player.photoSrc
+          ? `<img class="scorer-player-photo" src="${player.photoSrc}" alt="${player.nameEn}">`
+          : '';
+
+        const tr = document.createElement('tr');
+        tr.className = 'scorers-team-group-player-row';
+        if (isMine) tr.classList.add('my-team');
+        tr.innerHTML = `
+          <td class="rank-cell">${displayRank}</td>
+          <td class="team">
+            ${scorerPhoto}
+            <span class="lbl player-name-link" data-en="${player.nameEn}" data-ko="${player.nameKo}" data-player-key="${player.key}">${playerName}</span>
+          </td>
+          <td class="pts">${player.goals}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
 
     refreshScrollFadeHints();
   }
@@ -6604,6 +6747,35 @@
       noteEl.innerHTML = '';
     }
 
+    // 이달의 선수 / 이달의 골 수상 배지 (수상 경력이 있는 선수에게만 표시)
+    const awardsNoteEl = document.getElementById('squadPlayerModalAwardsNote');
+    const potmCount = stats.potmCount || 0;
+    const gotmCount = stats.gotmCount || 0;
+    const motmCount = stats.motmCount || 0;
+    const awardBadges = [];
+    if (potmCount > 0) {
+      awardBadges.push(isKorean
+        ? `🏅 이달의 선수 <b>${potmCount}</b>회`
+        : `🏅 Player of the Month <b>${potmCount}</b> time(s)`);
+    }
+    if (gotmCount > 0) {
+      awardBadges.push(isKorean
+        ? `⚽ 이달의 골 <b>${gotmCount}</b>회`
+        : `⚽ Goal of the Month <b>${gotmCount}</b> time(s)`);
+    }
+    if (motmCount > 0) {
+      awardBadges.push(isKorean
+        ? `🎗️ MOTM <b>${motmCount}</b>회`
+        : `🎗️ MOTM <b>${motmCount}</b> time(s)`);
+    }
+    if (awardBadges.length > 0) {
+      awardsNoteEl.style.display = '';
+      awardsNoteEl.innerHTML = awardBadges.join('<span class="squad-player-modal-awards-sep"> · </span>');
+    } else {
+      awardsNoteEl.style.display = 'none';
+      awardsNoteEl.innerHTML = '';
+    }
+
     const listEl = document.getElementById('squadPlayerTimeline');
     listEl.innerHTML = '';
 
@@ -6718,8 +6890,8 @@
           <img class="squad-header-logo" src="${t.logoSrc}" alt="${t.nameEn}">
           <div class="squad-header-text">
             <h2 class="lbl" data-en="${t.nameEn}" data-ko="${t.nameKo}">${name}</h2>
-            <span class="squad-header-sub lbl" data-en="26/27 Season · NRFA League One" data-ko="26/27 시즌 · NRFA 리그 원">26/27 시즌 · NRFA 리그 원</span>
-            ${venueName ? `<div class="team-info-people"><span class="team-info-person"><span class="tip-label lbl" data-en="Home Ground" data-ko="홈구장">홈구장</span><span class="tip-value lbl" data-en="${t.venue.nameEn}" data-ko="${t.venue.nameKo}">${venueName}</span></span></div>` : ''}
+            <span class="squad-header-sub lbl" data-en="26/27 Season · NRFA League One" data-ko="26/27 시즌 · NRFA 리그 원">${isKorean ? '26/27 시즌 · NRFA 리그 원' : '26/27 Season · NRFA League One'}</span>
+            ${venueName ? `<div class="team-info-people"><span class="team-info-person"><span class="tip-label lbl" data-en="Home Ground" data-ko="홈구장">${isKorean ? '홈구장' : 'Home Ground'}</span><span class="tip-value lbl" data-en="${t.venue.nameEn}" data-ko="${t.venue.nameKo}">${venueName}</span></span></div>` : ''}
           </div>
           <div class="team-info-quickstats">
             <div class="ti-stat ti-stat-highlight">

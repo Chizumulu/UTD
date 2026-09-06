@@ -83,7 +83,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=002">
+<link rel="stylesheet" href="style.css?v=003">
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -353,7 +353,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 
   <div class="team-motto-banner">
-    <span class="team-motto-main"><span class="team-motto-quote" aria-hidden="true">&ldquo;</span>Chilumba Chimodzi, Team Imodzi<span class="team-motto-quote" aria-hidden="true">&rdquo;</span></span>
+    <span class="team-motto-main"><span class="team-motto-quote" aria-hidden="true">&ldquo;</span> Chilumba Chimodzi, Team Imodzi <span class="team-motto-quote" aria-hidden="true">&rdquo;</span></span>
     <span class="team-motto-sub lbl" data-en="One Island, One Team" data-ko="하나의 섬, 하나의 팀">하나의 섬, 하나의 팀</span>
   </div>
 
@@ -729,12 +729,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="content-row" id="scorersView" style="display:none;">
 <div class="scroll-fade-wrap" id="scorersTableFade">
 <div class="table-wrap" id="scorersTableScroller">
+<div class="rank-filter-wrap">
+  <button class="scorers-mode-btn active lbl" data-mode="flat" data-en="ALL" data-ko="전체" onclick="setScorersGroupMode('flat')">전체</button>
+  <button class="scorers-mode-btn lbl" data-mode="team" data-en="BY TEAM" data-ko="팀별로 보기" onclick="setScorersGroupMode('team')">팀별로 보기</button>
+</div>
 <table id="scorersTable">
   <thead>
     <tr>
       <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
       <th class="lbl" data-en="PLAYER" data-ko="선수">선수</th>
-      <th class="lbl" data-en="TEAM" data-ko="소속팀">소속팀</th>
+      <th class="lbl scorers-col-team" data-en="TEAM" data-ko="소속팀">소속팀</th>
       <th class="lbl" data-en="GOALS" data-ko="득점">득점</th>
     </tr>
   </thead>
@@ -1006,6 +1010,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
       </div>
       <div id="squadPlayerModalCaptainNote" class="squad-player-modal-note"></div>
+      <div id="squadPlayerModalAwardsNote" class="squad-player-modal-note squad-player-modal-awards-note"></div>
       <div class="player-timeline" id="squadPlayerTimeline"></div>
     </div>
   </div>
@@ -1106,7 +1111,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 </div>
-<script src="data.js?v=002"></script>
-<script src="app.js?v=002"></script>
+<script src="data.js?v=003"></script>
+<script src="app.js?v=003"></script>
 </body>
 </html>

@@ -1243,6 +1243,27 @@
     color: var(--color-white);
     box-shadow: 0 2px 8px rgba(var(--color-navy-rgb),0.3);
   }
+  .scorers-mode-btn {
+    background: transparent;
+    color: var(--color-text-toggle);
+    border: none;
+    padding: 7px 16px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .scorers-mode-btn:hover {
+    background: var(--color-bg-btn-hover);
+    color: var(--color-brand-text);
+  }
+  .scorers-mode-btn.active {
+    background: var(--color-navy);
+    color: var(--color-white);
+    box-shadow: 0 2px 8px rgba(var(--color-navy-rgb),0.3);
+  }
   .share-btn {
     display: inline-flex;
     align-items: center;
@@ -3772,6 +3793,16 @@
     padding: 8px 10px;
     margin-bottom: 14px;
   }
+  .squad-player-modal-awards-note {
+    background: rgba(var(--color-teal-rgb, 0, 150, 136), 0.08);
+    border-color: rgba(var(--color-teal-rgb, 0, 150, 136), 0.3);
+    color: var(--color-teal-dark);
+  }
+  .squad-player-modal-awards-sep {
+    color: var(--color-text-faint);
+    font-weight: 400;
+    margin: 0 4px;
+  }
   .squad-card-number {
     display: flex;
     align-items: center;
@@ -3795,6 +3826,72 @@
     margin-right: 8px;
     background: var(--color-bg-subtle, rgba(var(--color-navy-rgb),0.06));
     border: 1px solid var(--color-border-light);
+  }
+  /* 득점 순위표: 모바일에서는 팀 로고 + 짧은 이름만 노출 */
+  .scorer-team-short {
+    display: none;
+  }
+  @media (max-width: 600px) {
+    .scorer-team-full {
+      display: none;
+    }
+    .scorer-team-short {
+      display: inline;
+    }
+  }
+  /* 득점 순위표: 팀별로 보기 모드에서는 소속팀 칸을 숨기고, 팀 그룹 헤더 행을 대신 보여줍니다 */
+  #scorersTable.grouped-by-team .scorers-col-team {
+    display: none;
+  }
+  .scorers-team-group-row td {
+    padding-top: 20px;
+  }
+  .scorers-team-group-row:first-child td {
+    padding-top: 10px;
+  }
+  .scorers-team-group-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--color-navy);
+    border-bottom: 1.5px solid rgba(var(--color-navy-rgb), 0.14);
+    padding-bottom: 8px;
+  }
+  .scorers-team-group-toggle {
+    display: inline-block;
+    font-size: 10px;
+    color: var(--color-text-faint);
+    transition: transform 0.15s ease;
+    transform: rotate(90deg);
+  }
+  .scorers-team-group-row.collapsed .scorers-team-group-toggle {
+    transform: rotate(0deg);
+  }
+  .scorers-team-group-row.collapsed .scorers-team-group-head {
+    border-bottom-color: transparent;
+    padding-bottom: 8px;
+  }
+  .scorers-team-group-row.my-team .scorers-team-group-head {
+    color: var(--color-teal-dark);
+    border-bottom-color: var(--color-teal);
+  }
+  .scorers-team-group-total {
+    margin-left: auto;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--color-text-faint);
+  }
+  .scorers-team-group-toggle-label {
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--color-text-faint);
+    margin-left: 10px;
+    white-space: nowrap;
+  }
+  .scorers-team-group-row.collapsed .scorers-team-group-toggle-label {
+    color: var(--color-teal-dark);
   }
   .squad-card-photo {
     width: 44px;
