@@ -3892,7 +3892,7 @@
     const away = { played: 0, won: 0 };
     completedRoundKeysIncludingScheduled().forEach(key => {
       buildRoundMatches(key).forEach(m => {
-        if (m.isBye) return;
+        if (m.isBye || m.isScheduled || typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
         const isHome = m.homeEn === nameEn || m.homeKo === nameKo;
         const isAway = m.awayEn === nameEn || m.awayKo === nameKo;
         if (isHome) {
