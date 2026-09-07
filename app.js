@@ -3084,7 +3084,9 @@
         html += `
           <div class="round-match-card round-match-scheduled">
             <span class="ti-result-week lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${weekLabel}</span>
-            <span class="rmc-pending-badge lbl" data-en="${m.postponed ? 'Postponed' : 'Upcoming'}" data-ko="${m.postponed ? '경기 연기' : '경기 시작 전'}">${isKorean ? (m.postponed ? '경기 연기' : '경기 시작 전') : (m.postponed ? 'Postponed' : 'Upcoming')}</span>
+            ${m.movedToWeek
+              ? `<button type="button" class="rmc-pending-badge rmc-moved-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`
+              : `<span class="rmc-pending-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
             <div class="rmc-teams">
               <div class="rmc-team rmc-home"><span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span></div>
               <div class="rmc-team rmc-away"><span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span></div>
@@ -3762,6 +3764,25 @@
   // ===== 라운드별 경기결과 렌더링 (Round Results View) =====
   let currentRoundKey = null;
 
+  // 연기/이동된 경기의 배지 문구를 계산합니다.
+  // - movedToWeek가 있으면(=새 일정이 확정돼 다른 주차로 옮겨간 경기) "N주차 경기로 이동"
+  // - 그렇지 않고 postponed만 true면 "경기 연기"
+  // - 둘 다 아니면 "경기 시작 전"
+  function scheduledBadgeText(m, ko) {
+    if (m.movedToWeek) return ko ? `${m.movedToWeek}주차 경기로 이동` : `Moved to Week ${m.movedToWeek}`;
+    if (m.postponed) return ko ? '경기 연기' : 'Postponed';
+    return ko ? '경기 시작 전' : 'Upcoming';
+  }
+
+  // movedFromWeek가 있는(=다른 주차에서 연기되어 이 주차로 옮겨온) 완료 경기 카드 위에
+  // 붙일 안내 배지 HTML. 없으면 빈 문자열.
+  function movedFromBadgeHtml(m, ko) {
+    if (!m.movedFromWeek) return '';
+    const enText = `Rescheduled from Week ${m.movedFromWeek}`;
+    const koText = `${m.movedFromWeek}주차에서 연기된 경기`;
+    return `<span class="rmc-moved-badge lbl" data-en="${enText}" data-ko="${koText}">${ko ? koText : enText}</span>`;
+  }
+
   function getTeamLogo(nameEn) {
     const team = leagueData.find(t => t.nameEn === nameEn);
     return team ? team.logoSrc : '';
@@ -3801,7 +3822,8 @@
             isBye: false, isScheduled: !!m.postponed,
             homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
             homeScore: m.homeScore, awayScore: m.awayScore,
-            postponed: m.postponed,
+            postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek,
+            kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
             scorersHome: undefined, scorersAway: undefined
           };
         }
@@ -3811,6 +3833,7 @@
           isBye: false, isScheduled: false,
           homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
           homeScore: m.homeScore, awayScore: m.awayScore,
+          movedFromWeek: m.movedFromWeek,
           scorersHome: d.scorersHome, scorersAway: d.scorersAway
         };
       });
@@ -3827,13 +3850,15 @@
           isBye: false, isScheduled: false,
           homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
           homeScore: m.homeScore, awayScore: m.awayScore,
+          movedFromWeek: m.movedFromWeek,
           scorersHome: m.scorersHome, scorersAway: m.scorersAway
         };
       }
       return {
         isBye: false, isScheduled: true,
         homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
-        kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime, postponed: m.postponed
+        kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
+        postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek
       };
     });
   }
@@ -4018,6 +4043,17 @@
     });
   }
 
+  // "N주차 경기로 이동" 배지를 눌렀을 때 해당 주차의 라운드 화면으로 이동합니다.
+  function goToRoundWeek(weekNum) {
+    const key = 'round' + weekNum;
+    if (roundsData[key] || (scheduledRounds && scheduledRounds[key])) {
+      currentRoundKey = key;
+    }
+    showView('rounds');
+    const listEl = document.getElementById('roundMatchList');
+    if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function renderRoundsView() {
     const tabBar = document.getElementById('roundTabBar');
     const roundKeys = allRoundKeysIncludingScheduled();
@@ -4079,13 +4115,16 @@
         const card = document.createElement('div');
         card.className = 'round-match-card round-match-scheduled' + (mine ? ' my-team' : '');
         card.innerHTML = `
+          ${movedFromBadgeHtml(m, isKorean)}
           <div class="rmc-teams">
             <div class="rmc-team rmc-home">
               ${homeLogo ? `<img class="team-logo-sm" src="${homeLogo}" alt="${m.homeEn}">` : ''}
               <span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span>
             </div>
             <div class="rmc-score rmc-score-pending">
-              <span class="rmc-pending-badge lbl" data-en="${m.postponed ? 'Postponed' : 'Upcoming'}" data-ko="${m.postponed ? '경기 연기' : '경기 시작 전'}">${isKorean ? (m.postponed ? '경기 연기' : '경기 시작 전') : (m.postponed ? 'Postponed' : 'Upcoming')}</span>
+              ${m.movedToWeek
+                ? `<button type="button" class="rmc-pending-badge rmc-moved-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`
+                : `<span class="rmc-pending-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
             </div>
             <div class="rmc-team rmc-away">
               <span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span>
@@ -4117,6 +4156,7 @@
       const card = document.createElement('div');
       card.className = 'round-match-card' + (mine ? ' my-team' : '');
       card.innerHTML = `
+        ${movedFromBadgeHtml(m, isKorean)}
         <div class="rmc-teams">
           <div class="rmc-team rmc-home${homeWin ? ' rmc-winner' : ''}">
             ${homeLogo ? `<img class="team-logo-sm" src="${homeLogo}" alt="${m.homeEn}">` : ''}
@@ -4156,8 +4196,8 @@
   // roundsData(완전히 끝난 라운드)와 scheduledRounds(진행 중/예정 라운드)를 모두 훑어서
   // postponed: true로 표시된 경기를 전부 모읍니다. 라운드 전체가 끝나 roundsData로
   // 옮겨진 뒤에도, 그 안에 postponed 경기가 남아있으면 계속 이 목록에 표시됩니다.
-  // 결과가 확정되면(=homeScore/awayScore가 채워지면) postponed 플래그도 함께
-  // 지워주면 이 목록에서 자동으로 빠집니다.
+  // 결과가 입력되면(=homeScore/awayScore가 둘 다 숫자로 채워지면) postponed
+  // 플래그를 따로 지우지 않아도 자동으로 이 목록에서 빠집니다.
   function getAllPostponedMatches() {
     const roundKeys = allRoundKeysIncludingScheduled();
     const list = [];
@@ -4165,10 +4205,17 @@
       const matches = roundsData[key] || (scheduledRounds && scheduledRounds[key]) || [];
       matches.forEach(m => {
         if (!m.postponed || m.byeKo || m.byeEn) return;
+        // 스코어가 이미 채워졌다면(=결과가 입력됐다면) postponed 플래그를 미처
+        // 못 지웠더라도 자동으로 목록에서 제외합니다. (수동으로 postponed를
+        // 지우는 걸 깜빡해도 "연기된 경기 모아보기"에 완료된 경기가 남지 않습니다.)
+        if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
+        // movedToWeek가 채워졌다면 이미 새 주차로 일정이 확정된 경기입니다.
+        // 목록에서 빼지 않고, 대신 "N주차 경기에서 확정" 배지를 달아 계속 보여줍니다.
         list.push({
           weekNum: idx + 1,
           homeKo: m.homeKo, homeEn: m.homeEn,
-          awayKo: m.awayKo, awayEn: m.awayEn
+          awayKo: m.awayKo, awayEn: m.awayEn,
+          movedToWeek: m.movedToWeek
         });
       });
     });
@@ -4193,6 +4240,12 @@
       const awayLogo = getTeamLogo(m.awayEn);
       const homeName = isKorean ? m.homeKo : m.homeEn;
       const awayName = isKorean ? m.awayKo : m.awayEn;
+      // 새 일정이 확정된(movedToWeek가 있는) 경기라면 "N주차 경기에서 확정" 배지를 추가로 보여줍니다.
+      const confirmedEnText = `Confirmed for Week ${m.movedToWeek}`;
+      const confirmedKoText = `${m.movedToWeek}주차 경기에서 확정`;
+      const confirmedBadge = m.movedToWeek
+        ? `<span class="postponed-confirmed-badge lbl" data-en="${confirmedEnText}" data-ko="${confirmedKoText}">${isKorean ? confirmedKoText : confirmedEnText}</span>`
+        : '';
       return `
         <div class="postponed-match-row">
           <span class="postponed-week-badge lbl" data-en="Week ${m.weekNum}" data-ko="${m.weekNum}주차">${weekLabel}</span>
@@ -4207,6 +4260,7 @@
               ${awayLogo ? `<img class="team-logo-sm" src="${awayLogo}" alt="${m.awayEn}">` : ''}
             </div>
           </div>
+          ${confirmedBadge}
         </div>
       `;
     }).join('');

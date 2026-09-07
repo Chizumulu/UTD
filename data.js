@@ -927,7 +927,13 @@ const scheduledRounds = {
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
-    { byeKo: "에크웬데니 FC", byeEn: "Ekwendeni FC" }
+    { byeKo: "에크웬데니 FC", byeEn: "Ekwendeni FC" },
+    // 7주차에서 연기됐던 마푸 vs 에크웬데니 경기가 10주차 경기로 확정되었습니다.
+    // 주의: 이 경기는 마푸의 홈구장(망캄비라 그라운드)이 아니라 Fukamalaza Ground에서
+    // 열립니다. 다만 현재 데이터 구조(leagueData.venue)는 팀별 홈구장만 지원하고
+    // 경기별 구장 재정의 필드는 없어서, 이 특이사항은 화면에는 표시되지 않고
+    // 주석으로만 남겨둡니다.
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-10", kickoffTime: "14:30", movedFromWeek: 7 }
   ],
   round11: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-09-18", kickoffTime: "15:00" },
@@ -1049,10 +1055,29 @@ const roundsData = {
   // homeScore/awayScore 없이 postponed: true만 넣어두면 됩니다 — 라운드 결과 화면에는
   // "예정 경기(연기)" 카드로, 연기된 경기 모아보기에는 계속 표시되고, 스코어가
   // 채워지기 전까지는 순위/기록 집계에서 자동으로 제외됩니다.
+  //
+  // ── 연기된 경기의 새 일정이 다른 주차로 확정된 경우 (movedToWeek / movedFromWeek) ──
+  // 위 방식은 "같은 주차 안에서" 날짜만 나중에 확정되는 경우입니다. 하지만 연기된 경기가
+  // 아예 다른 주차(예: 20주차)에 껴서 열리는 것으로 확정되면, 그 경기를 실제로 열리는
+  // 주차(roundsData.round20 등)로 옮겨 적어야 순서/집계가 맞습니다. 이때 두 군데를 같이 고쳐주세요.
+  //   1) 원래 있던 주차(postponed: true였던 자리)는 지우지 말고 그대로 두되,
+  //      postponed: true 옆에 movedToWeek: 20 처럼 "실제로 열리는 주차 번호"를 추가해주세요.
+  //      → 원래 주차 카드에는 "경기 연기" 대신 "20주차 경기로 이동" 배지가 뜨고,
+  //        "연기된 경기 모아보기" 목록에서는 자동으로 빠집니다(이미 옮겨갔으니까요).
+  //   2) 실제로 열리는 주차(roundsData.round20 등) 쪽에는 그 경기를 새 항목으로 추가하고,
+  //      postponed는 넣지 않은 채(스코어가 나왔다면 homeScore/awayScore/kickoffDate 등을
+  //      평소처럼 채우고) movedFromWeek: 7 처럼 "원래 열렸어야 했던 주차 번호"를 추가해주세요.
+  //      → 그 주차 카드 위에 "7주차에서 연기된 경기" 안내 배지가 함께 표시됩니다.
+  //      matchDetails에 득점자를 넣을 때도 이 항목 순서에 맞춰 추가하면 됩니다.
+  //   예시)
+  //     round7: [ ..., { homeKo: "마푸 스타즈 FC", ..., postponed: true, movedToWeek: 20 }, ... ]
+  //     round20: [ ..., { homeKo: "마푸 스타즈 FC", ..., kickoffDate: "2027-01-10", kickoffTime: "15:00",
+  //                        homeScore: 1, awayScore: 1, scorersHome: "...", scorersAway: "...",
+  //                        movedFromWeek: 7 }, ... ]
   round7: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-08-21", kickoffTime: "15:00", homeScore: 4, awayScore: 0, scorersHome: "STEVEN PHIRI, DICKIES NYIRENDA, BENJAMIN NYIRENDA, TIMOTHY KATAPA", scorersAway: "없음" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-08-27", kickoffTime: "14:30", homeScore: 3, awayScore: 0, scorersHome: "LIMBANI KAMANGA (2골), DAVIE NGOMA", scorersAway: "없음" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", postponed: true },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", postponed: true, movedToWeek: 10 },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-08-22", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "ROBIN CHIOKO, ACKIM GOMIRE, BABA NKHOMA", scorersAway: "DANIEL CHISOKWE" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "TEMWA NDHLOVU", scorersAway: "KING NYASULU, MIKE LUHANGA" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "GIVEN MWANDIRA, JOMO PHIRI", scorersAway: "없음" },

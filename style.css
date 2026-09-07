@@ -1368,6 +1368,19 @@
     flex-direction: row-reverse;
     text-align: right;
   }
+  /* 새 일정이 확정된(movedToWeek) 연기 경기에 붙는 안내 배지 ("N주차 경기에서 확정") */
+  .postponed-confirmed-badge {
+    display: inline-block;
+    white-space: nowrap;
+    background: rgba(0, 60, 140, 0.1);
+    color: var(--color-navy);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    padding: 3px 9px;
+    border-radius: var(--radius-md);
+    margin-top: 8px;
+  }
   .postponed-vs {
     flex-shrink: 0;
     font-size: 11px;
@@ -7020,6 +7033,39 @@
     letter-spacing: 0.2px;
     padding: 4px 9px;
     border-radius: var(--radius-md);
+  }
+  /* 다른 주차로 이동된 연기 경기 배지 ("N주차 경기로 이동") - 누르면 해당 주차로 이동합니다 */
+  .rmc-pending-badge.rmc-moved-badge {
+    background: rgba(0, 60, 140, 0.1);
+    color: var(--color-navy);
+    border: none;
+    appearance: none;
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  button.rmc-pending-badge.rmc-moved-badge:hover,
+  button.rmc-pending-badge.rmc-moved-badge:focus-visible {
+    background: rgba(0, 60, 140, 0.2);
+    outline: none;
+  }
+  /* 다른 주차에서 이 주차로 옮겨온 경기 카드에 붙는 안내 배지
+     ("N주차에서 연기된 경기") - 완료된 경기 카드 상단에 표시 */
+  span.rmc-moved-badge {
+    display: inline-block;
+    align-self: flex-start;
+    white-space: nowrap;
+    background: rgba(0, 60, 140, 0.1);
+    color: var(--color-navy);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    padding: 4px 9px;
+    border-radius: var(--radius-md);
+    margin-bottom: 6px;
   }
   .rmc-fdr-row {
     margin-top: 8px;
