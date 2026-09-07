@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<!-- ===== 배포 버전 (Asset Versions) — 캐시 무효화용 단일 기준점 ===== -->
+<!-- 파일을 새로 올려서 브라우저 캐시를 무효화하고 싶을 때, 그 파일에 해당하는 값만
+     여기서 올리면 됩니다. style.css/data.js/app.js는 서로 다른 시점에 따로 버전을
+     올려도 되고, 아래 <link>/<script> 태그들과 predict-worker.js 안에서 불러오는
+     data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
+<script>
+  window.ASSET_VERSIONS = {
+    style: '001',
+    data: '001',
+    app: '001',
+    predictWorker: '001'
+  };
+</script>
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -83,7 +96,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=007">
+<script>document.write('<link rel="stylesheet" href="style.css?v=' + window.ASSET_VERSIONS.style + '">');</script>
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -1111,7 +1124,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 </div>
-<script src="data.js?v=007"></script>
-<script src="app.js?v=007"></script>
+<script>
+  document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
+  document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
+</script>
 </body>
 </html>

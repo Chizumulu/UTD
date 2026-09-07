@@ -914,6 +914,12 @@ const matchDetails = {
 // roundKey(scheduledRounds 기준)를 키로 미리 적어두면 됩니다. 라운드가 실제로 끝나면
 // 이 항목은 지우고 matchLineups[roundKey].recentHistory로 옮겨주세요.
 const upcomingMatchHistory = {
+  round10: {
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 19주차", score: "음벨와 4 : 1 치주물루", result: "음벨와 승" },
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 16주차", score: "치주물루 2 : 3 음벨와", result: "음벨와 승" }
+    ]
+  }
 };
 
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
@@ -2739,6 +2745,61 @@ function computeTeamCorrectionFactor(sub, priorFactor) {
   return { factor: clampCorrectionFactor(blended), n };
 }
 
+// ============================================================
+// 자동 보정 — 방향성(절편) 보정 방식 (Additive Correction)
+// ------------------------------------------------------------
+// 위 비율 보정(actHome/expHome을 곱함)은 "오차가 기대득점에 비례해서
+// 커진다"고 가정합니다. 하지만 모델이 매번 "몇 골씩 일정하게" 과소/과대
+// 평가하는 편향(오차가 기대득점 크기와 무관하게 일정한 양)일 수도 있습니다.
+// 이 블록은 그런 경우를 잡기 위해 "곱하기" 대신 "더하기"로 보정합니다.
+// - 비율 보정과 똑같이 리그 전역 오차 평균을 구하고, 팀별로는 같은
+//   축소추정(shrinkage) 공식을 그대로 재사용합니다(파라미터 1개짜리
+//   추정이라 비율 보정과 안정성이 비슷합니다 — 기울기까지 함께 추정하는
+//   전체 선형회귀는 표본이 작은 이 리그 규모엔 과적합 위험이 커서 쓰지
+//   않습니다).
+// - 어느 쪽(비율 vs 절편)을 실제로 쓸지는 walk-forward 백테스트 성적을
+//   비교해서 자동으로 정합니다(computeAiPredictionTrackRecord의
+//   correctionModeUsed 참고) — DC ρ를 켤지 말지 정하는 것과 같은 원칙입니다.
+// ============================================================
+const TEAM_CORRECTION_ADDITIVE_MAX_ADJUST = 0.4; // ±0.4골 상한(비율 보정의 ±20%가 이 리그의 일반적인 기대득점(1~2골) 구간에서 갖는 크기와 비슷한 스케일)
+
+function clampAdditiveCorrection(offset) {
+  return Math.min(TEAM_CORRECTION_ADDITIVE_MAX_ADJUST, Math.max(-TEAM_CORRECTION_ADDITIVE_MAX_ADJUST, offset));
+}
+
+// totals: computeCorrectionFromTotals와 동일한 { expHome, actHome, expAway, actAway, n } 형태.
+function computeCorrectionFromTotalsAdditive(totals) {
+  const n = totals ? totals.n : 0;
+  if (!totals || n < AUTO_CORRECTION_MIN_SAMPLES) {
+    return { homeOffset: 0, awayOffset: 0, n, active: false };
+  }
+  const rawHomeOffset = (totals.actHome - totals.expHome) / n;
+  const rawAwayOffset = (totals.actAway - totals.expAway) / n;
+  return {
+    homeOffset: clampAdditiveCorrection(rawHomeOffset),
+    awayOffset: clampAdditiveCorrection(rawAwayOffset),
+    n, active: true
+  };
+}
+
+// sub: computeTeamCorrectionFactor와 동일한 { exp, act, n } 형태. priorOffset은
+// 표본이 부족한 팀이 대신 쓸 리그 전역 절편 보정값입니다.
+function computeTeamCorrectionOffsetAdditive(sub, priorOffset) {
+  const n = sub ? sub.n : 0;
+  const rawObs = (sub && sub.n > 0) ? (sub.act - sub.exp) / sub.n : priorOffset;
+  const blended = (priorOffset * TEAM_CORRECTION_PRIOR_WEIGHT + rawObs * n) / (TEAM_CORRECTION_PRIOR_WEIGHT + n);
+  return { offset: clampAdditiveCorrection(blended), n };
+}
+
+// 비율/절편 보정을 한 곳에서 적용하는 헬퍼. mode가 'additive'가 아니면
+// (기본값 'ratio', 혹은 명시적 off) 기존과 동일하게 곱셈으로 처리합니다.
+// 절편 보정 시 기대득점이 0 이하로 내려가지 않도록 바닥(0.05)을 둡니다
+// (포아송 분포는 λ>0이어야 함).
+function applyGoalCorrection(expectedGoals, mode, factor, offset) {
+  if (mode === 'additive') return Math.max(0.05, expectedGoals + (offset || 0));
+  return expectedGoals * (factor != null ? factor : 1);
+}
+
 // 지금 시점까지 쌓인 전체 경기 결과를 기준으로, 이번 매치업(homeEn 대 awayEn)에
 // 적용할 "현재" 자동 보정 계수를 반환합니다. predictSingleMatch /
 // runMonteCarloSimulation처럼 앞으로 열릴 경기를 예측할 때 씁니다.
@@ -2752,18 +2813,45 @@ function computeTeamCorrectionFactor(sub, priorFactor) {
 // 이렇게 씁니다). 생략하면 이 함수가 직접 한 번 계산합니다(하위호환용).
 function getAutoCorrectionFactors(homeEn, awayEn, precomputedTrack) {
   if (!precomputedTrack && typeof computeAiPredictionTrackRecord !== 'function') {
-    return { homeFactor: 1, awayFactor: 1, n: 0, active: false };
+    return { mode: 'ratio', homeFactor: 1, awayFactor: 1, homeOffset: 0, awayOffset: 0, n: 0, active: false };
   }
   const track = precomputedTrack || computeAiPredictionTrackRecord();
+  const mode = track.correctionModeUsed || 'ratio';
+
+  if (mode === 'additive') {
+    const global = track.currentAdditiveCorrection || { homeOffset: 0, awayOffset: 0, n: 0, active: false };
+    if (!global.active || !homeEn || !awayEn) {
+      return { mode: 'additive', homeFactor: 1, awayFactor: 1, homeOffset: global.homeOffset, awayOffset: global.awayOffset, n: global.n, active: global.active };
+    }
+    const teamCorrections = track.currentTeamAdditiveCorrections || {};
+    const homeTeam = teamCorrections[homeEn];
+    const awayTeam = teamCorrections[awayEn];
+    return {
+      mode: 'additive',
+      homeFactor: 1, awayFactor: 1,
+      homeOffset: homeTeam ? homeTeam.homeOffset : global.homeOffset,
+      awayOffset: awayTeam ? awayTeam.awayOffset : global.awayOffset,
+      n: global.n,
+      active: true,
+      homeTeamSample: homeTeam ? homeTeam.homeN : 0,
+      awayTeamSample: awayTeam ? awayTeam.awayN : 0
+    };
+  }
+
+  // 기본(mode === 'ratio'): 기존 비율 보정 그대로.
   const global = track.currentCorrection || { homeFactor: 1, awayFactor: 1, n: 0, active: false };
-  if (!global.active || !homeEn || !awayEn) return global;
+  if (!global.active || !homeEn || !awayEn) {
+    return { mode: 'ratio', homeFactor: global.homeFactor, awayFactor: global.awayFactor, homeOffset: 0, awayOffset: 0, n: global.n, active: global.active };
+  }
 
   const teamCorrections = track.currentTeamCorrections || {};
   const homeTeam = teamCorrections[homeEn];
   const awayTeam = teamCorrections[awayEn];
   return {
+    mode: 'ratio',
     homeFactor: homeTeam ? homeTeam.homeFactor : global.homeFactor,
     awayFactor: awayTeam ? awayTeam.awayFactor : global.awayFactor,
+    homeOffset: 0, awayOffset: 0,
     n: global.n,
     active: true,
     homeTeamSample: homeTeam ? homeTeam.homeN : 0,
@@ -3414,20 +3502,10 @@ function runMonteCarloSimulation(iterations) {
   // fixtureCorrections에서 가볍게 룩업만 합니다(팀별 계수는 시뮬레이션
   // 반복(iteration)과 무관하게 고정값이라 매 경기마다 다시 계산할 필요가 없습니다).
   const correctionTrack = (typeof computeAiPredictionTrackRecord === 'function') ? computeAiPredictionTrackRecord() : null;
-  const globalCorrection = (correctionTrack && correctionTrack.currentCorrection) || { homeFactor: 1, awayFactor: 1, n: 0, active: false };
-  const teamCorrections = (correctionTrack && correctionTrack.currentTeamCorrections) || {};
   function correctionForFixture(homeEn, awayEn) {
-    if (!globalCorrection.active) return globalCorrection;
-    const h = teamCorrections[homeEn];
-    const a = teamCorrections[awayEn];
-    return {
-      homeFactor: h ? h.homeFactor : globalCorrection.homeFactor,
-      awayFactor: a ? a.awayFactor : globalCorrection.awayFactor,
-      n: globalCorrection.n,
-      active: true
-    };
+    return getAutoCorrectionFactors(homeEn, awayEn, correctionTrack);
   }
-  const correction = globalCorrection; // 트랙레코드 요약용(하위호환) — 전역 계수
+  const correction = correctionForFixture(); // 트랙레코드 요약용(하위호환) — 전역 계수(mode 포함)
   // Dixon-Coles 저득점 보정(ρ) — 활성화된 경우, 홈/원정 골을 독립적으로 뽑는
   // 대신 τ로 조정된 결합확률에서 직접 스코어를 샘플링합니다.
   // (correctionTrack을 그대로 넘겨서 computeAiPredictionTrackRecord()가 여기서
@@ -3499,8 +3577,8 @@ function runMonteCarloSimulation(iterations) {
       const awayAttackAdj = applyRecentFormWeight(awayHA.awayAttack, awayHA.recentFormAttackFactor, fxFormWeight.awayWeight);
       const awayDefenseAdj = applyRecentFormWeight(awayHA.awayDefense, awayHA.recentFormDefenseFactor, fxFormWeight.awayWeight);
 
-      const homeExpected = homeBaseline * homeAttackAdj * awayDefenseAdj * fxCorrection.homeFactor;
-      const awayExpected = awayBaseline * awayAttackAdj * homeDefenseAdj * fxCorrection.awayFactor;
+      const homeExpected = applyGoalCorrection(homeBaseline * homeAttackAdj * awayDefenseAdj, fxCorrection.mode, fxCorrection.homeFactor, fxCorrection.homeOffset);
+      const awayExpected = applyGoalCorrection(awayBaseline * awayAttackAdj * homeDefenseAdj, fxCorrection.mode, fxCorrection.awayFactor, fxCorrection.awayOffset);
 
       let homeGoals, awayGoals;
       if (dc.active && dc.rho !== 0) {
@@ -3572,8 +3650,11 @@ function runMonteCarloSimulation(iterations) {
     iterations: N,
     remainingFixtureCount: fixtures.length,
     correctionApplied: correction.active,
+    correctionMode: correction.mode,
     homeCorrectionFactor: correction.homeFactor,
     awayCorrectionFactor: correction.awayFactor,
+    homeCorrectionOffset: correction.homeOffset,
+    awayCorrectionOffset: correction.awayOffset,
     correctionSampleSize: correction.n,
     dcApplied: dc.active,
     dcRho: dc.rho,
@@ -3663,8 +3744,8 @@ function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
   // 홈팀의 "홈에서의" 결정력 보정 + 원정팀의 "원정에서의" 결정력 보정을 각각
   // 팀별로 적용합니다(표본이 적은 팀은 리그 전역 계수 쪽으로 축소추정됩니다).
   const correction = getAutoCorrectionFactors(homeEn, awayEn, track);
-  const expectedHomeGoals = rawExpectedHomeGoals * correction.homeFactor;
-  const expectedAwayGoals = rawExpectedAwayGoals * correction.awayFactor;
+  const expectedHomeGoals = applyGoalCorrection(rawExpectedHomeGoals, correction.mode, correction.homeFactor, correction.homeOffset);
+  const expectedAwayGoals = applyGoalCorrection(rawExpectedAwayGoals, correction.mode, correction.awayFactor, correction.awayOffset);
 
   // Dixon-Coles 저득점 보정(ρ) — 표본이 부족하면 rho=0이라 아래 호출은
   // 순수 독립 포아송 격자와 동일합니다.
@@ -3690,8 +3771,11 @@ function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
     homeSample: homeHA.homeSample, awaySample: awayHA.awaySample,
     leagueAvgGoals,
     correctionApplied: correction.active,
+    correctionMode: correction.mode,
     homeCorrectionFactor: correction.homeFactor,
     awayCorrectionFactor: correction.awayFactor,
+    homeCorrectionOffset: correction.homeOffset,
+    awayCorrectionOffset: correction.awayOffset,
     correctionSampleSize: correction.n,
     homeCorrectionTeamSample: correction.homeTeamSample || 0,
     awayCorrectionTeamSample: correction.awayTeamSample || 0,
@@ -3845,6 +3929,71 @@ function computeAiPredictionTrackRecord() {
   // 쌓인 state/playedSoFar만으로 다시 계산합니다(walk-forward). 이렇게 해야
   // 트랙레코드가 실제로 지금 쓰이는 예측 모델과 같은 로직을 정직하게
   // 백테스트한 결과가 됩니다.
+  // 이 라운드 '직전'까지의 state만으로 HOME_ADVANTAGE/AWAY_DISADVANTAGE를
+  // 다시 추정합니다(computeHomeAwayBaselineRatio()와 동일한 prior/축소추정/
+  // clamp 로직이지만, 전역 collectPlayedMatches() 대신 walk-forward state를
+  // 씁니다). 전역 상수를 그대로 쓰면 시즌 초반 라운드를 예측할 때도 시즌
+  // 후반까지의 홈/원정 득점 비율이 이미 반영돼버리는 미래 데이터 유출이
+  // 생기기 때문입니다.
+  function homeAwayBaselineFromState() {
+    let sumHomeGoals = 0, homeGames = 0, sumAwayGoals = 0;
+    Object.values(state).forEach(s => {
+      sumHomeGoals += s.home.gf;
+      homeGames += s.home.played;
+      sumAwayGoals += s.away.gf;
+    });
+    const n = homeGames; // 라운드 직전까지 치러진 경기 수(홈/원정 표본 수는 항상 동일)
+    let rawHomeRatio = HOME_AWAY_BASELINE_PRIOR_HOME;
+    let rawAwayRatio = HOME_AWAY_BASELINE_PRIOR_AWAY;
+    if (n > 0) {
+      const avgHomeGoals = sumHomeGoals / n;
+      const avgAwayGoals = sumAwayGoals / n;
+      const avgTotal = (avgHomeGoals + avgAwayGoals) / 2;
+      if (avgTotal > 0) {
+        rawHomeRatio = avgHomeGoals / avgTotal;
+        rawAwayRatio = avgAwayGoals / avgTotal;
+      }
+    }
+    const blendedHome = (HOME_AWAY_BASELINE_PRIOR_HOME * HOME_AWAY_BASELINE_PRIOR_WEIGHT + rawHomeRatio * n)
+      / (HOME_AWAY_BASELINE_PRIOR_WEIGHT + n);
+    const clampedHome = Math.min(HOME_AWAY_BASELINE_MAX, Math.max(HOME_AWAY_BASELINE_MIN, blendedHome));
+    const clampedAway = 2 - clampedHome;
+    return { homeRatio: clampedHome, awayRatio: clampedAway, sampleSize: n };
+  }
+
+  // computeRecentFormFactors()는 computeFormGuide()를 통해 "현재까지의 전체
+  // 시즌" 데이터를 보므로 walk-forward 백테스트에는 쓸 수 없습니다(미래 데이터
+  // 유출). 대신 이 라운드 직전까지만 쌓인 playedSoFar에서 각 팀의 최근
+  // RECENT_FORM_WINDOW 경기만 뽑아 동일한 방식(비율 계산 → 표본 가중 →
+  // clampRecentFormFactor)으로 폼 배율을 구합니다.
+  function recentFormFactorsFromPlayed(leagueAvgGoals) {
+    const factors = {};
+    teamNames.forEach(nameEn => {
+      const recent = [];
+      for (let i = playedSoFar.length - 1; i >= 0 && recent.length < RECENT_FORM_WINDOW; i--) {
+        const m = playedSoFar[i];
+        if (m.homeEn === nameEn) recent.push({ myGoals: m.homeScore, oppGoals: m.awayScore });
+        else if (m.awayEn === nameEn) recent.push({ myGoals: m.awayScore, oppGoals: m.homeScore });
+      }
+      const n = recent.length;
+      if (!n || !leagueAvgGoals) {
+        factors[nameEn] = { attackFactor: 1, defenseFactor: 1, n: 0 };
+        return;
+      }
+      const avgFor = recent.reduce((s, m) => s + m.myGoals, 0) / n;
+      const avgAgainst = recent.reduce((s, m) => s + m.oppGoals, 0) / n;
+      const attackRatio = avgFor / leagueAvgGoals;
+      const defenseRatio = avgAgainst / leagueAvgGoals;
+      const sampleWeight = Math.min(n, RECENT_FORM_WINDOW) / RECENT_FORM_WINDOW;
+      factors[nameEn] = {
+        attackFactor: clampRecentFormFactor(1 + sampleWeight * (attackRatio - 1)),
+        defenseFactor: clampRecentFormFactor(1 + sampleWeight * (defenseRatio - 1)),
+        n
+      };
+    });
+    return factors;
+  }
+
   function strengthsFromState() {
     let totalGoals = 0, totalGames = 0;
     Object.values(state).forEach(s => {
@@ -3852,19 +4001,25 @@ function computeAiPredictionTrackRecord() {
       totalGames += s.home.played + s.away.played;
     });
     const leagueAvgGoals = totalGames > 0 ? totalGoals / totalGames : 1.3;
-    const homeBaseline = leagueAvgGoals * HOME_ADVANTAGE;
-    const awayBaseline = leagueAvgGoals * AWAY_DISADVANTAGE;
+    const { homeRatio, awayRatio } = homeAwayBaselineFromState();
+    const homeBaseline = leagueAvgGoals * homeRatio;
+    const awayBaseline = leagueAvgGoals * awayRatio;
 
     const iterative = computeIterativeStrengthEstimates(playedSoFar, teamNames, homeBaseline, awayBaseline);
+    const recentForm = recentFormFactorsFromPlayed(leagueAvgGoals);
 
     const teamHomeAway = {};
     teamNames.forEach(nameEn => {
       const est = iterative[nameEn] || { homeAttack: 1, homeDefense: 1, awayAttack: 1, awayDefense: 1, homePlayed: 0, awayPlayed: 0 };
+      const form = recentForm[nameEn] || { attackFactor: 1, defenseFactor: 1, n: 0 };
       teamHomeAway[nameEn] = {
         homeAttack: shrinkTeamIndex(est.homeAttack, est.homePlayed, HOME_AWAY_STRENGTH_PRIOR_WEIGHT),
         homeDefense: shrinkTeamIndex(est.homeDefense, est.homePlayed, HOME_AWAY_STRENGTH_PRIOR_WEIGHT),
         awayAttack: shrinkTeamIndex(est.awayAttack, est.awayPlayed, HOME_AWAY_STRENGTH_PRIOR_WEIGHT),
-        awayDefense: shrinkTeamIndex(est.awayDefense, est.awayPlayed, HOME_AWAY_STRENGTH_PRIOR_WEIGHT)
+        awayDefense: shrinkTeamIndex(est.awayDefense, est.awayPlayed, HOME_AWAY_STRENGTH_PRIOR_WEIGHT),
+        recentFormAttackFactor: form.attackFactor,
+        recentFormDefenseFactor: form.defenseFactor,
+        recentFormSample: form.n
       };
     });
     return { teamHomeAway, leagueAvgGoals, homeBaseline, awayBaseline };
@@ -3926,11 +4081,19 @@ function computeAiPredictionTrackRecord() {
       // "홈 어드밴티지만 반영된" 예측이라 통계에서는 참고용으로만 취급합니다.
       const lowConfidence = !(homeHasHistory && awayHasHistory);
 
-      const homeHA = teamHomeAway[m.homeEn] || { homeAttack: 1, homeDefense: 1, awayAttack: 1, awayDefense: 1 };
-      const awayHA = teamHomeAway[m.awayEn] || { homeAttack: 1, homeDefense: 1, awayAttack: 1, awayDefense: 1 };
+      const homeHA = teamHomeAway[m.homeEn] || { homeAttack: 1, homeDefense: 1, awayAttack: 1, awayDefense: 1, recentFormAttackFactor: 1, recentFormDefenseFactor: 1 };
+      const awayHA = teamHomeAway[m.awayEn] || { homeAttack: 1, homeDefense: 1, awayAttack: 1, awayDefense: 1, recentFormAttackFactor: 1, recentFormDefenseFactor: 1 };
 
-      const expectedHomeGoals = homeBaseline * homeHA.homeAttack * awayHA.awayDefense;
-      const expectedAwayGoals = awayBaseline * awayHA.awayAttack * homeHA.homeDefense;
+      // predictSingleMatch와 동일하게 "바로 다음 한 경기" 예측이므로 최근 폼
+      // 배율을 감쇠 없이(weight=1) 반영합니다. 프로덕션 파이프라인과 백테스트가
+      // 같은 로직을 타야 트랙레코드가 실제 예측 성능을 정직하게 보여줍니다.
+      const homeAttackAdj = applyRecentFormWeight(homeHA.homeAttack, homeHA.recentFormAttackFactor, 1);
+      const homeDefenseAdj = applyRecentFormWeight(homeHA.homeDefense, homeHA.recentFormDefenseFactor, 1);
+      const awayAttackAdj = applyRecentFormWeight(awayHA.awayAttack, awayHA.recentFormAttackFactor, 1);
+      const awayDefenseAdj = applyRecentFormWeight(awayHA.awayDefense, awayHA.recentFormDefenseFactor, 1);
+
+      const expectedHomeGoals = homeBaseline * homeAttackAdj * awayDefenseAdj;
+      const expectedAwayGoals = awayBaseline * awayAttackAdj * homeDefenseAdj;
 
       const raw = computePoissonGrid(expectedHomeGoals, expectedAwayGoals);
       const actualResult = m.homeScore > m.awayScore ? 'H' : (m.homeScore < m.awayScore ? 'A' : 'D');
@@ -3955,6 +4118,25 @@ function computeAiPredictionTrackRecord() {
       let correctedPredictedResult = 'D';
       if (corrected.homeWinPct >= corrected.drawPct && corrected.homeWinPct >= corrected.awayWinPct) correctedPredictedResult = 'H';
       else if (corrected.awayWinPct >= corrected.drawPct && corrected.awayWinPct >= corrected.homeWinPct) correctedPredictedResult = 'A';
+
+      // ----- 절편(방향성) 보정 적용 시 (walk-forward) -----
+      // 위 비율 보정과 똑같은 globalTotals/byTeamTotals를 그대로 재사용하되,
+      // "곱하기"가 아니라 "더하기"로 계산합니다. 어느 쪽이 실제로 더 잘 맞는지는
+      // 라운드 루프가 다 끝난 뒤 summaryCorrected와 summaryAdditive를 비교해서
+      // 결정합니다(correctionModeUsed).
+      const globalAdditiveCorrectionForThisRound = computeCorrectionFromTotalsAdditive(globalTotals);
+      const homeTeamAddCorr = globalAdditiveCorrectionForThisRound.active
+        ? computeTeamCorrectionOffsetAdditive(byTeamTotals[m.homeEn] && byTeamTotals[m.homeEn].home, globalAdditiveCorrectionForThisRound.homeOffset)
+        : { offset: 0, n: 0 };
+      const awayTeamAddCorr = globalAdditiveCorrectionForThisRound.active
+        ? computeTeamCorrectionOffsetAdditive(byTeamTotals[m.awayEn] && byTeamTotals[m.awayEn].away, globalAdditiveCorrectionForThisRound.awayOffset)
+        : { offset: 0, n: 0 };
+      const addExpectedHomeGoals = applyGoalCorrection(expectedHomeGoals, 'additive', undefined, homeTeamAddCorr.offset);
+      const addExpectedAwayGoals = applyGoalCorrection(expectedAwayGoals, 'additive', undefined, awayTeamAddCorr.offset);
+      const add = computePoissonGrid(addExpectedHomeGoals, addExpectedAwayGoals);
+      let addPredictedResult = 'D';
+      if (add.homeWinPct >= add.drawPct && add.homeWinPct >= add.awayWinPct) addPredictedResult = 'H';
+      else if (add.awayWinPct >= add.drawPct && add.awayWinPct >= add.homeWinPct) addPredictedResult = 'A';
 
       // ----- Dixon-Coles ρ 적용 시 (자동 보정 위에 저득점 상관관계까지 반영) -----
       // 기대 득점(lambda/mu) 자체는 자동 보정과 동일하고, ρ는 그 위에서 스코어
@@ -3994,6 +4176,18 @@ function computeAiPredictionTrackRecord() {
         correctedGoalErrorHome: Math.abs(correctedExpectedHomeGoals - m.homeScore),
         correctedGoalErrorAway: Math.abs(correctedExpectedAwayGoals - m.awayScore),
         correctedExpectedHomeGoals, correctedExpectedAwayGoals,
+        // ----- 절편(방향성) 보정 적용 시 (walk-forward) -----
+        addCorrectionActive: globalAdditiveCorrectionForThisRound.active,
+        homeCorrectionOffset: homeTeamAddCorr.offset,
+        awayCorrectionOffset: awayTeamAddCorr.offset,
+        addPredictedHomeGoals: add.bestH,
+        addPredictedAwayGoals: add.bestA,
+        addPredictedResult,
+        addWdlCorrect: addPredictedResult === actualResult,
+        addExactScoreCorrect: add.bestH === m.homeScore && add.bestA === m.awayScore,
+        addGoalErrorHome: Math.abs(addExpectedHomeGoals - m.homeScore),
+        addGoalErrorAway: Math.abs(addExpectedAwayGoals - m.awayScore),
+        addExpectedHomeGoals, addExpectedAwayGoals,
         // ----- Dixon-Coles ρ 적용 시 (walk-forward, 이 라운드 이전 데이터만 사용) -----
         dcActive: dcActiveForThisRound,
         dcRho: rhoForThisRound,
@@ -4056,10 +4250,10 @@ function computeAiPredictionTrackRecord() {
   function summarize(list, variant) {
     const n = list.length;
     if (!n) return null;
-    const wdlKey = variant === 'dc' ? 'dcWdlCorrect' : (variant === 'corrected' ? 'correctedWdlCorrect' : 'wdlCorrect');
-    const exactKey = variant === 'dc' ? 'dcExactScoreCorrect' : (variant === 'corrected' ? 'correctedExactScoreCorrect' : 'exactScoreCorrect');
-    const errHomeKey = variant === 'dc' ? 'dcGoalErrorHome' : (variant === 'corrected' ? 'correctedGoalErrorHome' : 'goalErrorHome');
-    const errAwayKey = variant === 'dc' ? 'dcGoalErrorAway' : (variant === 'corrected' ? 'correctedGoalErrorAway' : 'goalErrorAway');
+    const wdlKey = variant === 'dc' ? 'dcWdlCorrect' : (variant === 'corrected' ? 'correctedWdlCorrect' : (variant === 'add' ? 'addWdlCorrect' : 'wdlCorrect'));
+    const exactKey = variant === 'dc' ? 'dcExactScoreCorrect' : (variant === 'corrected' ? 'correctedExactScoreCorrect' : (variant === 'add' ? 'addExactScoreCorrect' : 'exactScoreCorrect'));
+    const errHomeKey = variant === 'dc' ? 'dcGoalErrorHome' : (variant === 'corrected' ? 'correctedGoalErrorHome' : (variant === 'add' ? 'addGoalErrorHome' : 'goalErrorHome'));
+    const errAwayKey = variant === 'dc' ? 'dcGoalErrorAway' : (variant === 'corrected' ? 'correctedGoalErrorAway' : (variant === 'add' ? 'addGoalErrorAway' : 'goalErrorAway'));
     const wdlCorrectCount = list.filter(r => r[wdlKey]).length;
     const exactCount = list.filter(r => r[exactKey]).length;
     const avgGoalError = list.reduce((sum, r) => sum + (r[errHomeKey] + r[errAwayKey]) / 2, 0) / n;
@@ -4088,26 +4282,65 @@ function computeAiPredictionTrackRecord() {
     });
   }
 
+  // 절편(방향성) 보정의 "현재" 버전도 똑같이 계산해둡니다(비율 보정과 같은
+  // globalTotals/byTeamTotals 재사용).
+  const currentAdditiveCorrection = computeCorrectionFromTotalsAdditive(globalTotals);
+  const currentTeamAdditiveCorrections = {};
+  if (currentAdditiveCorrection.active) {
+    Object.keys(byTeamTotals).forEach(nameEn => {
+      const homeC = computeTeamCorrectionOffsetAdditive(byTeamTotals[nameEn].home, currentAdditiveCorrection.homeOffset);
+      const awayC = computeTeamCorrectionOffsetAdditive(byTeamTotals[nameEn].away, currentAdditiveCorrection.awayOffset);
+      currentTeamAdditiveCorrections[nameEn] = {
+        homeOffset: homeC.offset, homeN: homeC.n,
+        awayOffset: awayC.offset, awayN: awayC.n
+      };
+    });
+  }
+
   const confidentRows = rows.filter(r => !r.lowConfidence);
 
   const summaryCorrected = summarize(confidentRows, 'corrected');
   const summaryDC = summarize(confidentRows, 'dc');
+  // "만약 절편(방향성) 보정을 계속 켜뒀다면" 시나리오의 walk-forward 백테스트 성적.
+  // 비율 보정(summaryCorrected)과 나란히 비교해서 실제로 어느 방식이 이 리그
+  // 데이터에 더 잘 맞는지 판단합니다.
+  const summaryAdditive = summarize(confidentRows, 'add');
 
   // ------------------------------------------------------------
+  // 비율 보정 vs 절편 보정, 어느 쪽을 실제로 켤지는 DC ρ와 같은 원칙으로
+  // 정합니다: walk-forward 백테스트 성적(승무패 적중률+정확스코어 적중률 합)이
+  // 더 높은 쪽만 채택합니다. 동률이면(Occam's razor) 더 단순한 쪽인 비율
+  // 보정을 유지합니다. 두 방식 다 표본 부족(active=false)이면 그냥 비율
+  // 모드로 두되(currentGlobalCorrection.active가 false라 실제로는 보정 자체가
+  // 꺼짐), 이후 표본이 쌓이면 다시 이 비교가 의미를 가집니다.
+  // ------------------------------------------------------------
+  const additiveBacktestHelps = !!(summaryCorrected && summaryAdditive &&
+    (summaryAdditive.wdlAccuracyPct + summaryAdditive.exactScoreAccuracyPct) >
+    (summaryCorrected.wdlAccuracyPct + summaryCorrected.exactScoreAccuracyPct));
+  const correctionModeUsed = additiveBacktestHelps ? 'additive' : 'ratio';
+
+
   // Dixon-Coles ρ를 "실제로 production에 켤지"는 표본 수 기준만으로 정하지
   // 않습니다. walk-forward 백테스트(summaryDC)가 자동 보정만 적용했을 때
   // (summaryCorrected)보다 승무패 적중률+정확스코어 적중률 합이 더 낮다면,
   // 이 리그에서는 ρ 보정이 실제로 도움이 안 된다는 뜻이므로 production
   // 예측에는 적용하지 않습니다(ρ=0으로 취급). 트랙레코드 화면에는 그래도
   // summaryDC를 그대로 보여줘서, "적용했다면 어땠을지"는 항상 확인할 수 있습니다.
+  // (단순화: ρ의 walk-forward 추정/비교는 항상 "비율 보정" 위에서만 이뤄집니다.
+  // ρ는 저득점 스코어의 상관관계 "모양"을 고치는 것이라 어느 평균 보정
+  // 방식을 썼는지엔 상대적으로 덜 민감하다고 보고, correctionModeUsed가
+  // 'additive'로 나와도 ρ 추정 로직 자체는 다시 안 돌립니다.)
   // ------------------------------------------------------------
   const dcSampleOk = dcHistory.length >= DC_RHO_MIN_SAMPLES;
   // 표본이 충분하면(dcSampleOk) 도움이 되든 안 되든 일단 ρ를 추정해둡니다.
   // "적용했다면 이 값이었을 것" 표시용이며, production에 실제로 켜질지는
   // 별도로 dcBacktestHelps가 결정합니다.
   const estimatedDCRho = dcSampleOk ? estimateDixonColesRho(dcHistory) : 0;
+  // 동률(>=)이면 예전엔 ρ를 켰지만, 동률일 때는 굳이 더 복잡한 DC 모델을
+  // 켤 이유가 없으므로(Occam's razor) '>'로 바꿔 더 단순한 Corrected 모델을
+  // 그대로 유지하는 쪽을 기본값으로 둡니다.
   const dcBacktestHelps = !!(dcSampleOk && summaryCorrected && summaryDC &&
-    (summaryDC.wdlAccuracyPct + summaryDC.exactScoreAccuracyPct) >=
+    (summaryDC.wdlAccuracyPct + summaryDC.exactScoreAccuracyPct) >
     (summaryCorrected.wdlAccuracyPct + summaryCorrected.exactScoreAccuracyPct));
   const currentDCActive = dcBacktestHelps;
   const currentDCRho = currentDCActive ? estimatedDCRho : 0;
@@ -4132,6 +4365,17 @@ function computeAiPredictionTrackRecord() {
     // homeN, awayFactor, awayN } }. getAutoCorrectionFactors(homeEn, awayEn)와
     // runMonteCarloSimulation이 이 맵을 사용해 매치업별로 다른 보정을 적용합니다.
     currentTeamCorrections,
+    // "만약 절편(방향성) 보정을 계속 켜뒀다면" 시나리오의 walk-forward 백테스트
+    // 성적과, 지금 이 순간의 절편 보정 계수(전역/팀별)입니다. 형태는 비율
+    // 보정과 동일하되 factor 대신 offset(골 단위)을 씁니다.
+    summaryAdditive,
+    summaryAllAdditive: summarize(rows, 'add'),
+    currentAdditiveCorrection,
+    currentTeamAdditiveCorrections,
+    // 비율 보정과 절편 보정 중 실제로 production에 적용되는 쪽입니다
+    // ('ratio' | 'additive'). getAutoCorrectionFactors가 이 값을 보고 결정합니다.
+    correctionModeUsed,
+    additiveBacktestHelps,
     // 지금 이 순간, 앞으로의 예측에 실제로 적용될 최신 Dixon-Coles ρ입니다.
     // 표본이 충분해도 백테스트상 도움이 안 되면(dcBacktestHelps=false) 0으로 유지됩니다.
     currentDCRho,

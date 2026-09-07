@@ -1,3 +1,11 @@
+  // ===== 캐시 버스팅 버전 (Asset Versions) =====
+  // index.html 맨 위에서 정의하는 window.ASSET_VERSIONS가 style.css/data.js/app.js
+  // 버전의 유일한 출처입니다. data.js와 app.js가 서로 다른 시점에 따로 버전이 올라가도
+  // (실제로 그렇게 운영 중이므로) predict-worker.js에게 "지금 로드된 data.js가 정확히
+  // 몇 버전인지"를 정확하게 물려줄 수 있도록, app.js 자신의 버전이 아니라 이 객체에서
+  // data 버전을 직접 읽어옵니다.
+  const ASSET_VERSIONS = window.ASSET_VERSIONS || {};
+
   // ===== 전역 상태 (Global State) =====
   // URL에 ?lang=en 이 붙어 있으면 처음부터 영문으로 시작합니다.
   // 예: https://your-domain.com/?lang=en
@@ -295,9 +303,55 @@
   }
 
   let predictionCache = null;
-
+  let predictWorker = null;
+  let predictWorkerFailed = false; // 워커 생성/로드가 실패하는 환경(예: file://로 직접 열람)에서는 메인 스레드 계산으로 폴백합니다.
+  let predictWorkerRequestSeq = 0;
 
   // ===== 경기 예측 / 몬테카를로 시뮬레이션 (Match Projections) =====
+  // 4000회 몬테카를로 시뮬레이션 + Dixon-Coles ρ 추정 같은 무거운 수학 연산은
+  // predict-worker.js(Web Worker) 안에서 돌립니다. data.js는 DOM/window를 전혀
+  // 건드리지 않는 순수 계산 + 데이터라서 워커 스레드에서도 그대로 재사용할 수 있습니다.
+  // 워커는 한 번만 띄워서 재사용하고(새로고침 버튼을 눌러도 매번 새로 만들지 않음),
+  // 워커 생성 자체가 안 되는 구식/제한된 환경에서는 기존처럼 메인 스레드에서 계산합니다.
+  function getPredictWorker() {
+    if (predictWorker || predictWorkerFailed) return predictWorker;
+    try {
+      // predictWorker 버전(워커 파일 자체가 바뀌었을 때)과 dataV(워커 안에서 불러올
+      // data.js 버전)를 각각 따로 넘깁니다 — 두 파일의 버전이 서로 달라도 항상 정확한
+      // data.js를 불러오도록 하기 위해서입니다.
+      const workerV = ASSET_VERSIONS.predictWorker || '001';
+      const dataV = ASSET_VERSIONS.data || '007';
+      predictWorker = new Worker('predict-worker.js?v=' + workerV + '&dataV=' + dataV);
+      predictWorker.onerror = function(err) {
+        console.error('predict-worker 로드/실행 실패, 메인 스레드 계산으로 전환합니다.', err);
+        predictWorker = null;
+        predictWorkerFailed = true;
+      };
+    } catch (e) {
+      predictWorkerFailed = true;
+    }
+    return predictWorker;
+  }
+
+  function runMonteCarloSimulationAsync(iterations) {
+    const worker = getPredictWorker();
+    if (!worker) {
+      // 폴백: 워커를 쓸 수 없는 환경에서는 예전처럼 메인 스레드에서 바로 계산합니다.
+      return Promise.resolve(runMonteCarloSimulation(iterations));
+    }
+    const requestId = ++predictWorkerRequestSeq;
+    return new Promise((resolve, reject) => {
+      function handleMessage(e) {
+        if (!e.data || e.data.requestId !== requestId) return; // 이전 요청의 응답은 무시
+        worker.removeEventListener('message', handleMessage);
+        if (e.data.error) reject(new Error(e.data.error));
+        else resolve(e.data.result);
+      }
+      worker.addEventListener('message', handleMessage);
+      worker.postMessage({ requestId, iterations });
+    });
+  }
+
   function renderPredictions(forceRerun) {
     const tbody = document.getElementById('predictTableBody');
     const refreshBtn = document.getElementById('predictRefreshBtn');
@@ -307,12 +361,15 @@
     if (!predictionCache) {
       tbody.innerHTML = `<tr><td colspan="7" class="predict-loading"><span class="predict-loading-inner"><span class="predict-spinner"></span><span>${isKorean ? '시뮬레이션 실행 중...' : 'Running simulation...'}</span></span></td></tr>`;
       refreshBtn.disabled = true;
-      // 브라우저가 로딩 문구를 그려낼 시간을 준 뒤 시뮬레이션 실행 (무거운 계산이 UI를 잠깐 멈출 수 있음)
-      setTimeout(() => {
-        predictionCache = runMonteCarloSimulation(4000);
+      runMonteCarloSimulationAsync(4000).then(result => {
+        predictionCache = result;
         drawPredictionTable();
         refreshBtn.disabled = false;
-      }, 30);
+      }).catch(err => {
+        console.error('몬테카를로 시뮬레이션 실행 중 오류:', err);
+        tbody.innerHTML = `<tr><td colspan="7" class="predict-loading">${isKorean ? '시뮬레이션 실행에 실패했어요. 새로고침 후 다시 시도해 주세요.' : 'Simulation failed. Please refresh and try again.'}</td></tr>`;
+        refreshBtn.disabled = false;
+      });
     } else {
       drawPredictionTable();
     }
@@ -450,13 +507,22 @@
     const compEl = document.getElementById('aiTrackCorrectedSummary');
     if (!corrEl || !compEl) return;
 
-    const c = track.currentCorrection;
-    const sc = track.summaryCorrected;
+    // correctionModeUsed: 'ratio'(곱셈 보정) | 'additive'(절편/방향성 보정).
+    // 어느 쪽을 실제로 쓸지는 data.js의 computeAiPredictionTrackRecord가
+    // walk-forward 백테스트 성적을 비교해서 자동으로 정합니다.
+    const mode = track.correctionModeUsed || 'ratio';
+    const isAdditive = mode === 'additive';
+    const c = isAdditive ? track.currentAdditiveCorrection : track.currentCorrection;
+    const sc = isAdditive ? track.summaryAdditive : track.summaryCorrected;
 
     function fmtFactor(f) {
       const pct = Math.round((f - 1) * 100);
       const sign = pct > 0 ? '+' : '';
       return `×${f.toFixed(2)} (${sign}${pct}%)`;
+    }
+    function fmtOffset(o) {
+      const sign = o > 0 ? '+' : '';
+      return isKorean ? `${sign}${o.toFixed(2)}골` : `${sign}${o.toFixed(2)} goals`;
     }
     // invert=true는 "평균 득점 오차"처럼 값이 낮을수록 좋은 지표용입니다
     // (그런 지표는 감소가 초록색 개선 표시가 되어야 합니다).
@@ -484,11 +550,11 @@
 
     corrEl.innerHTML = `
       <div class="ai-track-chip ai-track-chip-correction">
-        <span class="ai-track-chip-val">${fmtFactor(c.homeFactor)}</span>
+        <span class="ai-track-chip-val">${isAdditive ? fmtOffset(c.homeOffset) : fmtFactor(c.homeFactor)}</span>
         <span class="ai-track-chip-lbl lbl" data-en="Home goal correction" data-ko="홈 득점 보정">${isKorean ? '홈 득점 보정' : 'Home goal correction'}</span>
       </div>
       <div class="ai-track-chip ai-track-chip-correction">
-        <span class="ai-track-chip-val">${fmtFactor(c.awayFactor)}</span>
+        <span class="ai-track-chip-val">${isAdditive ? fmtOffset(c.awayOffset) : fmtFactor(c.awayFactor)}</span>
         <span class="ai-track-chip-lbl lbl" data-en="Away goal correction" data-ko="원정 득점 보정">${isKorean ? '원정 득점 보정' : 'Away goal correction'}</span>
       </div>
       <div class="ai-track-chip ai-track-chip-correction ai-track-chip-n">
@@ -533,7 +599,9 @@
     const bodyEl = document.getElementById('aiTrackTeamCorrectionBody');
     if (!wrapEl || !bodyEl) return;
 
-    const teamCorr = track.currentTeamCorrections || {};
+    const mode = track.correctionModeUsed || 'ratio';
+    const isAdditive = mode === 'additive';
+    const teamCorr = isAdditive ? (track.currentTeamAdditiveCorrections || {}) : (track.currentTeamCorrections || {});
     const teamNames = Object.keys(teamCorr);
     if (!teamNames.length || typeof leagueData === 'undefined') {
       wrapEl.style.display = 'none';
@@ -546,9 +614,18 @@
       const sign = pct > 0 ? '+' : '';
       return `×${f.toFixed(2)} (${sign}${pct}%)`;
     }
+    function fmtOffset(o) {
+      const sign = o > 0 ? '+' : '';
+      return isKorean ? `${sign}${o.toFixed(2)}골` : `${sign}${o.toFixed(2)} goals`;
+    }
     function factorCls(f) {
       if (f > 1.02) return 'ai-track-delta-up';
       if (f < 0.98) return 'ai-track-delta-down';
+      return 'ai-track-delta-flat';
+    }
+    function offsetCls(o) {
+      if (o > 0.03) return 'ai-track-delta-up';
+      if (o < -0.03) return 'ai-track-delta-down';
       return 'ai-track-delta-flat';
     }
 
@@ -564,8 +641,8 @@
     bodyEl.innerHTML = rows.map(({ label, c }) => `
       <tr>
         <td class="ai-track-match">${label}</td>
-        <td><span class="ai-track-delta ${factorCls(c.homeFactor)}">${fmtFactor(c.homeFactor)}</span> <span class="ai-track-chip-lbl">(n=${c.homeN})</span></td>
-        <td><span class="ai-track-delta ${factorCls(c.awayFactor)}">${fmtFactor(c.awayFactor)}</span> <span class="ai-track-chip-lbl">(n=${c.awayN})</span></td>
+        <td><span class="ai-track-delta ${isAdditive ? offsetCls(c.homeOffset) : factorCls(c.homeFactor)}">${isAdditive ? fmtOffset(c.homeOffset) : fmtFactor(c.homeFactor)}</span> <span class="ai-track-chip-lbl">(n=${c.homeN})</span></td>
+        <td><span class="ai-track-delta ${isAdditive ? offsetCls(c.awayOffset) : factorCls(c.awayFactor)}">${isAdditive ? fmtOffset(c.awayOffset) : fmtFactor(c.awayFactor)}</span> <span class="ai-track-chip-lbl">(n=${c.awayN})</span></td>
       </tr>
     `).join('');
   }
@@ -7558,8 +7635,16 @@
       : `Expected goals ${pred.expectedHomeGoals.toFixed(2)} : ${pred.expectedAwayGoals.toFixed(2)}`;
 
     // AI 예측 성적표에 쌓인 오차 패턴으로 자동 보정이 적용됐다면 계수와 함께 알려줍니다.
+    // correctionMode에 따라 "×배율" 또는 "+골" 표기를 다르게 씁니다.
+    const isAdditiveCorr = pred.correctionMode === 'additive';
+    const homeCorrTxt = isAdditiveCorr
+      ? `${pred.homeCorrectionOffset > 0 ? '+' : ''}${pred.homeCorrectionOffset.toFixed(2)}${isKorean ? '골' : ' goals'}`
+      : `×${pred.homeCorrectionFactor.toFixed(2)}`;
+    const awayCorrTxt = isAdditiveCorr
+      ? `${pred.awayCorrectionOffset > 0 ? '+' : ''}${pred.awayCorrectionOffset.toFixed(2)}${isKorean ? '골' : ' goals'}`
+      : `×${pred.awayCorrectionFactor.toFixed(2)}`;
     const correctionLineHtml = pred.correctionApplied
-      ? `<div class="mc-ai-correction lbl" data-en="Auto-corrected from past prediction errors (home ×${pred.homeCorrectionFactor.toFixed(2)} / away ×${pred.awayCorrectionFactor.toFixed(2)}, n=${pred.correctionSampleSize})" data-ko="지난 예측 오차를 반영해 자동 보정됨(홈 ×${pred.homeCorrectionFactor.toFixed(2)} · 원정 ×${pred.awayCorrectionFactor.toFixed(2)}, 표본 ${pred.correctionSampleSize}경기)">${isKorean ? `지난 예측 오차를 반영해 자동 보정됨(홈 ×${pred.homeCorrectionFactor.toFixed(2)} · 원정 ×${pred.awayCorrectionFactor.toFixed(2)}, 표본 ${pred.correctionSampleSize}경기)` : `Auto-corrected from past prediction errors (home ×${pred.homeCorrectionFactor.toFixed(2)} / away ×${pred.awayCorrectionFactor.toFixed(2)}, n=${pred.correctionSampleSize})`}</div>`
+      ? `<div class="mc-ai-correction lbl" data-en="Auto-corrected from past prediction errors (home ${homeCorrTxt} / away ${awayCorrTxt}, n=${pred.correctionSampleSize})" data-ko="지난 예측 오차를 반영해 자동 보정됨(홈 ${homeCorrTxt} · 원정 ${awayCorrTxt}, 표본 ${pred.correctionSampleSize}경기)">${isKorean ? `지난 예측 오차를 반영해 자동 보정됨(홈 ${homeCorrTxt} · 원정 ${awayCorrTxt}, 표본 ${pred.correctionSampleSize}경기)` : `Auto-corrected from past prediction errors (home ${homeCorrTxt} / away ${awayCorrTxt}, n=${pred.correctionSampleSize})`}</div>`
       : '';
 
     return `
