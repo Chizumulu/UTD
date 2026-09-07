@@ -3911,6 +3911,7 @@
           homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
           homeScore: m.homeScore, awayScore: m.awayScore,
           movedFromWeek: m.movedFromWeek,
+          kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
           scorersHome: d.scorersHome, scorersAway: d.scorersAway
         };
       });
@@ -3928,6 +3929,7 @@
           homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
           homeScore: m.homeScore, awayScore: m.awayScore,
           movedFromWeek: m.movedFromWeek,
+          kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
           scorersHome: m.scorersHome, scorersAway: m.scorersAway
         };
       }
@@ -4158,18 +4160,20 @@
     const listEl = document.getElementById('roundMatchList');
     listEl.innerHTML = '';
 
-    const matches = buildRoundMatches(currentRoundKey)
-      .slice()
-      .sort((a, b) => {
-        const aMine = a.isBye ? isMyTeamName(a.teamEn, a.teamKo) : (isMyTeamName(a.homeEn, a.homeKo) || isMyTeamName(a.awayEn, a.awayKo));
-        const bMine = b.isBye ? isMyTeamName(b.teamEn, b.teamKo) : (isMyTeamName(b.homeEn, b.homeKo) || isMyTeamName(b.awayEn, b.awayKo));
-        return (bMine ? 1 : 0) - (aMine ? 1 : 0);
-      });
-
-    matches.forEach(m => {
+    // 카드 하나(휴식주/예정/완료 경기)를 만들어 반환합니다. 날짜별로 묶어서
+    // 그리기 위해 기존에는 forEach 안에서 바로 DOM에 붙이던 로직을
+    // "엘리먼트를 만들어서 돌려주는" 형태로 분리했습니다.
+    // opts.forceNormal이 true면 치주물루 경기라도 my-team 스타일(확대/전체폭)을
+    // 붙이지 않고 다른 팀 경기와 똑같은 크기의 카드로 만듭니다. (하단 날짜별
+    // 목록에 중복으로 들어가는 치주물루 카드용)
+    const buildMatchCard = (m, opts) => {
+      const forceNormal = !!(opts && opts.forceNormal);
       if (m.isBye) {
         const card = document.createElement('div');
-        card.className = 'round-match-card round-bye-card';
+        // 치주물루의 휴식주 카드에도 my-team을 붙여서, PC 그리드 레이아웃에서
+        // 다른 경기 카드들과 마찬가지로 한 줄 전체를 차지하게 합니다.
+        const byeIsMine = isMyTeamName(m.teamEn, m.teamKo);
+        card.className = 'round-match-card round-bye-card' + (byeIsMine && !forceNormal ? ' my-team' : '');
         const logo = getTeamLogo(m.teamEn);
         const teamName = isKorean ? m.teamKo : m.teamEn;
         card.innerHTML = `
@@ -4177,11 +4181,11 @@
           <span class="lbl" data-en="${m.teamEn}" data-ko="${m.teamKo}">${teamName}</span>
           <span class="round-bye-badge lbl" data-en="BYE" data-ko="휴식주">${isKorean ? '휴식주' : 'BYE'}</span>
         `;
-        listEl.appendChild(card);
-        return;
+        return card;
       }
 
       const mine = isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo);
+      const mineClass = (mine && !forceNormal) ? ' my-team' : '';
       const homeLogo = getTeamLogo(m.homeEn);
       const awayLogo = getTeamLogo(m.awayEn);
       const homeName = isKorean ? m.homeKo : m.homeEn;
@@ -4190,7 +4194,7 @@
       if (m.isScheduled) {
         const kickoffTxt = formatKickoff({ kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime });
         const card = document.createElement('div');
-        card.className = 'round-match-card round-match-scheduled' + (mine ? ' my-team' : '');
+        card.className = 'round-match-card round-match-scheduled' + mineClass;
         card.innerHTML = `
           ${movedFromBadgeHtml(m, isKorean)}
           <div class="rmc-teams">
@@ -4213,14 +4217,13 @@
           ${mine ? matchWeatherPlaceholderHtml(m.homeEn, m.kickoffDate, m.kickoffTime, 'rmc-weather') : ''}
           <button type="button" class="rmc-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교">⚖️ ${isKorean ? '전적 비교' : 'Compare Teams'}</button>
         `;
-        listEl.appendChild(card);
         const compareBtn = card.querySelector('.rmc-compare-btn');
         if (compareBtn) {
           compareBtn.addEventListener('click', () => {
             openMatchCompareModal(m.homeEn, m.homeKo, m.awayEn, m.awayKo, currentRoundKey);
           });
         }
-        return;
+        return card;
       }
 
       const homeWin = m.homeScore > m.awayScore;
@@ -4231,7 +4234,7 @@
       const scorersAwayText = (m.scorersAway === '없음' || !m.scorersAway) ? noneLabel : renderScorerNamesHtml(m.scorersAway, isKorean);
 
       const card = document.createElement('div');
-      card.className = 'round-match-card' + (mine ? ' my-team' : '');
+      card.className = 'round-match-card' + mineClass;
       card.innerHTML = `
         ${movedFromBadgeHtml(m, isKorean)}
         <div class="rmc-teams">
@@ -4261,8 +4264,70 @@
         </div>
         ${venueCaptionHtml(m.homeEn)}
       `;
-      listEl.appendChild(card);
+      return card;
+    };
+
+    const mineFirstCompare = (a, b) => {
+      const aMine = a.isBye ? isMyTeamName(a.teamEn, a.teamKo) : (isMyTeamName(a.homeEn, a.homeKo) || isMyTeamName(a.awayEn, a.awayKo));
+      const bMine = b.isBye ? isMyTeamName(b.teamEn, b.teamKo) : (isMyTeamName(b.homeEn, b.homeKo) || isMyTeamName(b.awayEn, b.awayKo));
+      return (bMine ? 1 : 0) - (aMine ? 1 : 0);
+    };
+
+    const allMatches = buildRoundMatches(currentRoundKey);
+    const byeMatches = allMatches.filter(m => m.isBye);
+    const playMatches = allMatches.filter(m => !m.isBye);
+
+    // 치주물루 경기는 항상 최상단에 큰 카드로 고정해서 보여줍니다.
+    const mineMatch = playMatches.find(m => isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo));
+    if (mineMatch) {
+      listEl.appendChild(buildMatchCard(mineMatch));
+    }
+
+    // kickoffDate가 있는 경기끼리 날짜별로 묶습니다. (이미 결과가 나온 지난 라운드는
+    // kickoffDate가 저장돼있지 않은 경우가 많아 그때는 '날짜 미정' 묶음으로 따로 모읍니다.)
+    const NO_DATE_KEY = '__no_date__';
+    const dateGroups = new Map();
+    playMatches.forEach(m => {
+      const key = m.kickoffDate || NO_DATE_KEY;
+      if (!dateGroups.has(key)) dateGroups.set(key, []);
+      dateGroups.get(key).push(m);
     });
+
+    const sortedKeys = Array.from(dateGroups.keys()).sort((a, b) => {
+      if (a === NO_DATE_KEY) return 1;
+      if (b === NO_DATE_KEY) return -1;
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
+
+    // 이 라운드 안에 실제 날짜 정보가 하나라도 있을 때만 날짜 구분선을 보여줍니다.
+    const hasAnyDate = sortedKeys.some(k => k !== NO_DATE_KEY);
+
+    sortedKeys.forEach(key => {
+      if (hasAnyDate) {
+        const header = document.createElement('div');
+        header.className = 'round-date-heading';
+        if (key === NO_DATE_KEY) {
+          header.innerHTML = `<span class="lbl" data-en="Date TBD" data-ko="날짜 미정">${isKorean ? '날짜 미정' : 'Date TBD'}</span>`;
+        } else {
+          const [y, mo, d] = key.split('-').map(Number);
+          const dateObj = new Date(y, mo - 1, d);
+          const weekdayKo = WEEKDAY_KO[dateObj.getDay()];
+          const weekdayEn = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+          const monthEn = dateObj.toLocaleDateString('en-US', { month: 'short' });
+          const koTxt = `${mo}월 ${d}일 (${weekdayKo})`;
+          const enTxt = `${weekdayEn}, ${monthEn} ${d}`;
+          header.innerHTML = `<span class="lbl" data-en="${enTxt}" data-ko="${koTxt}">${isKorean ? koTxt : enTxt}</span>`;
+        }
+        listEl.appendChild(header);
+      }
+      // 하단 날짜별 목록에서는 치주물루 경기도 다른 팀 경기와 같은 크기(forceNormal)로
+      // 중복해서 보여줍니다. 이미 최상단에 큰 카드로 고정돼 있으므로 여기서는 정렬을
+      // mine-first로 굳이 강제하지 않고 원래 순서를 유지합니다.
+      dateGroups.get(key).forEach(m => listEl.appendChild(buildMatchCard(m, { forceNormal: true })));
+    });
+
+    // 휴식주 카드는 항상 맨 마지막(최하단)에 보여줍니다.
+    byeMatches.sort(mineFirstCompare).forEach(m => listEl.appendChild(buildMatchCard(m)));
 
     attachImageFallback();
     hydrateWeatherWidgets();

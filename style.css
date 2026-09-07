@@ -6926,6 +6926,61 @@
     flex-direction: column;
     gap: 10px;
   }
+  /* PC(사이드바가 붙는 881px 이상)에서는 라운드 전체를 한 화면에서 조망할 수 있게
+     그리드로 바꿉니다. 치주물루 경기(.my-team)는 정렬 로직(renderRoundsView)이
+     이미 배열 맨 앞에 둬서 DOM 순서상 첫 번째 카드이므로, 그 카드에만
+     grid-column: 1 / -1을 줘서 맨 위 한 줄을 통째로 차지하게 하고, 나머지 경기는
+     grid의 기본 자동 배치로 자연스럽게 2열로 흘러갑니다(별도 순서 계산 불필요).
+     모바일(880px 이하)은 기존 세로 1열 카드 목록을 그대로 씁니다. */
+  @media (min-width: 881px) {
+    .round-match-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      align-items: start;
+      gap: 14px;
+    }
+    .round-match-list .round-match-card.my-team {
+      grid-column: 1 / -1;
+      padding: 20px 28px;
+    }
+    /* 카드 폭 전체가 아니라 경기 정보(rmc-teams/rmc-scorers)만 적당한 폭으로
+       가운데 모아서, 팀 이름과 스코어 사이가 지나치게 벌어져 보이지 않게 합니다. */
+    .round-match-list .round-match-card.my-team .rmc-teams,
+    .round-match-list .round-match-card.my-team .rmc-scorers {
+      max-width: 640px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .round-match-list .round-match-card.my-team .rmc-team {
+      font-size: 16px;
+    }
+    .round-match-list .round-match-card.my-team .rmc-score {
+      font-size: 24px;
+    }
+    /* 날짜 구분선도 my-team 카드와 마찬가지로 그리드 한 줄 전체를 차지하게 합니다. */
+    .round-match-list .round-date-heading {
+      grid-column: 1 / -1;
+    }
+  }
+  .round-date-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 2px 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text-secondary, #8a8f98);
+    letter-spacing: 0.01em;
+  }
+  .round-date-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border, rgba(var(--color-navy-rgb),0.12));
+  }
+  .round-date-heading:first-child {
+    margin-top: 0;
+  }
   .round-match-card {
     background: var(--color-surface);
     border-radius: var(--radius-lg);
@@ -7016,6 +7071,15 @@
     color: var(--color-text-faint);
     font-size: 13px;
     font-weight: 600;
+    margin-top: 10px;
+  }
+  /* 휴식주 카드는 항상 목록 맨 마지막에 좌우 폭을 전부 차지하는 한 줄로
+     분리해서 보여줍니다 (치주물루의 휴식주가 아니어도 동일하게 적용). */
+  @media (min-width: 881px) {
+    .round-match-list .round-bye-card {
+      grid-column: 1 / -1;
+      margin-top: 6px;
+    }
   }
   .round-match-scheduled {
     opacity: 0.92;
