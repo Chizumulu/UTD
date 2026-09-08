@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '002',
-    data: '002',
-    app: '002',
+    style: '003',
+    data: '003',
+    app: '003',
     predictWorker: '001'
   };
 </script>
@@ -461,271 +461,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 <div id="statsView" style="display:none;">
 <div id="seasonFactSummary"></div>
-<div class="stats-grid">
-  <div class="stats-col">
-    <div class="stats-title lbl" data-en="GOALS PER GAME (Highest first)" data-ko="경기당 득점 (높은 순)">경기당 득점 (높은 순)</div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="TOTAL" data-ko="총 득점">총 득점</th>
-          <th class="lbl" data-en="PER GAME" data-ko="경기당">경기당</th>
-        </tr>
-      </thead>
-      <tbody id="scoreBody"></tbody>
-    </table>
+
+<div class="stat-cat-scroll" id="statCatNav"></div>
+
+<div class="stat-board" id="statBoard">
+  <div class="stat-board-head">
+    <div class="stat-board-title">
+      <span id="statBoardTitleText"></span><span class="stat-board-unit" id="statBoardUnitText"></span>
     </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('goalsFor')">더보기</button>
+    <span class="info-icon-btn" id="statBoardInfoBtn" style="display:none;" onclick="toggleInfoTooltip(event, 'statBoardInfo')">ⓘ</span>
+    <div class="info-tooltip" id="statBoardInfo" onclick="event.stopPropagation()">
+      <span class="lbl" id="statBoardInfoText"></span>
+    </div>
   </div>
-  <div class="stats-col">
-    <div class="stats-title lbl" data-en="GOALS CONCEDED PER GAME (Lowest first)" data-ko="경기당 실점 (낮은 순)">경기당 실점 (낮은 순)</div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="TOTAL" data-ko="총 실점">총 실점</th>
-          <th class="lbl" data-en="PER GAME" data-ko="경기당">경기당</th>
-        </tr>
-      </thead>
-      <tbody id="concedeBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('goalsAgainst')">더보기</button>
-  </div>
-  <div class="stats-col">
-    <div class="stats-title lbl" data-en="CLEAN SHEETS (Highest first)" data-ko="무실점 경기수 (많은 순)">무실점 경기수 (많은 순)</div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="CLEAN SHEETS" data-ko="무실점">무실점</th>
-        </tr>
-      </thead>
-      <tbody id="csBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('cs')">더보기</button>
-  </div>
-  <div class="stats-col">
-    <div class="stats-title lbl" data-en="FAILED TO SCORE (Highest first)" data-ko="무득점 경기수 (많은 순)">무득점 경기수 (많은 순)</div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="FAILED TO SCORE" data-ko="무득점">무득점</th>
-        </tr>
-      </thead>
-      <tbody id="ftsBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('fts')">더보기</button>
-  </div>
-  <div class="stats-col advanced-col">
-    <div class="stats-title advanced">
-      <span class="advanced-tag lbl" data-en="ADVANCED" data-ko="심화 지표">심화 지표</span>
-      <span class="lbl" data-en="POINTS PER GAME (Highest first)" data-ko="경기당 승점 (높은 순)">경기당 승점 (높은 순)</span>
-      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'ppgInfo')">ⓘ</span>
-      <div class="info-tooltip" id="ppgInfo" onclick="event.stopPropagation()">
-        <span class="lbl" data-ko="PPG(경기당 승점)는 승점을 경기수로 나눈 값이에요. 일반적으로 시즌 평균 PPG가 2.00을 넘으면 우승 경쟁권 페이스로 봅니다. 경기수가 다른 팀끼리도 공정하게 비교할 수 있는 지표예요." data-en="PPG (Points Per Game) is points divided by games played. A season average above 2.00 is generally considered title-race pace. It lets you fairly compare teams that have played a different number of matches.">PPG(경기당 승점)는 승점을 경기수로 나눈 값이에요. 일반적으로 시즌 평균 PPG가 2.00을 넘으면 우승 경쟁권 페이스로 봅니다. 경기수가 다른 팀끼리도 공정하게 비교할 수 있는 지표예요.</span>
-      </div>
-    </div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="PTS" data-ko="승점">승점</th>
-          <th class="lbl" data-en="PPG" data-ko="경기당">경기당</th>
-        </tr>
-      </thead>
-      <tbody id="ppgBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('ppg')">더보기</button>
-  </div>
-  <div class="stats-col advanced-col">
-    <div class="stats-title advanced">
-      <span class="advanced-tag lbl" data-en="ADVANCED" data-ko="심화 지표">심화 지표</span>
-      <span class="lbl" data-en="PYTHAGOREAN POINTS (Highest first)" data-ko="피타고리안 승점 (높은 순)">피타고리안 승점 (높은 순)</span>
-      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'pythagInfo')">ⓘ</span>
-      <div class="info-tooltip" id="pythagInfo" onclick="event.stopPropagation()">
-        <span class="lbl" data-ko="득점과 실점만으로 &quot;이론상 받았어야 할 승점&quot;을 추정하는 지표예요. 실제 승점이 기대치보다 높으면(+) 접전에서 운이 따랐거나 승부처에서 강했다는 뜻이고, 낮으면(-) 경기 내용에 비해 승점을 덜 챙겼다는 뜻입니다. 시즌이 진행될수록 실제 승점은 기대 승점 쪽으로 수렴하는 경향이 있어요." data-en="Estimates the points a team &quot;should&quot; have earned based purely on goals scored and conceded. A positive (+) difference means the team has outperformed its underlying numbers (close-game luck or clutch play); negative (-) means it's picking up fewer points than its output suggests. Over a season, actual points tend to drift back toward this expected value.">득점과 실점만으로 "이론상 받았어야 할 승점"을 추정하는 지표예요. 실제 승점이 기대치보다 높으면(+) 접전에서 운이 따랐거나 승부처에서 강했다는 뜻이고, 낮으면(-) 경기 내용에 비해 승점을 덜 챙겼다는 뜻입니다. 시즌이 진행될수록 실제 승점은 기대 승점 쪽으로 수렴하는 경향이 있어요.</span>
-      </div>
-    </div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="EXPECTED" data-ko="기대 승점">기대 승점</th>
-          <th class="lbl" data-en="+/-" data-ko="실제 대비">실제 대비</th>
-        </tr>
-      </thead>
-      <tbody id="pythagBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('pythag')">더보기</button>
-  </div>
-  <div class="stats-col advanced-col">
-    <div class="stats-title advanced">
-      <span class="advanced-tag lbl" data-en="ADVANCED" data-ko="심화 지표">심화 지표</span>
-      <span class="lbl" data-en="ATTACK INDEX (Highest first)" data-ko="공격 지수 (높은 순)">공격 지수 (높은 순)</span>
-      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'attackIdxInfo')">ⓘ</span>
-      <div class="info-tooltip" id="attackIdxInfo" onclick="event.stopPropagation()">
-        <span class="lbl" data-ko="슈팅 데이터 없이 골 기록만으로 만든 xG류 지표예요. 리그 전체 팀의 경기당 득점 평균을 100%로 놓고, 이 팀의 경기당 득점이 그 대비 몇 %인지를 보여줍니다. 100%보다 높으면 평균보다 골을 잘 넣는 팀이라는 뜻이에요." data-en="An xG-style metric built purely from goal records (no shot data). League-wide average goals per game is set to 100%, and this shows this team's goals per game as a percentage of that average. Above 100% means the team scores more than the league average.">슈팅 데이터 없이 골 기록만으로 만든 xG류 지표예요. 리그 전체 팀의 경기당 득점 평균을 100%로 놓고, 이 팀의 경기당 득점이 그 대비 몇 %인지를 보여줍니다. 100%보다 높으면 평균보다 골을 잘 넣는 팀이라는 뜻이에요.</span>
-      </div>
-    </div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="ATTACK INDEX" data-ko="공격 지수">공격 지수</th>
-        </tr>
-      </thead>
-      <tbody id="attackIdxBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('attackIdx')">더보기</button>
-  </div>
-  <div class="stats-col advanced-col">
-    <div class="stats-title advanced">
-      <span class="advanced-tag lbl" data-en="ADVANCED" data-ko="심화 지표">심화 지표</span>
-      <span class="lbl" data-en="DEFENSE INDEX (Highest first)" data-ko="수비 지수 (높은 순)">수비 지수 (높은 순)</span>
-      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'defenseIdxInfo')">ⓘ</span>
-      <div class="info-tooltip" id="defenseIdxInfo" onclick="event.stopPropagation()">
-        <span class="lbl" data-ko="리그 평균 경기당 실점을 100%로 놓고, 이 팀이 그 대비 얼마나 덜 실점하는지를 보여주는 지표예요. 숫자가 높을수록 수비가 평균보다 견고하다는 뜻이고, 실점이 0인 팀은 '무실점'으로 표시됩니다." data-en="League-wide average goals conceded per game is set to 100%, and this shows how much less this team concedes relative to that average. A higher number means a stronger-than-average defense; a team with zero goals conceded shows as 'Perfect'.">리그 평균 경기당 실점을 100%로 놓고, 이 팀이 그 대비 얼마나 덜 실점하는지를 보여주는 지표예요. 숫자가 높을수록 수비가 평균보다 견고하다는 뜻이고, 실점이 0인 팀은 '무실점'으로 표시됩니다.</span>
-      </div>
-    </div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="DEFENSE INDEX" data-ko="수비 지수">수비 지수</th>
-        </tr>
-      </thead>
-      <tbody id="defenseIdxBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('defenseIdx')">더보기</button>
-  </div>
-  <div class="stats-col">
-    <div class="stats-title lbl" data-en="WINNING STREAK (Highest first)" data-ko="연승 (많은 순)">연승 (많은 순)</div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="STREAK" data-ko="연승">연승</th>
-        </tr>
-      </thead>
-      <tbody id="streakWinBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakWin')">더보기</button>
-  </div>
-  <div class="stats-col">
-    <div class="stats-title lbl" data-en="LOSING STREAK (Highest first)" data-ko="연패 (많은 순)">연패 (많은 순)</div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="STREAK" data-ko="연패">연패</th>
-        </tr>
-      </thead>
-      <tbody id="streakLossBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakLoss')">더보기</button>
-  </div>
-  <div class="stats-col">
-    <div class="stats-title lbl" data-en="DRAWING STREAK (Highest first)" data-ko="연속 무승부 (많은 순)">연속 무승부 (많은 순)</div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="STREAK" data-ko="연무">연무</th>
-        </tr>
-      </thead>
-      <tbody id="streakDrawBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakDraw')">더보기</button>
-  </div>
-  <div class="stats-col">
-    <div class="stats-title advanced">
-      <span class="advanced-tag lbl" data-en="BONUS" data-ko="추천 스탯">추천 스탯</span>
-      <span class="lbl" data-en="UNBEATEN STREAK (Highest first)" data-ko="무패 행진 (많은 순)">무패 행진 (많은 순)</span>
-      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'unbeatenInfo')">ⓘ</span>
-      <div class="info-tooltip" id="unbeatenInfo" onclick="event.stopPropagation()">
-        <span class="lbl" data-ko="가장 최근 패배 이후 이어지고 있는 무패(승 또는 무) 경기 수예요. 연승과 연무를 합쳐서 팀의 안정적인 컨디션을 한눈에 보여줍니다." data-en="Consecutive matches without a loss (win or draw) since the most recent defeat. Combines winning and drawing streaks to show a team's overall run of form.">가장 최근 패배 이후 이어지고 있는 무패(승 또는 무) 경기 수예요. 연승과 연무를 합쳐서 팀의 안정적인 컨디션을 한눈에 보여줍니다.</span>
-      </div>
-    </div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="STREAK" data-ko="무패">무패</th>
-        </tr>
-      </thead>
-      <tbody id="streakUnbeatenBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakUnbeaten')">더보기</button>
-  </div>
-  <div class="stats-col">
-    <div class="stats-title lbl" data-en="SCORING STREAK (Highest first)" data-ko="연속 득점 (많은 순)">연속 득점 (많은 순)</div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="STREAK" data-ko="연속 득점">연속 득점</th>
-        </tr>
-      </thead>
-      <tbody id="streakScoringBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakScoring')">더보기</button>
-  </div>
-  <div class="stats-col">
-    <div class="stats-title lbl" data-en="CONCEDING STREAK (Highest first)" data-ko="연속 실점 (많은 순)">연속 실점 (많은 순)</div>
-        <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
-          <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="STREAK" data-ko="연속 실점">연속 실점</th>
-        </tr>
-      </thead>
-      <tbody id="streakConcedingBody"></tbody>
-    </table>
-    </div>
-    <button class="more-btn lbl" data-en="View More" data-ko="더보기" onclick="openModal('streakConceding')">더보기</button>
+  <div id="statBoardRows"></div>
+  <div class="stat-board-foot">
+    <span class="more-link lbl" data-en="View Full Ranking" data-ko="전체 순위 더보기" id="statBoardMoreBtn" onclick="toggleStatBoardExpand()">전체 순위 더보기</span>
   </div>
 </div>
+
 <div class="scatter-card">
   <div class="stats-title">
     <span class="lbl" data-en="ATTACK vs DEFENSE (Goals For vs Goals Against per Game)" data-ko="공격 vs 수비 (경기당 득점 vs 경기당 실점)">공격 vs 수비 (경기당 득점 vs 경기당 실점)</span>

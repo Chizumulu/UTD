@@ -23,6 +23,37 @@
   let currentTeamInfoTab = 'overview';
   let statsData = {};
   let currentModalType = null;
+
+  // ===== 리그 기록 - 카테고리 정의 (Stat Category Config) =====
+  // id는 statsData / MODAL_CONFIG의 키와 동일해야 합니다.
+  const STAT_CATEGORIES = [
+    { id: 'goalsFor', labelKo: '경기당 득점', labelEn: 'Goals/Game', unitKo: '높은 순', unitEn: 'Highest first' },
+    { id: 'goalsAgainst', labelKo: '경기당 실점', labelEn: 'Conceded/Game', unitKo: '낮은 순', unitEn: 'Lowest first' },
+    { id: 'cs', labelKo: '무실점', labelEn: 'Clean Sheets', unitKo: '많은 순', unitEn: 'Highest first' },
+    { id: 'fts', labelKo: '무득점', labelEn: 'Failed to Score', unitKo: '많은 순', unitEn: 'Highest first' },
+    { id: 'ppg', labelKo: '경기당 승점', labelEn: 'Points/Game', unitKo: '높은 순', unitEn: 'Highest first', tier: 'advanced',
+      infoKo: 'PPG(경기당 승점)는 승점을 경기수로 나눈 값이에요. 일반적으로 시즌 평균 PPG가 2.00을 넘으면 우승 경쟁권 페이스로 봅니다. 경기수가 다른 팀끼리도 공정하게 비교할 수 있는 지표예요.',
+      infoEn: 'PPG (Points Per Game) is points divided by games played. A season average above 2.00 is generally considered title-race pace. It lets you fairly compare teams that have played a different number of matches.' },
+    { id: 'pythag', labelKo: '피타고리안 승점', labelEn: 'Pythagorean Pts', unitKo: '높은 순', unitEn: 'Highest first', tier: 'advanced',
+      infoKo: '득점과 실점만으로 "이론상 받았어야 할 승점"을 추정하는 지표예요. 실제 승점이 기대치보다 높으면(+) 접전에서 운이 따랐거나 승부처에서 강했다는 뜻이고, 낮으면(-) 경기 내용에 비해 승점을 덜 챙겼다는 뜻입니다. 시즌이 진행될수록 실제 승점은 기대 승점 쪽으로 수렴하는 경향이 있어요.',
+      infoEn: 'Estimates the points a team "should" have earned based purely on goals scored and conceded. A positive (+) difference means the team has outperformed its underlying numbers (close-game luck or clutch play); negative (-) means it\'s picking up fewer points than its output suggests. Over a season, actual points tend to drift back toward this expected value.' },
+    { id: 'attackIdx', labelKo: '공격 지수', labelEn: 'Attack Index', unitKo: '높은 순', unitEn: 'Highest first', tier: 'advanced',
+      infoKo: '슈팅 데이터 없이 골 기록만으로 만든 xG류 지표예요. 리그 전체 팀의 경기당 득점 평균을 100%로 놓고, 이 팀의 경기당 득점이 그 대비 몇 %인지를 보여줍니다. 100%보다 높으면 평균보다 골을 잘 넣는 팀이라는 뜻이에요.',
+      infoEn: 'An xG-style metric built purely from goal records (no shot data). League-wide average goals per game is set to 100%, and this shows this team\'s goals per game as a percentage of that average. Above 100% means the team scores more than the league average.' },
+    { id: 'defenseIdx', labelKo: '수비 지수', labelEn: 'Defense Index', unitKo: '높은 순', unitEn: 'Highest first', tier: 'advanced',
+      infoKo: '리그 평균 경기당 실점을 100%로 놓고, 이 팀이 그 대비 얼마나 덜 실점하는지를 보여주는 지표예요. 숫자가 높을수록 수비가 평균보다 견고하다는 뜻이고, 실점이 0인 팀은 \'무실점\'으로 표시됩니다.',
+      infoEn: 'League-wide average goals conceded per game is set to 100%, and this shows how much less this team concedes relative to that average. A higher number means a stronger-than-average defense; a team with zero goals conceded shows as \'Perfect\'.' },
+    { id: 'streakWin', labelKo: '연승', labelEn: 'Winning Streak', unitKo: '많은 순', unitEn: 'Highest first' },
+    { id: 'streakLoss', labelKo: '연패', labelEn: 'Losing Streak', unitKo: '많은 순', unitEn: 'Highest first' },
+    { id: 'streakDraw', labelKo: '연속 무승부', labelEn: 'Drawing Streak', unitKo: '많은 순', unitEn: 'Highest first' },
+    { id: 'streakUnbeaten', labelKo: '무패 행진', labelEn: 'Unbeaten Streak', unitKo: '많은 순', unitEn: 'Highest first', tier: 'bonus',
+      infoKo: '가장 최근 패배 이후 이어지고 있는 무패(승 또는 무) 경기 수예요. 연승과 연무를 합쳐서 팀의 안정적인 컨디션을 한눈에 보여줍니다.',
+      infoEn: 'Consecutive matches without a loss (win or draw) since the most recent defeat. Combines winning and drawing streaks to show a team\'s overall run of form.' },
+    { id: 'streakScoring', labelKo: '연속 득점', labelEn: 'Scoring Streak', unitKo: '많은 순', unitEn: 'Highest first' },
+    { id: 'streakConceding', labelKo: '연속 실점', labelEn: 'Conceding Streak', unitKo: '많은 순', unitEn: 'Highest first' }
+  ];
+  let currentStatCategory = 'goalsFor';
+  let statBoardExpanded = false;
   let currentPlayerModalKey = null;
   let currentSquadPlayerModalNumber = null;
   let currentTeamInfoKey = 'Chizumulu United FC';
@@ -5490,6 +5521,150 @@
     });
   }
 
+  // ===== 리그 기록 - 리더보드 값 포맷 (Stat Value Formatting) =====
+  function getStatDisplay(team, statType) {
+    const faintClass = '';
+    if (statType === 'goalsFor') {
+      return { main: team.goalsFor, sub: team.goalsForPerGame.toFixed(2) + (isKorean ? ' / 경기' : ' / game') };
+    }
+    if (statType === 'goalsAgainst') {
+      return { main: team.goalsAgainst, sub: team.goalsAgainstPerGame.toFixed(2) + (isKorean ? ' / 경기' : ' / game') };
+    }
+    if (statType === 'cs') return { main: team.cleanSheets, sub: null };
+    if (statType === 'fts') return { main: team.failedToScore, sub: null };
+    if (statType === 'ppg') {
+      return { main: team.pts, sub: 'PPG ' + team.ppg.toFixed(2) };
+    }
+    if (statType === 'pythag') {
+      const diff = team.pythagDiff;
+      const cls = diff > 0.05 ? 'stat-val-pos' : (diff < -0.05 ? 'stat-val-neg' : '');
+      return { main: team.pythagPoints.toFixed(1), sub: (diff > 0 ? '+' : '') + diff.toFixed(1), subClass: cls };
+    }
+    if (statType === 'attackIdx') {
+      const cls = team.attackIndex > 105 ? 'stat-val-pos' : (team.attackIndex < 95 ? 'stat-val-neg' : '');
+      return { main: Math.round(team.attackIndex) + '%', sub: null, mainClass: cls };
+    }
+    if (statType === 'defenseIdx') {
+      if (team.defensePerfect) {
+        return { main: isKorean ? '무실점' : 'Clean Sheet', sub: null, mainClass: 'stat-val-pos' };
+      }
+      const cls = team.defenseIndex > 105 ? 'stat-val-pos' : (team.defenseIndex < 95 ? 'stat-val-neg' : '');
+      return { main: Math.round(team.defenseIndex) + '%', sub: null, mainClass: cls };
+    }
+    if (statType === 'streakWin') return { main: team.winStreak, sub: null };
+    if (statType === 'streakLoss') return { main: team.lossStreak, sub: null };
+    if (statType === 'streakDraw') return { main: team.drawStreak, sub: null };
+    if (statType === 'streakUnbeaten') return { main: team.unbeatenStreak, sub: null };
+    if (statType === 'streakScoring') return { main: team.scoringStreak, sub: null };
+    if (statType === 'streakConceding') return { main: team.concedingStreak, sub: null };
+    return { main: '-', sub: null };
+  }
+
+  // ===== 리그 기록 - 카테고리 탭 렌더 (Category Nav) =====
+  function renderStatCatNav() {
+    const nav = document.getElementById('statCatNav');
+    if (!nav) return;
+    nav.innerHTML = STAT_CATEGORIES.map(cat => {
+      const label = isKorean ? cat.labelKo : cat.labelEn;
+      const tagKo = cat.tier === 'advanced' ? '심화' : (cat.tier === 'bonus' ? '추천' : null);
+      const tagEn = cat.tier === 'advanced' ? 'ADV' : (cat.tier === 'bonus' ? 'BONUS' : null);
+      const tag = cat.tier ? `<span class="cat-tag">${isKorean ? tagKo : tagEn}</span>` : '';
+      const activeCls = cat.id === currentStatCategory ? ' active' : '';
+      return `<div class="stat-cat-pill${activeCls}" data-cat="${cat.id}" onclick="selectStatCategory('${cat.id}')">${label}${tag}</div>`;
+    }).join('');
+  }
+
+  // ===== 리그 기록 - 리더보드 카드 렌더 (Stat Board) =====
+  function renderStatBoard() {
+    const cat = STAT_CATEGORIES.find(c => c.id === currentStatCategory) || STAT_CATEGORIES[0];
+    const titleEl = document.getElementById('statBoardTitleText');
+    const unitEl = document.getElementById('statBoardUnitText');
+    const infoBtn = document.getElementById('statBoardInfoBtn');
+    const infoText = document.getElementById('statBoardInfoText');
+    const rowsHost = document.getElementById('statBoardRows');
+    const moreBtn = document.getElementById('statBoardMoreBtn');
+    if (!titleEl || !rowsHost) return;
+
+    titleEl.textContent = isKorean ? cat.labelKo : cat.labelEn;
+    unitEl.textContent = isKorean ? cat.unitKo : cat.unitEn;
+
+    if (cat.infoKo) {
+      infoBtn.style.display = '';
+      infoText.setAttribute('data-ko', cat.infoKo);
+      infoText.setAttribute('data-en', cat.infoEn);
+      infoText.textContent = isKorean ? cat.infoKo : cat.infoEn;
+    } else {
+      infoBtn.style.display = 'none';
+    }
+
+    const fullList = statsData[cat.id] || [];
+    const teams = statBoardExpanded ? fullList : fullList.slice(0, 5);
+
+    if (moreBtn) {
+      if (fullList.length <= 5) {
+        moreBtn.style.display = 'none';
+      } else {
+        moreBtn.style.display = '';
+        moreBtn.classList.toggle('expanded', statBoardExpanded);
+        const collapseKo = '접기', collapseEn = 'Show Less';
+        const expandKo = '전체 순위 더보기', expandEn = 'View Full Ranking';
+        moreBtn.setAttribute('data-ko', statBoardExpanded ? collapseKo : expandKo);
+        moreBtn.setAttribute('data-en', statBoardExpanded ? collapseEn : expandEn);
+        moreBtn.textContent = isKorean ? (statBoardExpanded ? collapseKo : expandKo) : (statBoardExpanded ? collapseEn : expandEn);
+      }
+    }
+
+    rowsHost.innerHTML = teams.map((team, idx) => {
+      const rank = idx + 1;
+      const disp = getStatDisplay(team, cat.id);
+      const isMyTeam = team.nameEn === 'Chizumulu United FC';
+      const rowCls = ['stat-row'];
+      if (rank === 1) rowCls.push('rank-1');
+      else if (rank === 2) rowCls.push('rank-2');
+      else if (rank === 3) rowCls.push('rank-3');
+      if (isMyTeam) rowCls.push('my-team');
+
+      const medalHtml = rank <= 3
+        ? `<span class="stat-medal ${rank === 1 ? 'g' : rank === 2 ? 's' : 'b'}">${rank}</span>`
+        : rank;
+
+      const name = isKorean ? team.nameKo : team.nameEn;
+      const crest = team.logoSrc ? `<img class="stat-row-crest" src="${team.logoSrc}" alt="${name}">` : '';
+      const barPct = Math.max(30, 100 - idx * 15);
+      const subHtml = disp.sub ? `<div class="stat-val-sub ${disp.subClass || ''}">${disp.sub}</div>` : '';
+
+      return `
+        <div class="${rowCls.join(' ')}">
+          <div class="stat-rank">${medalHtml}</div>
+          ${crest}
+          <div class="stat-team-cell">
+            <div class="stat-team-name">${name}</div>
+            <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${barPct}%"></div></div>
+          </div>
+          <div class="stat-val-cell">
+            <div class="stat-val-main ${disp.mainClass || ''}">${disp.main}</div>
+            ${subHtml}
+          </div>
+        </div>`;
+    }).join('');
+
+    attachImageFallback();
+  }
+
+  function selectStatCategory(catId) {
+    currentStatCategory = catId;
+    statBoardExpanded = false;
+    renderStatCatNav();
+    renderStatBoard();
+  }
+
+  function toggleStatBoardExpand() {
+    statBoardExpanded = !statBoardExpanded;
+    renderStatBoard();
+  }
+
+
+
   function renderStatsTable(tbodyId, teams, statType) {
     const tbody = document.getElementById(tbodyId);
     tbody.innerHTML = '';
@@ -5706,6 +5881,42 @@
       </div>`;
   }
 
+  // 팀 기록 기준 하이라이트 4종 (최다 득점, 최소 실점, 최다 연승, 기대 승점 대비 최고).
+  // statsData가 먼저 계산되어 있어야 하므로 buildStatsTables()에서 순서를 맞춰 호출합니다.
+  function seasonFactTeamHighlightsHtml() {
+    const topOf = (catId) => (statsData[catId] && statsData[catId][0]) || null;
+    const goalsTeam = topOf('goalsFor');
+    const defenseTeam = topOf('goalsAgainst');
+    const streakTeamRaw = topOf('streakWin');
+    const streakTeam = streakTeamRaw && streakTeamRaw.winStreak > 0 ? streakTeamRaw : null;
+    const pythagTeamRaw = statsData.pythag
+      ? statsData.pythag.slice().sort((a, b) => b.pythagDiff - a.pythagDiff)[0]
+      : null;
+    const pythagTeam = pythagTeamRaw && pythagTeamRaw.pythagDiff > 0 ? pythagTeamRaw : null;
+
+    const box = (team, val, lblKo, lblEn) => {
+      if (!team) {
+        return `<div class="sfs-team-highlight-box sfs-team-highlight-empty">${isKorean ? '집계 중' : 'Calculating'}</div>`;
+      }
+      const name = isKorean ? team.nameKo : team.nameEn;
+      const crest = team.logoSrc ? `<img src="${team.logoSrc}" alt="${name}">` : '';
+      return `
+        <div class="sfs-team-highlight-box">
+          <div class="sfs-team-highlight-team">${crest}<span>${name}</span></div>
+          <div class="sfs-team-highlight-val">${val}</div>
+          <div class="sfs-team-highlight-lbl lbl" data-en="${lblEn}" data-ko="${lblKo}">${isKorean ? lblKo : lblEn}</div>
+        </div>`;
+    };
+
+    return `
+      <div class="sfs-team-highlights">
+        ${box(goalsTeam, goalsTeam ? goalsTeam.goalsForPerGame.toFixed(2) : '', '최다 득점 · 경기당', 'Most Goals / Game')}
+        ${box(defenseTeam, defenseTeam ? defenseTeam.goalsAgainstPerGame.toFixed(2) : '', '최소 실점 · 경기당', 'Fewest Conceded / Game')}
+        ${box(streakTeam, streakTeam ? (isKorean ? streakTeam.winStreak + '경기' : streakTeam.winStreak + ' games') : '', '최다 연승 중', 'Longest Win Streak')}
+        ${box(pythagTeam, pythagTeam ? '+' + pythagTeam.pythagDiff.toFixed(1) : '', '기대 승점 대비 최고', 'Best vs Expected Points')}
+      </div>`;
+  }
+
   function renderSeasonFactSummary() {
     const host = document.getElementById('seasonFactSummary');
     if (!host) return;
@@ -5737,13 +5948,16 @@
 
     const legendRow = (label, dotColor, count, pct) => `
       <div class="ti-pos-legend-item">
-        <i class="ti-pos-legend-dot" style="background:${dotColor}"></i>
-        <div class="ti-pos-legend-main">
-          <span class="ti-pos-legend-label">${label}</span>
+        <div class="sfs-legend-row">
+          <i class="ti-pos-legend-dot" style="background:${dotColor}"></i>
+          <div class="ti-pos-legend-main">
+            <span class="ti-pos-legend-label">${label}</span>
+          </div>
+          <div class="ti-pos-legend-value">
+            <b>${count}</b><span class="ti-pos-legend-pct">${fmtPct(pct)}</span>
+          </div>
         </div>
-        <div class="ti-pos-legend-value">
-          <b>${count}</b><span class="ti-pos-legend-pct">${fmtPct(pct)}</span>
-        </div>
+        <div class="sfs-legend-bar-track"><div class="sfs-legend-bar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
       </div>`;
 
     const legendHtml =
@@ -5753,7 +5967,7 @@
 
     host.innerHTML = `
       <div class="ti-card sfs-card">
-        <div class="ti-card-title lbl" data-en="Season at a Glance" data-ko="리그 시즌 팩트 요약">${isKorean ? '리그 시즌 팩트 요약' : 'Season at a Glance'}</div>
+        <div class="ti-card-title lbl" data-en="Season at a Glance" data-ko="리그 시즌 요약">${isKorean ? '리그 시즌 요약' : 'Season at a Glance'}</div>
 
         <div class="sfs-quickstats">
           <div class="sfs-quickstat">
@@ -5800,13 +6014,17 @@
           ${seasonFactHighlightHtml('margin', s.biggestMargin)}
           ${seasonFactBestTeamHtml(s.bestTeamPerformance)}
         </div>
+
+        <div class="sfs-team-highlights-panel">
+          <div class="sfs-team-highlights-title lbl" data-en="Season Highlights" data-ko="시즌 하이라이트">${isKorean ? '시즌 하이라이트' : 'Season Highlights'}</div>
+          ${seasonFactTeamHighlightsHtml()}
+        </div>
       </div>`;
 
     attachImageFallback();
   }
 
   function buildStatsTables() {
-    renderSeasonFactSummary();
     const teams = collectTeamStats();
     statsData.goalsFor = teams.slice().sort(function(a, b) { return (b.goalsForPerGame - a.goalsForPerGame) || teamMineFirst(a, b); });
     statsData.goalsAgainst = teams.slice().sort(function(a, b) { return (a.goalsAgainstPerGame - b.goalsAgainstPerGame) || teamMineFirst(a, b); });
@@ -5823,20 +6041,9 @@
     statsData.streakScoring = teams.slice().sort(function(a, b) { return (b.scoringStreak - a.scoringStreak) || teamMineFirst(a, b); });
     statsData.streakConceding = teams.slice().sort(function(a, b) { return (b.concedingStreak - a.concedingStreak) || teamMineFirst(a, b); });
 
-    renderStatsTable('scoreBody', statsData.goalsFor.slice(0, 5), 'goalsFor');
-    renderStatsTable('concedeBody', statsData.goalsAgainst.slice(0, 5), 'goalsAgainst');
-    renderStatsTable('csBody', statsData.cs.slice(0, 5), 'cs');
-    renderStatsTable('ftsBody', statsData.fts.slice(0, 5), 'fts');
-    renderStatsTable('ppgBody', statsData.ppg.slice(0, 5), 'ppg');
-    renderStatsTable('pythagBody', statsData.pythag.slice(0, 5), 'pythag');
-    renderStatsTable('attackIdxBody', statsData.attackIdx.slice(0, 5), 'attackIdx');
-    renderStatsTable('defenseIdxBody', statsData.defenseIdx.slice(0, 5), 'defenseIdx');
-    renderStatsTable('streakWinBody', statsData.streakWin.slice(0, 5), 'streakWin');
-    renderStatsTable('streakLossBody', statsData.streakLoss.slice(0, 5), 'streakLoss');
-    renderStatsTable('streakDrawBody', statsData.streakDraw.slice(0, 5), 'streakDraw');
-    renderStatsTable('streakUnbeatenBody', statsData.streakUnbeaten.slice(0, 5), 'streakUnbeaten');
-    renderStatsTable('streakScoringBody', statsData.streakScoring.slice(0, 5), 'streakScoring');
-    renderStatsTable('streakConcedingBody', statsData.streakConceding.slice(0, 5), 'streakConceding');
+    renderSeasonFactSummary();
+    renderStatCatNav();
+    renderStatBoard();
     renderMagicNumberStats();
 
     renderScatterPlot(teams);
