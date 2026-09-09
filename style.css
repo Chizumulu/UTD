@@ -3386,6 +3386,56 @@
   .disclaimer-confirm-btn:hover {
     background: var(--color-navy-light);
   }
+  /* ===== 뉴스 안내 팝업 (선수 대표팀 발탁 소식 등) ===== */
+  .news-popup-content {
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+  }
+  .news-popup-close-x {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(var(--color-black-rgb), 0.45);
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+  .news-popup-close-x:hover {
+    background: rgba(var(--color-black-rgb), 0.65);
+  }
+  .news-popup-image {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .news-popup-body {
+    padding-top: 18px;
+  }
+  .news-popup-text {
+    font-weight: 800;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--color-text-darkest);
+  }
+  .news-popup-player-link {
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  .news-popup-player-link:hover,
+  .news-popup-player-link:active {
+    opacity: 0.7;
+  }
   @media (max-width: 720px) {
     .stats-grid {
       grid-template-columns: 1fr;
@@ -3779,6 +3829,9 @@
     color: var(--color-text-muted);
     font-weight: 600;
     margin-top: 2px;
+  }
+  .player-modal-stat-label-sm {
+    font-size: 10px;
   }
   .player-timeline {
     display: flex;

@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '004',
-    data: '004',
-    app: '004',
+    style: '001',
+    data: '001',
+    app: '001',
     predictWorker: '001'
   };
 </script>
@@ -759,6 +759,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <span class="player-modal-stat-num" id="squadPlayerModalGoals"></span>
           <span class="player-modal-stat-label lbl" data-en="Goals" data-ko="득점">득점</span>
         </div>
+        <div class="player-modal-stat" id="squadPlayerModalCleanSheetsStat" style="display:none;">
+          <span class="player-modal-stat-num" id="squadPlayerModalCleanSheets"></span>
+          <span class="player-modal-stat-label player-modal-stat-label-sm lbl" data-en="Clean Sheets (Starts)" data-ko="클린시트(선발기준)">클린시트(선발기준)</span>
+        </div>
         <div class="player-modal-stat">
           <span class="player-modal-stat-num player-modal-stat-num-split" id="squadPlayerModalStarts"></span>
           <span class="player-modal-stat-label lbl" data-en="Starts / Subs" data-ko="선발 / 교체">선발 / 교체</span>
@@ -821,6 +825,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="lbl" data-en="Don't show this for 1 week" data-ko="1주일간 보지 않기">1주일간 보지 않기</span>
       </label>
       <button class="disclaimer-confirm-btn lbl" data-en="OK" data-ko="확인" onclick="closeDisclaimer()">확인</button>
+    </div>
+  </div>
+</div>
+
+<div id="newsPopupModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content disclaimer-modal-content news-popup-content">
+    <button class="close-btn news-popup-close-x" onclick="closeNewsPopup()">&times;</button>
+    <img class="news-popup-image" src="https://i.imgur.com/AxV1PSB.png" alt="마야미코 치우시와">
+    <div class="modal-body disclaimer-modal-body news-popup-body">
+      <p class="disclaimer-text news-popup-text lbl news-popup-player-link" data-en="Mayamiko Chiuswa<br>called up to Malawi U-23 national team" data-ko="마야미코 치우시와<br>말라위 U-23 국가대표팀 발탁" onclick="openPlayerFromNewsPopup(90)" role="button" tabindex="0">마야미코 치우시와<br>말라위 U-23 국가대표팀 발탁</p>
+      <label class="disclaimer-dontshow">
+        <input type="checkbox" id="newsPopupDontShow">
+        <span class="lbl" data-en="Don't show this for 7 days" data-ko="7일간 보지 않기">7일간 보지 않기</span>
+      </label>
+      <button class="disclaimer-confirm-btn lbl" data-en="Close" data-ko="닫기" onclick="closeNewsPopup()">닫기</button>
     </div>
   </div>
 </div>

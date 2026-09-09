@@ -7221,6 +7221,19 @@
     document.getElementById('squadPlayerModalStarts').textContent = `${stats.starts} / ${stats.subApps}`;
     document.getElementById('squadPlayerModalMotm').textContent = stats.motmCount;
 
+    // 골키퍼는 득점 옆에 클린시트(선발 기준) 기록도 함께 보여줍니다.
+    // computeGoalkeeperRecords()는 라인업상 '선발' GK 기준으로만 집계하므로
+    // 교체 출전 클린시트는 포함되지 않습니다(선발기준 표기가 그래서 붙습니다).
+    const csStatEl = document.getElementById('squadPlayerModalCleanSheetsStat');
+    if (player.position === 'GK' && csStatEl) {
+      const gkRecords = (typeof computeGoalkeeperRecords === 'function') ? computeGoalkeeperRecords() : [];
+      const gkRecord = gkRecords.find(r => r.number === num);
+      document.getElementById('squadPlayerModalCleanSheets').textContent = gkRecord ? gkRecord.cleanSheets : 0;
+      csStatEl.style.display = '';
+    } else if (csStatEl) {
+      csStatEl.style.display = 'none';
+    }
+
     const noteEl = document.getElementById('squadPlayerModalCaptainNote');
     if (stats.captainCount > 0) {
       noteEl.style.display = '';
@@ -8273,14 +8286,15 @@
 
   function showDisclaimerIfNeeded() {
     const modal = document.getElementById('disclaimerModal');
-    if (!modal) return;
+    if (!modal) return false;
     try {
       const hideUntil = localStorage.getItem(DISCLAIMER_KEY);
       if (hideUntil && Date.now() < Number(hideUntil)) {
-        return; // 아직 숨김 기간이 지나지 않음
+        return false; // 아직 숨김 기간이 지나지 않음
       }
     } catch (e) {}
     modal.style.display = 'flex';
+    return true;
   }
 
   function closeDisclaimer() {
@@ -8293,6 +8307,50 @@
       } catch (e) {}
     }
     if (modal) modal.style.display = 'none';
+    showNewsPopupIfNeeded();
+  }
+
+  // ===== 뉴스 안내 팝업 (마야미코 치우시와 말라위 U-23 발탁 소식) =====
+  // 접속 안내 팝업이 뜬 경우엔 그게 닫힌 다음(closeDisclaimer 안에서 호출) 두 번째로 뜨고,
+  // 접속 안내 팝업이 이미 숨김 기간이라 안 뜬 경우엔 진입 시 바로 뜹니다.
+  const NEWS_POPUP_KEY = 'nrfa-news-popup-chiuswa-hide-until';
+  const NEWS_POPUP_HIDE_DAYS = 7;
+  // 체크박스와 별개로, 이 소식 자체를 요청일(2026-09-09)로부터 7일 뒤에는
+  // 아무도 다시 보지 않게 하드 마감시각을 둡니다. 이 시각이 지나면 팝업 자체가 뜨지 않습니다.
+  const NEWS_POPUP_EXPIRES_AT = new Date('2026-09-16T00:00:00+09:00').getTime();
+
+  function showNewsPopupIfNeeded() {
+    const modal = document.getElementById('newsPopupModal');
+    if (!modal) return;
+    if (Date.now() >= NEWS_POPUP_EXPIRES_AT) return; // 7일 지남 - 자동 종료
+    try {
+      const hideUntil = localStorage.getItem(NEWS_POPUP_KEY);
+      if (hideUntil && Date.now() < Number(hideUntil)) {
+        return; // 아직 숨김 기간이 지나지 않음
+      }
+    } catch (e) {}
+    modal.style.display = 'flex';
+  }
+
+  function closeNewsPopup() {
+    const modal = document.getElementById('newsPopupModal');
+    const dontShow = document.getElementById('newsPopupDontShow');
+    if (dontShow && dontShow.checked) {
+      try {
+        const hideUntil = Date.now() + NEWS_POPUP_HIDE_DAYS * 24 * 60 * 60 * 1000;
+        localStorage.setItem(NEWS_POPUP_KEY, String(hideUntil));
+      } catch (e) {}
+    }
+    if (modal) modal.style.display = 'none';
+  }
+
+  // 뉴스 팝업 안의 선수 이름을 누르면 팝업을 닫고(체크박스 상태는 그대로 반영) 바로
+  // 해당 선수의 상세 모달을 이어서 띄웁니다.
+  function openPlayerFromNewsPopup(number) {
+    closeNewsPopup();
+    if (typeof openSquadPlayerModal === 'function') {
+      openSquadPlayerModal(number);
+    }
   }
 
   // ===== 초기 실행 (App Init) =====
@@ -8320,7 +8378,7 @@
     setInterval(updateAllNextMatchCountdowns, 1000);
     window.addEventListener('resize', equalizeTitleLines);
 
-    showDisclaimerIfNeeded();
+    showDisclaimerIfNeeded() || showNewsPopupIfNeeded();
     initScrollFadeHints();
     updateInstallBtnVisibility();
 
