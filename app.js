@@ -245,6 +245,15 @@
 
 
   // ===== 화면 전환 (View Switching) =====
+  // 화면이 바뀔 때 새로 나타나는 뷰에 살짝 페이드+슬라이드업 애니메이션을 줍니다.
+  // 이미 재생 중인 애니메이션이 있으면(연타 등) 리플로우로 강제 리스타트합니다.
+  function playViewEnterAnimation(el) {
+    if (!el) return;
+    el.classList.remove('view-fade-in');
+    void el.offsetWidth; // reflow — 클래스를 다시 붙였을 때 애니메이션이 처음부터 재생되도록 강제
+    el.classList.add('view-fade-in');
+  }
+
   function showView(view) {
     currentView = view;
     const rankView = document.getElementById('rankView');
@@ -291,18 +300,22 @@
       squadView.style.display = '';
       squadBtn.classList.add('active');
       showTeamInfoForKey(currentTeamInfoKey);
+      playViewEnterAnimation(squadView);
     } else if (view === 'rounds') {
       roundsView.style.display = '';
       roundsBtn.classList.add('active');
       renderRoundsView();
+      playViewEnterAnimation(roundsView);
     } else if (view === 'stats') {
       statsView.style.display = 'block';
       statsBtn.classList.add('active');
       buildStatsTables();
+      playViewEnterAnimation(statsView);
     } else if (view === 'scorers') {
       scorersView.style.display = '';
       scorersBtn.classList.add('active');
       renderScorersTable();
+      playViewEnterAnimation(scorersView);
     } else if (view === 'predict') {
       predictView.style.display = '';
       predictBtn.classList.add('active');
@@ -311,23 +324,28 @@
       renderPointsHistoryChart();
       renderMagicNumberStats();
       renderAiTrackRecord();
+      playViewEnterAnimation(predictView);
     } else if (view === 'venues') {
       if (venuesView) venuesView.style.display = '';
       if (venuesBtn) venuesBtn.classList.add('active');
       renderVenuesView();
+      playViewEnterAnimation(venuesView);
     } else if (view === 'report') {
       if (reportView) reportView.style.display = '';
       if (reportBtn) reportBtn.classList.add('active');
       renderRoundResultReport();
+      playViewEnterAnimation(reportView);
     } else if (view === 'leagueRank') {
       if (leagueRankView) leagueRankView.style.display = '';
       if (leagueRankBtn) leagueRankBtn.classList.add('active');
       renderLeagueTable();
+      playViewEnterAnimation(leagueRankView);
     } else {
       rankView.style.display = '';
       rankBtn.classList.add('active');
       if (nextMatchStrip) nextMatchStrip.style.display = '';
       renderMainMiniTable();
+      playViewEnterAnimation(rankView);
     }
 
     refreshScrollFadeHints();
@@ -426,6 +444,7 @@
       if (r.nameEn === 'Chizumulu United FC') tr.classList.add('my-team');
 
       const name = isKorean ? r.nameKo : r.nameEn;
+      const shortName = name.split(" ")[0];
 
       function barCell(pct, cls) {
         const width = Math.max(pct, pct > 0 ? 3 : 0);
@@ -441,7 +460,8 @@
         <td class="rank-cell">${rank}</td>
         <td class="pt-team">
           <img class="team-logo" src="${r.logoSrc}" data-en-name="${r.nameEn}" alt="${r.nameEn}">
-          <span>${name}</span>
+          <span class="pt-team-name-full">${name}</span>
+          <span class="pt-team-name-short">${shortName}</span>
         </td>
         <td class="pt-prob-cell">${barCell(r.championPct, 'champ')}</td>
         <td class="pt-prob-cell">${barCell(r.top3Pct, 'top3')}</td>
@@ -797,7 +817,16 @@
   }
 
   function isReportReadyRound(roundKey) {
-    return countPlayedMatchesInRound(roundKey) >= REPORT_MIN_MATCHES;
+    if (countPlayedMatchesInRound(roundKey) < REPORT_MIN_MATCHES) return false;
+    // 라운드 안의 다른 경기들이 충분히 채워졌더라도, 정작 우리 팀(치주물루) 경기
+    // 자체에 스코어가 없으면(아직 안 열렸거나 누락) 리포트를 만들면 안 됩니다.
+    // (부전승 주간은 예외 — myMatch가 없는 게 정상이라 그대로 통과)
+    const matches = buildRoundMatches(roundKey);
+    const myBye = matches.find(m => m.isBye && isMyTeamName(m.teamEn, m.teamKo));
+    if (myBye) return true;
+    const myMatch = matches.find(m => !m.isBye &&
+      (isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo)));
+    return !!(myMatch && typeof myMatch.homeScore === 'number' && typeof myMatch.awayScore === 'number');
   }
 
   // 리포트를 만들 수 있는(=6경기 이상 채워진) 라운드 중 가장 최신 라운드
@@ -1049,6 +1078,7 @@
       };
     }
     if (!myMatch) return null;
+    if (typeof myMatch.homeScore !== 'number' || typeof myMatch.awayScore !== 'number') return null;
 
     const isHome = isMyTeamName(myMatch.homeEn, myMatch.homeKo);
     const myGoals = isHome ? myMatch.homeScore : myMatch.awayScore;
@@ -2432,7 +2462,9 @@
       return `
         <details class="ti-card ti-bye-flow-card">
           ${titleHtml}
-          <div class="ti-bye-flow-empty lbl" data-en="${bodyEn}" data-ko="${bodyKo}">${isKorean ? bodyKo : bodyEn}</div>
+          <div class="ti-bye-flow-body">
+            <div class="ti-bye-flow-empty lbl" data-en="${bodyEn}" data-ko="${bodyKo}">${isKorean ? bodyKo : bodyEn}</div>
+          </div>
         </details>`;
     }
 
@@ -2530,12 +2562,14 @@
     return `
       <details class="ti-card ti-bye-flow-card">
         ${titleHtml}
-        <div class="ti-bye-flow-svg-wrap">${chartSvg}</div>
-        ${legendHtml}
-        <div class="ti-bye-flow-summary">
-          ${sideCardHtml(`<span class="lbl" data-en="${beforeLabelEn}" data-ko="${beforeLabelKo}">${isKorean ? beforeLabelKo : beforeLabelEn}</span>`, flow.before, '')}
-          ${sideCardHtml(`<span class="lbl" data-en="${afterLabelEn}" data-ko="${afterLabelKo}">${isKorean ? afterLabelKo : afterLabelEn}</span>`, flow.after, deltaHtml)}
-        </div>
+        <div class="ti-bye-flow-body"><div class="ti-bye-flow-body-inner">
+          <div class="ti-bye-flow-svg-wrap">${chartSvg}</div>
+          ${legendHtml}
+          <div class="ti-bye-flow-summary">
+            ${sideCardHtml(`<span class="lbl" data-en="${beforeLabelEn}" data-ko="${beforeLabelKo}">${isKorean ? beforeLabelKo : beforeLabelEn}</span>`, flow.before, '')}
+            ${sideCardHtml(`<span class="lbl" data-en="${afterLabelEn}" data-ko="${afterLabelKo}">${isKorean ? afterLabelKo : afterLabelEn}</span>`, flow.after, deltaHtml)}
+          </div>
+        </div></div>
       </details>`;
   }
 
@@ -2621,16 +2655,23 @@
 
     const formGuideHtml = buildFormGuideCardHtml(t);
     const homeAwayHtml = renderHomeAwaySplitCard(t);
-    const byeFlowHtml = renderByeWeekFlowCard(t);
 
     el.innerHTML = `
       <div class="ti-overview-grid">
         ${formGuideHtml}
         ${homeAwayHtml}
-        ${byeFlowHtml}
       </div>
     `;
     attachImageFallback();
+  }
+
+  // ===== 휴식 주간 전후 흐름 카드 (개요 탭에서 라운드별 누적 승점 아래로 독립 배치) =====
+  function renderTeamInfoByeFlow() {
+    const el = document.getElementById('teamInfoByeFlowTab');
+    if (!el) return;
+    const info = getMyRankedTeam();
+    if (!info) { el.innerHTML = ''; return; }
+    el.innerHTML = renderByeWeekFlowCard(info.team);
   }
 
   function renderTeamAwardsTab() {
@@ -3280,24 +3321,11 @@
     hydrateWeatherWidgets();
   }
 
-  function scrollToTeamInfoSection(tab) {
-    currentTeamInfoTab = tab;
-    setActiveTeamInfoButton(tab);
-    const sectionEl = document.getElementById('tiSection-' + tab);
-    if (sectionEl) {
-      sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
-
   function setActiveTeamInfoButton(tab) {
     const buttons = {
       overview: 'tiOverviewBtn',
-      record: 'tiRecordBtn',
       squad: 'tiSquadBtn',
-      scorers: 'tiScorersBtn',
-      awards: 'tiAwardsBtn',
-      h2h: 'tiH2hBtn',
-      youtube: 'tiYoutubeBtn',
+      honors: 'tiHonorsBtn',
       results: 'tiResultsBtn'
     };
     Object.keys(buttons).forEach(key => {
@@ -3334,35 +3362,26 @@
     if (document.getElementById('teamInfoTabBar')) updateTabIndicator();
   });
 
-  let teamInfoScrollObserver = null;
-  function setupTeamInfoScrollSpy() {
-    if (teamInfoScrollObserver) {
-      teamInfoScrollObserver.disconnect();
-      teamInfoScrollObserver = null;
-    }
-    const sections = ['overview', 'record', 'squad', 'scorers', 'awards', 'h2h', 'youtube', 'results']
-      .map(tab => ({ tab, el: document.getElementById('tiSection-' + tab) }))
-      .filter(s => s.el);
-    if (sections.length === 0) return;
-
-    const tabBar = document.getElementById('teamInfoTabBar');
-    const tabBarHeight = tabBar ? tabBar.getBoundingClientRect().height : 0;
-
-    teamInfoScrollObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const tab = entry.target.id.replace('tiSection-', '');
-          currentTeamInfoTab = tab;
-          setActiveTeamInfoButton(tab);
-        }
-      });
-    }, {
-      root: null,
-      rootMargin: `-${Math.ceil(tabBarHeight + 10)}px 0px -70% 0px`,
-      threshold: 0
+  // ===== 구단 정보 탭 전환 (실제 탭 전환) =====
+  // 예전에는 8개 섹션을 한 페이지에 다 늘어놓고 앵커 스크롤 + IntersectionObserver로
+  // "지금 보고 있는 섹션"만 추정해서 탭을 하이라이트했습니다. 지금은 4개 탭으로
+  // 정리하면서 실제로 선택한 탭의 .ti-tabpage만 보여주고 나머지는 숨깁니다.
+  const TEAM_INFO_TABS = ['overview', 'squad', 'honors', 'results'];
+  function applyTeamInfoTab(tab) {
+    if (TEAM_INFO_TABS.indexOf(tab) === -1) tab = 'overview';
+    currentTeamInfoTab = tab;
+    TEAM_INFO_TABS.forEach(key => {
+      const sectionEl = document.getElementById('tiSection-' + key);
+      if (sectionEl) sectionEl.classList.toggle('active', key === tab);
     });
-
-    sections.forEach(s => teamInfoScrollObserver.observe(s.el));
+    setActiveTeamInfoButton(tab);
+  }
+  // 탭 버튼 클릭 시 호출 — 렌더링 시점(applyTeamInfoTab만 사용)과 달리
+  // 사용자가 직접 누른 경우에만 탭 바 위치로 스크롤해줍니다.
+  function switchTeamInfoTab(tab) {
+    applyTeamInfoTab(tab);
+    const tabBar = document.getElementById('teamInfoTabBar');
+    if (tabBar) tabBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ===== 몰입감 강화: 카드/섹션 리빌 옵저버 =====
@@ -3379,7 +3398,8 @@
     const root = document.getElementById('squadView');
     if (!root) return;
     const targets = root.querySelectorAll(
-      '.ti-card, .ti-scorer-card, .ti-award-card-item, .ti-gk-card-item, .squad-card, .ti-section-title, .ti-section-title-row'
+      '.ti-card, .ti-scorer-card, .ti-award-card-item, .ti-gk-card-item, .squad-card, .ti-section-title, .ti-section-title-row, ' +
+      '.team-magic-number-card, .team-points-trend-details, .ti-record-card, .ti-yt-card'
     );
     if (!targets.length) return;
     if (reduceMotion) {
@@ -3494,6 +3514,7 @@
     const mine = getMyRankedTeam();
     if (magicTarget) magicTarget.innerHTML = mine ? buildTeamMagicNumberHtml(mine.team, getRankedTeams('all')) : '';
     renderTeamPointsHistoryChart('teamInfoPointsHistorySvg', mine ? mine.team : null);
+    renderTeamInfoByeFlow();
     renderTeamH2HTab();
     renderTeamStaffTab();
     renderSquadView();
@@ -3501,9 +3522,22 @@
     renderTeamAwardsTab();
     renderTeamYoutubeTab();
     renderTeamResultsTab();
-    setActiveTeamInfoButton(currentTeamInfoTab);
-    setupTeamInfoScrollSpy();
+    renderTeamInfoNextMatchTab();
+    applyTeamInfoTab(currentTeamInfoTab);
     setupTeamInfoRevealObserver();
+  }
+
+  // ===== 구단 정보 개요 탭 하단 "다음 경기" 카드 =====
+  // 예전에는 club info 페이지에 다음 경기가 없었고(nextMatchStrip은 순위표 화면 전용),
+  // 다른 팀 상세 보기에서 쓰던 nextMatchOpponentHtml()을 그대로 재사용해서
+  // 우리 팀 개요 탭에도 카운트다운·상대전적·예측까지 포함한 카드를 보여줍니다.
+  function renderTeamInfoNextMatchTab() {
+    const el = document.getElementById('teamInfoNextMatchTab');
+    if (!el) return;
+    const info = getMyRankedTeam();
+    if (!info) { el.innerHTML = ''; return; }
+    el.innerHTML = `<div class="ti-card">${nextMatchOpponentHtml(info.team, info.rank)}</div>`;
+    hydrateWeatherWidgets();
   }
 
   // ===== 팀별 득점 순위 카드 (재사용 가능한 빌더) =====
@@ -7115,6 +7149,42 @@
     }
   });
 
+  // ===== 국가대표 뱃지용 국기 SVG 아이콘 (이모지 미지원 환경 대응) =====
+  // countryCode: 'MW' 등 ISO 국가 코드. 필요한 국기가 늘어나면 이 함수에 case만 추가하면 됩니다.
+  function getNationalFlagSvg(countryCode) {
+    if (countryCode === 'MW') return buildMalawiFlagSvg();
+    return '';
+  }
+
+  function buildMalawiFlagSvg() {
+    const w = 30, h = 20;
+    const stripeH = h / 3;
+    const cx = w / 2, cy = stripeH / 2;
+    const rInner = 2.2;
+    const rOuter = stripeH / 2 - 0.3;
+    const rayCount = 31; // 말라위 국기 태양의 광선 수
+    const rays = [];
+    for (let i = 0; i < rayCount; i++) {
+      const a1 = (i / rayCount) * 2 * Math.PI;
+      const aMid = ((i + 0.5) / rayCount) * 2 * Math.PI;
+      const a2 = ((i + 1) / rayCount) * 2 * Math.PI;
+      const x1 = (cx + rInner * Math.cos(a1)).toFixed(2);
+      const y1 = (cy + rInner * Math.sin(a1)).toFixed(2);
+      const xm = (cx + rOuter * Math.cos(aMid)).toFixed(2);
+      const ym = (cy + rOuter * Math.sin(aMid)).toFixed(2);
+      const x2 = (cx + rInner * Math.cos(a2)).toFixed(2);
+      const y2 = (cy + rInner * Math.sin(a2)).toFixed(2);
+      rays.push(`<polygon points="${x1},${y1} ${xm},${ym} ${x2},${y2}" fill="#CE1126"/>`);
+    }
+    return `<svg class="national-flag-icon" viewBox="0 0 ${w} ${h}" width="18" height="12" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="${w}" height="${stripeH}" fill="#000000"/>
+      <rect x="0" y="${stripeH}" width="${w}" height="${stripeH}" fill="#CE1126"/>
+      <rect x="0" y="${stripeH * 2}" width="${w}" height="${stripeH}" fill="#339E35"/>
+      ${rays.join('')}
+      <circle cx="${cx}" cy="${cy}" r="${rInner}" fill="#CE1126"/>
+    </svg>`;
+  }
+
   // ===== 스쿼드 선수 통산 기록 모달 (Squad Player Career Stats Modal) =====
   function openSquadPlayerModal(number) {
     const num = parseInt(number, 10);
@@ -7133,6 +7203,18 @@
     document.getElementById('squadPlayerModalName').textContent = isKorean ? player.nameKo : player.nameEn;
     const posLabel = POSITION_LABEL[player.position] ? (isKorean ? POSITION_LABEL[player.position].ko : POSITION_LABEL[player.position].en) : player.position;
     document.getElementById('squadPlayerModalPos').textContent = `#${player.number} · ${posLabel}`;
+
+    const nationalBadgeEl = document.getElementById('squadPlayerModalNationalBadge');
+    if (player.nationalBadge) {
+      nationalBadgeEl.style.display = '';
+      const nb = player.nationalBadge;
+      const flagSvg = getNationalFlagSvg(nb.flag);
+      const label = isKorean ? nb.labelKo : nb.labelEn;
+      nationalBadgeEl.innerHTML = `${flagSvg}<span class="squad-player-modal-national-badge-text">${label}</span>`;
+    } else {
+      nationalBadgeEl.style.display = 'none';
+      nationalBadgeEl.innerHTML = '';
+    }
 
     document.getElementById('squadPlayerModalApps').textContent = stats.appearances;
     document.getElementById('squadPlayerModalGoals').textContent = stats.goals;
@@ -7351,11 +7433,13 @@
           <div class="ti-overview-grid other-team-full-grid">
             ${formGuideHtml}
             ${homeAwayHtml}
-            ${byeFlowHtml}
           </div>
           ${magicNumberHtml}
         </div>
         ${pointsTrendHtml}
+        <div class="ti-section">
+          ${byeFlowHtml}
+        </div>
         <div class="ti-section">
           <div class="ti-section-title lbl" data-en="Top Scorers" data-ko="득점 순위">${isKorean ? '득점 순위' : 'Top Scorers'}</div>
           ${scorersHtml}

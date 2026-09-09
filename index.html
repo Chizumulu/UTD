@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '003',
-    data: '003',
-    app: '003',
+    style: '004',
+    data: '004',
+    app: '004',
     predictWorker: '001'
   };
 </script>
@@ -362,8 +362,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </a>
       </div>
     </div>
-    <div class="team-info-quickstats" id="teamInfoQuickStats"></div>
   </div>
+  <div class="team-info-quickstats team-info-quickstats-bar" id="teamInfoQuickStats"></div>
 
   <div class="team-motto-banner">
     <span class="team-motto-main"><span class="team-motto-quote" aria-hidden="true">&ldquo;</span> Chilumba Chimodzi, Team Imodzi <span class="team-motto-quote" aria-hidden="true">&rdquo;</span></span>
@@ -373,21 +373,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 
   <div class="team-info-tab-bar" id="teamInfoTabBar">
-    <button class="team-info-tab-btn active lbl" id="tiOverviewBtn" data-en="CLUB INFO" data-ko="구단 정보" onclick="scrollToTeamInfoSection('overview')">구단 정보</button>
-    <button class="team-info-tab-btn lbl" id="tiRecordBtn" data-en="RECORD" data-ko="기록" onclick="scrollToTeamInfoSection('record')">기록</button>
-    <button class="team-info-tab-btn lbl" id="tiSquadBtn" data-en="SQUAD" data-ko="선수단" onclick="scrollToTeamInfoSection('squad')">선수단</button>
-    <button class="team-info-tab-btn lbl" id="tiScorersBtn" data-en="Player Records" data-ko="선수 기록" onclick="scrollToTeamInfoSection('scorers')">선수 기록</button>
-    <button class="team-info-tab-btn lbl" id="tiAwardsBtn" data-en="AWARDS" data-ko="수상 정보" onclick="scrollToTeamInfoSection('awards')">수상 정보</button>
-    <button class="team-info-tab-btn lbl" id="tiH2hBtn" data-en="H2H" data-ko="상대전적" onclick="scrollToTeamInfoSection('h2h')">상대전적</button>
-    <button class="team-info-tab-btn lbl" id="tiYoutubeBtn" data-en="YOUTUBE" data-ko="구단 유튜브" onclick="scrollToTeamInfoSection('youtube')">구단 유튜브</button>
-    <button class="team-info-tab-btn lbl" id="tiResultsBtn" data-en="RESULTS" data-ko="경기결과" onclick="scrollToTeamInfoSection('results')">경기결과</button>
+    <button class="team-info-tab-btn active lbl" id="tiOverviewBtn" data-en="OVERVIEW" data-ko="개요" onclick="switchTeamInfoTab('overview')">개요</button>
+    <button class="team-info-tab-btn lbl" id="tiSquadBtn" data-en="SQUAD" data-ko="선수단" onclick="switchTeamInfoTab('squad')">선수단</button>
+    <button class="team-info-tab-btn lbl" id="tiHonorsBtn" data-en="RECORDS" data-ko="기록·수상" onclick="switchTeamInfoTab('honors')">기록·수상</button>
+    <button class="team-info-tab-btn lbl" id="tiResultsBtn" data-en="RESULTS" data-ko="경기결과" onclick="switchTeamInfoTab('results')">경기결과</button>
   </div>
 
-  <section id="tiSection-record" class="ti-section">
-    <div class="ti-section-title lbl" data-en="Record" data-ko="기록">기록</div>
+  <section id="tiSection-overview" class="ti-section ti-tabpage active">
+    <div class="ti-section-title lbl" data-en="Record" data-ko="구단 기록">구단 기록</div>
     <div id="teamInfoRecordTab" class="team-info-tab-content"></div>
-  </section>
-  <section id="tiSection-overview" class="ti-section">
     <div id="teamInfoOverviewTab" class="team-info-tab-content"></div>
     <div id="teamInfoMagicNumber" class="team-info-tab-content"></div>
     <details class="team-points-trend-details">
@@ -396,31 +390,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <svg id="teamInfoPointsHistorySvg" viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
     </details>
-  </section>
-  <section id="tiSection-squad" class="ti-section">
-    <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
-    <div id="teamInfoStaffTab" class="team-info-tab-content"></div>
-    <div id="squadGroups" class="team-info-tab-content"></div>
-  </section>
-  <section id="tiSection-scorers" class="ti-section">
-    <div class="ti-section-title lbl" data-en="Player Records" data-ko="선수 기록">선수 기록</div>
-    <div id="teamInfoScorersTab" class="team-info-tab-content"></div>
-  </section>
-  <section id="tiSection-awards" class="ti-section">
-    <div id="teamInfoAwardsTab" class="team-info-tab-content"></div>
-  </section>
-  <section id="tiSection-h2h" class="ti-section">
-    <div class="ti-section-title lbl" data-en="Head-to-Head" data-ko="상대전적">상대전적</div>
-    <div id="teamInfoH2hTab" class="team-info-tab-content"></div>
-  </section>
-  <section id="tiSection-youtube" class="ti-section">
+    <div id="teamInfoByeFlowTab" class="team-info-tab-content"></div>
     <div class="ti-section-title-row">
       <div class="ti-section-title lbl" data-en="Club YouTube" data-ko="구단 유튜브">구단 유튜브</div>
       <a id="tiYoutubeChannelLink" class="ti-yt-channel-btn lbl" data-en="Go to Channel" data-ko="채널로 가기" href="#" target="_blank" rel="noopener noreferrer">채널로 가기</a>
     </div>
     <div id="teamInfoYoutubeTab" class="team-info-tab-content"></div>
+    <div class="ti-section-title lbl" data-en="Next Match" data-ko="다음 경기">다음 경기</div>
+    <div id="teamInfoNextMatchTab" class="team-info-tab-content"></div>
   </section>
-  <section id="tiSection-results" class="ti-section">
+  <section id="tiSection-squad" class="ti-section ti-tabpage">
+    <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
+    <div id="teamInfoStaffTab" class="team-info-tab-content"></div>
+    <div id="squadGroups" class="team-info-tab-content"></div>
+    <div class="ti-section-title lbl" data-en="Player Records" data-ko="선수 기록">선수 기록</div>
+    <div id="teamInfoScorersTab" class="team-info-tab-content"></div>
+  </section>
+  <section id="tiSection-honors" class="ti-section ti-tabpage">
+    <div id="teamInfoAwardsTab" class="team-info-tab-content"></div>
+    <div class="ti-section-title lbl" data-en="Head-to-Head" data-ko="상대전적">상대전적</div>
+    <div id="teamInfoH2hTab" class="team-info-tab-content"></div>
+  </section>
+  <section id="tiSection-results" class="ti-section ti-tabpage">
     <div class="ti-section-title lbl" data-en="Results" data-ko="경기결과">경기결과</div>
     <div id="teamInfoResultsTab" class="team-info-tab-content"></div>
   </section>
@@ -753,6 +744,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="player-modal-title-text">
           <h2 id="squadPlayerModalName"></h2>
           <span id="squadPlayerModalPos" class="player-modal-team"></span>
+          <span id="squadPlayerModalNationalBadge" class="squad-player-modal-national-badge" style="display: none;"></span>
         </div>
       </div>
       <button class="close-btn" onclick="closeSquadPlayerModal()">&times;</button>

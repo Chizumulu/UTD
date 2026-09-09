@@ -314,7 +314,7 @@ const squadData = [
   { number: 77, position: "DF", nameKo: "제임스 귄도안", nameEn: "James Gundogan", photoSrc: "no77.png" },
   { number: 80, position: "FW", nameKo: "다니엘 스쿠카", nameEn: "Daniel Scuka", photoSrc: "no80.png" },
   { number: 88, position: "GK", nameKo: "티나시 카삼발라", nameEn: "Tinashe Kasambala", photoSrc: "no88.png" },
-  { number: 90, position: "GK", nameKo: "마야미코 치우시와", nameEn: "Mayamiko Chiusiwa", photoSrc: "no90.png" },
+  { number: 90, position: "GK", nameKo: "마야미코 치우시와", nameEn: "Mayamiko Chiusiwa", photoSrc: "no90.png", nationalBadge: { flag: "MW", labelKo: "U-23 국가대표", labelEn: "U-23 International" } },
   { number: 98, position: "MF", nameKo: "스티브 피리", nameEn: "Steve Phiri", photoSrc: "no98.png" },
   { number: 99, position: "MF", nameKo: "패트릭 지야", nameEn: "Patrick Jiya", photoSrc: "no99.png" }
 ];

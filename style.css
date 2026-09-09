@@ -708,15 +708,34 @@
     background: var(--color-gold);
     border-color: var(--color-gold);
   }
+  .theme-toggle-btn:active {
+    transform: scale(0.9);
+  }
   .theme-toggle-btn svg {
     width: 15px;
     height: 15px;
     flex-shrink: 0;
   }
+  @keyframes themeIconPop {
+    from { opacity: 0; transform: rotate(-90deg) scale(0.4); }
+    to { opacity: 1; transform: rotate(0) scale(1); }
+  }
   .theme-toggle-btn .icon-sun { display: none; color: var(--color-gold-light); }
   .theme-toggle-btn .icon-moon { display: block; color: var(--color-cream); }
+  /* 다크모드 전환 시 해/달 아이콘이 display:none→block으로 새로 렌더링되는
+     순간마다(별도 JS 없이) 회전하며 팝인되는 애니메이션이 자동 재생됩니다. */
+  .theme-toggle-btn .icon-sun,
+  .theme-toggle-btn .icon-moon {
+    animation: themeIconPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
   :root[data-theme="dark"] .theme-toggle-btn .icon-sun { display: block; }
   :root[data-theme="dark"] .theme-toggle-btn .icon-moon { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .theme-toggle-btn .icon-sun,
+    .theme-toggle-btn .icon-moon {
+      animation: none;
+    }
+  }
   .match-alert-btn {
     width: auto;
     height: auto;
@@ -2833,7 +2852,18 @@
     box-shadow: 0 10px 28px rgba(var(--color-navy-rgb),0.4);
     z-index: 60;
   }
-  .info-tooltip.show { display: block; }
+  .info-tooltip.show {
+    display: block;
+    transform-origin: top center;
+    animation: infoTooltipIn 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes infoTooltipIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-4px) scale(0.96); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .info-tooltip.show { animation: none; }
+  }
   .info-tooltip::before {
     content: "";
     position: absolute;
@@ -2949,6 +2979,17 @@
     text-align: left;
     font-weight: 700;
     color: var(--color-text-darkest);
+  }
+  .pt-team-name-short {
+    display: none;
+  }
+  @media (max-width: 600px) {
+    .pt-team-name-full {
+      display: none;
+    }
+    .pt-team-name-short {
+      display: inline;
+    }
   }
   .pt-prob-cell {
     min-width: 110px;
@@ -3094,8 +3135,43 @@
     height: auto;
   }
   .team-points-trend-section { margin-bottom: 0; }
-  /* ===== 라운드별 누적 승점 - 접고 펼치기 (기본 접힘) ===== */
+  /* ===== 라운드별 누적 승점 - 접고 펼치기 (기본 접힘) =====
+     details 기본 토글은 즉시 나타났다 사라지는데, grid-template-rows를
+     0fr↔1fr로 트랜지션하는 방식(자바스크립트로 높이를 계산할 필요 없이,
+     콘텐츠의 실제 높이를 트랙 크기로 그대로 써서 부드럽게 늘었다 줄어듦)으로
+     펼침/접힘에 애니메이션을 줍니다. */
   .team-points-trend-details { margin-top: 14px; }
+  .team-points-trend-details .team-points-trend-card {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    overflow: hidden;
+    margin-top: 0;
+    border-top: none;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0 1px;
+    transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.26s ease,
+                padding 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+                border-width 0.32s step-end;
+  }
+  .team-points-trend-details .team-points-trend-card > svg {
+    min-height: 0;
+  }
+  .team-points-trend-details[open] .team-points-trend-card {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    padding-top: 12px;
+    padding-bottom: 6px;
+    border-width: 0 1px 1px;
+    transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.32s ease 0.05s,
+                padding 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+                border-width 0.01s step-start;
+  }
   .team-points-trend-summary {
     display: flex;
     align-items: center;
@@ -3133,11 +3209,10 @@
   .team-points-trend-details[open] .team-points-trend-summary::after {
     transform: rotate(-135deg);
   }
-  .team-points-trend-details .team-points-trend-card {
-    margin-top: 0;
-    border-top: none;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
+  @media (prefers-reduced-motion: reduce) {
+    .team-points-trend-details .team-points-trend-card {
+      transition: none;
+    }
   }
 
   .predict-loading {
@@ -3167,6 +3242,14 @@
   }
 
   /* ===== Stat Detail Modal ===== */
+  @keyframes modalOverlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes modalContentIn {
+    from { opacity: 0; transform: translateY(18px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
   .modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -3176,6 +3259,9 @@
     justify-content: center;
     z-index: 2000;
     backdrop-filter: blur(4px);
+    /* display:none → flex로 바뀔 때마다(모든 모달 공용) 새로 렌더링되므로
+       별도 JS 없이 애니메이션이 매번 자동으로 재생됩니다. */
+    animation: modalOverlayIn 0.2s ease;
   }
   /* 상세보기(매치 상세) 모달 위에서 선수 이름을 눌러 스쿼드 상세 모달을 띄울 수 있도록
      스쿼드 상세 모달을 다른 모달보다 항상 위에 오게 합니다. */
@@ -3197,6 +3283,13 @@
     flex-direction: column;
     box-shadow: 0 10px 40px rgba(var(--color-black-rgb),0.3);
     overflow: hidden;
+    animation: modalContentIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .modal-overlay,
+    .modal-content {
+      animation: none;
+    }
   }
   .modal-header {
     background: var(--color-navy);
@@ -3630,6 +3723,28 @@
     color: rgba(255,255,255,0.75);
     font-weight: 600;
     margin-top: 2px;
+  }
+  .squad-player-modal-national-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 6px;
+    padding: 3px 9px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: #0a2540;
+    background: var(--color-gold-strong);
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .squad-player-modal-national-badge .national-flag-icon {
+    flex-shrink: 0;
+    border-radius: 2px;
+    display: block;
+  }
+  .squad-player-modal-national-badge-text {
+    white-space: nowrap;
   }
   .player-modal-body {
     padding: 18px 20px 20px;
@@ -4481,6 +4596,33 @@
     margin-left: auto;
     padding-top: 2px;
   }
+  /* 내 팀 구단정보 페이지 전용 — 헤더 옆에 끼워넣지 않고, 순위/승점/경기/승/무/패를
+     핵심 지표로 따로 뽑아 히어로 카드 아래 전체 너비 바 형태로 강조합니다. */
+  .team-info-quickstats-bar {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    flex-wrap: nowrap;
+    margin: 0 0 14px;
+    padding: 12px 6px;
+    background: linear-gradient(135deg, var(--color-navy), var(--color-navy-light));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
+  }
+  .team-info-quickstats-bar .ti-stat {
+    min-width: 0;
+  }
+  @media (max-width: 480px) {
+    .team-info-quickstats-bar {
+      padding: 10px 2px;
+    }
+    .team-info-quickstats-bar .ti-stat-value {
+      font-size: 15px;
+    }
+    .team-info-quickstats-bar .ti-stat-label {
+      font-size: 9.5px;
+    }
+  }
   .team-info-social {
     display: flex;
     gap: 8px;
@@ -4573,7 +4715,7 @@
     border-color: var(--color-teal);
     transform: translateY(-1px);
   }
-  .ti-switch-arrow:active { transform: translateY(0); }
+  .ti-switch-arrow:active { transform: translateY(0) scale(0.88); }
   .ti-switch-current {
     display: flex;
     align-items: center;
@@ -4851,6 +4993,9 @@
     background: var(--color-bg-btn-hover);
     color: var(--color-brand-text);
   }
+  .team-info-tab-btn:active {
+    transform: scale(0.94);
+  }
   .team-info-tab-btn.active {
     background: var(--color-teal);
     color: var(--color-white);
@@ -4860,6 +5005,31 @@
   .ti-section {
     scroll-margin-top: 70px;
     margin-bottom: 30px;
+  }
+
+  /* ===== 화면/탭 전환 애니메이션 (사이드바 메뉴 전환용 .view-fade-in, 구단정보 탭용 .ti-tabpage.active 공용) ===== */
+  @keyframes viewFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .view-fade-in {
+    animation: viewFadeIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .view-fade-in,
+    .ti-tabpage.active {
+      animation: none;
+    }
+  }
+  /* 내 팀 구단정보 탭(개요/선수단/기록·수상/경기결과) 전용 — 예전에는 8개 섹션을
+     한 페이지에 다 늘어놓고 앵커 스크롤만 했지만, 이제는 실제로 선택한 탭만 보여줍니다.
+     (다른 팀 상세 보기 화면은 .ti-section만 쓰고 .ti-tabpage는 안 붙어서 그대로 전부 보입니다.) */
+  .ti-tabpage {
+    display: none;
+  }
+  .ti-tabpage.active {
+    display: block;
+    animation: viewFadeIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .ti-section-title {
     font-size: 15px;
@@ -4902,6 +5072,7 @@
     display: grid;
     grid-template-columns: 1.2fr 1fr;
     gap: 16px;
+    margin-bottom: 16px;
   }
   .ti-card {
     background: var(--color-surface);
@@ -6023,6 +6194,41 @@
   .ti-bye-flow-card {
     grid-column: 1 / -1;
   }
+  /* ===== 휴식 주간 전후 흐름 - 접고 펼치기 애니메이션 =====
+     details의 기본 UA 스타일(닫힘 상태에서 summary 이외 자식을 display:none 처리)을
+     .ti-bye-flow-body에 display:grid를 항상 걸어서 무력화하고, 대신 grid-template-rows를
+     0fr↔1fr로 트랜지션해서 실제 콘텐츠 높이만큼 부드럽게 펼쳐지게 합니다.
+     grid-template-rows 트릭은 그리드 안에 자식이 1개일 때만 정확히 동작하므로,
+     내부 실제 콘텐츠는 -inner 래퍼 하나로 한 번 더 감쌉니다. */
+  .ti-bye-flow-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    overflow: hidden;
+    transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.26s ease;
+  }
+  .ti-bye-flow-body-inner,
+  .ti-bye-flow-body > .ti-bye-flow-empty {
+    min-height: 0;
+  }
+  .ti-bye-flow-card[open] .ti-bye-flow-body {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.32s ease 0.05s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ti-bye-flow-body {
+      transition: none;
+    }
+  }
+  /* 개요 탭에서는 그리드 밖(라운드별 누적 승점 아래)에 독립적으로 배치되므로,
+     위/아래 요소와 바로 붙어 보이지 않도록 컨테이너 자체에 위아래 여백을 줍니다. */
+  #teamInfoByeFlowTab {
+    margin-top: 16px;
+    margin-bottom: 16px;
+  }
   .ti-bye-flow-svg-wrap {
     width: 100%;
     overflow-x: auto;
@@ -6068,6 +6274,7 @@
     justify-content: space-between;
     gap: 10px;
     user-select: none;
+    transition: margin-bottom 0.28s ease;
   }
   summary.ti-bye-flow-toggle::-webkit-details-marker { display: none; }
   summary.ti-bye-flow-toggle::after {
@@ -6940,6 +7147,7 @@
     gap: 24px;
     flex-wrap: wrap;
     transition: var(--theme-transition);
+    margin-bottom: 16px;
   }
   .ti-record-rank {
     display: flex;
@@ -7299,6 +7507,10 @@
     flex-direction: column;
     gap: 10px;
   }
+  .round-match-list.ti-results-list > * {
+    width: 100%;
+    box-sizing: border-box;
+  }
   /* PC(사이드바가 붙는 881px 이상)에서는 라운드 전체를 한 화면에서 조망할 수 있게
      그리드로 바꿉니다. 치주물루 경기(.my-team)는 정렬 로직(renderRoundsView)이
      이미 배열 맨 앞에 둬서 DOM 순서상 첫 번째 카드이므로, 그 카드에만
@@ -7333,6 +7545,25 @@
     /* 날짜 구분선도 my-team 카드와 마찬가지로 그리드 한 줄 전체를 차지하게 합니다. */
     .round-match-list .round-date-heading {
       grid-column: 1 / -1;
+    }
+    /* 구단정보 > 경기결과는 라운드 화면과 달리 2열 그리드가 아닌 1열 목록으로 보여줍니다.
+       카드 종류(정상 경기 결과/휴식주/연기된 경기/다음 경기 미니 카드)에 따라 좌우 폭이
+       제각각으로 보이지 않도록, 목록의 모든 직계 자식에 폭 100%를 명시적으로 강제합니다. */
+    .round-match-list.ti-results-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .round-match-list.ti-results-list > * {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    /* 위 2열 레이아웃용으로 my-team 카드 내부 폭을 640px로 좁혀 가운데 정렬했던 규칙은
+       1열 목록인 경기결과 섹션에는 적용하지 않고, 카드 좌우 끝까지 꽉 채웁니다. */
+    .round-match-list.ti-results-list .round-match-card.my-team .rmc-teams,
+    .round-match-list.ti-results-list .round-match-card.my-team .rmc-scorers {
+      max-width: none;
+      margin-left: 0;
+      margin-right: 0;
     }
   }
   .round-date-heading {
@@ -8443,17 +8674,36 @@
     border-left: 3px solid transparent;
     white-space: normal;
     text-align: left;
+    transition: background 0.18s ease, color 0.18s ease,
+                border-left-color 0.18s ease, transform 0.12s ease;
   }
   .app-sidebar .view-toggle-btn:hover,
   .app-sidebar .view-toggle-community:hover {
     background: rgba(255,255,255,.07);
     color: #fff;
   }
+  .app-sidebar .view-toggle-btn:active,
+  .app-sidebar .view-toggle-community:active {
+    transform: scale(0.97);
+  }
   .app-sidebar .view-toggle-btn.active {
     background: rgba(255,255,255,.1);
     color: #fff;
     box-shadow: none;
     border-left-color: var(--color-gold);
+  }
+  .app-sidebar .view-toggle-btn .side-nav-icon {
+    transition: transform 0.18s ease;
+  }
+  .app-sidebar .view-toggle-btn.active .side-nav-icon {
+    transform: scale(1.08);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app-sidebar .view-toggle-btn,
+    .app-sidebar .view-toggle-community,
+    .app-sidebar .view-toggle-btn .side-nav-icon {
+      transition: none;
+    }
   }
   .app-sidebar .view-toggle-sep {
     display: block;
