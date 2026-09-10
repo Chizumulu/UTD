@@ -3346,7 +3346,8 @@
       overview: 'tiOverviewBtn',
       squad: 'tiSquadBtn',
       honors: 'tiHonorsBtn',
-      results: 'tiResultsBtn'
+      results: 'tiResultsBtn',
+      predict: 'tiPredictBtn'
     };
     Object.keys(buttons).forEach(key => {
       const btnEl = document.getElementById(buttons[key]);
@@ -3386,7 +3387,7 @@
   // 예전에는 8개 섹션을 한 페이지에 다 늘어놓고 앵커 스크롤 + IntersectionObserver로
   // "지금 보고 있는 섹션"만 추정해서 탭을 하이라이트했습니다. 지금은 4개 탭으로
   // 정리하면서 실제로 선택한 탭의 .ti-tabpage만 보여주고 나머지는 숨깁니다.
-  const TEAM_INFO_TABS = ['overview', 'squad', 'honors', 'results'];
+  const TEAM_INFO_TABS = ['overview', 'squad', 'honors', 'results', 'predict'];
   function applyTeamInfoTab(tab) {
     if (TEAM_INFO_TABS.indexOf(tab) === -1) tab = 'overview';
     currentTeamInfoTab = tab;
@@ -3419,7 +3420,7 @@
     if (!root) return;
     const targets = root.querySelectorAll(
       '.ti-card, .ti-scorer-card, .ti-award-card-item, .ti-gk-card-item, .squad-card, .ti-section-title, .ti-section-title-row, ' +
-      '.team-magic-number-card, .team-points-trend-details, .ti-record-card, .ti-yt-card'
+      '.team-magic-number-card, .path-finder-card, .team-points-trend-details, .ti-record-card, .ti-yt-card'
     );
     if (!targets.length) return;
     if (reduceMotion) {
@@ -3533,6 +3534,7 @@
     const magicTarget = document.getElementById('teamInfoMagicNumber');
     const mine = getMyRankedTeam();
     if (magicTarget) magicTarget.innerHTML = mine ? buildTeamMagicNumberHtml(mine.team, getRankedTeams('all')) : '';
+    renderPathFinder();
     renderTeamPointsHistoryChart('teamInfoPointsHistorySvg', mine ? mine.team : null);
     renderTeamInfoByeFlow();
     renderTeamH2HTab();
@@ -4993,6 +4995,125 @@
     }).join('');
     attachImageFallback();
     refreshScrollFadeHints();
+  }
+
+  // ===== Path Finder — 우승/잔류까지 가장 쉬운 경로 · 가장 안전한 경로 =====
+  // 계산 로직은 전부 pathfinder-engine.js(전역 PathFinderEngine)에 있고, 이 파일은
+  // 그 결과를 HTML로 그리는 역할만 합니다. getMagicNumberContext()가 이미 계산해둔
+  // seasonGames/safeSlots를 그대로 넘겨서, 매직넘버와 같은 가정(상대 전승 = 안전
+  // 경로 기준)을 공유합니다.
+  function pathFinderResultsLabel(resultsNeeded) {
+    if (!resultsNeeded) return isKorean ? '이번 시즌 결과만으로는 확정 불가' : 'Not clinchable by results alone this season';
+    const { wins, draws } = resultsNeeded;
+    if (wins === 0 && draws === 0) return isKorean ? '이미 확정' : 'Already clinched';
+    const parts = [];
+    if (wins > 0) parts.push(isKorean ? `${wins}승` : `${wins}W`);
+    if (draws > 0) parts.push(isKorean ? `${draws}무` : `${draws}D`);
+    return isKorean ? `${parts.join(' ')}이면 충분` : `${parts.join(' + ')} is enough`;
+  }
+
+  function pathFinderFixtureRowHtml(fx, teamByEnMap) {
+    const opp = teamByEnMap[fx.opponentEn];
+    const oppName = isKorean ? fx.opponentKo : fx.opponentEn;
+    const venueTxt = fx.venue === 'home' ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A');
+    const reqTxt = fx.requiredResult === 'WIN' ? (isKorean ? '승리 필요' : 'Win needed') : (isKorean ? '무승부 이상' : 'Draw or better');
+    const h2hTag = fx.isHeadToHead
+      ? `<span class="pf-h2h-tag lbl" data-en="Head-to-head" data-ko="직접 맞대결">${isKorean ? '직접 맞대결' : 'Head-to-head'}</span>`
+      : '';
+    return `
+      <div class="pf-fixture-row">
+        <span class="pf-fixture-round">${isKorean ? `${fx.round}R` : `R${fx.round}`}</span>
+        <img class="team-logo team-logo-sm" src="${opp ? opp.logoSrc : ''}" alt="">
+        <span class="pf-fixture-opp">${oppName}</span>
+        <span class="pf-fixture-venue">${venueTxt}</span>
+        <span class="pf-fixture-req ${fx.requiredResult === 'WIN' ? 'pf-req-win' : 'pf-req-draw'}">${reqTxt}</span>
+        ${h2hTag}
+      </div>`;
+  }
+
+  function pathFinderPlanHtml(plan, teamByEnMap, label) {
+    const resultsTxt = pathFinderResultsLabel(plan.resultsNeeded);
+    const fixturesHtml = plan.mustWinFixtures.length
+      ? plan.mustWinFixtures.map(fx => pathFinderFixtureRowHtml(fx, teamByEnMap)).join('')
+      : `<div class="pf-fixture-empty lbl" data-en="No confirmed fixtures for this path yet" data-ko="아직 편성된 경기가 없어요">${isKorean ? '아직 편성된 경기가 없어요' : 'No confirmed fixtures for this path yet'}</div>`;
+    const shortfallNote = plan.note === 'NEEDS_FUTURE_UNSCHEDULED_RESULTS'
+      ? `<p class="pf-note lbl" data-en="Plus ${plan.shortfall} more result(s) from rounds not yet scheduled" data-ko="여기에 아직 편성 안 된 라운드에서 ${plan.shortfall}경기 더 필요">${isKorean ? `여기에 아직 편성 안 된 라운드에서 ${plan.shortfall}경기 더 필요` : `Plus ${plan.shortfall} more result(s) from rounds not yet scheduled`}</p>`
+      : '';
+    const statusTag = !plan.resultsNeeded
+      ? ''
+      : plan.isActuallyMandatory
+        ? `<span class="pf-mandatory-tag lbl" data-en="Must-win — no games to spare" data-ko="전부 필수 · 여유 없음">${isKorean ? '전부 필수 · 여유 없음' : 'Must-win — no games to spare'}</span>`
+        : `<span class="pf-example-tag lbl" data-en="One example scenario" data-ko="예시 시나리오 중 하나">${isKorean ? '예시 시나리오 중 하나' : 'One example scenario'}</span>`;
+    return `
+      <div class="pf-plan">
+        <div class="pf-plan-head">
+          <span class="pf-plan-label">${label}</span>
+          <span class="pf-plan-points">${plan.pointsNeeded}${isKorean ? '점' : ' pts'}</span>
+        </div>
+        <div class="pf-plan-results">${resultsTxt}</div>
+        ${statusTag}
+        <div class="pf-fixture-list">${fixturesHtml}</div>
+        ${shortfallNote}
+      </div>`;
+  }
+
+  function pathFinderRaceCardHtml(result, teamByEnMap, labelKo, labelEn) {
+    if (!result) return '';
+    const rivalName = isKorean ? result.rival.nameKo : result.rival.nameEn;
+    const depFixtures = result.rivalDependencyFixtures;
+    const depHtml = depFixtures.length ? `
+      <details class="pf-rival-dep-details">
+        <summary class="lbl" data-en="${rivalName}&#39;s remaining games that help you" data-ko="${rivalName}의 남은 경기 중 우리에게 유리한 카드">${isKorean ? `${rivalName}의 남은 경기 중 우리에게 유리한 카드` : `${rivalName}'s remaining games that help you`}</summary>
+        <div class="pf-fixture-list">
+          ${depFixtures.map(fx => `
+            <div class="pf-fixture-row">
+              <span class="pf-fixture-round">${isKorean ? `${fx.round}R` : `R${fx.round}`}</span>
+              <span class="pf-fixture-opp">vs ${isKorean ? fx.opponentKo : fx.opponentEn}</span>
+              <span class="pf-fixture-req pf-req-draw">${isKorean ? '무승부·패배가 유리' : 'Draw/loss helps'}</span>
+            </div>`).join('')}
+        </div>
+      </details>` : '';
+    return `
+      <div class="path-finder-card">
+        <div class="path-finder-head">
+          <span class="pf-kicker lbl" data-en="PATH FINDER" data-ko="경로 찾기">${isKorean ? '경로 찾기' : 'PATH FINDER'}</span>
+          <h3 class="lbl" data-en="${labelEn}" data-ko="${labelKo}">${isKorean ? labelKo : labelEn}</h3>
+        </div>
+        <p class="pf-rival-note lbl" data-en="Based on ${rivalName}&#39;s remaining results" data-ko="${rivalName}의 남은 경기 결과 기준">${isKorean ? `${rivalName}의 남은 경기 결과 기준` : `Based on ${rivalName}'s remaining results`}</p>
+        <div class="pf-plan-grid">
+          ${pathFinderPlanHtml(result.easiest, teamByEnMap, isKorean ? '가장 쉬운 경로' : 'Easiest path')}
+          ${pathFinderPlanHtml(result.safest, teamByEnMap, isKorean ? '가장 안전한 경로' : 'Safest path')}
+        </div>
+        ${depHtml}
+      </div>`;
+  }
+
+  function renderPathFinder() {
+    const target = document.getElementById('teamInfoPathFinder');
+    if (!target) return;
+    if (typeof PathFinderEngine === 'undefined' || typeof scheduledRounds === 'undefined') { target.innerHTML = ''; return; }
+    const mine = getMyRankedTeam();
+    if (!mine) { target.innerHTML = ''; return; }
+    const ranked = getRankedTeams('all');
+    const context = getMagicNumberContext(ranked);
+    if (!context) { target.innerHTML = ''; return; }
+
+    const teamByEnMap = {};
+    leagueData.forEach(t => { teamByEnMap[t.nameEn] = t; });
+
+    const titleResult = PathFinderEngine.computePathFinder(
+      mine.team.nameEn, 'title', ranked, scheduledRounds, context.seasonGames, context.safeSlots
+    );
+    const safetyResult = PathFinderEngine.computePathFinder(
+      mine.team.nameEn, 'safety', ranked, scheduledRounds, context.seasonGames, context.safeSlots
+    );
+
+    target.innerHTML = `
+      <div class="path-finder-section">
+        ${pathFinderRaceCardHtml(titleResult, teamByEnMap, '우승까지 경로', 'Path to the title')}
+        ${pathFinderRaceCardHtml(safetyResult, teamByEnMap, '잔류까지 경로', 'Path to safety')}
+      </div>`;
+    attachImageFallback();
   }
 
   // ===== 팀 순위 렌더링 (League Table) =====

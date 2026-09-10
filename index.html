@@ -8,10 +8,11 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '005',
-    data: '005',
-    app: '005',
-    predictWorker: '001'
+    style: '006',
+    data: '006',
+    app: '006',
+    predictWorker: '001',
+    pathfinderEngine: '001'
   };
 </script>
 <!-- Google Tag Manager -->
@@ -377,13 +378,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button class="team-info-tab-btn lbl" id="tiSquadBtn" data-en="SQUAD" data-ko="선수단" onclick="switchTeamInfoTab('squad')">선수단</button>
     <button class="team-info-tab-btn lbl" id="tiHonorsBtn" data-en="RECORDS" data-ko="기록·수상" onclick="switchTeamInfoTab('honors')">기록·수상</button>
     <button class="team-info-tab-btn lbl" id="tiResultsBtn" data-en="RESULTS" data-ko="경기결과" onclick="switchTeamInfoTab('results')">경기결과</button>
+    <button class="team-info-tab-btn lbl" id="tiPredictBtn" data-en="PREDICTION" data-ko="예측" onclick="switchTeamInfoTab('predict')">예측</button>
   </div>
 
   <section id="tiSection-overview" class="ti-section ti-tabpage active">
     <div class="ti-section-title lbl" data-en="Record" data-ko="구단 기록">구단 기록</div>
     <div id="teamInfoRecordTab" class="team-info-tab-content"></div>
     <div id="teamInfoOverviewTab" class="team-info-tab-content"></div>
-    <div id="teamInfoMagicNumber" class="team-info-tab-content"></div>
     <details class="team-points-trend-details">
       <summary class="team-points-trend-summary lbl" data-en="Cumulative Points by Round" data-ko="라운드별 누적 승점">라운드별 누적 승점</summary>
       <div class="team-points-trend-card">
@@ -403,10 +404,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
     <div id="teamInfoStaffTab" class="team-info-tab-content"></div>
     <div id="squadGroups" class="team-info-tab-content"></div>
-    <div class="ti-section-title lbl" data-en="Player Records" data-ko="선수 기록">선수 기록</div>
-    <div id="teamInfoScorersTab" class="team-info-tab-content"></div>
   </section>
   <section id="tiSection-honors" class="ti-section ti-tabpage">
+    <div class="ti-section-title lbl" data-en="Player Records" data-ko="선수 기록">선수 기록</div>
+    <div id="teamInfoScorersTab" class="team-info-tab-content"></div>
     <div id="teamInfoAwardsTab" class="team-info-tab-content"></div>
     <div class="ti-section-title lbl" data-en="Head-to-Head" data-ko="상대전적">상대전적</div>
     <div id="teamInfoH2hTab" class="team-info-tab-content"></div>
@@ -414,6 +415,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <section id="tiSection-results" class="ti-section ti-tabpage">
     <div class="ti-section-title lbl" data-en="Results" data-ko="경기결과">경기결과</div>
     <div id="teamInfoResultsTab" class="team-info-tab-content"></div>
+  </section>
+  <section id="tiSection-predict" class="ti-section ti-tabpage">
+    <div class="ti-section-title lbl" data-en="Magic Number" data-ko="매직넘버">매직넘버</div>
+    <div id="teamInfoMagicNumber" class="team-info-tab-content"></div>
+    <div class="ti-section-title lbl" data-en="Path Finder" data-ko="경로 찾기">경로 찾기</div>
+    <div id="teamInfoPathFinder" class="team-info-tab-content"></div>
   </section>
   </div>
 
@@ -902,6 +909,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 </div>
 <script>
+  document.write('<script src="pathfinder-engine.js?v=' + window.ASSET_VERSIONS.pathfinderEngine + '"><\/script>');
   document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
 </script>
