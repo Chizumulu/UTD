@@ -939,7 +939,7 @@ const scheduledRounds = {
     // 열립니다. 다만 현재 데이터 구조(leagueData.venue)는 팀별 홈구장만 지원하고
     // 경기별 구장 재정의 필드는 없어서, 이 특이사항은 화면에는 표시되지 않고
     // 주석으로만 남겨둡니다.
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-10", kickoffTime: "14:30", movedFromWeek: 7 }
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-10", kickoffTime: "14:30", movedFromWeek: 7, homeScore: 2, awayScore: 2, scorersHome: "와낭과 가마, 노먼 은들로부", scorersAway: "와티파 니렌다(2골)" }
   ],
   round11: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-09-18", kickoffTime: "15:00" },
