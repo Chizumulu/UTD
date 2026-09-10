@@ -510,6 +510,10 @@
         <span class="ai-track-chip-val">${s.avgGoalError.toFixed(2)}</span>
         <span class="ai-track-chip-lbl lbl" data-en="Avg. goal error (xG vs actual)" data-ko="평균 득점 오차(예상-실제)">${isKorean ? '평균 득점 오차(예상-실제)' : 'Avg. goal error (xG vs actual)'}</span>
       </div>
+      <div class="ai-track-chip">
+        <span class="ai-track-chip-val">${s.avgBrierScore.toFixed(3)}</span>
+        <span class="ai-track-chip-lbl lbl" data-en="Brier score (0=perfect, 2=worst)" data-ko="브라이어 점수(0=완벽, 2=최악)">${isKorean ? '브라이어 점수(0=완벽, 2=최악)' : 'Brier score (0=perfect, 2=worst)'}</span>
+      </div>
       <div class="ai-track-chip ai-track-chip-n">
         <span class="ai-track-chip-val">${s.n}</span>
         <span class="ai-track-chip-lbl lbl" data-en="Matches scored" data-ko="집계 경기 수">${isKorean ? '집계 경기 수' : 'Matches scored'}</span>
@@ -540,6 +544,7 @@
           <td class="ai-track-check"><span class="ai-track-badge ${r.wdlCorrect ? 'ai-track-badge-ok' : 'ai-track-badge-no'}">${r.wdlCorrect ? '✓' : '✗'}</span></td>
           <td class="ai-track-check"><span class="ai-track-badge ${r.exactScoreCorrect ? 'ai-track-badge-ok' : 'ai-track-badge-no'}">${r.exactScoreCorrect ? '✓' : '✗'}</span></td>
           <td class="ai-track-err">${((r.goalErrorHome + r.goalErrorAway) / 2).toFixed(2)}</td>
+          <td class="ai-track-err">${r.brierScore.toFixed(3)}</td>
         </tr>`;
     }).join('');
 
@@ -636,6 +641,11 @@
         <span class="ai-track-chip-val">${sc.avgGoalError.toFixed(2)}</span>
         ${deltaHtml(sc.avgGoalError, rawSummary.avgGoalError, false, true)}
         <span class="ai-track-chip-lbl lbl" data-en="Avg. goal error w/ correction" data-ko="보정 적용 시 평균 득점 오차">${isKorean ? '보정 적용 시 평균 득점 오차' : 'Avg. goal error w/ correction'}</span>
+      </div>
+      <div class="ai-track-chip ai-track-chip-corrected">
+        <span class="ai-track-chip-val">${sc.avgBrierScore.toFixed(3)}</span>
+        ${deltaHtml(sc.avgBrierScore, rawSummary.avgBrierScore, false, true)}
+        <span class="ai-track-chip-lbl lbl" data-en="Brier score w/ correction" data-ko="보정 적용 시 브라이어 점수">${isKorean ? '보정 적용 시 브라이어 점수' : 'Brier score w/ correction'}</span>
       </div>
     `;
   }
@@ -768,6 +778,11 @@
         <span class="ai-track-chip-val">${withDC.exactScoreAccuracyPct.toFixed(1)}%</span>
         ${deltaHtml(withDC.exactScoreAccuracyPct, baseline.exactScoreAccuracyPct, true)}
         <span class="ai-track-chip-lbl lbl" data-en="Exact score accuracy w/ ρ (vs correction only)" data-ko="ρ 적용 시 정확한 스코어 적중률(자동 보정 대비)">${isKorean ? 'ρ 적용 시 정확한 스코어 적중률(자동 보정 대비)' : 'Exact score accuracy w/ ρ (vs correction only)'}</span>
+      </div>
+      <div class="ai-track-chip ai-track-chip-corrected">
+        <span class="ai-track-chip-val">${withDC.avgBrierScore.toFixed(3)}</span>
+        ${deltaHtml(withDC.avgBrierScore, baseline.avgBrierScore, false, true)}
+        <span class="ai-track-chip-lbl lbl" data-en="Brier score w/ ρ (vs correction only)" data-ko="ρ 적용 시 브라이어 점수(자동 보정 대비)">${isKorean ? 'ρ 적용 시 브라이어 점수(자동 보정 대비)' : 'Brier score w/ ρ (vs correction only)'}</span>
       </div>
     `;
   }

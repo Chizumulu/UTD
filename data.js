@@ -4101,6 +4101,19 @@ function computeAiPredictionTrackRecord() {
       if (raw.homeWinPct >= raw.drawPct && raw.homeWinPct >= raw.awayWinPct) predictedResult = 'H';
       else if (raw.awayWinPct >= raw.drawPct && raw.awayWinPct >= raw.homeWinPct) predictedResult = 'A';
 
+      // ----- Brier score (확률 예측 자체의 정밀도, 0=완벽~2=최악) -----
+      // 적중률(wdlCorrect)은 "1등 확률이 실제 결과와 같았는가"만 보지만, Brier
+      // score는 "그 확률이 실제로 얼마나 자신 있었는가"까지 반영합니다(예: 51%로
+      // 맞춘 것과 90%로 맞춘 것을 구분). variant별로 따로 계산해서 각 보정
+      // 방식이 확률 보정 자체를 더 잘하는지도 비교할 수 있게 합니다.
+      function brierScoreOf(grid) {
+        const pH = grid.homeWinPct / 100, pD = grid.drawPct / 100, pA = grid.awayWinPct / 100;
+        const aH = actualResult === 'H' ? 1 : 0;
+        const aD = actualResult === 'D' ? 1 : 0;
+        const aA = actualResult === 'A' ? 1 : 0;
+        return (pH - aH) * (pH - aH) + (pD - aD) * (pD - aD) + (pA - aA) * (pA - aA);
+      }
+
       // 같은 경기를 그 시점까지 쌓인 자동 보정 계수로 다시 예측했다면 어땠을지도
       // 함께 계산해서, 트랙레코드에서 "보정 적용 시" 성적을 비교할 수 있게 합니다.
       // 홈팀의 "홈 결정력" 보정 + 원정팀의 "원정 결정력" 보정을 각각 팀별로
@@ -4155,6 +4168,7 @@ function computeAiPredictionTrackRecord() {
         predictedResult, actualResult,
         wdlCorrect: predictedResult === actualResult,
         exactScoreCorrect: raw.bestH === m.homeScore && raw.bestA === m.awayScore,
+        brierScore: brierScoreOf(raw),
         expectedHomeGoals, expectedAwayGoals,
         goalErrorHome: Math.abs(expectedHomeGoals - m.homeScore),
         goalErrorAway: Math.abs(expectedAwayGoals - m.awayScore),
@@ -4173,6 +4187,7 @@ function computeAiPredictionTrackRecord() {
         correctedPredictedResult,
         correctedWdlCorrect: correctedPredictedResult === actualResult,
         correctedExactScoreCorrect: corrected.bestH === m.homeScore && corrected.bestA === m.awayScore,
+        correctedBrierScore: brierScoreOf(corrected),
         correctedGoalErrorHome: Math.abs(correctedExpectedHomeGoals - m.homeScore),
         correctedGoalErrorAway: Math.abs(correctedExpectedAwayGoals - m.awayScore),
         correctedExpectedHomeGoals, correctedExpectedAwayGoals,
@@ -4185,6 +4200,7 @@ function computeAiPredictionTrackRecord() {
         addPredictedResult,
         addWdlCorrect: addPredictedResult === actualResult,
         addExactScoreCorrect: add.bestH === m.homeScore && add.bestA === m.awayScore,
+        addBrierScore: brierScoreOf(add),
         addGoalErrorHome: Math.abs(addExpectedHomeGoals - m.homeScore),
         addGoalErrorAway: Math.abs(addExpectedAwayGoals - m.awayScore),
         addExpectedHomeGoals, addExpectedAwayGoals,
@@ -4196,6 +4212,7 @@ function computeAiPredictionTrackRecord() {
         dcPredictedResult,
         dcWdlCorrect: dcPredictedResult === actualResult,
         dcExactScoreCorrect: dcGrid.bestH === m.homeScore && dcGrid.bestA === m.awayScore,
+        dcBrierScore: brierScoreOf(dcGrid),
         dcGoalErrorHome: Math.abs(correctedExpectedHomeGoals - m.homeScore),
         dcGoalErrorAway: Math.abs(correctedExpectedAwayGoals - m.awayScore)
       });
@@ -4254,14 +4271,20 @@ function computeAiPredictionTrackRecord() {
     const exactKey = variant === 'dc' ? 'dcExactScoreCorrect' : (variant === 'corrected' ? 'correctedExactScoreCorrect' : (variant === 'add' ? 'addExactScoreCorrect' : 'exactScoreCorrect'));
     const errHomeKey = variant === 'dc' ? 'dcGoalErrorHome' : (variant === 'corrected' ? 'correctedGoalErrorHome' : (variant === 'add' ? 'addGoalErrorHome' : 'goalErrorHome'));
     const errAwayKey = variant === 'dc' ? 'dcGoalErrorAway' : (variant === 'corrected' ? 'correctedGoalErrorAway' : (variant === 'add' ? 'addGoalErrorAway' : 'goalErrorAway'));
+    const brierKey = variant === 'dc' ? 'dcBrierScore' : (variant === 'corrected' ? 'correctedBrierScore' : (variant === 'add' ? 'addBrierScore' : 'brierScore'));
     const wdlCorrectCount = list.filter(r => r[wdlKey]).length;
     const exactCount = list.filter(r => r[exactKey]).length;
     const avgGoalError = list.reduce((sum, r) => sum + (r[errHomeKey] + r[errAwayKey]) / 2, 0) / n;
+    // Brier score: 확률 예측이 실제로 얼마나 자신감 있게(그리고 정확하게) 맞았는지
+    // 보는 지표입니다. 0=완벽한 확률 예측, 2=최악(반대쪽에 100% 확신). marccer의
+    // BACKTEST 탭과 같은 3-outcome Brier score 정의를 그대로 씁니다.
+    const avgBrierScore = list.reduce((sum, r) => sum + r[brierKey], 0) / n;
     return {
       n,
       wdlAccuracyPct: (wdlCorrectCount / n) * 100,
       exactScoreAccuracyPct: (exactCount / n) * 100,
-      avgGoalError
+      avgGoalError,
+      avgBrierScore
     };
   }
 
@@ -4316,7 +4339,12 @@ function computeAiPredictionTrackRecord() {
   // ------------------------------------------------------------
   const additiveBacktestHelps = !!(summaryCorrected && summaryAdditive &&
     (summaryAdditive.wdlAccuracyPct + summaryAdditive.exactScoreAccuracyPct) >
-    (summaryCorrected.wdlAccuracyPct + summaryCorrected.exactScoreAccuracyPct));
+    (summaryCorrected.wdlAccuracyPct + summaryCorrected.exactScoreAccuracyPct) &&
+    // 적중률 합만으로는 "51% 확신 적중"과 "90% 확신 적중"을 구분 못 합니다.
+    // Brier score(확률 예측 자체의 정밀도, 낮을수록 좋음)가 오히려 나빠졌다면
+    // 적중률 합이 이겼어도 채택하지 않습니다 — 단순 우연히 맞은 결과에
+    // 낚이지 않기 위한 이중 확인입니다.
+    summaryAdditive.avgBrierScore <= summaryCorrected.avgBrierScore);
   const correctionModeUsed = additiveBacktestHelps ? 'additive' : 'ratio';
 
 
@@ -4341,7 +4369,11 @@ function computeAiPredictionTrackRecord() {
   // 그대로 유지하는 쪽을 기본값으로 둡니다.
   const dcBacktestHelps = !!(dcSampleOk && summaryCorrected && summaryDC &&
     (summaryDC.wdlAccuracyPct + summaryDC.exactScoreAccuracyPct) >
-    (summaryCorrected.wdlAccuracyPct + summaryCorrected.exactScoreAccuracyPct));
+    (summaryCorrected.wdlAccuracyPct + summaryCorrected.exactScoreAccuracyPct) &&
+    // 위 additiveBacktestHelps와 같은 이유로, Brier score가 나빠지는 채택은
+    // 하지 않습니다(ρ가 스코어 분포의 "모양"만 바꾸는 만큼 확률 정밀도 자체가
+    // 실제로 좋아졌는지가 더 직접적인 근거가 됩니다).
+    summaryDC.avgBrierScore <= summaryCorrected.avgBrierScore);
   const currentDCActive = dcBacktestHelps;
   const currentDCRho = currentDCActive ? estimatedDCRho : 0;
 
