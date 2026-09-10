@@ -2558,6 +2558,143 @@ function generateRemainingFixtures() {
   return fixtures;
 }
 
+// ===== 우승확률 추이(타임머신) =====
+// "그 라운드가 끝난 시점에 알 수 있었던 데이터만으로" 그 시점의 우승확률을
+// 재계산합니다. runMonteCarloSimulation()이 쓰는 Dixon-Coles ρ / AI 예측
+// 오차 보정 / 최근 폼 감쇠는 전부 "현재 시점까지 쌓인 트랙레코드"에 의존하는
+// 값이라 과거 스냅샷에는 그대로 쓸 수 없으므로, 여기서는 의도적으로 훨씬
+// 단순한 버전(팀 평균 득실 기반 공수 지수 + 고정 홈 어드밴티지)을 씁니다.
+// 그래서 "지금" 시점의 확률은 예측 탭의 정식 몬테카를로 결과와 소폭 다를 수
+// 있는데, 이건 버그가 아니라 "그 시점 기준"이라는 정의상 당연한 차이입니다.
+
+// 시즌 전체(1라운드 + 재대결 2라운드)의 "고정" 대진표를 한 번 만들어둡니다.
+// generateRemainingFixtures()와 달리 이미 끝난 경기까지 포함한 전체 대진이며,
+// 아래 computeTitleProbabilityHistory()에서 "그 시점까지 이미 치른 경기"를
+// 빼서 "그 시점 이후 남은 경기"를 구하는 데 씁니다.
+function generateAllSeasonFixtures() {
+  const leg1Homes = computeLeg1Homes();
+  const fixtures = [];
+  for (let i = 0; i < leagueData.length; i++) {
+    for (let j = i + 1; j < leagueData.length; j++) {
+      const teamA = leagueData[i];
+      const teamB = leagueData[j];
+      const key = teamA.nameEn < teamB.nameEn
+        ? `${teamA.nameEn}||${teamB.nameEn}`
+        : `${teamB.nameEn}||${teamA.nameEn}`;
+      const leg1Home = leg1Homes[key];
+      if (!leg1Home) continue; // 1라운드 매치업 정보가 없으면 스킵
+      const homeTeam = leg1Home === teamA.nameEn ? teamA : teamB;
+      const awayTeam = leg1Home === teamA.nameEn ? teamB : teamA;
+      fixtures.push({ homeEn: homeTeam.nameEn, awayEn: awayTeam.nameEn });
+      fixtures.push({ homeEn: awayTeam.nameEn, awayEn: homeTeam.nameEn }); // 재대결(2라운드)
+    }
+  }
+  return fixtures;
+}
+
+// 라운드별 스냅샷 하나마다 시즌 끝까지 N회 시뮬레이션해서 팀별 우승확률(%)을 냅니다.
+// 반환: [{ week, round, championPct: { nameEn: pct, ... } }, ...] (roundsData에 실제로
+// "완료된" 라운드만 대상 — 진행 중인 라운드의 부분 결과는 포함하지 않습니다)
+function computeTitleProbabilityHistory(iterations) {
+  const N = iterations || 600;
+  const roundKeys = Object.keys(roundsData || {}).sort((a, b) => {
+    const na = parseInt(a.replace('round', ''), 10);
+    const nb = parseInt(b.replace('round', ''), 10);
+    return na - nb;
+  });
+  if (!roundKeys.length) return [];
+
+  const allFixtures = generateAllSeasonFixtures();
+  const teams = leagueData.map(t => ({ nameEn: t.nameEn, nameKo: t.nameKo }));
+  const HOME_ADV = 1.35; // 홈 득점 배율(원정은 그 역수의 제곱근만큼 나눔) — 단순화된 고정값
+  const FALLBACK_AVG_GOALS = 1.3; // 시즌 극초반처럼 표본이 거의 없을 때 쓰는 기준선
+
+  const playedState = {};
+  teams.forEach(t => { playedState[t.nameEn] = { pts: 0, gf: 0, ga: 0, played: 0 }; });
+  const playedFixtureKeys = new Set(); // "홈||원정" — 이미 치른 경기(방향까지 일치)
+
+  const history = [];
+
+  roundKeys.forEach((roundKey, idx) => {
+    (roundsData[roundKey] || []).forEach(m => {
+      if (m.byeKo || m.byeEn) return;
+      if (!m.homeEn || !m.awayEn) return;
+      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+      const home = playedState[m.homeEn];
+      const away = playedState[m.awayEn];
+      if (!home || !away) return;
+      home.gf += m.homeScore; home.ga += m.awayScore; home.played += 1;
+      away.gf += m.awayScore; away.ga += m.homeScore; away.played += 1;
+      if (m.homeScore > m.awayScore) home.pts += 3;
+      else if (m.homeScore < m.awayScore) away.pts += 3;
+      else { home.pts += 1; away.pts += 1; }
+      playedFixtureKeys.add(m.homeEn + '||' + m.awayEn);
+    });
+
+    // 그 시점까지의 득실만으로 공수 지수 산출 — 표본이 적은 시즌 초반엔
+    // played가 작을수록 shrink가 0에 가까워져 리그 평균(지수 1.0) 쪽으로
+    // 완만하게 수렴하고, 경기 수가 쌓일수록 실제 득실 비중이 커집니다.
+    let totalGoals = 0, totalPlayed = 0;
+    teams.forEach(t => { totalGoals += playedState[t.nameEn].gf; totalPlayed += playedState[t.nameEn].played; });
+    const avgGoals = totalPlayed > 0 ? totalGoals / totalPlayed : FALLBACK_AVG_GOALS;
+    const strength = {};
+    teams.forEach(t => {
+      const s = playedState[t.nameEn];
+      const shrink = s.played / (s.played + 4);
+      const gfpg = s.played > 0 ? s.gf / s.played : avgGoals;
+      const gapg = s.played > 0 ? s.ga / s.played : avgGoals;
+      strength[t.nameEn] = {
+        attack: 1 + (Math.max(0.2, gfpg / avgGoals) - 1) * shrink,
+        defense: 1 + (Math.max(0.2, gapg / avgGoals) - 1) * shrink
+      };
+    });
+
+    // 이 시점 이후 남은 경기 = 시즌 전체 대진 - 지금까지 치른 경기
+    const remaining = allFixtures.filter(fx => !playedFixtureKeys.has(fx.homeEn + '||' + fx.awayEn));
+    const homeMult = Math.sqrt(HOME_ADV);
+
+    const champCount = {};
+    teams.forEach(t => { champCount[t.nameEn] = 0; });
+
+    for (let sim = 0; sim < N; sim++) {
+      const simPts = {};
+      const simGd = {};
+      teams.forEach(t => {
+        simPts[t.nameEn] = playedState[t.nameEn].pts;
+        simGd[t.nameEn] = playedState[t.nameEn].gf - playedState[t.nameEn].ga;
+      });
+
+      remaining.forEach(fx => {
+        const hs = strength[fx.homeEn], as = strength[fx.awayEn];
+        const hExp = Math.max(0.15, avgGoals * hs.attack * as.defense * homeMult);
+        const aExp = Math.max(0.15, avgGoals * as.attack * hs.defense / homeMult);
+        const hg = poissonRandom(hExp);
+        const ag = poissonRandom(aExp);
+        simGd[fx.homeEn] += hg - ag;
+        simGd[fx.awayEn] += ag - hg;
+        if (hg > ag) simPts[fx.homeEn] += 3;
+        else if (hg < ag) simPts[fx.awayEn] += 3;
+        else { simPts[fx.homeEn] += 1; simPts[fx.awayEn] += 1; }
+      });
+
+      let bestTeam = teams[0].nameEn, bestPts = -Infinity, bestGd = -Infinity;
+      teams.forEach(t => {
+        const p = simPts[t.nameEn], g = simGd[t.nameEn];
+        if (p > bestPts || (p === bestPts && g > bestGd)) {
+          bestPts = p; bestGd = g; bestTeam = t.nameEn;
+        }
+      });
+      champCount[bestTeam] += 1;
+    }
+
+    const pct = {};
+    teams.forEach(t => { pct[t.nameEn] = (champCount[t.nameEn] / N) * 100; });
+    history.push({ week: idx + 1, round: parseInt(roundKey.replace('round', ''), 10), championPct: pct });
+  });
+
+  return history;
+}
+
 // 팀별 공격력/수비력 지수 (리그 평균 대비) 계산
 function computeTeamStrengths() {
   let totalGoals = 0;

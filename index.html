@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '003',
-    data: '003',
-    app: '003',
+    style: '005',
+    data: '005',
+    app: '005',
     predictWorker: '001'
   };
 </script>
@@ -566,6 +566,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div class="scatter-body"><svg id="pointsHistorySvg" viewBox="0 0 820 410" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <div class="rank-hist-legend" id="pointsHistLegend"></div>
+  </div>
+  <div class="scatter-card" style="margin-top:20px;">
+    <div class="stats-title">
+      <span class="lbl" data-en="TITLE PROBABILITY TREND" data-ko="우승확률 추이">우승확률 추이</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'titleProbHistInfo')">ⓘ</span>
+      <div class="info-tooltip" id="titleProbHistInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-ko="각 라운드가 끝난 시점까지의 데이터만 가지고 그 시점의 우승확률을 다시 계산한 타임머신 차트예요. 바로 위 누적 승점 그래프와 같은 주차 축을 씁니다. 눈에 띄는 확률을 한 번이라도 찍은 팀만 표시하며, 팀 이름을 누르면 해당 팀 선만 강조됩니다." data-en="A time-machine chart: at each completed round, we recompute the title probability using only the data known at that moment. It shares the same week axis as the cumulative points chart above. Only teams that reached a noticeable probability at some point are shown; tap a team's name to highlight just that line.">각 라운드가 끝난 시점까지의 데이터만 가지고 그 시점의 우승확률을 다시 계산한 타임머신 차트예요. 바로 위 누적 승점 그래프와 같은 주차 축을 씁니다. 눈에 띄는 확률을 한 번이라도 찍은 팀만 표시하며, 팀 이름을 누르면 해당 팀 선만 강조됩니다.</span>
+      </div>
+    </div>
+    <div class="scatter-body"><svg id="titleProbHistorySvg" viewBox="0 0 820 410" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="rank-hist-legend" id="titleProbHistLegend"></div>
   </div>
   <section class="magic-number-stats-section" aria-live="polite">
     <div class="stats-title advanced">

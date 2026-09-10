@@ -322,6 +322,7 @@
       renderPredictions(false);
       renderRankHistoryChart();
       renderPointsHistoryChart();
+      renderTitleProbabilityHistoryChart();
       renderMagicNumberStats();
       renderAiTrackRecord();
       playViewEnterAnimation(predictView);
@@ -1695,6 +1696,7 @@
     const weekLbl = isKorean ? `${nextWeek}주차` : `WK ${nextWeek}`;
 
     if (t.nextMatch.isBye) {
+      el.classList.remove('nms-matchday');
       el.innerHTML = `
         <div class="nmh-eyebrow lbl" data-en="Next" data-ko="다음경기">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</div>
         <div class="nmh-bye lbl" data-en="Bye week — no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week — no match this round'}</div>`;
@@ -1725,6 +1727,9 @@
       ? kickoffUTCMillis(t.nextMatch.kickoffDate, t.nextMatch.kickoffTime) : null;
     const daysLeft = kickoffMs ? Math.max(0, Math.ceil((kickoffMs - Date.now()) / 86400000)) : null;
     const ddayTxt = daysLeft === null ? '' : (daysLeft === 0 ? (isKorean ? 'D-DAY' : 'D-DAY') : `D-${daysLeft}`);
+    // 경기가 있는 당일(또는 이미 시작됨)이면 카드 테두리에 은은하게 회전하는
+    // 그라데이션 빛을 둘러서 "오늘 경기 있음"을 한눈에 알아볼 수 있게 합니다.
+    el.classList.toggle('nms-matchday', daysLeft === 0);
 
     el.innerHTML = `
       <div class="nmh-eyebrow lbl" data-en="Next · ${weekLbl}" data-ko="다음경기 · ${weekLbl}">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</div>
@@ -6618,6 +6623,7 @@
 
   let rankHistHighlighted = null;
   let pointsHistHighlighted = null;
+  let titleProbHistHighlighted = null;
 
 
   // ===== SVG 차트 - 주차별 순위 변동 (Rank History Chart) =====
@@ -6992,6 +6998,137 @@
 
   function renderPointsHistoryChart() {
     renderPointsHistorySvg(document.getElementById('pointsHistorySvg'), leagueData, document.getElementById('pointsHistLegend'));
+  }
+
+  // ===== SVG 차트 - 우승확률 추이(타임머신) =====
+  // computeTitleProbabilityHistory()는 계산 비용이 있으므로(라운드마다 독립적으로
+  // 시즌을 끝까지 재시뮬레이션) 한 번 계산한 결과를 캐싱해뒀다가 재사용합니다.
+  // roundsData는 페이지 로드 후 바뀌지 않는 정적 데이터라, 캐시 무효화 로직 없이
+  // "최초 1회만 계산"해도 항상 최신 상태입니다.
+  let titleProbHistoryCache = null;
+  function getTitleProbabilityHistory() {
+    if (titleProbHistoryCache === null) {
+      titleProbHistoryCache = (typeof computeTitleProbabilityHistory === 'function')
+        ? computeTitleProbabilityHistory(600)
+        : [];
+    }
+    return titleProbHistoryCache;
+  }
+
+  function titleProbColor(nameEn, colorIndex) {
+    return nameEn === 'Chizumulu United FC' ? '#0454e0' : RANK_HIST_COLORS[colorIndex % RANK_HIST_COLORS.length];
+  }
+
+  function renderTitleProbabilityHistoryChart() {
+    const svg = document.getElementById('titleProbHistorySvg');
+    const legendEl = document.getElementById('titleProbHistLegend');
+    if (!svg) return;
+    svg.innerHTML = '';
+    if (legendEl) legendEl.innerHTML = '';
+
+    const history = getTitleProbabilityHistory();
+    if (!history.length) return;
+
+    const teamByEn = {};
+    leagueData.forEach(t => { teamByEn[t.nameEn] = t; });
+
+    // 15개 팀 전부를 선으로 그리면 대부분 0% 근처에서 겹쳐 읽기 어려우므로,
+    // "라운드 중 단 한 번이라도 눈에 띄는 확률(2% 이상)을 찍어본 팀"은 전부
+    // 그리고, 나머지(항상 2% 미만이었던 팀)만 생략합니다. 개수 제한은 두지
+    // 않습니다 — 2%를 넘긴 팀이 몇 개든 다 보여줍니다. 우리 팀(치주물루)은
+    // 2%를 못 넘겼어도 항상 포함합니다.
+    const latest = history[history.length - 1].championPct;
+    const maxByTeam = {};
+    leagueData.forEach(t => {
+      maxByTeam[t.nameEn] = Math.max.apply(null, history.map(h => h.championPct[t.nameEn] || 0));
+    });
+    let candidates = leagueData
+      .filter(t => maxByTeam[t.nameEn] >= 2)
+      .sort((a, b) => (latest[b.nameEn] || 0) - (latest[a.nameEn] || 0))
+      .map(t => t.nameEn);
+    if (!candidates.includes('Chizumulu United FC') && teamByEn['Chizumulu United FC']) {
+      candidates.push('Chizumulu United FC');
+    }
+    const teams = candidates.map(nameEn => teamByEn[nameEn]).filter(Boolean);
+    if (!teams.length) return;
+
+    const compact = teams.length === 1;
+    const W = compact ? 700 : 820;
+    const H = compact ? 300 : 410;
+    const margin = { top: 24, right: 22, bottom: 42, left: 46 };
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+    const xPos = index => history.length > 1 ? margin.left + (index / (history.length - 1)) * plotW : margin.left + plotW / 2;
+    const yPos = pct => margin.top + plotH - (pct / 100) * plotH;
+    const ct = chartTheme();
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.appendChild(svgEl('rect', { x: margin.left, y: margin.top, width: plotW, height: plotH, rx: 10, fill: ct.backdropCard }));
+
+    for (let i = 0; i <= 4; i++) {
+      const value = 25 * i;
+      const y = yPos(value);
+      svg.appendChild(svgEl('line', { x1: margin.left, y1: y, x2: margin.left + plotW, y2: y, stroke: ct.gridLine, 'stroke-width': 1 }));
+      const label = svgEl('text', { x: margin.left - 9, y: y + 4, 'text-anchor': 'end', class: 'rank-hist-week-label' });
+      label.textContent = value + '%';
+      svg.appendChild(label);
+    }
+    history.forEach((h, index) => {
+      const x = xPos(index);
+      svg.appendChild(svgEl('line', { x1: x, y1: margin.top, x2: x, y2: margin.top + plotH, stroke: ct.gridLine, 'stroke-width': 1, 'stroke-dasharray': '3,4' }));
+      const label = svgEl('text', { x, y: margin.top + plotH + 20, 'text-anchor': 'middle', class: 'rank-hist-week-label' });
+      label.textContent = isKorean ? `${h.round}주` : `W${h.round}`;
+      svg.appendChild(label);
+    });
+    svg.appendChild(svgEl('rect', { x: margin.left, y: margin.top, width: plotW, height: plotH, rx: 10, fill: 'none', stroke: ct.gridBorder, 'stroke-width': 1.5 }));
+    const yTitle = svgEl('text', { x: 13, y: margin.top + plotH / 2, 'text-anchor': 'middle', class: 'rank-hist-axis-label', transform: `rotate(-90 13 ${margin.top + plotH / 2})` });
+    yTitle.textContent = isKorean ? '우승확률 →' : 'Title chance →';
+    svg.appendChild(yTitle);
+
+    let colorIndex = 0;
+    const lines = teams.map(team => {
+      const color = titleProbColor(team.nameEn, colorIndex++);
+      const coords = history.map((h, index) => ({ round: h.round, pct: h.championPct[team.nameEn] || 0, x: xPos(index) }));
+      coords.forEach(c => { c.y = yPos(c.pct); });
+      return { team, color, coords };
+    });
+    lines.forEach(line => {
+      const path = svgEl('path', { d: straightPath(line.coords), stroke: line.color, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'points-hist-line' });
+      path.dataset.teamKey = line.team.nameEn;
+      svg.appendChild(path);
+      line.dots = line.coords.map(c => {
+        const dot = svgEl('circle', { cx: c.x, cy: c.y, r: compact ? 4.5 : 3.5, fill: line.color, stroke: '#fff', 'stroke-width': 1.4, class: 'points-hist-dot' });
+        dot.dataset.teamKey = line.team.nameEn;
+        const title = svgEl('title', {});
+        title.textContent = `${isKorean ? line.team.nameKo : line.team.nameEn} — ${isKorean ? `${c.round}주차` : `Week ${c.round}`}: ${c.pct.toFixed(1)}%`;
+        dot.appendChild(title);
+        svg.appendChild(dot);
+        return dot;
+      });
+      line.path = path;
+    });
+    const applyHighlight = teamKey => {
+      lines.forEach(line => {
+        const active = !teamKey || line.team.nameEn === teamKey;
+        line.path.classList.toggle('dimmed', !active);
+        line.path.classList.toggle('highlighted', !!teamKey && active);
+        line.dots.forEach(dot => dot.classList.toggle('dimmed', !active));
+      });
+      if (legendEl) legendEl.querySelectorAll('.points-hist-chip').forEach(chip => chip.classList.toggle('dimmed', !!teamKey && chip.dataset.teamKey !== teamKey));
+    };
+    if (legendEl) {
+      lines.forEach(line => {
+        const chip = document.createElement('div');
+        chip.className = 'rank-hist-chip points-hist-chip';
+        chip.dataset.teamKey = line.team.nameEn;
+        chip.innerHTML = `<span class="chip-dot" style="background:${line.color}"></span><span>${(isKorean ? line.team.nameKo : line.team.nameEn).replace(/\s*FC$/i, '')}</span>`;
+        chip.addEventListener('click', () => {
+          titleProbHistHighlighted = titleProbHistHighlighted === line.team.nameEn ? null : line.team.nameEn;
+          applyHighlight(titleProbHistHighlighted);
+        });
+        legendEl.appendChild(chip);
+      });
+      applyHighlight(titleProbHistHighlighted);
+    }
   }
 
   function renderTeamPointsHistoryChart(svgId, team) {
@@ -8233,6 +8370,7 @@
       drawPredictionTable();
       renderRankHistoryChart();
       renderPointsHistoryChart();
+      renderTitleProbabilityHistoryChart();
       renderMagicNumberStats();
       renderAiTrackRecord();
     } else if (currentView === 'squad') {
