@@ -295,6 +295,7 @@ const matchLineups = {
 };
 
 const squadData = [
+  { number: 1, position: "GK", nameKo: "기프트 길버트", nameEn: "Gift Gilbert", photoSrc: "no1.png" },
   { number: 2, position: "DF", nameKo: "로날드 은달라마", nameEn: "Ronald Ndalama", photoSrc: "no2.png" },
   { number: 3, position: "DF", nameKo: "알란 음롱골라", nameEn: "Allan Mlongola", isViceCaptain: true, photoSrc: "no3.png" },
   { number: 5, position: "DF", nameKo: "라반 롱웨", nameEn: "Laban Longwe", photoSrc: "no5.png" },
@@ -342,7 +343,7 @@ const staffData = [
     { nameKo: "레오나드 롱웨", nameEn: "Leonard Longwe" }
   ]},
   { roleKo: "미디어", roleEn: "Media", people: [
-    { nameKo: "모스터 은코마", nameEn: "" }
+    { nameKo: "모스터 은코마", nameEn: "Moster Nkhoma" }
   ]}
 ];
 
