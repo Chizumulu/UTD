@@ -1725,7 +1725,10 @@
     );
     const kickoffMs = (typeof kickoffUTCMillis === 'function')
       ? kickoffUTCMillis(t.nextMatch.kickoffDate, t.nextMatch.kickoffTime) : null;
-    const daysLeft = kickoffMs ? Math.max(0, Math.ceil((kickoffMs - Date.now()) / 86400000)) : null;
+    // KST 달력 기준 날짜 차이로 계산합니다(예: 킥오프가 "내일"이면 지금이 몇 시든 항상 D-1).
+    const daysLeft = kickoffMs
+      ? Math.max(0, Math.round((kstMidnightUTCMillis(kickoffMs) - kstMidnightUTCMillis(Date.now())) / 86400000))
+      : null;
     const ddayTxt = daysLeft === null ? '' : (daysLeft === 0 ? (isKorean ? 'D-DAY' : 'D-DAY') : `D-${daysLeft}`);
     // 경기가 있는 당일(또는 이미 시작됨)이면 카드 테두리에 은은하게 회전하는
     // 그라데이션 빛을 둘러서 "오늘 경기 있음"을 한눈에 알아볼 수 있게 합니다.
@@ -1946,6 +1949,16 @@
     const [y, mo, d] = kickoffDate.split('-').map(Number);
     const [hh, mm] = kickoffTime.split(':').map(Number);
     return Date.UTC(y, mo - 1, d, hh - 2, mm, 0);
+  }
+
+  // ===== KST(UTC+9) 기준 "자정" 시각(ms) 계산 =====
+  // D-day 배지는 "몇 시간 남았는지"가 아니라 "KST 달력으로 며칠 남았는지"를 보여줘야
+  // 하므로, 보는 사람의 브라우저 타임존과 무관하게 항상 한국 표준시 기준으로 날짜를
+  // 계산합니다. utcMs를 KST로 shift한 뒤 그 날짜의 00:00(KST)에 해당하는 UTC ms를 구합니다.
+  const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  function kstMidnightUTCMillis(utcMs) {
+    const shifted = new Date(utcMs + KST_OFFSET_MS);
+    return Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()) - KST_OFFSET_MS;
   }
 
   // 화면에 떠 있는 모든 카운트다운 엘리먼트를 1초마다 갱신합니다.
