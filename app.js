@@ -1731,7 +1731,7 @@
       ? Math.max(0, Math.round((kstMidnightUTCMillis(kickoffMs) - kstMidnightUTCMillis(Date.now())) / 86400000))
       : null;
     const ddayTxt = daysLeft === null ? '' : (daysLeft === 0 ? (isKorean ? 'D-DAY' : 'D-DAY') : `D-${daysLeft}`);
-    // 경기가 있는 당일(또는 이미 시작됨)이면 카드 테두리에 은은하게 회전하는
+    // 경기가 있는 당일(또는 이미 시작됨)이면 카드 테두리에 은은하게 맥동하는
     // 그라데이션 빛을 둘러서 "오늘 경기 있음"을 한눈에 알아볼 수 있게 합니다.
     el.classList.toggle('nms-matchday', daysLeft === 0);
 

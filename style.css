@@ -9123,38 +9123,100 @@
 }
 .next-match-strip:empty { display: none; }
 
-/* ---- 오늘 경기가 있는 날: 카드 테두리를 따라 도는 은은한 빛 ---- */
-/* 사이트 메인 컬러(네이비)와 포인트 컬러(틸)를 섞은 conic-gradient를 테두리
-   두께만큼만 보이게 마스킹해서 두르고, 천천히 회전시킵니다. 카드 자체의
-   background/box-shadow는 그대로 두고 ::before를 카드보다 한 겹 아래(테두리
-   자리)에 깔아서, 클릭 영역이나 내부 레이아웃에는 전혀 영향을 주지 않습니다. */
+/* ---- 오늘 경기가 있는 날: 카드 테두리를 얇은 하이라이트가 은은하게 도는 형태로 ---- */
+/* 중요: 박스(::before) 자체를 transform:rotate로 돌리면, 각지지 않은 테두리
+   ::before의 사각 바운딩 박스가 회전하면서 모서리가 카드 밖으로 삐져나가
+   대각선 빛줄기처럼 보이는 버그가 생깁니다. 그래서 박스는 고정해두고,
+   conic-gradient의 각도(@property로 애니메이션 가능하게 만든 커스텀 속성)만
+   돌려서 "하이라이트만 테두리를 따라 흐르는" 것처럼 보이게 합니다. */
+@property --nms-spin-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
 .next-match-strip.nms-matchday::before {
   content: '';
   position: absolute;
   inset: -2.5px;
   border-radius: calc(var(--radius-xl) + 2.5px);
   padding: 2.5px;
-  background: conic-gradient(from 0deg,
-    var(--color-teal) 0deg,
-    var(--color-teal-light) 90deg,
-    var(--color-navy-light) 180deg,
-    var(--color-teal) 270deg,
-    var(--color-teal-light) 360deg);
+  background: conic-gradient(from var(--nms-spin-angle),
+    rgba(245, 158, 11, 0.16) 0%,
+    rgba(245, 158, 11, 0.16) 40%,
+    #fbbf24 47%,
+    #fff7ed 50%,
+    #fbbf24 53%,
+    rgba(245, 158, 11, 0.16) 60%,
+    rgba(245, 158, 11, 0.16) 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  filter: drop-shadow(0 0 6px rgba(var(--color-teal-rgb), 0.55));
-  animation: nmsMatchdaySpin 3.2s linear infinite;
+  animation: nmsMatchdaySpin 5.5s linear infinite;
   z-index: -1;
   pointer-events: none;
 }
+/* 글로우는 마스킹된 얇은 링 위에 filter:drop-shadow로 주면 브라우저가 마스킹 전
+   conic-gradient의 쐐기(파이) 모양 그대로 그림자를 투사해 대각선 빛줄기 버그가
+   생깁니다. 그래서 글로우는 카드 자체의 box-shadow로 은은하게만 줍니다. */
+.next-match-strip.nms-matchday {
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.28), 0 0 22px rgba(251, 191, 36, 0.18);
+}
+:root[data-theme="dark"] .next-match-strip.nms-matchday {
+  box-shadow: 0 0 10px rgba(var(--color-teal-rgb), 0.28), 0 0 22px rgba(var(--color-teal-rgb), 0.18);
+}
+:root[data-theme="dark"] .next-match-strip.nms-matchday::before {
+  background: conic-gradient(from var(--nms-spin-angle),
+    rgba(var(--color-teal-rgb), 0.16) 0%,
+    rgba(var(--color-teal-rgb), 0.16) 40%,
+    var(--color-teal-light) 47%,
+    #eafffe 50%,
+    var(--color-teal-light) 53%,
+    rgba(var(--color-teal-rgb), 0.16) 60%,
+    rgba(var(--color-teal-rgb), 0.16) 100%);
+}
+@keyframes nmsMatchdayGlow {
+  0%, 100% {
+    opacity: 0.75;
+    filter:
+      drop-shadow(0 0 3px rgba(245, 158, 11, 0.7))
+      drop-shadow(0 0 8px rgba(245, 158, 11, 0.5))
+      drop-shadow(0 0 14px rgba(251, 191, 36, 0.35));
+  }
+  50% {
+    opacity: 1;
+    filter:
+      drop-shadow(0 0 6px rgba(245, 158, 11, 1))
+      drop-shadow(0 0 18px rgba(245, 158, 11, 0.8))
+      drop-shadow(0 0 32px rgba(251, 191, 36, 0.6));
+  }
+}
+@keyframes nmsMatchdayGlowDark {
+  0%, 100% { opacity: 0.55; filter: drop-shadow(0 0 4px rgba(var(--color-teal-rgb), 0.35)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 9px rgba(var(--color-teal-rgb), 0.75)); }
+}
+/* 박스가 아니라 --nms-spin-angle 커스텀 속성 값만 0→360도로 애니메이션합니다.
+   테두리 사각형은 전혀 움직이지 않고, 링 안의 하이라이트만 흐르듯 돕니다. */
 @keyframes nmsMatchdaySpin {
-  to { transform: rotate(360deg); }
+  to { --nms-spin-angle: 360deg; }
 }
 @media (prefers-reduced-motion: reduce) {
   .next-match-strip.nms-matchday::before {
     animation: none;
+    background: linear-gradient(90deg,
+      rgba(245, 158, 11, 0.18) 0%,
+      #fbbf24 42%,
+      #fff7ed 50%,
+      #fbbf24 58%,
+      rgba(245, 158, 11, 0.18) 100%);
+  }
+  :root[data-theme="dark"] .next-match-strip.nms-matchday::before {
+    background: linear-gradient(90deg,
+      rgba(var(--color-teal-rgb), 0.18) 0%,
+      var(--color-teal-light) 42%,
+      #eafffe 50%,
+      var(--color-teal-light) 58%,
+      rgba(var(--color-teal-rgb), 0.18) 100%);
   }
 }
 .nmh-eyebrow {

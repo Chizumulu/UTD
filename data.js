@@ -927,9 +927,9 @@ const upcomingMatchHistory = {
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
   round10: [
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-09-12", kickoffTime: "14:30" },
+    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "HENDERSON KANYIKA (2골)", scorersAway: "없음" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", postponed: true, movedToWeek: 12 },
-    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-12", kickoffTime: "14:30" },
+    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "THURASON SHABA (3골)", scorersAway: "BLESSINGS NYASULU" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
@@ -2101,6 +2101,8 @@ const playerDirectory = {
   "WANANGWA GAMA": { nameKo: "와낭과 가마", nameEn: "Wanangwa Gama" },
   "PHILIMON PHIRI": { nameKo: "필리몬 피리", nameEn: "Philimon Phiri" },
   "SOLOMON MANDA": { nameKo: "솔로몬 만다", nameEn: "Solomon Manda" },
+  "THURASON SHABA": { nameKo: "투라손 샤바", nameEn: "Thurason Shaba" },
+  "BLESSINGS NYASULU": { nameKo: "블레싱스 니야술루", nameEn: "Blessings Nyasulu" },
   "ALICK CHAVULA": { nameKo: "앨릭 차불라", nameEn: "Alick Chavula" },
   "OFFICIAL PHIRI": { nameKo: "오피셜 피리", nameEn: "Official Phiri" },
   "MWAYI SIMKONDA": { nameKo: "음와이 심콘다", nameEn: "Mwayi Simkonda" },
