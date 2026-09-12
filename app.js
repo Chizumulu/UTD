@@ -3943,11 +3943,15 @@
   let currentRoundKey = null;
 
   // 연기/이동된 경기의 배지 문구를 계산합니다.
+  // - noBadge가 true면 배지를 아예 표시하지 않습니다(빈 문자열 반환)
   // - movedToWeek가 있으면(=새 일정이 확정돼 다른 주차로 옮겨간 경기) "N주차 경기로 이동"
+  // - postponed이면서 pendingResult가 true면(=아직 새 일정도 안 잡히고 결과 대기 상태) "경기 결과 미정"
   // - 그렇지 않고 postponed만 true면 "경기 연기"
-  // - 둘 다 아니면 "경기 시작 전"
+  // - 넷 다 아니면 "경기 시작 전"
   function scheduledBadgeText(m, ko) {
+    if (m.noBadge) return '';
     if (m.movedToWeek) return ko ? `${m.movedToWeek}주차 경기로 이동` : `Moved to Week ${m.movedToWeek}`;
+    if (m.postponed && m.pendingResult) return ko ? '경기 결과 미정' : 'Result Pending';
     if (m.postponed) return ko ? '경기 연기' : 'Postponed';
     return ko ? '경기 시작 전' : 'Upcoming';
   }
@@ -4001,6 +4005,7 @@
             homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
             homeScore: m.homeScore, awayScore: m.awayScore,
             postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek,
+            pendingResult: m.pendingResult, noBadge: m.noBadge,
             kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
             scorersHome: undefined, scorersAway: undefined
           };
@@ -4038,7 +4043,8 @@
         isBye: false, isScheduled: true,
         homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
         kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
-        postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek
+        postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek,
+        pendingResult: m.pendingResult, noBadge: m.noBadge
       };
     });
   }
@@ -4458,7 +4464,9 @@
           weekNum: idx + 1,
           homeKo: m.homeKo, homeEn: m.homeEn,
           awayKo: m.awayKo, awayEn: m.awayEn,
-          movedToWeek: m.movedToWeek
+          movedToWeek: m.movedToWeek,
+          pendingResult: m.pendingResult,
+          noBadge: m.noBadge
         });
       });
     });
@@ -4486,8 +4494,14 @@
       // 새 일정이 확정된(movedToWeek가 있는) 경기라면 "N주차 경기에서 확정" 배지를 추가로 보여줍니다.
       const confirmedEnText = `Confirmed for Week ${m.movedToWeek}`;
       const confirmedKoText = `${m.movedToWeek}주차 경기에서 확정`;
-      const confirmedBadge = m.movedToWeek
+      const pendingEnText = 'Result Pending';
+      const pendingKoText = '경기 결과 미정';
+      const confirmedBadge = m.noBadge
+        ? ''
+        : m.movedToWeek
         ? `<span class="postponed-confirmed-badge lbl" data-en="${confirmedEnText}" data-ko="${confirmedKoText}">${isKorean ? confirmedKoText : confirmedEnText}</span>`
+        : m.pendingResult
+        ? `<span class="postponed-confirmed-badge postponed-pending-badge lbl" data-en="${pendingEnText}" data-ko="${pendingKoText}">${isKorean ? pendingKoText : pendingEnText}</span>`
         : '';
       return `
         <div class="postponed-match-row">
