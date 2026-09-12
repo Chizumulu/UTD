@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '006',
-    data: '008',
-    app: '007',
+    style: '001',
+    data: '001',
+    app: '001',
     predictWorker: '001',
     pathfinderEngine: '001'
   };
@@ -240,7 +240,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </aside>
 
 <div class="container">
-<div class="next-match-strip" id="nextMatchStrip"></div>
+<div class="next-match-strip" id="nextMatchStrip" aria-busy="true">
+  <div class="nmh-eyebrow"><span class="skeleton-bar skeleton-bar-eyebrow"></span></div>
+  <div class="nmh-top">
+    <div class="nmh-team">
+      <span class="skeleton-bar skeleton-crest"></span>
+      <span class="skeleton-bar skeleton-bar-team-name"></span>
+    </div>
+    <div class="nmh-center">
+      <div class="nmh-dday"><span class="skeleton-bar skeleton-bar-dday"></span></div>
+      <div class="nmh-meta"><span class="skeleton-bar skeleton-bar-meta"></span></div>
+    </div>
+    <div class="nmh-team">
+      <span class="skeleton-bar skeleton-crest"></span>
+      <span class="skeleton-bar skeleton-bar-team-name"></span>
+    </div>
+  </div>
+  <div class="nmh-bottom">
+    <span class="skeleton-bar skeleton-bar-ha"></span>
+    <span class="skeleton-bar skeleton-bar-weather"></span>
+    <span class="skeleton-bar skeleton-bar-actions"></span>
+  </div>
+</div>
 <a class="next-match-live-bar" id="nextMatchLiveBar" href="https://www.facebook.com/profile.php?id=100083273735668" target="_blank" rel="noopener noreferrer" style="display:none;">
   <span class="nmlb-dot"></span>
   <span class="nmlb-text lbl" data-en="NRFA Facebook Live Text Commentary" data-ko="NRFA 페이스북 문자중계보기">NRFA 페이스북 문자중계보기</span>
@@ -270,6 +291,156 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </tr>
   </thead>
   <tbody id="mainMiniTableBody">
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td class="team"><span class="skeleton-bar skeleton-bar-logo"></span><span class="skeleton-bar skeleton-bar-name"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+      <td><span class="skeleton-bar skeleton-bar-xs"></span></td>
+    </tr>
   </tbody>
 </table>
 <div class="mini-rank-more-wrap">

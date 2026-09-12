@@ -1684,6 +1684,7 @@
   function renderNextMatchStrip() {
     const el = document.getElementById('nextMatchStrip');
     if (!el) return;
+    el.removeAttribute('aria-busy');
     const info = getMyRankedTeam();
     if (!info) { el.innerHTML = ''; return; }
     const t = info.team;
