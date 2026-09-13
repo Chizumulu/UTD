@@ -930,10 +930,10 @@ const scheduledRounds = {
     { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "HENDERSON KANYIKA (2골)", scorersAway: "없음" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", postponed: true, movedToWeek: 12 },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "THURASON SHABA (3골)", scorersAway: "BLESSINGS NYASULU" },
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 1, awayScore: 1, scorersHome: "ZIKANI KASAMBALA", scorersAway: "NORMAN NDLOVU" },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "ALICK CHAVULA (2골)", scorersAway: "YAMIKANI NYIRENDA" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "MASSA YOLLAM", scorersAway: "TIMOTHY KATAPA, DICKIES NYIRENDA" },
     { byeKo: "에크웬데니 FC", byeEn: "Ekwendeni FC" },
     // 7주차에서 연기됐던 마푸 vs 에크웬데니 경기가 10주차 경기로 확정되었습니다.
     // 주의: 이 경기는 마푸의 홈구장(망캄비라 그라운드)이 아니라 Fukamalaza Ground에서
@@ -2068,6 +2068,7 @@ const playerDirectory = {
   "DAVIE NGOMA": { nameKo: "데이비 응고마", nameEn: "Davie Ngoma" },
   "SHAIBU JAHALI": { nameKo: "샤이부 자할리", nameEn: "Shaibu Jahali" },
   "MASSA PEREKANI": { nameKo: "마사 페레카니", nameEn: "Massa Perekani" },
+  "MASSA YOLLAM": { nameKo: "마사 욜람", nameEn: "Massa Yollam" },
   "LUKE JERE": { nameKo: "루크 제레", nameEn: "Luke Jere" },
   "JASTON MOYO": { nameKo: "재스톤 모요", nameEn: "Jaston Moyo" },
   "JONATHAN PHIRI": { nameKo: "조나단 피리", nameEn: "Jonathan Phiri" },
@@ -2118,7 +2119,8 @@ const playerDirectory = {
   "SAMAN NYIRENDA": { nameKo: "사만 니렌다", nameEn: "Saman Nyirenda" },
   "ZIKANI KASAMBALA": { nameKo: "지카니 카삼발라", nameEn: "Zikani Kasambala" },
   "MLEZA NYIRONGO": { nameKo: "믈레자 니롱고", nameEn: "Mleza Nyirongo" },
-  "ANDREW KAMANGA": { nameKo: "앤드류 카망가", nameEn: "Andrew Kamanga" }
+  "ANDREW KAMANGA": { nameKo: "앤드류 카망가", nameEn: "Andrew Kamanga" },
+  "NORMAN NDLOVU": { nameKo: "노먼 은들로부", nameEn: "Norman Ndlovu" }
 };
 
 function toTitleCase(upperName) {
