@@ -1244,8 +1244,8 @@
       roundKey, weekNum, isBye: false, isHome, oppKo, oppEn, myGoals, oppGoals, result,
       rankBefore, rankAfter, ptsBefore, ptsAfter, milestones,
       headline: {
-        ko: `${weekNum}주차: 치주물루 ${isHome ? myGoals + ' - ' + oppGoals : oppGoals + ' - ' + myGoals} ${oppKo} (${isHome ? '홈' : '원정'})`,
-        en: `Round ${weekNum}: Chizumulu ${isHome ? myGoals + '-' + oppGoals : oppGoals + '-' + myGoals} ${oppEn} (${isHome ? 'Home' : 'Away'})`
+        ko: `${weekNum}주차: 치주물루 ${myGoals} - ${oppGoals} ${oppKo} (${isHome ? '홈' : '원정'})`,
+        en: `Round ${weekNum}: Chizumulu ${myGoals}-${oppGoals} ${oppEn} (${isHome ? 'Home' : 'Away'})`
       },
       paragraphs,
       rivalWatch: buildRivalWatch(afterSnap, beforeSnap, matches, rngRival)
@@ -4458,8 +4458,21 @@
         // 못 지웠더라도 자동으로 목록에서 제외합니다. (수동으로 postponed를
         // 지우는 걸 깜빡해도 "연기된 경기 모아보기"에 완료된 경기가 남지 않습니다.)
         if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
-        // movedToWeek가 채워졌다면 이미 새 주차로 일정이 확정된 경기입니다.
-        // 목록에서 빼지 않고, 대신 "N주차 경기에서 확정" 배지를 달아 계속 보여줍니다.
+        // movedToWeek가 채워졌고, 그 옮겨간 주차의 실제 경기가 이미 스코어까지 채워져
+        // 완전히 끝났다면(=결과가 확정됐다면) 더 이상 "일정 재조율이 필요한 연기 경기"가
+        // 아니므로 이 목록에서 제외합니다. (원래 날짜의 카드에는 계속 "N주차 경기로 이동"
+        // 배지로 표시됩니다 — 이 목록에서만 빠지는 것입니다.)
+        if (m.movedToWeek) {
+          const targetKey = 'round' + m.movedToWeek;
+          const targetMatches = roundsData[targetKey] || (scheduledRounds && scheduledRounds[targetKey]) || [];
+          const targetMatch = targetMatches.find(tm =>
+            (tm.homeKo === m.homeKo && tm.awayKo === m.awayKo) ||
+            (tm.homeEn === m.homeEn && tm.awayEn === m.awayEn)
+          );
+          if (targetMatch && typeof targetMatch.homeScore === 'number' && typeof targetMatch.awayScore === 'number') {
+            return;
+          }
+        }
         list.push({
           weekNum: idx + 1,
           homeKo: m.homeKo, homeEn: m.homeEn,

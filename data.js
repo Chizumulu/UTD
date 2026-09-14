@@ -291,6 +291,32 @@ const matchLineups = {
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 12주차", score: "치폴로폴로 4 : 4 치주물루", result: "무승부" }
     ],
     historySummary: "최근 2경기 전적 2전 1승 1무 0패로 우세"
+  },
+  round10: {
+    formation: "4-2-3-1",
+    opponentKo: "음벨와 워리어스 FC",
+    result: "2 : 1 승",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"] },
+      { pos: "LW", number: 49, nameKo: "쿰부카니" },
+      { pos: "CAM", number: 10, nameKo: "찰스" },
+      { pos: "RW", number: 6, nameKo: "벤자민" },
+      { pos: "LCM", number: 98, nameKo: "스티브" },
+      { pos: "RCM", number: 7, nameKo: "디킨스", goals: ["-"] },
+      { pos: "LB", number: 5, nameKo: "라반" },
+      { pos: "LCB", number: 13, nameKo: "조셉" },
+      { pos: "RCB", number: 99, nameKo: "패트릭" },
+      { pos: "RB", number: 25, nameKo: "모버트" },
+      { pos: "GK", number: 88, nameKo: "티나시" }
+    ],
+    subsIn: [],
+    subsUnused: [1, 8, 11, 20, 66, 77, 80],
+    recentHistory: [
+      { comp: "26/27 시즌 NRFA 리그 원 10주차", score: "치주물루 2 : 1 음벨와", result: "치주물루 승" },
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 19주차", score: "음벨와 4 : 1 치주물루", result: "음벨와 승" },
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 16주차", score: "치주물루 2 : 3 음벨와", result: "음벨와 승" }
+    ],
+    historySummary: "최근 3경기 전적 1승 0무 2패로 열세"
   }
 };
 
@@ -380,7 +406,8 @@ const teamAwards = {
     round1: [13, 7],
     round3: [22, 6],
     round5: [49],
-    round7: [98]
+    round7: [98],
+    round10: [88]
   },
   playerOfTheMonth: {
     '2026-07': 90,
@@ -906,6 +933,41 @@ const matchDetails = {
       scorersHome: "없음",
       scorersAway: "AZIZI PINDANI"
     }
+  ],
+  // 10주차는 전체 라운드가 종료되어 roundsData.round10으로 옮겨졌으므로 matchDetails.round10을
+  // 아래에 새로 추가했습니다. 칠룸바 vs 친테체(12주차로 이동)와 에우티니 vs 루베(연기)는
+  // 스코어가 없어 matchDetails에는 넣지 않습니다 — 나중에 결과가 나오면 이 목록 맨 뒤에 추가해주세요.
+  round10: [
+    {
+      match: "치바비 2 : 비전 0",
+      scorersHome: "HENDERSON KANYIKA (2골)",
+      scorersAway: "없음"
+    },
+    {
+      match: "루비리 3 : 치하메 1",
+      scorersHome: "THURASON SHABA (3골)",
+      scorersAway: "BLESSINGS NYASULU"
+    },
+    {
+      match: "치폴로폴로 1 : 마푸 1",
+      scorersHome: "ZIKANI KASAMBALA",
+      scorersAway: "NORMAN NDLOVU"
+    },
+    {
+      match: "젠다 2 : 라이플리 1",
+      scorersHome: "ALICK CHAVULA (2골)",
+      scorersAway: "YAMIKANI NYIRENDA"
+    },
+    {
+      match: "음벨와 1 : 치주물루 2",
+      scorersHome: "MASSA YOLLAM",
+      scorersAway: "TIMOTHY KATAPA, DICKIES NYIRENDA"
+    },
+    {
+      match: "마푸 2 : 에크웬데니 2",
+      scorersHome: "와낭과 가마, 노먼 은들로부",
+      scorersAway: "와티파 니렌다(2골)"
+    }
   ]
 };
 
@@ -915,10 +977,11 @@ const matchDetails = {
 // roundKey(scheduledRounds 기준)를 키로 미리 적어두면 됩니다. 라운드가 실제로 끝나면
 // 이 항목은 지우고 matchLineups[roundKey].recentHistory로 옮겨주세요.
 const upcomingMatchHistory = {
-  round10: {
+  round11: {
     recentHistory: [
-      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 19주차", score: "음벨와 4 : 1 치주물루", result: "음벨와 승" },
-      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 16주차", score: "치주물루 2 : 3 음벨와", result: "음벨와 승" }
+      { comp: "2025 카스텔 챌린지컵 4라운드", score: "치주물루 1 : 2 칠룸바", result: "칠룸바 승" },
+      { comp: "2025 FDH 뱅크컵 2라운드", score: "칠룸바 3 : 1 치주물루", result: "칠룸바 승" },
+      { comp: "2024 카스텔컵 북부 지역 예선", score: "치주물루 3 : 3 칠룸바 (PSO 4:1)", result: "무승부" }
     ]
   }
 };
@@ -926,22 +989,6 @@ const upcomingMatchHistory = {
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
-  round10: [
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "HENDERSON KANYIKA (2골)", scorersAway: "없음" },
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", postponed: true, movedToWeek: 12 },
-    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "THURASON SHABA (3골)", scorersAway: "BLESSINGS NYASULU" },
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 1, awayScore: 1, scorersHome: "ZIKANI KASAMBALA", scorersAway: "NORMAN NDLOVU" },
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "ALICK CHAVULA (2골)", scorersAway: "YAMIKANI NYIRENDA" },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-13", kickoffTime: "14:30" },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "MASSA YOLLAM", scorersAway: "TIMOTHY KATAPA, DICKIES NYIRENDA" },
-    { byeKo: "에크웬데니 FC", byeEn: "Ekwendeni FC" },
-    // 7주차에서 연기됐던 마푸 vs 에크웬데니 경기가 10주차 경기로 확정되었습니다.
-    // 주의: 이 경기는 마푸의 홈구장(망캄비라 그라운드)이 아니라 Fukamalaza Ground에서
-    // 열립니다. 다만 현재 데이터 구조(leagueData.venue)는 팀별 홈구장만 지원하고
-    // 경기별 구장 재정의 필드는 없어서, 이 특이사항은 화면에는 표시되지 않고
-    // 주석으로만 남겨둡니다.
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-10", kickoffTime: "14:30", movedFromWeek: 7, homeScore: 2, awayScore: 2, scorersHome: "와낭과 가마, 노먼 은들로부", scorersAway: "와티파 니렌다(2골)" }
-  ],
   round11: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-09-18", kickoffTime: "15:00" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-19", kickoffTime: "14:30" },
@@ -1116,6 +1163,26 @@ const roundsData = {
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 0, awayScore: 1, scorersHome: "없음", scorersAway: "MLEZA NYIRONGO" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 0, awayScore: 1, scorersHome: "없음", scorersAway: "AZIZI PINDANI" },
     { byeKo: "치바비 리얼 스타스 FC", byeEn: "Chibavi Real Stars FC" }
+  ],
+  // 10주차는 전체 라운드가 종료되어 roundsData.round10으로 옮겨졌습니다.
+  // 단, 에우티니 베테랑스 FC vs 루베 마스터즈 FC 경기는 연기(postponed)되어 스코어가 아직 없습니다.
+  // (round7의 마푸 vs 에크웬데니와 동일한 패턴 — 새 날짜가 확정되고 스코어가
+  // 채워지면 postponed를 지우고 matchDetails.round10 목록 맨 뒤에 추가해주세요.)
+  round10: [
+    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "HENDERSON KANYIKA (2골)", scorersAway: "없음" },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", postponed: true, movedToWeek: 12 },
+    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "THURASON SHABA (3골)", scorersAway: "BLESSINGS NYASULU" },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 1, awayScore: 1, scorersHome: "ZIKANI KASAMBALA", scorersAway: "NORMAN NDLOVU" },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "ALICK CHAVULA (2골)", scorersAway: "YAMIKANI NYIRENDA" },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", postponed: true },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "MASSA YOLLAM", scorersAway: "TIMOTHY KATAPA, DICKIES NYIRENDA" },
+    { byeKo: "에크웬데니 FC", byeEn: "Ekwendeni FC" },
+    // 7주차에서 연기됐던 마푸 vs 에크웬데니 경기가 10주차 경기로 확정되었습니다.
+    // 주의: 이 경기는 마푸의 홈구장(망캄비라 그라운드)이 아니라 Fukamalaza Ground에서
+    // 열립니다. 다만 현재 데이터 구조(leagueData.venue)는 팀별 홈구장만 지원하고
+    // 경기별 구장 재정의 필드는 없어서, 이 특이사항은 화면에는 표시되지 않고
+    // 주석으로만 남겨둡니다.
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-10", kickoffTime: "14:30", movedFromWeek: 7, homeScore: 2, awayScore: 2, scorersHome: "와낭과 가마, 노먼 은들로부", scorersAway: "와티파 니렌다(2골)" }
   ]
 };
 
