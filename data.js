@@ -2341,6 +2341,112 @@ function computeTopScorers() {
 const topScorersData = computeTopScorers();
 
 // ============================================================
+// 다득점 기록 (Multi-goal Games): 한 경기에서 2골 이상 넣은 기록만 모아서
+// 보여줍니다 (더블골 / 해트트릭 / 해트트릭 이상). matchDetails 의 "(N골)"
+// 메모를 그대로 활용하며, topScorersData 와 달리 "선수별 합산"이 아니라
+// "경기별 개별 기록"을 하나씩 담습니다 (한 선수가 여러 번 등장할 수 있음).
+// ============================================================
+function computeMultiGoalGames() {
+  const teamByShortName = buildShortNameToTeamMap();
+  const entries = [];
+
+  function collect(scorerText, scoringTeam, opponentTeam, isHome, homeScore, awayScore, roundNum) {
+    if (!scorerText || scorerText === "없음" || !scoringTeam || !opponentTeam) return;
+
+    scorerText.split(",").forEach(rawSegment => {
+      const segment = rawSegment.trim();
+      if (!segment) return;
+
+      const parenMatch = segment.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+      const rawName = (parenMatch ? parenMatch[1] : segment).trim();
+      const note = parenMatch ? parenMatch[2] : "";
+
+      // 자책골은 개인 다득점 기록에서 제외
+      if (/자책골/.test(note)) return;
+
+      const golMatch = note.match(/(\d+)\s*골/);
+      const goals = golMatch ? parseInt(golMatch[1], 10) : 1;
+      if (goals < 2) return; // 더블골 미만은 이 리스트에서 제외
+
+      let key = rawName.toUpperCase();
+      if (nameAliases[key]) key = nameAliases[key];
+
+      const info = playerDirectory[key] || { nameKo: toTitleCase(key), nameEn: toTitleCase(key) };
+
+      let photoSrc = null;
+      if (scoringTeam.nameEn === 'Chizumulu United FC') {
+        const squadMatch = squadData.find(p => p.nameEn.toUpperCase() === info.nameEn.toUpperCase());
+        if (squadMatch && squadMatch.photoSrc) photoSrc = squadMatch.photoSrc;
+      }
+
+      entries.push({
+        key,
+        nameKo: info.nameKo,
+        nameEn: info.nameEn,
+        teamKo: scoringTeam.nameKo,
+        teamEn: scoringTeam.nameEn,
+        teamLogo: scoringTeam.logoSrc,
+        photoSrc,
+        goals,
+        opponentKo: opponentTeam.nameKo,
+        opponentEn: opponentTeam.nameEn,
+        opponentLogo: opponentTeam.logoSrc,
+        isHome,
+        homeScore,
+        awayScore,
+        roundNum
+      });
+    });
+  }
+
+  // 1) 완전히 끝나 roundsData로 옮겨진 라운드
+  Object.keys(matchDetails).forEach(roundKey => {
+    const roundNum = parseInt(roundKey.replace('round', ''), 10);
+    matchDetails[roundKey].forEach(m => {
+      const parts = m.match.split(":").map(s => s.trim());
+      if (parts.length !== 2) return;
+
+      const homeParse = parts[0].match(/^(.+?)\s+(\d+)$/);
+      const awayParse = parts[1].match(/^(.+?)\s+(\d+)$/);
+      const homeTeam = homeParse ? teamByShortName[homeParse[1]] : null;
+      const awayTeam = awayParse ? teamByShortName[awayParse[1]] : null;
+      if (!homeTeam || !awayTeam) return;
+
+      const homeScore = parseInt(homeParse[2], 10);
+      const awayScore = parseInt(awayParse[2], 10);
+
+      collect(m.scorersHome, homeTeam, awayTeam, true, homeScore, awayScore, roundNum);
+      collect(m.scorersAway, awayTeam, homeTeam, false, homeScore, awayScore, roundNum);
+    });
+  });
+
+  // 2) 아직 진행 중인 라운드(scheduledRounds)에서 이미 스코어가 채워진 경기
+  if (typeof scheduledRounds !== 'undefined' && scheduledRounds) {
+    Object.keys(scheduledRounds).forEach(roundKey => {
+      if (roundsData[roundKey]) return; // 이미 matchDetails 쪽에서 집계됨
+      const roundNum = parseInt(roundKey.replace('round', ''), 10);
+      scheduledRounds[roundKey].forEach(m => {
+        if (m.byeKo || m.byeEn) return;
+        if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+
+        const homeTeam = findTeamByNameEn(m.homeEn);
+        const awayTeam = findTeamByNameEn(m.awayEn);
+        if (!homeTeam || !awayTeam) return;
+
+        collect(m.scorersHome, homeTeam, awayTeam, true, m.homeScore, m.awayScore, roundNum);
+        collect(m.scorersAway, awayTeam, homeTeam, false, m.homeScore, m.awayScore, roundNum);
+      });
+    });
+  }
+
+  // 골 수 많은 순, 같은 골 수면 최근 라운드 순으로 정렬
+  return entries.sort((a, b) => (b.goals - a.goals) || (b.roundNum - a.roundNum));
+}
+
+// 다득점 기록 데이터 (matchDetails 로부터 자동 계산됨. 더 이상 직접 수정할 필요 없음)
+const multiGoalGamesData = computeMultiGoalGames();
+
+// ============================================================
 // 포지션별 득점 기여도 (Goals by Position)
 // ------------------------------------------------------------
 // topScorersData(득점 순위, computeTopScorers로 이미 계산됨) 중 치주물루

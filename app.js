@@ -4551,7 +4551,7 @@
 
 
   // ===== 득점 순위표 렌더링 (Top Scorers Table) =====
-  // scorersGroupMode: 'flat'(전체 한 줄 순위) | 'team'(팀별로 묶어서 보기)
+  // scorersGroupMode: 'flat'(전체 한 줄 순위) | 'team'(팀별로 묶어서 보기) | 'multi'(다득점 기록만 모아보기)
   let scorersGroupMode = 'flat';
 
   function setScorersGroupMode(mode) {
@@ -4561,13 +4561,22 @@
       btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
     });
     const table = document.getElementById('scorersTable');
-    if (table) table.classList.toggle('grouped-by-team', mode === 'team');
+    if (table) {
+      table.classList.toggle('grouped-by-team', mode === 'team');
+      table.style.display = (mode === 'multi') ? 'none' : '';
+    }
+    const multiWrap = document.getElementById('multiGoalGroupsWrap');
+    if (multiWrap) multiWrap.style.display = (mode === 'multi') ? '' : 'none';
     renderScorersTable();
   }
 
   function renderScorersTable() {
     if (scorersGroupMode === 'team') {
       renderScorersTableByTeam();
+      return;
+    }
+    if (scorersGroupMode === 'multi') {
+      renderScorersTableMultiGoal();
       return;
     }
 
@@ -4727,6 +4736,115 @@
         `;
         tbody.appendChild(tr);
       });
+    });
+
+    refreshScrollFadeHints();
+  }
+
+  // 다득점 기록(더블골/해트트릭/4골.../5골...)을 골 수 그룹별로 묶어서 카드 형태로 보여줍니다.
+  // 골 수가 많은 그룹부터, 같은 그룹 안에서는 최근 라운드 순으로 정렬됩니다.
+  const multiGoalCollapsed = {};
+
+  function toggleMultiGoalGroup(goalsKey) {
+    multiGoalCollapsed[goalsKey] = !(multiGoalCollapsed[goalsKey] !== false);
+    renderScorersTableMultiGoal();
+  }
+
+  function multiGoalLabel(goals) {
+    if (goals === 2) return { ko: '더블골', en: 'DOUBLE' };
+    if (goals === 3) return { ko: '해트트릭', en: 'HAT-TRICK' };
+    return { ko: `${goals}골`, en: `${goals} GOALS` };
+  }
+
+  function renderScorersTableMultiGoal() {
+    const wrap = document.getElementById('multiGoalGroupsWrap');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+
+    const list = (typeof multiGoalGamesData !== 'undefined') ? multiGoalGamesData : [];
+
+    if (list.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'multigoal-empty';
+      empty.textContent = isKorean ? '아직 더블골 이상을 기록한 경기가 없습니다.' : 'No multi-goal games yet.';
+      wrap.appendChild(empty);
+      refreshScrollFadeHints();
+      return;
+    }
+
+    // 골 수별로 그룹핑 (5골 -> 4골 -> 해트트릭(3골) -> 더블골(2골) 순)
+    const groups = {};
+    list.forEach(entry => {
+      if (!groups[entry.goals]) groups[entry.goals] = [];
+      groups[entry.goals].push(entry);
+    });
+    const goalKeys = Object.keys(groups).map(Number).sort((a, b) => b - a);
+
+    goalKeys.forEach(goals => {
+      const entries = groups[goals];
+      const label = multiGoalLabel(goals);
+      const goalsKey = String(goals);
+      const isCollapsed = multiGoalCollapsed[goalsKey] === true;
+      const countKo = `${entries.length}건`;
+      const countEn = `${entries.length}`;
+
+      const groupEl = document.createElement('div');
+      groupEl.className = 'multigoal-group' + (isCollapsed ? ' collapsed' : '') + (goals >= 4 ? ' multigoal-group-super' : goals === 3 ? ' multigoal-group-hattrick' : ' multigoal-group-double');
+
+      const headEl = document.createElement('div');
+      headEl.className = 'multigoal-group-head';
+      headEl.innerHTML = `
+        <span class="multigoal-group-toggle" aria-hidden="true">&#9656;</span>
+        <span class="multigoal-group-badge lbl" data-en="${label.en}" data-ko="${label.ko}">${isKorean ? label.ko : label.en}</span>
+        <span class="multigoal-group-count lbl" data-en="${countEn} game${entries.length === 1 ? '' : 's'}" data-ko="${countKo}">${isKorean ? countKo : (countEn + (entries.length === 1 ? ' game' : ' games'))}</span>
+      `;
+      headEl.addEventListener('click', () => toggleMultiGoalGroup(goalsKey));
+      groupEl.appendChild(headEl);
+
+      const listEl = document.createElement('div');
+      listEl.className = 'multigoal-group-list';
+
+      entries.forEach(entry => {
+        const playerName = isKorean ? entry.nameKo : entry.nameEn;
+        const teamName = isKorean ? entry.teamKo : entry.teamEn;
+        const oppFullName = isKorean ? entry.opponentKo : entry.opponentEn;
+        const isMine = entry.teamEn === 'Chizumulu United FC';
+
+        const scoreLine = entry.isHome ? `${entry.homeScore} : ${entry.awayScore}` : `${entry.awayScore} : ${entry.homeScore}`;
+        const roundLabelKo = `${entry.roundNum}라운드`;
+        const roundLabelEn = `Round ${entry.roundNum}`;
+
+        const scorerPhoto = entry.photoSrc
+          ? `<img class="scorer-player-photo" src="${entry.photoSrc}" alt="${entry.nameEn}">`
+          : '';
+
+        const card = document.createElement('div');
+        card.className = 'multigoal-card' + (isMine ? ' my-team' : '');
+        card.innerHTML = `
+          <div class="multigoal-card-player">
+            ${scorerPhoto}
+            <div class="multigoal-card-player-info">
+              <span class="lbl multigoal-card-name player-name-link" data-en="${entry.nameEn}" data-ko="${entry.nameKo}" data-player-key="${entry.key}">${playerName}</span>
+              <span class="multigoal-card-team">
+                ${entry.teamLogo ? `<img class="team-logo" src="${entry.teamLogo}" alt="${entry.teamEn}">` : ''}
+                <span class="lbl" data-en="${entry.teamEn}" data-ko="${entry.teamKo}">${teamName}</span>
+              </span>
+            </div>
+          </div>
+          <div class="multigoal-card-match">
+            <span class="multigoal-card-vs">
+              ${entry.opponentLogo ? `<img class="team-logo" src="${entry.opponentLogo}" alt="${entry.opponentEn}">` : ''}
+              <span class="lbl" data-en="vs ${entry.opponentEn}" data-ko="vs ${entry.opponentKo}">vs ${oppFullName}</span>
+            </span>
+            <span class="multigoal-card-score">${scoreLine}</span>
+            <span class="lbl multigoal-card-round" data-en="${roundLabelEn}" data-ko="${roundLabelKo}">${isKorean ? roundLabelKo : roundLabelEn}</span>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+
+      groupEl.appendChild(listEl);
+      wrap.appendChild(groupEl);
     });
 
     refreshScrollFadeHints();
