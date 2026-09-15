@@ -8,11 +8,12 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '001',
-    data: '001',
-    app: '001',
+    style: '002',
+    data: '002',
+    app: '002',
     predictWorker: '001',
-    pathfinderEngine: '001'
+    pathfinderEngine: '001',
+    poster: '001'
   };
 </script>
 <!-- Google Tag Manager -->
@@ -929,44 +930,68 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 <div id="squadPlayerModal" class="modal-overlay" style="display: none;">
-  <div class="modal-content player-modal-content">
-    <div class="modal-header player-modal-header">
-      <div class="player-modal-title-wrap">
-        <img id="squadPlayerModalPhoto" class="squad-player-modal-photo" src="" alt="">
-        <div class="player-modal-title-text">
-          <h2 id="squadPlayerModalName"></h2>
-          <span id="squadPlayerModalPos" class="player-modal-team"></span>
-          <span id="squadPlayerModalNationalBadge" class="squad-player-modal-national-badge" style="display: none;"></span>
+  <div class="modal-content player-modal-content spm-content">
+    <button class="close-btn spm-close" onclick="closeSquadPlayerModal()">&times;</button>
+    <div class="modal-body player-modal-body spm-body">
+
+      <div class="spm-left" id="squadPlayerModalLeft">
+        <div class="spm-team-row">
+          <img id="squadPlayerModalTeamLogo" class="spm-team-logo" src="" alt="">
+          <span id="squadPlayerModalTeamName" class="spm-team-name"></span>
+        </div>
+
+        <div class="spm-center-block">
+          <div class="spm-photo-wrap">
+            <div class="spm-photo-ring"></div>
+            <div class="spm-photo">
+              <img id="squadPlayerModalPhoto" src="" alt="" style="display:none;">
+              <div id="squadPlayerModalPhotoFallback" class="spm-photo-fallback"></div>
+            </div>
+            <div id="squadPlayerModalNumberChip" class="spm-number-chip"></div>
+          </div>
+
+          <div class="spm-name-block">
+            <h2 id="squadPlayerModalName"></h2>
+            <div class="spm-tags">
+              <span id="squadPlayerModalPosTag" class="spm-tag spm-tag-pos"></span>
+              <span id="squadPlayerModalCaptainTag" class="spm-tag spm-tag-cap" style="display:none;">🎖️ <span class="lbl" data-en="Captain" data-ko="주장">주장</span></span>
+              <span id="squadPlayerModalNationalBadge" class="spm-tag spm-tag-flag" style="display: none;"></span>
+            </div>
+          </div>
         </div>
       </div>
-      <button class="close-btn" onclick="closeSquadPlayerModal()">&times;</button>
-    </div>
-    <div class="modal-body player-modal-body">
-      <div class="player-modal-summary squad-player-modal-summary">
-        <div class="player-modal-stat">
-          <span class="player-modal-stat-num" id="squadPlayerModalApps"></span>
-          <span class="player-modal-stat-label lbl" data-en="Appearances" data-ko="출전 경기">출전 경기</span>
+
+      <div class="spm-right">
+        <div class="spm-section-title lbl" data-en="Season Stats" data-ko="시즌 기록">시즌 기록</div>
+        <div class="spm-stat-grid">
+          <div class="spm-stat-card">
+            <span class="spm-stat-num" id="squadPlayerModalApps"></span>
+            <span class="spm-stat-label lbl" data-en="Appearances" data-ko="출전 경기">출전 경기</span>
+          </div>
+          <div class="spm-stat-card accent">
+            <span class="spm-stat-num" id="squadPlayerModalGoals"></span>
+            <span class="spm-stat-label lbl" data-en="Goals" data-ko="득점">득점</span>
+          </div>
+          <div class="spm-stat-card" id="squadPlayerModalCleanSheetsStat" style="display:none;">
+            <span class="spm-stat-num" id="squadPlayerModalCleanSheets"></span>
+            <span class="spm-stat-label lbl" data-en="Clean Sheets" data-ko="클린시트">클린시트</span>
+          </div>
+          <div class="spm-stat-card">
+            <span class="spm-stat-num spm-stat-num-split" id="squadPlayerModalStarts"></span>
+            <span class="spm-stat-label lbl" data-en="Starts / Subs" data-ko="선발 / 교체">선발 / 교체</span>
+          </div>
+          <div class="spm-stat-card">
+            <span class="spm-stat-num" id="squadPlayerModalMotm"></span>
+            <span class="spm-stat-label lbl" data-en="MOTM" data-ko="MOTM">MOTM</span>
+          </div>
         </div>
-        <div class="player-modal-stat">
-          <span class="player-modal-stat-num" id="squadPlayerModalGoals"></span>
-          <span class="player-modal-stat-label lbl" data-en="Goals" data-ko="득점">득점</span>
-        </div>
-        <div class="player-modal-stat" id="squadPlayerModalCleanSheetsStat" style="display:none;">
-          <span class="player-modal-stat-num" id="squadPlayerModalCleanSheets"></span>
-          <span class="player-modal-stat-label player-modal-stat-label-sm lbl" data-en="Clean Sheets (Starts)" data-ko="클린시트(선발기준)">클린시트(선발기준)</span>
-        </div>
-        <div class="player-modal-stat">
-          <span class="player-modal-stat-num player-modal-stat-num-split" id="squadPlayerModalStarts"></span>
-          <span class="player-modal-stat-label lbl" data-en="Starts / Subs" data-ko="선발 / 교체">선발 / 교체</span>
-        </div>
-        <div class="player-modal-stat">
-          <span class="player-modal-stat-num" id="squadPlayerModalMotm"></span>
-          <span class="player-modal-stat-label lbl" data-en="MOTM" data-ko="MOTM">MOTM</span>
-        </div>
+
+        <div id="squadPlayerModalAwardsRow" class="spm-award-row" style="display:none;"></div>
+
+        <div class="spm-section-title lbl" data-en="Recent Appearances" data-ko="최근 출전 기록">최근 출전 기록</div>
+        <div class="player-timeline" id="squadPlayerTimeline"></div>
       </div>
-      <div id="squadPlayerModalCaptainNote" class="squad-player-modal-note"></div>
-      <div id="squadPlayerModalAwardsNote" class="squad-player-modal-note squad-player-modal-awards-note"></div>
-      <div class="player-timeline" id="squadPlayerTimeline"></div>
+
     </div>
   </div>
 </div>
@@ -1084,6 +1109,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script>
   document.write('<script src="pathfinder-engine.js?v=' + window.ASSET_VERSIONS.pathfinderEngine + '"><\/script>');
   document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
+  document.write('<script src="poster.js?v=' + window.ASSET_VERSIONS.poster + '"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
 </script>
 </body>

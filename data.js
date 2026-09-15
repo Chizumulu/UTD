@@ -965,8 +965,8 @@ const matchDetails = {
     },
     {
       match: "마푸 2 : 에크웬데니 2",
-      scorersHome: "와낭과 가마, 노먼 은들로부",
-      scorersAway: "와티파 니렌다(2골)"
+      scorersHome: "WANANGWA GAMA, NORMAN NDLOVU",
+      scorersAway: "WATIPA NYIRENDA (2골)"
     }
   ]
 };
@@ -1182,7 +1182,7 @@ const roundsData = {
     // 열립니다. 다만 현재 데이터 구조(leagueData.venue)는 팀별 홈구장만 지원하고
     // 경기별 구장 재정의 필드는 없어서, 이 특이사항은 화면에는 표시되지 않고
     // 주석으로만 남겨둡니다.
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-10", kickoffTime: "14:30", movedFromWeek: 7, homeScore: 2, awayScore: 2, scorersHome: "와낭과 가마, 노먼 은들로부", scorersAway: "와티파 니렌다(2골)" }
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-10", kickoffTime: "14:30", movedFromWeek: 7, homeScore: 2, awayScore: 2, scorersHome: "WANANGWA GAMA, NORMAN NDLOVU", scorersAway: "WATIPA NYIRENDA (2골)" }
   ]
 };
 
@@ -2167,6 +2167,7 @@ const playerDirectory = {
   "JAMES ZONGA": { nameKo: "제임스 존가", nameEn: "James Zonga" },
   "CHARLES KAMANGA": { nameKo: "찰스 카망가", nameEn: "Charles Kamanga" },
   "WANANGWA GAMA": { nameKo: "와낭과 가마", nameEn: "Wanangwa Gama" },
+  "WATIPA NYIRENDA": { nameKo: "와티파 니렌다", nameEn: "Watipa Nyirenda" },
   "PHILIMON PHIRI": { nameKo: "필리몬 피리", nameEn: "Philimon Phiri" },
   "SOLOMON MANDA": { nameKo: "솔로몬 만다", nameEn: "Solomon Manda" },
   "THURASON SHABA": { nameKo: "투라손 샤바", nameEn: "Thurason Shaba" },

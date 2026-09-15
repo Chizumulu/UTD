@@ -1290,6 +1290,10 @@
           <div class="report-rival-title lbl" data-en="What it means for the race" data-ko="다른 팀 결과가 미친 영향">${isKorean ? '다른 팀 결과가 미친 영향' : 'What it means for the race'}</div>
           ${rivalHtml}
         </div>` : ''}
+        <button class="export-img-btn report-poster-btn" id="resultPosterBtn" onclick="downloadMatchPoster('result','resultPosterBtn')">
+          <svg class="export-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17V18C4 19.657 5.343 21 7 21H17C18.657 21 20 19.657 20 18V17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="lbl" data-en="Download Poster" data-ko="포스터 다운로드">${isKorean ? '포스터 다운로드' : 'Download Poster'}</span>
+        </button>
       </section>
     `;
 
@@ -1394,6 +1398,10 @@
         ${aiHtml}
         ${narrativeHtml}
         ${watchFixtureHtml}
+        <button class="export-img-btn report-poster-btn" id="previewPosterBtn" onclick="downloadMatchPoster('preview','previewPosterBtn')">
+          <svg class="export-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17V18C4 19.657 5.343 21 7 21H17C18.657 21 20 19.657 20 18V17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="lbl" data-en="Download Poster" data-ko="포스터 다운로드">${isKorean ? '포스터 다운로드' : 'Download Poster'}</span>
+        </button>
       </section>
     `;
   }
@@ -5706,6 +5714,124 @@
     }
   }
 
+  // ===================================================================
+  // ===== 매치데이 포스터 다운로드 (주차별 리포트 카드에서 호출) =====
+  // 실제 그림은 poster.js(MatchPoster)가 담당하고, 여기서는 리포트/예측
+  // 데이터를 캔버스가 필요로 하는 형태로만 가공합니다. 팀 로고는 이미
+  // getTeamLogo()로 매핑돼 있는 실제 크레스트 경로를 그대로 재사용합니다.
+  // ===================================================================
+  function parseScorerNames(raw) {
+    if (!raw || raw === '없음') return [];
+    return raw.split(',').map(s => s.trim()).filter(Boolean);
+  }
+
+  async function downloadMatchPoster(kind, btnId) {
+    if (typeof MatchPoster === 'undefined') {
+      alert(isKorean ? '포스터 모듈을 불러오지 못했습니다.' : 'Poster module failed to load.');
+      return;
+    }
+    const btn = btnId ? document.getElementById(btnId) : null;
+    const btnLabel = btn ? btn.querySelector('.lbl') : null;
+    const originalLabel = btnLabel ? btnLabel.textContent : '';
+    if (btn) btn.disabled = true;
+    if (btnLabel) btnLabel.textContent = isKorean ? '생성 중...' : 'Generating...';
+
+    try {
+      const weekLabelText = (document.getElementById('weekLabel') || {}).textContent || '';
+      let data, drawFn, filenamePart;
+
+      if (kind === 'result') {
+        const roundKey = latestReportReadyRoundKey();
+        const report = roundKey ? buildRoundResultReport(roundKey) : null;
+        if (!report || report.isBye) {
+          alert(isKorean ? '아직 완료된 경기 결과가 없어요.' : 'No completed match result yet.');
+          return;
+        }
+        const homeEn = report.isHome ? REPORT_TEAM_EN : report.oppEn;
+        const homeKo = report.isHome ? REPORT_TEAM_KO : report.oppKo;
+        const awayEn = report.isHome ? report.oppEn : REPORT_TEAM_EN;
+        const awayKo = report.isHome ? report.oppKo : REPORT_TEAM_KO;
+        const homeScore = report.isHome ? report.myGoals : report.oppGoals;
+        const awayScore = report.isHome ? report.oppGoals : report.myGoals;
+
+        const matches = buildRoundMatches(report.roundKey);
+        const myMatch = matches.find(m => !m.isBye &&
+          (isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo)));
+
+        const [homeLogo, awayLogo] = await Promise.all([
+          loadImageForExport(getTeamLogo(homeEn)),
+          loadImageForExport(getTeamLogo(awayEn))
+        ]);
+
+        data = {
+          isKorean,
+          roundLabel: isKorean ? `${report.weekNum}주차 경기 결과` : `Round ${report.weekNum} Result`,
+          weekLabel: weekLabelText,
+          homeKo, awayKo, homeScore, awayScore,
+          result: report.result,
+          homeLogo, awayLogo,
+          venue: myMatch ? (myMatch.venue || '') : '',
+          homeScorers: myMatch ? parseScorerNames(myMatch.scorersHome) : [],
+          awayScorers: myMatch ? parseScorerNames(myMatch.scorersAway) : []
+        };
+        drawFn = MatchPoster.drawResultPoster;
+        filenamePart = `result_wk${report.weekNum}`;
+      } else {
+        const pred = buildRoundPredictionReport();
+        if (!pred || pred.isBye) {
+          alert(isKorean ? '아직 예정된 다음 경기가 없어요.' : 'No upcoming fixture to preview yet.');
+          return;
+        }
+        const [homeLogo, awayLogo] = await Promise.all([
+          loadImageForExport(getTeamLogo(pred.homeEn)),
+          loadImageForExport(getTeamLogo(pred.awayEn))
+        ]);
+        const kickoffTxt = (pred.kickoffDate && pred.kickoffTime) ? formatKickoff(pred) : '';
+
+        data = {
+          isKorean,
+          roundLabel: isKorean ? `${pred.weekNum}주차 매치데이` : `Round ${pred.weekNum} Matchday`,
+          weekLabel: weekLabelText,
+          homeKo: pred.homeKo, awayKo: pred.awayKo,
+          homeLogo, awayLogo,
+          dateText: pred.kickoffDate || '',
+          timeText: kickoffTxt,
+          venue: ''
+        };
+        drawFn = MatchPoster.drawPreviewPoster;
+        filenamePart = `preview_wk${pred.weekNum}`;
+      }
+
+      const { w, h } = MatchPoster.SIZE;
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      drawFn(ctx, w, h, data);
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert(isKorean ? '포스터 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to generate the poster. Please try again.');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chizumulu_${filenamePart}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      }, 'image/png');
+    } catch (err) {
+      console.error('매치데이 포스터 생성 실패:', err);
+      alert(isKorean ? '포스터 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to generate the poster. Please try again.');
+    } finally {
+      if (btn) btn.disabled = false;
+      if (btnLabel) btnLabel.textContent = originalLabel;
+    }
+  }
+
   // 완전 동률일 때 치주물루 유나이티드(팀 또는 소속 선수)를 동률 그룹의
   // 맨 위로 올려주는 공용 타이브레이커 함수들
   function teamMineFirst(a, b) {
@@ -7629,12 +7755,28 @@
       captainCount: 0, motmCount: 0, history: []
     };
 
-    document.getElementById('squadPlayerModalPhoto').src = player.photoSrc || '';
-    document.getElementById('squadPlayerModalPhoto').alt = player.nameEn;
-    document.getElementById('squadPlayerModalPhoto').style.display = player.photoSrc ? '' : 'none';
+    const photoImgEl = document.getElementById('squadPlayerModalPhoto');
+    const photoFallbackEl = document.getElementById('squadPlayerModalPhotoFallback');
+    photoImgEl.src = player.photoSrc || '';
+    photoImgEl.alt = player.nameEn;
+    photoImgEl.style.display = player.photoSrc ? '' : 'none';
+    photoFallbackEl.style.display = player.photoSrc ? 'none' : '';
+    photoFallbackEl.textContent = player.photoSrc ? '' : player.number;
+
+    document.getElementById('squadPlayerModalNumberChip').textContent = player.number;
+    document.getElementById('squadPlayerModalLeft').setAttribute('data-num', player.number);
+
+    const myTeamObj = reportTeamByNameEn(REPORT_TEAM_EN);
+    document.getElementById('squadPlayerModalTeamLogo').src = myTeamObj ? myTeamObj.logoSrc : '';
+    document.getElementById('squadPlayerModalTeamLogo').alt = REPORT_TEAM_EN;
+    document.getElementById('squadPlayerModalTeamName').textContent = isKorean ? REPORT_TEAM_KO : REPORT_TEAM_EN;
+
     document.getElementById('squadPlayerModalName').textContent = isKorean ? player.nameKo : player.nameEn;
     const posLabel = POSITION_LABEL[player.position] ? (isKorean ? POSITION_LABEL[player.position].ko : POSITION_LABEL[player.position].en) : player.position;
-    document.getElementById('squadPlayerModalPos').textContent = `#${player.number} · ${posLabel}`;
+    document.getElementById('squadPlayerModalPosTag').textContent = `${posLabel} · #${player.number}`;
+
+    const captainTagEl = document.getElementById('squadPlayerModalCaptainTag');
+    captainTagEl.style.display = player.isCaptain ? '' : 'none';
 
     const nationalBadgeEl = document.getElementById('squadPlayerModalNationalBadge');
     if (player.nationalBadge) {
@@ -7666,44 +7808,38 @@
       csStatEl.style.display = 'none';
     }
 
-    const noteEl = document.getElementById('squadPlayerModalCaptainNote');
-    if (stats.captainCount > 0) {
-      noteEl.style.display = '';
-      noteEl.innerHTML = isKorean
-        ? `🎖️ 주장 선발 출전 <b>${stats.captainCount}</b>회`
-        : `🎖️ Started as captain <b>${stats.captainCount}</b> time(s)`;
-    } else {
-      noteEl.style.display = 'none';
-      noteEl.innerHTML = '';
-    }
-
-    // 이달의 선수 / 이달의 골 수상 배지 (수상 경력이 있는 선수에게만 표시)
-    const awardsNoteEl = document.getElementById('squadPlayerModalAwardsNote');
+    // 주장 선발 출전 횟수 + 이달의 선수/이달의 골/MOTM 수상 경력을 하나의 칩 목록으로 모아 보여줍니다.
+    const awardsRowEl = document.getElementById('squadPlayerModalAwardsRow');
     const potmCount = stats.potmCount || 0;
     const gotmCount = stats.gotmCount || 0;
     const motmCount = stats.motmCount || 0;
-    const awardBadges = [];
+    const awardChips = [];
+    if (stats.captainCount > 0) {
+      awardChips.push(isKorean
+        ? `🎖️ 주장 선발 출전 <b>${stats.captainCount}</b>회`
+        : `🎖️ Started as captain <b>${stats.captainCount}</b> time(s)`);
+    }
     if (potmCount > 0) {
-      awardBadges.push(isKorean
+      awardChips.push(isKorean
         ? `🏅 이달의 선수 <b>${potmCount}</b>회`
         : `🏅 Player of the Month <b>${potmCount}</b> time(s)`);
     }
     if (gotmCount > 0) {
-      awardBadges.push(isKorean
+      awardChips.push(isKorean
         ? `⚽ 이달의 골 <b>${gotmCount}</b>회`
         : `⚽ Goal of the Month <b>${gotmCount}</b> time(s)`);
     }
     if (motmCount > 0) {
-      awardBadges.push(isKorean
+      awardChips.push(isKorean
         ? `🎗️ MOTM <b>${motmCount}</b>회`
         : `🎗️ MOTM <b>${motmCount}</b> time(s)`);
     }
-    if (awardBadges.length > 0) {
-      awardsNoteEl.style.display = '';
-      awardsNoteEl.innerHTML = awardBadges.join('<span class="squad-player-modal-awards-sep"> · </span>');
+    if (awardChips.length > 0) {
+      awardsRowEl.style.display = '';
+      awardsRowEl.innerHTML = awardChips.map(chip => `<span class="spm-award-chip">${chip}</span>`).join('');
     } else {
-      awardsNoteEl.style.display = 'none';
-      awardsNoteEl.innerHTML = '';
+      awardsRowEl.style.display = 'none';
+      awardsRowEl.innerHTML = '';
     }
 
     const listEl = document.getElementById('squadPlayerTimeline');

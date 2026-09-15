@@ -4083,6 +4083,269 @@
     }
   }
 
+  /* =====================================================
+     선수 상세창(스쿼드) - FM/FC 온라인 스타일 리디자인
+     PC(721px 이상)에서는 좌측 초상 패널 + 우측 스탯 패널의
+     2단 레이아웃으로, 모바일에서는 위아래로 쌓이는 1단 레이아웃으로 보입니다.
+     ===================================================== */
+  .spm-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0,0,0,0.28);
+    color: var(--color-white);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 5;
+    opacity: 1;
+    transition: background 0.15s ease;
+  }
+  .spm-close:hover { background: rgba(0,0,0,0.45); }
+
+  .spm-content {
+    max-width: 460px;
+    position: relative;
+  }
+  .spm-body {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* --- 좌측: 선수 초상 패널 --- */
+  .spm-left {
+    position: relative;
+    background:
+      radial-gradient(circle at 30% 0%, rgba(255,255,255,0.10), transparent 55%),
+      linear-gradient(165deg, var(--color-navy-light) 0%, var(--color-navy) 45%, var(--color-navy-deep, #001c42) 100%);
+    color: var(--color-white);
+    padding: 28px 22px 22px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .spm-team-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .spm-team-logo {
+    width: 24px; height: 24px;
+    border-radius: var(--radius-xs);
+    background: rgba(255,255,255,0.12);
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .spm-team-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+  }
+  .spm-photo-wrap {
+    position: relative;
+    width: 150px; height: 150px;
+    margin: 4px auto 16px;
+  }
+  .spm-photo-ring {
+    position: absolute; inset: -5px;
+    border-radius: 50%;
+    background: conic-gradient(from 220deg, var(--color-gold), var(--color-gold-strong), var(--color-gold));
+    opacity: 0.9;
+  }
+  .spm-photo {
+    position: relative;
+    width: 150px; height: 150px;
+    border-radius: 50%;
+    background: linear-gradient(160deg, #3a4a6b, #223154);
+    border: 4px solid var(--color-navy-deep, #001c42);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .spm-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .spm-photo-fallback {
+    font-size: 42px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.55);
+    font-family: var(--font-num);
+  }
+  /* 등번호는 사진 원과 겹치지 않도록 오른쪽 바깥으로 살짝 나오는 리본형 뱃지로 배치합니다 */
+  .spm-number-chip {
+    position: absolute;
+    top: 2px; right: -4px;
+    background: linear-gradient(155deg, var(--color-gold), var(--color-gold-strong));
+    color: #2b1c04;
+    font-family: var(--font-num);
+    font-weight: 800;
+    font-size: 15px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 4px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(255,255,255,0.85);
+    box-shadow: 0 5px 12px rgba(0,0,0,0.35);
+  }
+  .spm-name-block { text-align: center; }
+  .spm-name-block h2 {
+    margin: 4px 0 10px;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .spm-tags {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .spm-tag {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.18);
+    white-space: nowrap;
+  }
+  .spm-tag-pos { background: var(--color-teal); border-color: transparent; }
+  .spm-tag-cap {
+    background: var(--color-gold-strong);
+    color: #2b1c04;
+    border-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .spm-tag-flag { display: inline-flex; align-items: center; gap: 5px; }
+  .spm-tag-flag .national-flag-icon { flex-shrink: 0; border-radius: 2px; display: block; }
+
+  /* --- 우측: 시즌 기록 / 수상 / 타임라인 패널 --- */
+  .spm-right {
+    padding: 20px 20px 22px;
+    background: var(--color-surface);
+    flex-shrink: 0;
+  }
+  .spm-section-title {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--color-brand-text);
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .spm-section-title:not(:first-child) { margin-top: 20px; }
+  .spm-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(var(--color-navy-rgb),0.18), transparent);
+  }
+  .spm-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .spm-stat-card {
+    background: var(--color-bg-stripe);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    padding: 10px 6px;
+    text-align: center;
+  }
+  .spm-stat-num {
+    display: block;
+    font-family: var(--font-num);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--color-stat-value);
+    line-height: 1.15;
+  }
+  .spm-stat-card.accent .spm-stat-num { color: var(--color-teal-dark, var(--color-teal)); }
+  .spm-stat-num-split { font-size: 15.5px; white-space: nowrap; }
+  .spm-stat-label {
+    display: block;
+    margin-top: 3px;
+    font-size: 10.5px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+  .spm-award-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+  .spm-award-chip {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #fff6e4, #fbecc9);
+    border: 1px solid var(--color-gold);
+    color: #6b4f12;
+  }
+
+  /* --- PC(721px+): 좌우 2단 레이아웃, 팝업 확대 --- */
+  @media (min-width: 721px) {
+    .spm-content {
+      max-width: 880px;
+      width: 92%;
+    }
+    .spm-body {
+      flex-direction: row;
+      overflow: hidden;
+    }
+    .spm-left {
+      width: 300px;
+      flex-shrink: 0;
+      padding: 34px 28px 28px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    /* 좌측 패널 하단에 남는 여백을 채우기 위해 등번호를 큰 워터마크로 은은하게 깔고,
+       사진+이름 블록은 team-row 아래 남은 공간 안에서 수직 중앙에 오도록 정렬합니다. */
+    .spm-left::before {
+      content: attr(data-num);
+      position: absolute;
+      right: -12px;
+      bottom: -40px;
+      font-family: var(--font-num);
+      font-size: 180px;
+      font-weight: 800;
+      color: rgba(255,255,255,0.05);
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+    }
+    .spm-photo-wrap { width: 180px; height: 180px; margin: 6px auto 18px; }
+    .spm-photo { width: 180px; height: 180px; }
+    .spm-photo-fallback { font-size: 54px; }
+    .spm-number-chip { top: 6px; right: -6px; font-size: 19px; min-width: 40px; height: 40px; border-radius: 12px; }
+    .spm-name-block h2 { font-size: 23px; }
+    .spm-center-block {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 0;
+    }
+    .spm-right {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px 32px;
+    }
+    .spm-stat-grid { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+  }
+
   /* ===== Squad View ===== */
   .squad-header {
     display: flex;
@@ -5589,6 +5852,13 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+  /* 리포트 카드 하단의 "포스터 다운로드" 버튼 — 기존 이미지 저장 버튼과
+     같은 필 스타일을 쓰되, 카드 안에서는 위쪽 여백만 살짝 띄워 붙입니다. */
+  .report-poster-btn {
+    margin-top: 16px;
+    justify-content: center;
+    width: 100%;
   }
   .report-rival-title {
     font-size: 12px;
