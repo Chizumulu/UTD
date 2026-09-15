@@ -990,14 +990,16 @@ const upcomingMatchHistory = {
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
   round11: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-09-18", kickoffTime: "15:00" },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-19", kickoffTime: "14:30" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-09-19", kickoffTime: "14:30" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-19", kickoffTime: "14:30" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-20", kickoffTime: "14:30" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-20", kickoffTime: "14:30" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-09-20", kickoffTime: "14:30" },
-    { byeKo: "비전 S 아카데미", byeEn: "Vision S Academy" }
+    { byeKo: "비전 S 아카데미", byeEn: "Vision S Academy" },
+    // 10주차에서 연기됐던 에우티니 vs 루베 마스터즈 경기가 11주차 경기로 확정되었습니다.
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-16", kickoffTime: "14:30", movedFromWeek: 10 }
   ],
   round12: [
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-26", kickoffTime: "14:30" },
@@ -1174,7 +1176,7 @@ const roundsData = {
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "THURASON SHABA (3골)", scorersAway: "BLESSINGS NYASULU" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 1, awayScore: 1, scorersHome: "ZIKANI KASAMBALA", scorersAway: "NORMAN NDLOVU" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "ALICK CHAVULA (2골)", scorersAway: "YAMIKANI NYIRENDA" },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", postponed: true },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", postponed: true, movedToWeek: 11 },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "MASSA YOLLAM", scorersAway: "TIMOTHY KATAPA, DICKIES NYIRENDA" },
     { byeKo: "에크웬데니 FC", byeEn: "Ekwendeni FC" },
     // 7주차에서 연기됐던 마푸 vs 에크웬데니 경기가 10주차 경기로 확정되었습니다.
