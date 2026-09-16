@@ -299,7 +299,7 @@ const matchLineups = {
     starters: [
       { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"] },
       { pos: "LW", number: 49, nameKo: "쿰부카니" },
-      { pos: "CAM", number: 10, nameKo: "찰스" },
+      { pos: "CAM", number: 10, nameKo: "찰스", outMin: "전반" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
       { pos: "LCM", number: 98, nameKo: "스티브" },
       { pos: "RCM", number: 7, nameKo: "디킨스", goals: ["-"] },
@@ -309,8 +309,10 @@ const matchLineups = {
       { pos: "RB", number: 25, nameKo: "모버트" },
       { pos: "GK", number: 88, nameKo: "티나시" }
     ],
-    subsIn: [],
-    subsUnused: [1, 8, 11, 20, 66, 77, 80],
+    subsIn: [
+      { number: 8, nameKo: "엑스퍼트", pos: "CAM", inMin: "전반" }
+    ],
+    subsUnused: [1, 11, 20, 66, 77, 80],
     recentHistory: [
       { comp: "26/27 시즌 NRFA 리그 원 10주차", score: "치주물루 2 : 1 음벨와", result: "치주물루 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 19주차", score: "음벨와 4 : 1 치주물루", result: "음벨와 승" },
