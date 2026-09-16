@@ -1001,7 +1001,7 @@ const scheduledRounds = {
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-09-20", kickoffTime: "14:30" },
     { byeKo: "비전 S 아카데미", byeEn: "Vision S Academy" },
     // 10주차에서 연기됐던 에우티니 vs 루베 마스터즈 경기가 11주차 경기로 확정되었습니다.
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-16", kickoffTime: "14:30", movedFromWeek: 10 }
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-16", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 5, awayScore: 2, scorersHome: "ELIAS BOTTOMAN, JACK GAMA (2골), MUSA PHIRI", scorersAway: "RHEMA MAKAMO, FORTUNE CHILAMBO" }
   ],
   round12: [
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-26", kickoffTime: "14:30" },
@@ -2192,7 +2192,12 @@ const playerDirectory = {
   "ZIKANI KASAMBALA": { nameKo: "지카니 카삼발라", nameEn: "Zikani Kasambala" },
   "MLEZA NYIRONGO": { nameKo: "믈레자 니롱고", nameEn: "Mleza Nyirongo" },
   "ANDREW KAMANGA": { nameKo: "앤드류 카망가", nameEn: "Andrew Kamanga" },
-  "NORMAN NDLOVU": { nameKo: "노먼 은들로부", nameEn: "Norman Ndlovu" }
+  "NORMAN NDLOVU": { nameKo: "노먼 은들로부", nameEn: "Norman Ndlovu" },
+  "ELIAS BOTTOMAN": { nameKo: "엘리아스 보토만", nameEn: "Elias Bottoman" },
+  "JACK GAMA": { nameKo: "잭 가마", nameEn: "Jack Gama" },
+  "RHEMA MAKAMO": { nameKo: "레마 마카모", nameEn: "Rhema Makamo" },
+  "FORTUNE CHILAMBO": { nameKo: "포춘 칠람보", nameEn: "Fortune Chilambo" },
+  "MUSA PHIRI": { nameKo: "무사 피리", nameEn: "Musa Phiri" }
 };
 
 function toTitleCase(upperName) {
