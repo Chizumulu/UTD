@@ -983,7 +983,15 @@ const upcomingMatchHistory = {
     recentHistory: [
       { comp: "2025 카스텔 챌린지컵 4라운드", score: "치주물루 1 : 2 칠룸바", result: "칠룸바 승" },
       { comp: "2025 FDH 뱅크컵 2라운드", score: "칠룸바 3 : 1 치주물루", result: "칠룸바 승" },
-      { comp: "2024 카스텔컵 북부 지역 예선", score: "치주물루 3 : 3 칠룸바 (PSO 4:1)", result: "무승부" }
+      { comp: "24시즌 카스텔컵 북부 지역 예선", score: "치주물루 3 : 3 칠룸바 (PSO 4:1)", result: "무승부" }
+    ]
+  },
+  round12: {
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 25주차", score: "치바비 2 : 0 치주물루", result: "치바비 승" },
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 14주차", score: "치주물루 2 : 2 치바비", result: "무승부" },
+      { comp: "24시즌 MNRF 심소 프리미어 리그(8월 25일)", score: "치바비 5 : 0 치주물루", result: "치바비 승" },
+      { comp: "24시즌 MNRF 심소 프리미어 리그(5월 22일)", score: "치주물루 4 : 1 치바비", result: "치주물루 승" }
     ]
   }
 };
