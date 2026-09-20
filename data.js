@@ -970,6 +970,42 @@ const matchDetails = {
       scorersHome: "WANANGWA GAMA, NORMAN NDLOVU",
       scorersAway: "WATIPA NYIRENDA (2골)"
     }
+  ],
+  // 11주차는 전체 라운드가 종료되어 roundsData.round11로 옮겨졌으므로 matchDetails.round11을
+  // 아래에 새로 추가했습니다. 치주물루 vs 칠룸바, 루베 vs 젠다는 연기(postponed)라
+  // 스코어가 없어 matchDetails에는 넣지 않습니다 — 나중에 결과가 나오면 이 목록 맨 뒤에 추가해주세요.
+  // (순서는 roundsData.round11의 스코어가 있는 경기 순서와 같아야 합니다.)
+  round11: [
+    {
+      match: "에크웬데니 1 : 에우티니 0",
+      scorersHome: "ALBERT KAUNDA",
+      scorersAway: "없음"
+    },
+    {
+      match: "라이플리 5 : 치폴로폴로 0",
+      scorersHome: "YAMIKANI NYIRENDA, JASON ZIMBA, JONATHAN MGUNTHA, KONDWANI CHIRWA, MOFFAT MVULA",
+      scorersAway: "없음"
+    },
+    {
+      match: "마푸 3 : 루비리 1",
+      scorersHome: "NORMAN NDLOVU (2골), PRECIOUS MWANZA",
+      scorersAway: "MISHECK SILVESTER"
+    },
+    {
+      match: "치하메 3 : 음벨와 5",
+      scorersHome: "FRANK KAUNDA (3골)",
+      scorersAway: "LUKE JERE (3골), LEVISON SILUNGWE, BENSON KACHALI"
+    },
+    {
+      match: "친테체 1 : 치바비 2",
+      scorersHome: "JIMMY KALANJE",
+      scorersAway: "ISSA HASSAN, MARKO PHIRI (자책골)"
+    },
+    {
+      match: "에우티니 5 : 루베 2",
+      scorersHome: "ELIAS BOTTOMAN, JACK GAMA (2골), MUSA PHIRI",
+      scorersAway: "RHEMA MAKAMO, FORTUNE CHILAMBO"
+    }
   ]
 };
 
@@ -999,18 +1035,6 @@ const upcomingMatchHistory = {
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
-  round11: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-20", kickoffTime: "14:30" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", postponed: true },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-20", kickoffTime: "14:30" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-19", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "NORMAN NDLOVU (2골), PRECIOUS MWANZA", scorersAway: "MISHECK SILVESTER" },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-19", kickoffTime: "14:30", homeScore: 3, awayScore: 5, scorersHome: "FRANK KAUNDA (3골)", scorersAway: "LUKE JERE (3골), LEVISON SILUNGWE, BENSON KACHALI" },
-    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-09-20", kickoffTime: "14:30" },
-    { byeKo: "비전 S 아카데미", byeEn: "Vision S Academy" },
-    // 10주차에서 연기됐던 에우티니 vs 루베 마스터즈 경기가 11주차 경기로 확정되었습니다.
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-16", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 5, awayScore: 2, scorersHome: "ELIAS BOTTOMAN, JACK GAMA (2골), MUSA PHIRI", scorersAway: "RHEMA MAKAMO, FORTUNE CHILAMBO" }
-  ],
   round12: [
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-26", kickoffTime: "14:30" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-26", kickoffTime: "14:30" },
@@ -1195,6 +1219,22 @@ const roundsData = {
     // 경기별 구장 재정의 필드는 없어서, 이 특이사항은 화면에는 표시되지 않고
     // 주석으로만 남겨둡니다.
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-10", kickoffTime: "14:30", movedFromWeek: 7, homeScore: 2, awayScore: 2, scorersHome: "WANANGWA GAMA, NORMAN NDLOVU", scorersAway: "WATIPA NYIRENDA (2골)" }
+  ],
+  // 11주차는 전체 라운드가 종료되어 roundsData.round11로 옮겨졌습니다.
+  // 단, 치주물루 vs 칠룸바 / 루베 vs 젠다 경기는 연기(postponed)되어 스코어가 아직 없습니다.
+  // (round7의 마푸 vs 에크웬데니와 동일한 패턴 — 새 날짜가 확정되고 스코어가
+  // 채워지면 postponed를 지우고 matchDetails.round11 목록 맨 뒤에 추가해주세요.)
+  round11: [
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "ALBERT KAUNDA", scorersAway: "없음" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", postponed: true },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 5, awayScore: 0, scorersHome: "YAMIKANI NYIRENDA, JASON ZIMBA, JONATHAN MGUNTHA, KONDWANI CHIRWA, MOFFAT MVULA", scorersAway: "없음" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-19", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "NORMAN NDLOVU (2골), PRECIOUS MWANZA", scorersAway: "MISHECK SILVESTER" },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-19", kickoffTime: "14:30", homeScore: 3, awayScore: 5, scorersHome: "FRANK KAUNDA (3골)", scorersAway: "LUKE JERE (3골), LEVISON SILUNGWE, BENSON KACHALI" },
+    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "JIMMY KALANJE", scorersAway: "ISSA HASSAN, MARKO PHIRI (자책골)" },
+    { byeKo: "비전 S 아카데미", byeEn: "Vision S Academy" },
+    // 10주차에서 연기됐던 에우티니 vs 루베 마스터즈 경기가 11주차 경기로 확정되었습니다.
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-16", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 5, awayScore: 2, scorersHome: "ELIAS BOTTOMAN, JACK GAMA (2골), MUSA PHIRI", scorersAway: "RHEMA MAKAMO, FORTUNE CHILAMBO" }
   ]
 };
 
@@ -2210,7 +2250,11 @@ const playerDirectory = {
   "LEVISON SILUNGWE": { nameKo: "레비슨 실룽웨", nameEn: "Levison Silungwe" },
   "BENSON KACHALI": { nameKo: "벤슨 카찰리", nameEn: "Benson Kachali" },
   "PRECIOUS MWANZA": { nameKo: "프레셔스 므완자", nameEn: "Precious Mwanza" },
-  "MISHECK SILVESTER": { nameKo: "미셰크 실베스터", nameEn: "Misheck Silvester" }
+  "MISHECK SILVESTER": { nameKo: "미셰크 실베스터", nameEn: "Misheck Silvester" },
+  "ALBERT KAUNDA": { nameKo: "앨버트 카운다", nameEn: "Albert Kaunda" },
+  "JASON ZIMBA": { nameKo: "제이슨 짐바", nameEn: "Jason Zimba" },
+  "JONATHAN MGUNTHA": { nameKo: "조나단 음군타", nameEn: "Jonathan Mguntha" },
+  "MARKO PHIRI": { nameKo: "마르코 피리", nameEn: "Marko Phiri" }
 };
 
 function toTitleCase(upperName) {
@@ -2728,6 +2772,9 @@ function generateRemainingFixtures() {
     (roundsData[roundKey] || []).forEach(m => {
       if (m.byeKo || m.byeEn) return;
       if (!m.postponed) return;
+      // 다른 주차로 이동이 확정된 경기(movedToWeek)는 이미 그 주차(scheduledRounds/roundsData)에
+      // 별도 항목으로 들어 있으므로, 여기서 또 세면 같은 경기가 이중으로 집계됩니다.
+      if (m.movedToWeek) return;
       if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
       const home = teamByEn[m.homeEn];
       const away = teamByEn[m.awayEn];
