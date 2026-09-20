@@ -1004,8 +1004,8 @@ const scheduledRounds = {
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-20", kickoffTime: "14:30" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", postponed: true },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-20", kickoffTime: "14:30" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-19", kickoffTime: "14:30" },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-19", kickoffTime: "14:30" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-19", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "NORMAN NDLOVU (2골), PRECIOUS MWANZA", scorersAway: "MISHECK SILVESTER" },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-19", kickoffTime: "14:30", homeScore: 3, awayScore: 5, scorersHome: "FRANK KAUNDA (3골)", scorersAway: "LUKE JERE (3골), LEVISON SILUNGWE, BENSON KACHALI" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-09-20", kickoffTime: "14:30" },
     { byeKo: "비전 S 아카데미", byeEn: "Vision S Academy" },
     // 10주차에서 연기됐던 에우티니 vs 루베 마스터즈 경기가 11주차 경기로 확정되었습니다.
@@ -2205,7 +2205,12 @@ const playerDirectory = {
   "JACK GAMA": { nameKo: "잭 가마", nameEn: "Jack Gama" },
   "RHEMA MAKAMO": { nameKo: "레마 마카모", nameEn: "Rhema Makamo" },
   "FORTUNE CHILAMBO": { nameKo: "포춘 칠람보", nameEn: "Fortune Chilambo" },
-  "MUSA PHIRI": { nameKo: "무사 피리", nameEn: "Musa Phiri" }
+  "MUSA PHIRI": { nameKo: "무사 피리", nameEn: "Musa Phiri" },
+  "FRANK KAUNDA": { nameKo: "프랭크 카운다", nameEn: "Frank Kaunda" },
+  "LEVISON SILUNGWE": { nameKo: "레비슨 실룽웨", nameEn: "Levison Silungwe" },
+  "BENSON KACHALI": { nameKo: "벤슨 카찰리", nameEn: "Benson Kachali" },
+  "PRECIOUS MWANZA": { nameKo: "프레셔스 므완자", nameEn: "Precious Mwanza" },
+  "MISHECK SILVESTER": { nameKo: "미셰크 실베스터", nameEn: "Misheck Silvester" }
 };
 
 function toTitleCase(upperName) {
