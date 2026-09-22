@@ -1065,6 +1065,28 @@
     background: var(--color-surface);
     border-radius: var(--radius-pill);
     box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.10);
+    position: relative;
+  }
+  /* ===== 순위 필터 / 득점왕 모드 버튼용 슬라이딩 필 인디케이터 =====
+     구단정보 탭(.ti-tab-indicator)과 같은 방식: 활성 버튼 뒤로 흐르듯 이동하는
+     배경을 만들어서, 버튼이 바뀔 때 색만 뚝 바뀌는 대신 실제로 이동하는 것처럼 보이게 합니다. */
+  .seg-indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: 0;
+    border-radius: var(--radius-pill);
+    background: var(--color-navy);
+    box-shadow: 0 2px 8px rgba(var(--color-navy-rgb),0.3);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .seg-indicator.is-ready { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .seg-indicator { transition: none; }
   }
   .rank-form-note {
     margin: -6px 0 12px;
@@ -1324,16 +1346,18 @@
     font-size: 12.5px;
     font-weight: 700;
     white-space: nowrap;
-    transition: all 0.2s;
+    transition: color 0.2s;
+    position: relative;
+    z-index: 1;
   }
   .rank-filter-btn:hover {
     background: var(--color-bg-btn-hover);
     color: var(--color-brand-text);
   }
   .rank-filter-btn.active {
-    background: var(--color-navy);
+    background: transparent;
     color: var(--color-white);
-    box-shadow: 0 2px 8px rgba(var(--color-navy-rgb),0.3);
+    box-shadow: none;
   }
   .scorers-mode-btn {
     background: transparent;
@@ -1345,16 +1369,18 @@
     font-size: 12.5px;
     font-weight: 700;
     white-space: nowrap;
-    transition: all 0.2s;
+    transition: color 0.2s;
+    position: relative;
+    z-index: 1;
   }
   .scorers-mode-btn:hover {
     background: var(--color-bg-btn-hover);
     color: var(--color-brand-text);
   }
   .scorers-mode-btn.active {
-    background: var(--color-navy);
+    background: transparent;
     color: var(--color-white);
-    box-shadow: 0 2px 8px rgba(var(--color-navy-rgb),0.3);
+    box-shadow: none;
   }
   .share-btn {
     display: inline-flex;
@@ -1900,6 +1926,9 @@
   }
   .dot-promo { background: var(--color-green); }
   .dot-gd-neg { background: var(--color-red); }
+  .dot-xg-over { background: var(--color-teal); }
+  .dot-xg-under { background: var(--color-red); }
+  .dot-xg-mine { background: none; border: 2px solid var(--color-gold-strong); }
   
   .team-logo {
     width: 22px;
@@ -7785,6 +7814,7 @@
     flex-wrap: wrap;
     transition: var(--theme-transition);
     margin-bottom: 16px;
+    position: relative;
   }
   .ti-record-rank {
     display: flex;
@@ -7837,6 +7867,7 @@
   .idx-good { color: var(--color-teal-dark); }
   .idx-bad { color: var(--color-red-text); }
   .idx-avg { color: var(--color-text-muted); }
+
   .ti-record-index-note {
     flex-basis: 100%;
     font-size: 10.5px;
@@ -9038,6 +9069,37 @@
   transform: translateY(-3px);
   border-left-color: var(--color-teal);
   box-shadow: 0 12px 26px rgba(var(--color-navy-rgb), 0.16);
+}
+
+/* ===== Spotlight 카드 — 커서를 따라 은은하게 번지는 글로우 =====
+   .spotlight-active 토글과 --spot-x/--spot-y 좌표는 app.js의 pointermove
+   위임(delegation) 리스너가 채워줍니다. 배경은 의사요소 자신의 박스에
+   border-radius: inherit가 적용되므로 overflow:hidden 없이도 둥근 모서리
+   안쪽으로 자연스럽게 클리핑됩니다. */
+.ti-card::after,
+.ti-record-card::after,
+.home-match-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(260px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(var(--color-teal-rgb), 0.14), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.ti-card.spotlight-active::after,
+.ti-record-card.spotlight-active::after,
+.home-match-card.spotlight-active::after {
+  opacity: 1;
+}
+@media (hover: none) {
+  .ti-card::after,
+  .ti-record-card::after,
+  .home-match-card::after {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

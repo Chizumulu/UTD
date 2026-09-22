@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '001',
-    data: '001',
-    app: '001',
+    style: '003',
+    data: '003',
+    app: '003',
     predictWorker: '001',
     pathfinderEngine: '001',
     poster: '001'
@@ -102,6 +102,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- 스켈레톤→실데이터 전환 등 UI 애니메이션용 (전역 window.anime 객체로 노출) -->
+<script src="https://cdn.jsdelivr.net/npm/animejs@4/lib/anime.iife.min.js"></script>
 <script>
   // 페이지 렌더링 전에 저장된 테마(또는 시스템 설정)를 즉시 적용해 깜빡임(FOUC)을 방지합니다.
   (function() {
@@ -788,6 +790,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <p class="ai-track-note lbl" data-en="Recalculated automatically every time a new round's results are added — no manual logging needed." data-ko="새 라운드 결과가 추가될 때마다 자동으로 다시 계산돼요. 따로 기록할 필요 없어요.">새 라운드 결과가 추가될 때마다 자동으로 다시 계산돼요. 따로 기록할 필요 없어요.</p>
     <div class="ai-track-summary" id="aiTrackSummary"></div>
+
+    <div class="ai-track-subtitle">
+      <span class="lbl" data-en="EXPECTED vs ACTUAL" data-ko="예상 득점 vs 실제 득점">예상 득점 vs 실제 득점</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'xgScatterInfo')">ⓘ</span>
+      <div class="info-tooltip" id="xgScatterInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-en="Every completed match's home/away side plotted as one dot each: x-axis is the model's expected goals for that side going into the match, y-axis is the actual goals scored. Dots above the diagonal scored more than expected, dots below scored less. Chizumulu United's own matches are outlined in gold." data-ko="완료된 경기마다 홈/원정 양쪽에서 점을 하나씩 찍습니다. x축은 그 경기를 앞두고 모델이 예측한 기대 득점, y축은 실제로 넣은 골이에요. 대각선보다 위쪽이면 예상보다 많이 넣은 것, 아래쪽이면 적게 넣은 거예요. 치주물루 유나이티드 경기는 금색 테두리로 표시됩니다.">완료된 경기마다 홈/원정 양쪽에서 점을 하나씩 찍습니다. x축은 그 경기를 앞두고 모델이 예측한 기대 득점, y축은 실제로 넣은 골이에요. 대각선보다 위쪽이면 예상보다 많이 넣은 것, 아래쪽이면 적게 넣은 거예요. 치주물루 유나이티드 경기는 금색 테두리로 표시됩니다.</span>
+      </div>
+    </div>
+    <div class="scatter-card" style="margin-top:0;">
+      <div class="scatter-body" id="xgScatterBody">
+        <svg id="xgScatterSvg" viewBox="0 0 560 560" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="legend">
+        <span><span class="dot dot-xg-over"></span><span class="lbl" data-en="Scored more than expected" data-ko="예상보다 많이 넣음">예상보다 많이 넣음</span></span>
+        <span><span class="dot dot-xg-under"></span><span class="lbl" data-en="Scored less than expected" data-ko="예상보다 적게 넣음">예상보다 적게 넣음</span></span>
+        <span><span class="dot dot-xg-mine"></span><span class="lbl" data-en="Chizumulu United" data-ko="치주물루 유나이티드">치주물루 유나이티드</span></span>
+      </div>
+    </div>
+    <p class="ai-track-empty lbl" id="xgScatterEmpty" style="display:none;" data-en="Not enough completed matches yet." data-ko="아직 완료된 경기가 없어요.">아직 완료된 경기가 없어요.</p>
 
     <div class="ai-track-subtitle">
       <span class="lbl" data-en="AUTO-CORRECTION" data-ko="자동 보정">자동 보정</span>

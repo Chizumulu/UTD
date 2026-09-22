@@ -73,12 +73,14 @@
       quadStrong: '#332c1a', quadAttack: '#15302f', quadDefense: '#1c2440', quadWeak: '#3a1f1f',
       quadStrongLabel: '#e0b84a', quadAttackLabel: '#4fd6d0', quadDefenseLabel: '#7fb3ea', quadWeakLabel: '#e57368',
       plotBorder: '#3a4058', guideLine: '#454c68', tickLine: '#565d7c',
-      backdropCard: '#232838', backdropStripe: '#272d42', gridLine: '#333a54', gridBorder: '#3a4058'
+      backdropCard: '#232838', backdropStripe: '#272d42', gridLine: '#333a54', gridBorder: '#3a4058',
+      xgOver: '#4fd6d0', xgUnder: '#e57368', xgNeutral: '#7d859f', xgDiagLine: '#565d7c', xgMineRing: '#e0b84a'
     } : {
       quadStrong: '#fff9ec', quadAttack: '#eaf6f6', quadDefense: '#eef2fb', quadWeak: '#fdecea',
       quadStrongLabel: '#c99a2e', quadAttackLabel: '#079696', quadDefenseLabel: '#033990', quadWeakLabel: '#c0392b',
       plotBorder: '#e3e7f0', guideLine: '#c7cede', tickLine: '#b7bdca',
-      backdropCard: '#f8f9fd', backdropStripe: '#eef1f8', gridLine: '#e1e5f0', gridBorder: '#dde1ee'
+      backdropCard: '#f8f9fd', backdropStripe: '#eef1f8', gridLine: '#e1e5f0', gridBorder: '#dde1ee',
+      xgOver: '#079696', xgUnder: '#c0392b', xgNeutral: '#9096a8', xgDiagLine: '#c7cede', xgMineRing: '#c99a2e'
     };
   }
 
@@ -107,6 +109,7 @@
       if (currentModalType) openModal(currentModalType);
     } else if (currentView === 'predict') {
       renderRankHistoryChart();
+      renderAiTrackRecord();
     }
   }
 
@@ -165,12 +168,12 @@
 
   function openIosGuideModal() {
     const modal = document.getElementById('iosGuideModal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) showModalAnimated(modal);
   }
 
   function closeIosGuideModal() {
     const modal = document.getElementById('iosGuideModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) closeModalAnimated(modal);
   }
 
   // ===== PWA 설치 유도 배너 =====
@@ -315,6 +318,7 @@
       scorersView.style.display = '';
       scorersBtn.classList.add('active');
       renderScorersTable();
+      updateSegIndicator(document.querySelector('#scorersView .rank-filter-wrap'));
       playViewEnterAnimation(scorersView);
     } else if (view === 'predict') {
       predictView.style.display = '';
@@ -340,6 +344,7 @@
       if (leagueRankView) leagueRankView.style.display = '';
       if (leagueRankBtn) leagueRankBtn.classList.add('active');
       renderLeagueTable();
+      updateSegIndicator(document.querySelector('#leagueRankView .rank-filter-wrap'));
       playViewEnterAnimation(leagueRankView);
     } else {
       rankView.style.display = '';
@@ -477,6 +482,124 @@
     refreshScrollFadeHints();
   }
 
+  // ===== 예상 득점(xG) vs 실제 득점 산점도 =====
+  // AI 트랙레코드(computeAiPredictionTrackRecord)가 이미 갖고 있는 "그 경기 직전까지의
+  // 데이터로 예측했다면"의 기대 득점(expectedHomeGoals/expectedAwayGoals — 반올림 전
+  // 연속값이라 xG에 가깝습니다)과 실제 스코어를 그대로 재사용합니다. 경기 하나당
+  // 홈/원정 쪽에서 한 점씩, 총 두 점을 찍습니다. 새 차트 인프라를 만들지 않고
+  // renderScatterPlot()과 같은 svgEl()/chartTheme()/CSS 클래스를 그대로 씁니다.
+  function renderXgScatterPlot(track) {
+    const svg = document.getElementById('xgScatterSvg');
+    if (!svg) return;
+    svg.innerHTML = '';
+
+    const rows = (track && track.rows) || [];
+    const points = [];
+    rows.forEach(r => {
+      points.push({
+        expected: r.expectedHomeGoals, actual: r.homeScore, weekNum: r.weekNum,
+        isMine: r.homeEn === 'Chizumulu United FC', isHome: true, lowConfidence: r.lowConfidence,
+        teamKo: r.homeKo, teamEn: r.homeEn, oppKo: r.awayKo, oppEn: r.awayEn
+      });
+      points.push({
+        expected: r.expectedAwayGoals, actual: r.awayScore, weekNum: r.weekNum,
+        isMine: r.awayEn === 'Chizumulu United FC', isHome: false, lowConfidence: r.lowConfidence,
+        teamKo: r.awayKo, teamEn: r.awayEn, oppKo: r.homeKo, oppEn: r.homeEn
+      });
+    });
+
+    const emptyEl = document.getElementById('xgScatterEmpty');
+    const bodyEl = document.getElementById('xgScatterBody');
+    if (!points.length) {
+      if (emptyEl) emptyEl.style.display = '';
+      if (bodyEl) bodyEl.style.display = 'none';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (bodyEl) bodyEl.style.display = '';
+
+    const W = 560, H = 560;
+    const margin = { top: 22, right: 22, bottom: 50, left: 46 };
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+
+    const maxVal = Math.max.apply(null, points.map(p => Math.max(p.expected, p.actual)).concat([2]));
+    const domain = Math.max(4, Math.ceil(maxVal + 0.5));
+
+    function xPos(v) { return margin.left + (v / domain) * plotW; }
+    function yPos(v) { return margin.top + plotH - (v / domain) * plotH; }
+
+    const ct = chartTheme();
+
+    // plot border
+    svg.appendChild(svgEl('rect', { x: margin.left, y: margin.top, width: plotW, height: plotH, fill: 'none', stroke: ct.plotBorder, 'stroke-width': 1.5 }));
+
+    // 대각선 기준선 (예상 = 실제)
+    svg.appendChild(svgEl('line', {
+      x1: xPos(0), y1: yPos(0), x2: xPos(domain), y2: yPos(domain),
+      stroke: ct.xgDiagLine, 'stroke-width': 1.4, 'stroke-dasharray': '5,4'
+    }));
+
+    // axis ticks
+    const steps = domain <= 6 ? domain : 5;
+    for (let i = 0; i <= steps; i++) {
+      const v = (domain / steps) * i;
+      const x = xPos(v);
+      svg.appendChild(svgEl('line', { x1: x, y1: margin.top + plotH, x2: x, y2: margin.top + plotH + 5, stroke: ct.tickLine, 'stroke-width': 1 }));
+      const tx = svgEl('text', { x: x, y: margin.top + plotH + 18, 'text-anchor': 'middle', class: 'scatter-tick-label' });
+      tx.textContent = v.toFixed(1);
+      svg.appendChild(tx);
+
+      const y = yPos(v);
+      svg.appendChild(svgEl('line', { x1: margin.left - 5, y1: y, x2: margin.left, y2: y, stroke: ct.tickLine, 'stroke-width': 1 }));
+      const ty = svgEl('text', { x: margin.left - 9, y: y + 3, 'text-anchor': 'end', class: 'scatter-tick-label' });
+      ty.textContent = v.toFixed(1);
+      svg.appendChild(ty);
+    }
+
+    // axis titles
+    const xTitle = svgEl('text', { x: margin.left + plotW / 2, y: H - 8, 'text-anchor': 'middle', class: 'scatter-axis-label' });
+    xTitle.textContent = isKorean ? '예상 득점 →' : 'Expected Goals →';
+    svg.appendChild(xTitle);
+
+    const yTitle = svgEl('text', { x: 14, y: margin.top + plotH / 2, 'text-anchor': 'middle', class: 'scatter-axis-label', transform: `rotate(-90 14 ${margin.top + plotH / 2})` });
+    yTitle.textContent = isKorean ? '실제 득점 →' : 'Actual Goals →';
+    svg.appendChild(yTitle);
+
+    // data points — 완전히 같은 값끼리 겹치지 않도록 아주 살짝(±3.5px) 지터를 줍니다.
+    // 매번 같은 위치가 나오도록 랜덤 대신 결정론적 시드를 씁니다(테마 전환 시 안 튐).
+    const EPS = 0.15;
+    points.forEach(p => {
+      const seed = p.weekNum * 7 + (p.isHome ? 1 : 2) + (p.isMine ? 100 : 0);
+      const jx = ((seed * 9301 + 49297) % 233280) / 233280 - 0.5;
+      const jy = ((seed * 4423 + 17431) % 233280) / 233280 - 0.5;
+      const cx = xPos(p.expected) + jx * 3.5;
+      const cy = yPos(p.actual) + jy * 3.5;
+
+      const diff = p.actual - p.expected;
+      const color = diff > EPS ? ct.xgOver : (diff < -EPS ? ct.xgUnder : ct.xgNeutral);
+      const r = p.isMine ? 5.5 : 3.6;
+      const opacity = p.lowConfidence ? 0.35 : (p.isMine ? 0.95 : 0.6);
+
+      const g = svgEl('g', {});
+      const dot = svgEl('circle', {
+        cx: cx.toFixed(1), cy: cy.toFixed(1), r,
+        fill: color, opacity: opacity.toFixed(2),
+        stroke: p.isMine ? ct.xgMineRing : 'none', 'stroke-width': p.isMine ? 2 : 0
+      });
+      const title = svgEl('title', {});
+      const teamName = isKorean ? p.teamKo : p.teamEn;
+      const oppName = isKorean ? p.oppKo : p.oppEn;
+      const haTxt = isKorean ? (p.isHome ? '홈' : '원정') : (p.isHome ? 'H' : 'A');
+      title.textContent = isKorean
+        ? `${p.weekNum}주차 · ${teamName}(${haTxt}) vs ${oppName} — 예상 ${p.expected.toFixed(2)}골 / 실제 ${p.actual}골`
+        : `WK${p.weekNum} · ${teamName} (${haTxt}) vs ${oppName} — expected ${p.expected.toFixed(2)}, actual ${p.actual}`;
+      g.appendChild(dot);
+      g.appendChild(title);
+      svg.appendChild(g);
+    });
+  }
+
   // ===== AI 예측 성적표 (Prediction Track Record / Backtest) =====
   // 이미 끝난 모든 경기에 대해, 그 경기 직전까지의 데이터만으로 AI가
   // 예측했다면 어떤 결과가 나왔을지 재계산(computeAiPredictionTrackRecord,
@@ -488,6 +611,7 @@
     if (typeof computeAiPredictionTrackRecord !== 'function') return;
 
     const track = computeAiPredictionTrackRecord();
+    renderXgScatterPlot(track);
     const s = track.summary;
 
     function fmtPct(v) { return v.toFixed(1) + '%'; }
@@ -978,7 +1102,9 @@
     if (myRank === 1 || oppRank === 1) {
       return pickSentence(rng, isPrediction ? [
         [`두 팀 중 한쪽은 리그 선두(승격권) 자리를 놓고 다투는 만큼, 이번 경기는 사실상 승격 경쟁의 분수령이 될 수 있다.`,
-         `With top spot — the sole promotion place — on the line for one of these sides, this fixture could prove pivotal in the promotion race.`]
+         `With top spot — the sole promotion place — on the line for one of these sides, this fixture could prove pivotal in the promotion race.`],
+        [`선두 자리가 걸린 경기인 만큼, 승리하는 쪽이 승격 경쟁에서 한 발 더 앞서 나갈 수 있다.`,
+         `With the league's top spot at stake, whoever wins here takes a real step forward in the promotion race.`]
       ] : [
         [`이번 결과는 리그 선두(승격권) 다툼에도 곧바로 영향을 미쳤다.`,
          `The result had an immediate knock-on effect at the top of the table, where the single promotion spot is being contested.`]
@@ -987,7 +1113,9 @@
     if (myRank <= 3 && oppRank <= 3) {
       return pickSentence(rng, isPrediction ? [
         [`두 팀 모두 상위권에 자리한 만큼, 이번 경기는 승격 경쟁의 향방을 가를 수 있는 중요한 맞대결이다.`,
-         `With both sides sitting near the top of the table, this is a heavyweight clash that could shape the promotion race.`]
+         `With both sides sitting near the top of the table, this is a heavyweight clash that could shape the promotion race.`],
+        [`상위권끼리의 맞대결인 만큼, 승점 차를 좁히느냐 벌리느냐가 이번 경기 하나로 갈릴 수 있다.`,
+         `As a top-of-the-table meeting, this single result could either close the gap or stretch it further apart.`]
       ] : [
         [`상위권 팀 간의 맞대결이었던 만큼, 이번 결과는 승격 경쟁 구도에 곧바로 영향을 미쳤다.`,
          `As a clash between two sides near the top, the result carried real weight for the promotion picture.`]
@@ -996,7 +1124,9 @@
     if (myRank >= relegationCut || oppRank >= relegationCut) {
       return pickSentence(rng, isPrediction ? [
         [`한쪽 팀이 강등권에 걸쳐 있는 만큼, 이번 경기는 잔류를 위한 승점 확보 차원에서도 중요하다.`,
-         `With one side sitting in the relegation zone, this match matters just as much for survival as for the table above.`]
+         `With one side sitting in the relegation zone, this match matters just as much for survival as for the table above.`],
+        [`강등권과 맞닿은 순위인 만큼, 이번 경기 결과 하나로도 잔류 판도가 크게 흔들릴 수 있다.`,
+         `With the relegation zone within touching distance, this single result could swing the survival picture significantly.`]
       ] : [
         [`강등권 경쟁이 걸린 팀이 포함된 경기였던 만큼, 이번 결과는 잔류 싸움에도 영향을 줬다.`,
          `With relegation-threatened opposition involved, the result also had implications at the bottom of the table.`]
@@ -1020,7 +1150,9 @@
     const gap = leader.pts - myPts;
     return pickSentence(rng, [
       [`리그 1위 ${leader.nameKo}와의 승점 차는 ${gap}점이다.`,
-       `The gap to league leaders ${leader.nameEn} stands at ${gap} point${gap === 1 ? '' : 's'}.`]
+       `The gap to league leaders ${leader.nameEn} stands at ${gap} point${gap === 1 ? '' : 's'}.`],
+      [`선두 ${leader.nameKo}와는 승점 ${gap}점 차이로, 이번 경기 결과에 따라 그 격차가 좁혀지거나 더 벌어질 수 있다.`,
+       `Chizumulu trail leaders ${leader.nameEn} by ${gap} point${gap === 1 ? '' : 's'} — a gap that could shrink or grow depending on how this one goes.`]
     ]);
   }
 
@@ -1057,7 +1189,29 @@
     const oppName = isKorean ? oppTeam.nameKo : oppTeam.nameEn;
     return pickSentence(rng, [
       [`치주물루는 경기당 평균 ${myGF}득점 ${myGA}실점을 기록 중이며, ${oppName}는 경기당 평균 ${oppGF}득점 ${oppGA}실점을 기록하고 있다.`,
-       `Chizumulu are averaging ${myGF} goals scored and ${myGA} conceded per game, compared with ${oppGF} scored and ${oppGA} conceded for ${oppName}.`]
+       `Chizumulu are averaging ${myGF} goals scored and ${myGA} conceded per game, compared with ${oppGF} scored and ${oppGA} conceded for ${oppName}.`],
+      [`${myGA < oppGA ? '치주물루의 짠물 수비' : oppName + '의 탄탄한 수비'}와 ${myGF > oppGF ? '치주물루' : oppName}의 공격력이 정면으로 충돌하는 경기이기도 하다(경기당 득점 ${myGF} : ${oppGF}, 실점 ${myGA} : ${oppGA}).`,
+       `It also shapes up as a clash between attack and defense — ${myGF} vs ${oppGF} goals scored per game, and ${myGA} vs ${oppGA} conceded, for Chizumulu and ${oppName} respectively.`]
+    ]);
+  }
+
+  // 경기 연기 등으로 다른 팀보다 소화한 경기 수가 적을 때("미소화 경기"),
+  // 실제 경기 없이도 순위가 오르내릴 수 있다는 맥락을 짚어주는 문장입니다.
+  function buildGamesInHandParagraph(myTeam, rng, isPrediction) {
+    if (!myTeam || typeof myTeam.played !== 'number') return null;
+    const ranked = getRankedTeams('all');
+    if (!ranked.length) return null;
+    const maxPlayed = Math.max(...ranked.map(t => t.played || 0));
+    const gamesInHand = maxPlayed - myTeam.played;
+    if (gamesInHand <= 0) return null;
+    return pickSentence(rng, isPrediction ? [
+      [`경기 연기가 이어지며 치주물루는 다른 팀들보다 ${gamesInHand}경기를 덜 치른 상태다. 이번 경기 결과와 별개로, 다른 팀들이 밀린 경기를 소화하는 과정에서 순위가 오르내릴 가능성이 있다.`,
+       `With ${gamesInHand} game${gamesInHand === 1 ? '' : 's'} in hand still to play, Chizumulu's position could shift up or down purely on the back of other results, regardless of how this one goes.`],
+      [`잇단 일정 연기로 미소화 경기(${gamesInHand}경기)를 남겨두고 있어, 실제 경기 없이도 순위표상 위치가 흔들릴 수 있는 상황이다.`,
+       `A backlog of ${gamesInHand} postponed fixture${gamesInHand === 1 ? '' : 's'} means the table position can move even without Chizumulu kicking a ball.`]
+    ] : [
+      [`이번 결과가 나온 시점에도 치주물루는 여전히 다른 팀들보다 ${gamesInHand}경기를 덜 치른 상태라, 향후 이월 경기 결과에 따라 순위가 다시 조정될 수 있다.`,
+       `Even after this result, Chizumulu still have ${gamesInHand} game${gamesInHand === 1 ? '' : 's'} in hand, so the table could still shift once those fixtures are played out.`]
     ]);
   }
 
@@ -1229,6 +1383,8 @@
     if (goalAvgPara) paragraphs.push(goalAvgPara);
     const topScorerPara = buildTopScorerParagraph(REPORT_TEAM_EN, REPORT_TEAM_KO, oppEn, oppKo, rngResult);
     if (topScorerPara) paragraphs.push(topScorerPara);
+    const gamesInHandParaResult = buildGamesInHandParagraph(myTeamObj, rngResult, false);
+    if (gamesInHandParaResult) paragraphs.push(gamesInHandParaResult);
 
     // ---- 같은 라운드 다른 상위권/강등권 경기, 판도에 미치는 의미 ----
     const totalTeamsResult = leagueData.length;
@@ -1513,7 +1669,9 @@
       if (mySnap.form.currentWinStreak >= 2) {
         paragraphs.push(pickSentence(rng, [
           [`최근 ${mySnap.form.currentWinStreak}연승으로 상승세를 타고 있어 이번 경기도 기세를 이어갈지 주목된다.`,
-           `Chizumulu head into this one on a ${mySnap.form.currentWinStreak}-game winning streak, looking to keep the momentum going.`]
+           `Chizumulu head into this one on a ${mySnap.form.currentWinStreak}-game winning streak, looking to keep the momentum going.`],
+          [`${mySnap.form.currentWinStreak}연승 행진 중인 만큼, 이 기세를 원정길에서도 이어갈 수 있을지가 관전 포인트다.`,
+           `On the back of ${mySnap.form.currentWinStreak} straight wins, the question is whether that momentum can carry over into this fixture.`]
         ]));
       } else if (mySnap.form.currentUnbeatenStreak >= 3) {
         paragraphs.push(pickSentence(rng, [
@@ -1521,14 +1679,28 @@
            `An unbeaten run of ${mySnap.form.currentUnbeatenStreak} games has Chizumulu heading in with confidence.`]
         ]));
       } else {
-        const recentLosses = mySnap.form.recentForm.filter(m => m.result === 'L').length;
-        if (recentLosses >= 3) {
+        const recentResults = mySnap.form.recentForm.map(m => m.result);
+        const recentLosses = recentResults.filter(r => r === 'L').length;
+        // 승-패를 번갈아 반복하는 이른바 '퐁당퐁당' 흐름 감지 (최근 4경기 이상, 연속된 두 결과가 한 번도 같지 않은 경우)
+        const isAlternating = recentResults.length >= 4 &&
+          recentResults.slice(-4).every((r, i, arr) => i === 0 || r !== arr[i - 1]);
+        if (isAlternating) {
+          paragraphs.push(pickSentence(rng, [
+            [`승-패를 번갈아 반복하는 이른바 '퐁당퐁당' 흐름이 이어지고 있어, 다음 결과를 쉽게 예측하기 어려운 상황이다.`,
+             `Chizumulu have been stuck in a win-lose-win-lose pattern lately, making the next result tough to call.`],
+            [`최근 결과가 승패를 오가며 들쭉날쭉한 흐름을 보이고 있어, 이번 경기에서 연속성을 만드는 것이 과제다.`,
+             `Results have swung back and forth recently, so building any real consistency is the priority heading into this one.`]
+          ]));
+        } else if (recentLosses >= 3) {
           paragraphs.push(pickSentence(rng, [
             [`최근 경기 결과가 좋지 않았던 만큼, 이번 경기에서 흐름을 바꿔야 한다.`,
-             `Recent results haven\u2019t gone Chizumulu\u2019s way, so this is a chance to turn things around.`]
+             `Recent results haven\u2019t gone Chizumulu\u2019s way, so this is a chance to turn things around.`],
+            [`최근 흐름이 좋지 않은 가운데 맞이하는 경기라, 반등의 계기가 절실하다.`,
+             `Chizumulu arrive in poor recent form and badly need a result to arrest the slide.`]
           ]));
         }
       }
+
     }
 
     // ---- 상대 전적(이번 시즌) ----
@@ -1570,6 +1742,8 @@
     if (goalAvgPara) paragraphs.push(goalAvgPara);
     const topScorerPara = buildTopScorerParagraph(REPORT_TEAM_EN, REPORT_TEAM_KO, pred.oppEn, pred.oppKo, rng);
     if (topScorerPara) paragraphs.push(topScorerPara);
+    const gamesInHandPara = buildGamesInHandParagraph(mySnap.team, rng, true);
+    if (gamesInHandPara) paragraphs.push(gamesInHandPara);
 
     // ---- 홈/원정 이점 ----
     paragraphs.push(pickSentence(rng, myIsHome ? [
@@ -1577,7 +1751,9 @@
        'Playing at home, Chizumulu should draw extra energy from the crowd.']
     ] : [
       ['원정 경기인 만큼 낯선 환경을 얼마나 잘 극복하느냐가 관건이다.',
-       'On the road, how well Chizumulu handle the away-day challenge will be key.']
+       'On the road, how well Chizumulu handle the away-day challenge will be key.'],
+      ['원정에서 얼마나 침착하게 경기를 풀어가는지가 이번 승부의 관건이 될 전망이다.',
+       'How composed Chizumulu look away from home is likely to be the deciding factor in this one.']
     ]));
 
     // ---- 승격/강등 판도, 같은 라운드 다른 경기 ----
@@ -1689,6 +1865,7 @@
   }
 
   // ===== 다음 경기 미니 스트립 (메뉴 바 ~ 순위표 사이) =====
+
   function renderNextMatchStrip() {
     const el = document.getElementById('nextMatchStrip');
     if (!el) return;
@@ -2107,6 +2284,7 @@
             <span class="home-match-date">${weekTxt}</span>
           </div>`;
       }).join('') || `<div class="home-match-empty lbl" data-en="No matches played yet" data-ko="아직 치른 경기가 없습니다">${isKorean ? '아직 치른 경기가 없습니다' : 'No matches played yet'}</div>`;
+      animateEntranceIn(recentEl, '.home-match-item');
     }
 
     if (upcomingEl) {
@@ -2125,6 +2303,7 @@
             <span class="home-match-date">${weekTxt}</span>
           </div>`;
       }).join('') || `<div class="home-match-empty lbl" data-en="No upcoming fixtures" data-ko="예정된 경기가 없습니다">${isKorean ? '예정된 경기가 없습니다' : 'No upcoming fixtures'}</div>`;
+      animateEntranceIn(upcomingEl, '.home-match-item');
     }
   }
 
@@ -2914,8 +3093,9 @@
     const attackValue = attackIndex !== null
       ? `<span class="${indexClass(attackIndex)}">${attackIndex}%</span>` : '-';
     const defenseValue = defensePerfect
-      ? `<span class="idx-good lbl" data-en="Clean Sheet" data-ko="무실점">${isKorean ? '무실점' : 'Clean Sheet'}</span>`
+      ? `<span class="idx-good">${isKorean ? '무실점' : 'CS'}</span>`
       : (defenseIndex !== null ? `<span class="${indexClass(defenseIndex)}">${defenseIndex}%</span>` : '-');
+    const hasIndex = attackIndex !== null || defenseIndex !== null || defensePerfect;
 
     const rows = [
       { ko: '승점', en: 'PTS', value: `<span class="pts">${t.pts}</span>` },
@@ -2948,7 +3128,7 @@
             </div>
           `).join('')}
         </div>
-        ${(attackIndex !== null || defenseIndex !== null || defensePerfect) ? `
+        ${hasIndex ? `
         <div class="ti-record-index-note lbl" data-en="Attack/Defense Index — 100% is the league average; higher is stronger" data-ko="공격/수비 지수 — 100%가 리그 평균, 높을수록 강함">${isKorean ? '공격/수비 지수 — 100%가 리그 평균, 높을수록 강함' : 'Attack/Defense Index — 100% is the league average; higher is stronger'}</div>` : ''}
       </div>
     `;
@@ -3374,6 +3554,28 @@
     attachImageFallback();
     hydrateWeatherWidgets();
   }
+
+  // ===== 세그먼트 버튼(순위 필터/득점왕 모드) 슬라이딩 인디케이터 =====
+  // 구단정보 탭 인디케이터(updateTabIndicator)와 같은 원리로, 활성 버튼 뒤에
+  // .seg-indicator를 만들어 위치/너비만 갱신합니다. 실제 이동은 CSS transition이 맡습니다.
+  function updateSegIndicator(wrapEl) {
+    if (!wrapEl) return;
+    let indicator = wrapEl.querySelector(':scope > .seg-indicator');
+    if (!indicator) {
+      indicator = document.createElement('span');
+      indicator.className = 'seg-indicator';
+      indicator.setAttribute('aria-hidden', 'true');
+      wrapEl.insertBefore(indicator, wrapEl.firstChild);
+    }
+    const activeBtn = wrapEl.querySelector('.active');
+    if (!activeBtn) { indicator.classList.remove('is-ready'); return; }
+    indicator.style.transform = `translateX(${activeBtn.offsetLeft - 4}px)`;
+    indicator.style.width = activeBtn.offsetWidth + 'px';
+    indicator.classList.add('is-ready');
+  }
+  window.addEventListener('resize', () => {
+    document.querySelectorAll('.rank-filter-wrap').forEach(updateSegIndicator);
+  });
 
   function setActiveTeamInfoButton(tab) {
     const buttons = {
@@ -4569,12 +4771,12 @@
   function openPostponedMatchesModal() {
     renderPostponedMatchesModal();
     const modal = document.getElementById('postponedMatchesModal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) showModalAnimated(modal);
   }
 
   function closePostponedMatchesModal() {
     const modal = document.getElementById('postponedMatchesModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) closeModalAnimated(modal);
   }
 
 
@@ -4588,6 +4790,7 @@
     document.querySelectorAll('.scorers-mode-btn').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
     });
+    updateSegIndicator(document.querySelector('#scorersView .rank-filter-wrap'));
     const table = document.getElementById('scorersTable');
     if (table) {
       table.classList.toggle('grouped-by-team', mode === 'team');
@@ -5095,6 +5298,7 @@
     document.querySelectorAll('.rank-filter-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.filter === filterType);
     });
+    updateSegIndicator(document.querySelector('#leagueRankView .rank-filter-wrap'));
     // 홈/원정/최근5 분할표에서는 순위 변동 열 자체를 숨깁니다(전주 순위와 비교할 기준이 없음).
     const table = document.getElementById('mainTable');
     if (table) table.classList.toggle('hide-rank-change', filterType !== 'all');
@@ -5315,6 +5519,9 @@
     const playedTeams = rankChangeData ? rankChangeData.playedTeams : null;
 
     const tbody = document.getElementById('leagueTableBody');
+    // FLIP 애니메이션용: 다시 그리기 전, 현재 화면에 떠 있는 행들의 위치를 팀 이름 기준으로 기록해둡니다.
+    // (최초 렌더링 시에는 행이 없으므로 빈 Map이 되고, 그 경우 아래 flipLeagueTableRows는 조용히 건너뜁니다.)
+    const prevRects = captureRowRects(tbody, '[data-team-key]', tr => tr.dataset.teamKey);
     tbody.innerHTML = '';
 
     processedData.forEach((team, index) => {
@@ -5333,6 +5540,7 @@
       const tr = document.createElement('tr');
       if(trClass.trim() !== '') tr.className = trClass.trim();
       tr.style.setProperty('--row-index', index);
+      tr.dataset.teamKey = team.nameEn;
 
       const name = isKorean ? team.nameKo : team.nameEn;
       
@@ -5405,6 +5613,7 @@
 
     attachImageFallback();
     refreshScrollFadeHints();
+    flipRowsIn(tbody, '[data-team-key]', tr => tr.dataset.teamKey, prevRects);
   }
 
   // ===== 메인 화면용 간략 순위표 (Mini League Table for Main view) =====
@@ -5448,6 +5657,7 @@
     }).join('');
 
     attachImageFallback();
+    animateEntranceIn(tbody, 'tr', { stagger: 20 });
   }
 
   // ===== 순위표 이미지로 내보내기 (Export Standings as PNG) =====
@@ -6971,14 +7181,14 @@
   function openVenueMapModal() {
     const modal = document.getElementById('venueMapModal');
     if (!modal) return;
-    modal.style.display = 'flex';
+    showModalAnimated(modal);
     renderVenueLeafletMapLarge();
     setTimeout(() => { if (venueLeafletMapLarge) venueLeafletMapLarge.invalidateSize(); }, 80);
   }
 
   function closeVenueMapModal() {
     const modal = document.getElementById('venueMapModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) closeModalAnimated(modal);
   }
 
   function highlightVenueMarker(idx, source, markerStore, mapInstance) {
@@ -7257,6 +7467,95 @@
     tl.abbrEl = abbrText;
   }
 
+  // ===== 차트가 스크롤로 화면에 들어올 때 콜백을 "딱 한 번" 실행 =====
+  // 라인 드로잉 애니메이션들이 공용으로 사용합니다. IntersectionObserver를
+  // 지원하지 않는 환경에서는 그냥 즉시 실행합니다.
+  function playWhenScrolledIntoView(el, callback) {
+    if (!el) return;
+    if (!('IntersectionObserver' in window)) { callback(); return; }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          observer.disconnect();
+          callback();
+        }
+      });
+    }, { root: null, rootMargin: '0px 0px -10% 0px', threshold: 0.15 });
+    observer.observe(el);
+  }
+
+  // 순위 변동 추이 차트 전용: 선(rank line) + 점 + 로고 + 팀 약어까지 모두 갖춘
+  // 구조라 animateHistoryLines보다 요소가 많습니다. 같은 dataset.animated 플래그로
+  // "처음 그리는 차트인지"를 판단하는 건 동일하고, 추가로 로고/약어/연결선은
+  // 선이 다 그려진 뒤에 톡 나타나도록 했습니다.
+  // 실제 재생 시점은 즉시가 아니라, 차트가 스크롤로 화면에 들어오는 순간입니다
+  // (playWhenScrolledIntoView). dataset.animated는 "재생을 예약했는지"를
+  // 나타내므로, 아직 화면 밖이라 재생 전이어도 재렌더링 시 다시 예약되지 않습니다.
+  function animateRankHistLines(svg, teamLines) {
+    if (!svg) return;
+    const alreadyAnimated = svg.dataset.animated === '1';
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const shouldAnimate = !!window.anime && !alreadyAnimated && !reduceMotion;
+    if (!shouldAnimate) { svg.dataset.animated = '1'; return; }
+
+    // 재생 전에는 "다 그려지기 전" 상태(선 안 보임, 점/로고/약어 투명)로 고정해둡니다.
+    teamLines.forEach(tl => {
+      const len = tl.pathEl.getTotalLength();
+      tl.pathEl.style.strokeDasharray = len;
+      tl.pathEl.style.strokeDashoffset = len;
+      tl.dotEls.forEach(dot => { dot.style.opacity = '0'; });
+      if (tl.connectorEl) tl.connectorEl.style.opacity = '0';
+      if (tl.logoEl) tl.logoEl.style.opacity = '0';
+      if (tl.abbrEl) tl.abbrEl.style.opacity = '0';
+    });
+    svg.dataset.animated = '1';
+
+    playWhenScrolledIntoView(svg, () => {
+      const lineDuration = 900;
+      teamLines.forEach((tl, tlIdx) => {
+        const lineDelay = tlIdx * 90;
+        const len = tl.pathEl.getTotalLength();
+        tl.pathEl.style.strokeDasharray = len;
+        tl.pathEl.style.strokeDashoffset = len;
+        window.anime.animate(tl.pathEl, {
+          strokeDashoffset: [len, 0],
+          duration: lineDuration,
+          delay: lineDelay,
+          ease: 'outQuad'
+        });
+        tl.dotEls.forEach((dot, i) => {
+          const progress = tl.coords.length > 1 ? i / (tl.coords.length - 1) : 1;
+          dot.style.opacity = '0';
+          window.anime.animate(dot, {
+            opacity: [0, 1],
+            duration: 220,
+            delay: lineDelay + progress * lineDuration,
+            ease: 'outQuad',
+            onComplete: () => { dot.style.opacity = ''; }
+          });
+        });
+        // 연결선 → 로고 → 약어 순으로, 선이 다 그려진 직후에 톡 나타나게
+        const afterLine = lineDelay + lineDuration;
+        const popEls = [
+          { el: tl.connectorEl, to: 0.75 }, // 연결선은 원래도 완전 불투명이 아니라 0.75로 그려짐
+          { el: tl.logoEl, to: 1 },
+          { el: tl.abbrEl, to: 1 }
+        ];
+        popEls.forEach(({ el, to }, i) => {
+          if (!el) return;
+          el.style.opacity = '0';
+          window.anime.animate(el, {
+            opacity: [0, to],
+            duration: 260,
+            delay: afterLine + i * 70,
+            ease: 'outQuad',
+            onComplete: () => { el.style.opacity = ''; }
+          });
+        });
+      });
+    });
+  }
+
   // teamKey가 있으면 해당 팀 선/점/로고/칩만 강조하고 나머지는 흐리게, null이면 전체 강조 해제
   function applyRankHistHighlight(teamLines, teamKey) {
     teamLines.forEach(tl => {
@@ -7322,6 +7621,7 @@
     const lineGroup = svgEl('g', {});
     svg.appendChild(lineGroup);
     teamLines.forEach((tl, tlIdx) => drawRankHistTeamLine(lineGroup, defs, tl, tlIdx, dims.logoColX));
+    animateRankHistLines(svg, teamLines);
 
     buildRankHistLegend(legendEl, teamLines);
     applyRankHistHighlight(teamLines, rankHistHighlighted);
@@ -7397,6 +7697,15 @@
       });
       line.path = path;
     });
+
+    // ===== 라인 드로잉 애니메이션: 이 SVG가 "처음" 그려질 때만 재생 =====
+    // 이 함수는 필터/언어 전환, 데이터 갱신 등으로 자주 다시 호출되는데, 매번
+    // stroke-dashoffset 애니메이션을 재생하면 이미 보고 있던 차트가 계속 다시
+    // 그려지는 것처럼 보여 거슬립니다. svg.innerHTML은 매번 비워도 <svg> 엘리먼트
+    // 자체(및 거기 붙은 dataset)는 그대로 유지되므로, dataset.animated 플래그를
+    // 심어두면 "이 SVG로는 처음 그리는 차트인지"를 안정적으로 판단할 수 있습니다.
+    animateHistoryLines(svg, lines);
+
     const applyHighlight = teamKey => {
       lines.forEach(line => {
         const active = !teamKey || line.team.nameEn === teamKey;
@@ -7532,6 +7841,7 @@
       });
       line.path = path;
     });
+    animateHistoryLines(svg, lines);
     const applyHighlight = teamKey => {
       lines.forEach(line => {
         const active = !teamKey || line.team.nameEn === teamKey;
@@ -7650,12 +7960,12 @@
     }
 
     renderStatsTable('modalTableBody', statsData[type], type);
-    modal.style.display = 'flex';
+    showModalAnimated(modal);
   }
 
   function closeModal() {
     currentModalType = null;
-    document.getElementById('statModal').style.display = 'none';
+    closeModalAnimated(document.getElementById('statModal'));
   }
 
   // ===== 선수 득점 타임라인 모달 (Player Goal Timeline Modal) =====
@@ -7712,12 +8022,12 @@
     }
 
     attachImageFallback();
-    document.getElementById('playerModal').style.display = 'flex';
+    showModalAnimated(document.getElementById('playerModal'));
   }
 
   function closePlayerModal() {
     currentPlayerModalKey = null;
-    document.getElementById('playerModal').style.display = 'none';
+    closeModalAnimated(document.getElementById('playerModal'));
   }
 
   document.addEventListener('click', function(event) {
@@ -7810,10 +8120,10 @@
       nationalBadgeEl.innerHTML = '';
     }
 
-    document.getElementById('squadPlayerModalApps').textContent = stats.appearances;
-    document.getElementById('squadPlayerModalGoals').textContent = stats.goals;
+    animateCountUp(document.getElementById('squadPlayerModalApps'), stats.appearances);
+    animateCountUp(document.getElementById('squadPlayerModalGoals'), stats.goals, { delay: 60 });
     document.getElementById('squadPlayerModalStarts').textContent = `${stats.starts} / ${stats.subApps}`;
-    document.getElementById('squadPlayerModalMotm').textContent = stats.motmCount;
+    animateCountUp(document.getElementById('squadPlayerModalMotm'), stats.motmCount, { delay: 120 });
 
     // 골키퍼는 득점 옆에 클린시트(선발 기준) 기록도 함께 보여줍니다.
     // computeGoalkeeperRecords()는 라인업상 '선발' GK 기준으로만 집계하므로
@@ -7822,7 +8132,7 @@
     if (player.position === 'GK' && csStatEl) {
       const gkRecords = (typeof computeGoalkeeperRecords === 'function') ? computeGoalkeeperRecords() : [];
       const gkRecord = gkRecords.find(r => r.number === num);
-      document.getElementById('squadPlayerModalCleanSheets').textContent = gkRecord ? gkRecord.cleanSheets : 0;
+      animateCountUp(document.getElementById('squadPlayerModalCleanSheets'), gkRecord ? gkRecord.cleanSheets : 0, { delay: 90 });
       csStatEl.style.display = '';
     } else if (csStatEl) {
       csStatEl.style.display = 'none';
@@ -7907,12 +8217,12 @@
     }
 
     attachImageFallback();
-    document.getElementById('squadPlayerModal').style.display = 'flex';
+    showModalAnimated(document.getElementById('squadPlayerModal'));
   }
 
   function closeSquadPlayerModal() {
     currentSquadPlayerModalNumber = null;
-    document.getElementById('squadPlayerModal').style.display = 'none';
+    closeModalAnimated(document.getElementById('squadPlayerModal'));
   }
 
   // ===== 팀 정보 전환 (Team Info Switcher: 좌우 화살표 / 팀 바로가기) =====
@@ -8110,11 +8420,11 @@
   // ===== 팀 바로가기 모달 (Jump to Team Modal) =====
   function openOtherTeamModal() {
     renderOtherTeamGrid();
-    document.getElementById('otherTeamModal').style.display = 'flex';
+    showModalAnimated(document.getElementById('otherTeamModal'));
   }
 
   function closeOtherTeamModal() {
-    document.getElementById('otherTeamModal').style.display = 'none';
+    closeModalAnimated(document.getElementById('otherTeamModal'));
   }
 
   function jumpToTeam(nameEn) {
@@ -8196,32 +8506,37 @@
     document.querySelectorAll('.info-tooltip').forEach(el => el.classList.remove('show'));
   });
   
-  window.onclick = function(event) {
-    const modal = document.getElementById('statModal');
-    if (event.target === modal) {
-      closeModal();
+  // ===== 상세 모달 공통 닫기 정책 =====
+  // 예전에는 모달마다 "배경(오버레이) 클릭 시 닫기"를 개별적으로 구현했는데(window.onclick),
+  // 모든 모달이 화면 전체를 덮는 position:fixed 오버레이라서 하나가 열려 있으면
+  // 그 아래 페이지의 다른 버튼/카드는 실제로는 눌리지 않고 지금 열려 있는 모달의
+  // 배경만 눌리는 상태가 됩니다. 그 결과 "다른 항목을 보려고 눌렀는데 지금 열려있던
+  // 상세창이 그냥 꺼져버리는" 오작동이 모달 종류를 가리지 않고 반복적으로 발생했습니다
+  // (반투명 블러 배경 때문에 아래 내용이 비쳐 보여 실제로 눌리는 줄 착각하기 쉬웠습니다).
+  // 그래서 배경 클릭으로 닫히는 동작 자체를 모든 상세 모달에서 없애고, 각 모달의
+  // 우측 상단 닫기(×) 버튼이나 Esc 키로만 닫히게 통일합니다.
+  const DETAIL_MODAL_IDS = [
+    // z-index가 더 높아 다른 모달 위에 겹쳐 뜨는 것부터 먼저 닫습니다.
+    { id: 'squadPlayerModal', close: () => closeSquadPlayerModal() },
+    { id: 'playerModal', close: () => closePlayerModal() },
+    { id: 'matchDetailModal', close: () => closeMatchDetail() },
+    { id: 'matchCompareModal', close: () => closeMatchCompareModal() },
+    { id: 'statModal', close: () => closeModal() },
+    { id: 'venueMapModal', close: () => closeVenueMapModal() },
+    { id: 'postponedMatchesModal', close: () => closePostponedMatchesModal() },
+    { id: 'otherTeamModal', close: () => closeOtherTeamModal() }
+  ];
+
+  document.addEventListener('keydown', function(event) {
+    if (event.key !== 'Escape') return;
+    for (const { id, close } of DETAIL_MODAL_IDS) {
+      const modal = document.getElementById(id);
+      if (modal && modal.style.display !== 'none') {
+        close();
+        return; // 겹쳐 떠 있을 수 있으므로 한 번에 하나씩만 닫습니다.
+      }
     }
-    const playerModal = document.getElementById('playerModal');
-    if (event.target === playerModal) {
-      closePlayerModal();
-    }
-    const squadPlayerModal = document.getElementById('squadPlayerModal');
-    if (event.target === squadPlayerModal) {
-      closeSquadPlayerModal();
-    }
-    const matchDetailModal = document.getElementById('matchDetailModal');
-    if (event.target === matchDetailModal) {
-      closeMatchDetail();
-    }
-    const venueMapModal = document.getElementById('venueMapModal');
-    if (event.target === venueMapModal) {
-      closeVenueMapModal();
-    }
-    const postponedMatchesModal = document.getElementById('postponedMatchesModal');
-    if (event.target === postponedMatchesModal) {
-      closePostponedMatchesModal();
-    }
-  }
+  });
 
   // ===== 라운드 상세(포메이션/득점/최근 전적) 모달 =====
   const POS_ROWS = [
@@ -8435,11 +8750,11 @@
       </div>
     `;
 
-    document.getElementById('matchDetailModal').style.display = 'flex';
+    showModalAnimated(document.getElementById('matchDetailModal'));
   }
 
   function closeMatchDetail() {
-    document.getElementById('matchDetailModal').style.display = 'none';
+    closeModalAnimated(document.getElementById('matchDetailModal'));
   }
 
   // ===== 경기 전 팀 비교(전적 비교) 모달 =====
@@ -8697,11 +9012,11 @@
       </div>
     `;
 
-    document.getElementById('matchCompareModal').style.display = 'flex';
+    showModalAnimated(document.getElementById('matchCompareModal'));
   }
 
   function closeMatchCompareModal() {
-    document.getElementById('matchCompareModal').style.display = 'none';
+    closeModalAnimated(document.getElementById('matchCompareModal'));
   }
 
 
@@ -8842,6 +9157,201 @@
   }
 
 
+  // ===== 스켈레톤 → 실데이터 등장 애니메이션 (anime.js) =====
+  // 스켈레톤 placeholder가 사라지고 실제 데이터(행/카드)가 채워지는 순간, 위에서
+  // 살짝 떠오르며 순서대로 나타나게 해 "표/리스트가 채워지고 있다"는 느낌을 줍니다.
+  // anime.js가 아직 로드되지 않았거나(네트워크 문제 등) prefers-reduced-motion이
+  // 설정된 환경에서는 애니메이션 없이 즉시 보이도록 조용히 건너뜁니다.
+  function animateEntranceIn(container, itemSelector, opts) {
+    if (!container || !window.anime) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const items = itemSelector ? container.querySelectorAll(itemSelector) : container.children;
+    if (!items || items.length === 0) return;
+
+    const staggerMs = (opts && opts.stagger) || 26;
+    const duration = (opts && opts.duration) || 380;
+    const distance = (opts && opts.distance) || 8;
+
+    window.anime.animate(items, {
+      opacity: [0, 1],
+      translateY: [distance, 0],
+      duration: duration,
+      delay: window.anime.stagger(staggerMs),
+      ease: 'outQuad'
+    });
+  }
+
+  // ===== 순위 변동 FLIP 애니메이션 (First-Last-Invert-Play) =====
+  // 라운드가 끝나거나 필터가 바뀌어 팀 순위가 오르내릴 때, 표를 다시 그리기 직전
+  // 위치(First)를 기록해뒀다가 다시 그린 뒤(Last) 그 차이만큼 되돌려놓고(Invert)
+  // 원래 위치로 애니메이션(Play)시켜 "행이 위/아래로 실제 이동했다"는 느낌을 줍니다.
+  // 새로 다시 그려도 각 행이 어떤 팀인지 이어서 추적할 수 있도록 key로 매칭합니다.
+  function captureRowRects(container, itemSelector, keyFn) {
+    const map = new Map();
+    if (!container) return map;
+    container.querySelectorAll(itemSelector).forEach(el => {
+      const key = keyFn(el);
+      if (key) map.set(key, el.getBoundingClientRect());
+    });
+    return map;
+  }
+
+  function flipRowsIn(container, itemSelector, keyFn, prevRects, opts) {
+    if (!container || !window.anime || !prevRects || prevRects.size === 0) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const duration = (opts && opts.duration) || 450;
+    container.querySelectorAll(itemSelector).forEach(el => {
+      const key = keyFn(el);
+      const prevRect = key ? prevRects.get(key) : null;
+      if (!prevRect) return; // 이전 렌더링에 없던 행(필터로 새로 나타난 팀 등)은 FLIP 대상에서 제외
+      const newRect = el.getBoundingClientRect();
+      const deltaY = prevRect.top - newRect.top;
+      if (Math.abs(deltaY) < 1) return; // 위치 변화가 없으면 건드리지 않음
+      el.style.animation = 'none'; // 등장(fade-in) CSS 애니메이션과 겹치지 않도록 끔
+      window.anime.animate(el, {
+        translateY: [deltaY, 0],
+        duration: duration,
+        ease: 'outQuad'
+      });
+    });
+  }
+
+  // ===== 숫자 카운트업 애니메이션 (Count-up) =====
+  // 출전/득점 같은 통계 숫자가 갱신될 때 0(또는 이전 값)에서 목표값까지 애니메이션으로
+  // 올려줘서 "숫자가 바뀌었다"는 게 잘 체감되게 합니다. anime.js가 없거나 reduced-motion
+  // 환경이면 애니메이션 없이 바로 값만 표시합니다.
+  function animateCountUp(el, value, opts) {
+    if (!el) return;
+    const target = Number(value);
+    if (!window.anime || !isFinite(target) || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      el.textContent = value;
+      return;
+    }
+    window.anime.animate(el, {
+      innerHTML: [0, target],
+      duration: (opts && opts.duration) || 700,
+      delay: (opts && opts.delay) || 0,
+      ease: 'outQuad',
+      modifier: v => Math.round(v)
+    });
+  }
+
+  // ===== 모달 열림/닫힘 애니메이션 (Modal Open/Close) =====
+  // 모달이 열릴 때는 이미 CSS(@keyframes modalOverlayIn/modalContentIn)가
+  // display:none → flex 전환 시 자동으로 재생돼 부드럽게 나타납니다. 반면 닫힐 때는
+  // display:none으로 즉시 사라져 뚝 끊기는 느낌이 있었는데, 여기서는 사라지기 전에
+  // 살짝 축소 + 페이드 아웃시킨 뒤 애니메이션이 끝나면 display:none을 적용합니다.
+  //
+  // ⚠️ 재사용 버그 주의: 닫힘 애니메이션은 180ms 동안 비동기로 진행되다가 끝나야
+  // display:none이 실제로 적용됩니다. 그런데 "닫기 → (같은 모달을) 다시 열기"를
+  // 그 180ms 안에 빠르게 연달아 하면(예: A선수 상세 닫고 바로 B선수 상세 열기),
+  // 새로 연 모달이 화면에 나타난 직후 "이전 닫힘 애니메이션의 예약된 onComplete"가
+  // 뒤늦게 실행되며 방금 새로 연 모달을 도로 display:none으로 꺼버리는 문제가 있었습니다.
+  // 이를 막기 위해 모달마다 "애니메이션 토큰"을 두고, 열기/닫기를 시도할 때마다
+  // 토큰을 새로 발급합니다. onComplete가 실행되는 시점에 토큰이 그새 바뀌어 있다면
+  // (그사이 모달이 다시 열렸거나 또 닫혔다는 뜻이므로) 그 오래된 콜백은 아무 것도 하지
+  // 않고 조용히 무시됩니다.
+  let modalAnimSeq = 0;
+  const modalAnimTokens = new WeakMap();
+
+  function showModalAnimated(modal) {
+    if (!modal) return;
+    modalAnimTokens.set(modal, ++modalAnimSeq);
+    // 직전 닫힘 애니메이션이 남겨둔 인라인 opacity/transform이 있으면 지워서,
+    // 다시 열릴 때 반투명하거나 살짝 작게 보이는 채로 시작하지 않게 합니다.
+    modal.style.opacity = '';
+    const content = modal.querySelector('.modal-content');
+    if (content) { content.style.opacity = ''; content.style.transform = ''; }
+    modal.style.display = 'flex';
+  }
+
+  function closeModalAnimated(modal) {
+    if (!modal || modal.style.display === 'none') return;
+    const token = ++modalAnimSeq;
+    modalAnimTokens.set(modal, token);
+    if (!window.anime || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      modal.style.display = 'none';
+      return;
+    }
+    const content = modal.querySelector('.modal-content');
+    const cleanup = () => {
+      // 애니메이션이 도는 사이 이 모달이 다시 열렸다면(토큰이 바뀌었다면) 방금 새로
+      // 연 내용을 숨기지 않도록 아무 것도 하지 않고 멈춥니다.
+      if (modalAnimTokens.get(modal) !== token) return;
+      modal.style.display = 'none';
+      modal.style.opacity = '';
+      if (content) { content.style.opacity = ''; content.style.transform = ''; }
+    };
+    window.anime.animate(modal, { opacity: [1, 0], duration: 180, ease: 'inQuad', onComplete: cleanup });
+    if (content) {
+      window.anime.animate(content, { opacity: [1, 0], scale: [1, 0.94], duration: 180, ease: 'inQuad' });
+    }
+  }
+
+
+  // ===== 라인 차트 드로잉 애니메이션 (처음 화면에 스크롤되어 들어올 때만 재생) =====
+  // 포인트 히스토리 / 우승 확률 추이처럼 stroke-dashoffset으로 선을 그려 보이는
+  // 차트에서 공용으로 씁니다. svg.innerHTML은 데이터가 바뀔 때마다 비워지지만
+  // <svg> 엘리먼트 자체는 재사용되므로, 거기 심어둔 dataset.animated 플래그로
+  // "이 SVG로는 애니메이션 재생을 이미 예약했는지"를 판단해 재렌더링 시 애니메이션이
+  // 중복 예약되지 않게 막습니다. 실제 재생 시점은 예약 즉시가 아니라 이 SVG가
+  // 스크롤로 뷰포트에 들어오는 순간입니다(playWhenScrolledIntoView).
+  // lines는 { path, dots, coords } 형태의 배열입니다.
+  function animateHistoryLines(svg, lines) {
+    if (!svg) return;
+    const alreadyAnimated = svg.dataset.animated === '1';
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const shouldAnimate = !!window.anime && !alreadyAnimated && !reduceMotion;
+
+    if (!shouldAnimate) {
+      // reduced-motion이거나 anime.js가 없을 때도 "이미 처리했다"고 표시해 다음 호출에서
+      // 불필요한 재계산 없이 즉시 최종 상태로만 그려지게 합니다.
+      svg.dataset.animated = '1';
+      return;
+    }
+
+    // 재생 전에는 선/점을 "다 그려지기 전" 상태로 고정해둡니다.
+    lines.forEach(line => {
+      const len = line.path.getTotalLength();
+      line.path.style.strokeDasharray = len;
+      line.path.style.strokeDashoffset = len;
+      (line.dots || []).forEach(dot => { dot.style.opacity = '0'; });
+    });
+    svg.dataset.animated = '1';
+
+    playWhenScrolledIntoView(svg, () => {
+      lines.forEach((line, lineIndex) => {
+        const len = line.path.getTotalLength();
+        const lineDuration = 900;
+        const lineDelay = lineIndex * 90; // 팀(라인)마다 살짝 시차를 둬서 순서대로 그려지게
+        line.path.style.strokeDasharray = len;
+        line.path.style.strokeDashoffset = len;
+        window.anime.animate(line.path, {
+          strokeDashoffset: [len, 0],
+          duration: lineDuration,
+          delay: lineDelay,
+          ease: 'outQuad'
+        });
+        // 점(dot)은 선이 그 지점까지 그려진 시점에 맞춰 톡 나타나도록 딜레이를 계산
+        (line.dots || []).forEach((dot, i) => {
+          const progress = line.coords.length > 1 ? i / (line.coords.length - 1) : 1;
+          dot.style.opacity = '0';
+          window.anime.animate(dot, {
+            opacity: [0, 1],
+            duration: 220,
+            delay: lineDelay + progress * lineDuration,
+            ease: 'outQuad',
+            // 애니메이션이 끝나면 인라인 opacity를 지워, 범례 클릭 시 .dimmed 클래스(CSS)가
+            // 다시 opacity를 제어할 수 있게 합니다(인라인 스타일이 클래스보다 우선하므로).
+            onComplete: () => { dot.style.opacity = ''; }
+          });
+        });
+      });
+    });
+  }
+
   // ===== 이미지 로드 실패 대체 처리 (Image Fallback) =====
   function attachImageFallback() {
     document.querySelectorAll('img').forEach(img => {
@@ -8882,7 +9392,7 @@
         return false; // 아직 숨김 기간이 지나지 않음
       }
     } catch (e) {}
-    modal.style.display = 'flex';
+    showModalAnimated(modal);
     return true;
   }
 
@@ -8895,7 +9405,7 @@
         localStorage.setItem(DISCLAIMER_KEY, String(hideUntil));
       } catch (e) {}
     }
-    if (modal) modal.style.display = 'none';
+    if (modal) closeModalAnimated(modal);
     showNewsPopupIfNeeded();
   }
 
@@ -8918,7 +9428,7 @@
         return; // 아직 숨김 기간이 지나지 않음
       }
     } catch (e) {}
-    modal.style.display = 'flex';
+    showModalAnimated(modal);
   }
 
   function closeNewsPopup() {
@@ -8930,7 +9440,7 @@
         localStorage.setItem(NEWS_POPUP_KEY, String(hideUntil));
       } catch (e) {}
     }
-    if (modal) modal.style.display = 'none';
+    if (modal) closeModalAnimated(modal);
   }
 
   // 뉴스 팝업 안의 선수 이름을 누르면 팝업을 닫고(체크박스 상태는 그대로 반영) 바로
@@ -8948,6 +9458,7 @@
     renderMainMiniTable();
     renderNextMatchStrip();
     renderHomeMatchCards();
+    initSpotlightCards();
   
     document.querySelectorAll('.lbl').forEach(el => {
       el.innerHTML = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');
@@ -9071,4 +9582,41 @@
   // 바뀔 수 있는 시점마다 이 함수를 호출해 힌트 상태를 다시 계산합니다.
   function refreshScrollFadeHints() {
     scrollFadeUpdaters.forEach(update => update());
+  }
+
+  // ===== Spotlight 카드 — 커서를 따라가는 은은한 글로우 =====
+  // 카드들(.ti-card, .ti-record-card, .home-match-card)은 언어 전환·탭 전환마다
+  // innerHTML로 새로 그려지므로, 카드마다 리스너를 다시 붙이는 대신 document 하나에
+  // pointermove를 위임(delegation)해서 항상 최신 카드에도 자동으로 적용되게 합니다.
+  function initSpotlightCards() {
+    const SPOTLIGHT_SELECTOR = '.ti-card, .ti-record-card, .home-match-card';
+    let activeCard = null;
+
+    function clearActive() {
+      if (activeCard) {
+        activeCard.classList.remove('spotlight-active');
+        activeCard = null;
+      }
+    }
+
+    document.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return;
+      const card = e.target.closest ? e.target.closest(SPOTLIGHT_SELECTOR) : null;
+      if (!card) { clearActive(); return; }
+      if (card !== activeCard) {
+        clearActive();
+        activeCard = card;
+        card.classList.add('spotlight-active');
+      }
+      const rect = card.getBoundingClientRect();
+      card.style.setProperty('--spot-x', `${e.clientX - rect.left}px`);
+      card.style.setProperty('--spot-y', `${e.clientY - rect.top}px`);
+    }, { passive: true });
+
+    document.addEventListener('pointerout', (e) => {
+      if (!activeCard) return;
+      // 카드 밖으로 완전히 나갔을 때만(관련 타깃이 같은 카드 안이 아닐 때) 글로우를 끕니다.
+      if (e.relatedTarget && activeCard.contains(e.relatedTarget)) return;
+      if (!e.relatedTarget || !activeCard.contains(e.relatedTarget)) clearActive();
+    }, { passive: true });
   }
