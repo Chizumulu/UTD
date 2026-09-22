@@ -297,7 +297,7 @@ const matchLineups = {
     opponentKo: "음벨와 워리어스 FC",
     result: "2 : 1 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"] },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"], captain: true },
       { pos: "LW", number: 49, nameKo: "쿰부카니" },
       { pos: "CAM", number: 10, nameKo: "찰스", outMin: "전반" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
@@ -1356,7 +1356,13 @@ const leagueData = [
   },
   {
     nameKo: "음벨와 워리어스 FC", nameEn: "M'mbelwa Warriors FC", logoSrc: "음벨와.webp",
-    venue: { nameKo: "치반자 그라운드", nameEn: "Chibanja Ground", lat: -11.459634955492291, lng: 34.00871941636782 }
+    venue: { nameKo: "카비토우 초등학교 그라운드", nameEn: "Kavitowo Primary School Ground", lat: -11.89113120300144, lng: 33.592496561509485 },
+    // 12주차부터 새 홈구장(카비토우 초교 그라운드)을 쓰고, 1~11주차 경기는
+    // 옛 홈구장(치반자 그라운드)에서 열렸던 것으로 남겨둡니다.
+    // getTeamVenue(nameEn, weekNum)가 weekNum이 이 범위 안에 들면 아래 venue를 대신 씁니다.
+    venueHistory: [
+      { fromWeek: 1, toWeek: 11, venue: { nameKo: "치반자 그라운드", nameEn: "Chibanja Ground", lat: -11.459634955492291, lng: 34.00871941636782 } }
+    ]
   },
   {
     nameKo: "치폴로폴로 보이즈 FC", nameEn: "Chipolopolo Boys FC", logoSrc: "치폴로폴로.webp",
@@ -1380,7 +1386,7 @@ const leagueData = [
   },
   {
     nameKo: "에우티니 베테랑스 FC", nameEn: "Euthini Veterans FC", logoSrc: "에우티니.webp",
-    venue: { nameKo: "에우티니 그라운드", nameEn: "Euthini CDSS Ground", lat: -11.452676853336099, lng: 33.41946042830683 }
+    venue: { nameKo: "에우티니 CDSS 그라운드", nameEn: "Euthini CDSS Ground", lat: -11.452676853336099, lng: 33.41946042830683 }
   },
   {
     nameKo: "비전 S 아카데미", nameEn: "Vision S Academy", logoSrc: "비전아카데미.webp",

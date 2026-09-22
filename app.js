@@ -1727,8 +1727,11 @@
     const oppName = oppNameFull.split(' ')[0];
     const myName = myNameFull.split(' ')[0];
     const kickoffTxt = formatKickoff(t.nextMatch);
+    const nextMatchHomeEn = t.nextMatch.homeAway === 'H' ? t.nameEn : t.nextMatch.oppEn;
+    const nextMatchVenue = getTeamVenue(nextMatchHomeEn, nextWeek);
+    const nextMatchVenueName = nextMatchVenue ? (isKorean ? nextMatchVenue.nameKo : nextMatchVenue.nameEn) : '';
     const weatherHtml = matchWeatherPlaceholderHtml(
-      t.nextMatch.homeAway === 'H' ? t.nameEn : t.nextMatch.oppEn,
+      nextMatchHomeEn,
       t.nextMatch.kickoffDate, t.nextMatch.kickoffTime,
       'nms-weather', true
     );
@@ -1743,23 +1746,32 @@
     // 그라데이션 빛을 둘러서 "오늘 경기 있음"을 한눈에 알아볼 수 있게 합니다.
     el.classList.toggle('nms-matchday', daysLeft === 0);
 
-    el.innerHTML = `
-      <div class="nmh-eyebrow lbl" data-en="Next · ${weekLbl}" data-ko="다음경기 · ${weekLbl}">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</div>
-      <div class="nmh-top">
-        <div class="nmh-team">
+    // 홈이면 우리 팀이 왼쪽, 원정이면 우리 팀이 오른쪽에 오도록 팀 블록의 순서를 바꿉니다.
+    const myTeamHtml = `
+        <div class="nmh-team nmh-team-mine">
           <img class="team-logo nmh-crest" src="./dd.svg" alt="Chizumulu United FC">
           <span class="lbl" data-en="Chizumulu" data-ko="치주물루" title="${myNameFull}">${myName}</span>
           ${myRankTxt ? `<span class="nms-opp-rank">${myRankTxt}</span>` : ''}
-        </div>
-        <div class="nmh-center">
-          ${ddayTxt ? `<div class="nmh-dday">${ddayTxt}</div>` : ''}
-          <div class="nmh-meta">${kickoffTxt || ''}</div>
-        </div>
+        </div>`;
+    const oppTeamHtml = `
         <div class="nmh-team">
           <img class="team-logo nmh-crest opp-logo" data-en-name="${t.nextMatch.oppEn}" data-ko-name="${t.nextMatch.oppKo}" title="${oppNameFull}" src="${t.nextMatch.oppLogo}" alt="${t.nextMatch.oppEn}">
           <span title="${oppNameFull}">${oppName}</span>
           ${oppRankTxt ? `<span class="nms-opp-rank">${oppRankTxt}</span>` : ''}
+        </div>`;
+    const leftTeamHtml = t.nextMatch.homeAway === 'H' ? myTeamHtml : oppTeamHtml;
+    const rightTeamHtml = t.nextMatch.homeAway === 'H' ? oppTeamHtml : myTeamHtml;
+
+    el.innerHTML = `
+      <div class="nmh-eyebrow lbl" data-en="Next · ${weekLbl}" data-ko="다음경기 · ${weekLbl}">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</div>
+      <div class="nmh-top">
+        ${leftTeamHtml}
+        <div class="nmh-center">
+          ${ddayTxt ? `<div class="nmh-dday">${ddayTxt}</div>` : ''}
+          <div class="nmh-meta">${kickoffTxt || ''}</div>
+          ${nextMatchVenueName ? `<div class="nmh-venue">🏟️ ${nextMatchVenueName}</div>` : ''}
         </div>
+        ${rightTeamHtml}
       </div>
       <div class="nmh-bottom">
         <span class="ha-badge ${haClass} nms-ha">${haLabel}</span>
@@ -3332,7 +3344,7 @@
               <span class="rmc-scorers-icon">⚽</span>
             </div>
           </div>
-          ${venueCaptionHtml(m.homeEn)}
+          ${venueCaptionHtml(m.homeEn, weekNum)}
           ${(isMine && (matchLineups[key] || matchHighlights[key])) ? `
           <div class="rmc-btn-row">
             ${matchLineups[key] ? `<button class="rmc-detail-btn lbl" data-en="View Details" data-ko="상세보기" onclick="openMatchDetail('${key}', ${weekNum})">${isKorean ? '상세보기' : 'View Details'}</button>` : ''}
@@ -4127,13 +4139,21 @@
   }
 
   // 홈팀 nameEn 으로 leagueData 에서 구장 정보를 찾아줍니다 (경기는 홈팀 구장에서 열림)
-  function getTeamVenue(nameEn) {
+  // weekNum을 함께 넘기면, 팀에 venueHistory(과거 특정 주차 구간에 썼던 옛 구장)가
+  // 있을 때 그 주차에 맞는 옛 구장을 대신 돌려줍니다. weekNum이 없거나 범위 밖이면
+  // 현재 구장(venue)을 그대로 씁니다.
+  function getTeamVenue(nameEn, weekNum) {
     const team = leagueData.find(t => t.nameEn === nameEn);
-    return (team && team.venue) ? team.venue : null;
+    if (!team) return null;
+    if (typeof weekNum === 'number' && Array.isArray(team.venueHistory)) {
+      const hist = team.venueHistory.find(h => weekNum >= h.fromWeek && weekNum <= h.toWeek);
+      if (hist) return hist.venue;
+    }
+    return team.venue || null;
   }
 
-  function venueCaptionHtml(homeEn) {
-    const venue = getTeamVenue(homeEn);
+  function venueCaptionHtml(homeEn, weekNum) {
+    const venue = getTeamVenue(homeEn, weekNum);
     if (!venue) return '';
     const venueName = isKorean ? venue.nameKo : venue.nameEn;
     return `<div class="rmc-venue">🏟️ ${venueName}</div>`;
@@ -4377,7 +4397,7 @@
             <span class="rmc-scorers-icon">⚽</span>
           </div>
         </div>
-        ${venueCaptionHtml(m.homeEn)}
+        ${venueCaptionHtml(m.homeEn, parseInt(String(currentRoundKey).replace('round', ''), 10))}
       `;
       return card;
     };

@@ -1775,6 +1775,7 @@
   .rank-cell {
     font-weight: 700;
     color: var(--color-text-muted);
+    white-space: nowrap;
   }
   .rank-1 .rank-cell { color: var(--color-gold-strong); }
   .rank-2 .rank-cell { color: var(--color-rank-silver); }
@@ -8871,7 +8872,8 @@
     }
     .rmc-scorers-col-away {
       flex-direction: row;
-      text-align: left;
+      justify-content: flex-end;
+      text-align: right;
     }
   }
 
@@ -9714,6 +9716,12 @@
   color: var(--color-text-faint);
   line-height: 1.4;
 }
+.nmh-venue {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+  line-height: 1.4;
+}
 .nmh-bottom {
   display: flex;
   align-items: center;
@@ -9772,7 +9780,7 @@
   .nmh-team:first-of-type { grid-area: team1; min-width: 0; }
   .nmh-team:last-of-type { grid-area: team2; min-width: 0; }
   .nmh-team .nms-opp-rank { font-size: 10px; padding: 1px 5px; flex-shrink: 0; }
-  .nmh-team:first-of-type .nms-opp-rank { display: none; }
+  .nmh-team-mine .nms-opp-rank { display: none; }
   .nmh-team span {
     font-size: 12px;
     max-width: none;
@@ -9799,6 +9807,9 @@
   .nmh-meta {
     margin-top: 0;
     font-size: 11px;
+  }
+  .nmh-venue {
+    display: none;
   }
   .nms-weather.match-weather {
     grid-area: weather;
