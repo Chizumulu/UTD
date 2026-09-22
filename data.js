@@ -1333,7 +1333,7 @@ const leagueData = [
   {
     nameKo: "치바비 리얼 스타스 FC", nameEn: "Chibavi Real Stars FC", logoSrc: "치바비.webp",
     venue: { nameKo: "치바비 그라운드", nameEn: "Chibavi Ground", lat: -11.443131740663798, lng: 34.00202271076014 },
-    prevSeasonFinal: { season: "25/26", rank: 2, played: 27, gd: 26, pts: 51 }
+    prevSeasonFinal: { season: "25/26", rank: 3, played: 30, gd: 27, pts: 57 }
   },
   {
     nameKo: "젠다 유나이티드 FC", nameEn: "Jenda United FC", logoSrc: "젠다.webp",
@@ -1342,7 +1342,7 @@ const leagueData = [
   {
     nameKo: "치주물루 유나이티드 FC", nameEn: "Chizumulu United FC", logoSrc: "dd.svg",
     venue: { nameKo: "치테코 커뮤니티 그라운드", nameEn: "Chiteko Community Ground", lat: -12.013520053363743, lng: 34.61472198075732 },
-    prevSeasonFinal: { season: "25/26", rank: 6, played: 25, gd: 0, pts: 42 }
+    prevSeasonFinal: { season: "25/26", rank: 6, played: 30, gd: 2, pts: 48 }
   },
   {
     nameKo: "친테체 유나이티드 FC", nameEn: "Chintheche United FC", logoSrc: "친테체.webp",
@@ -1356,7 +1356,7 @@ const leagueData = [
     nameKo: "마푸 스타즈 FC", nameEn: "Mafu Stars FC", logoSrc: "마푸스타즈.webp",
     venue: { nameKo: "망캄비라 그라운드", nameEn: "Mankhambira Ground", lat: -11.722050060500038, lng: 34.296560298979976 },
     // 25/26 시즌 당시 팀명은 "심보웨 스타즈(Simbowe Stars)"였고, 이후 "마푸 스타즈"로 개명함
-    prevSeasonFinal: { season: "25/26", rank: 3, played: 27, gd: 20, pts: 49 }
+    prevSeasonFinal: { season: "25/26", rank: 4, played: 30, gd: 24, pts: 55 }
   },
   {
     nameKo: "음벨와 워리어스 FC", nameEn: "M'mbelwa Warriors FC", logoSrc: "음벨와.webp",
@@ -1367,37 +1367,37 @@ const leagueData = [
     venueHistory: [
       { fromWeek: 1, toWeek: 11, venue: { nameKo: "치반자 그라운드", nameEn: "Chibanja Ground", lat: -11.459634955492291, lng: 34.00871941636782 } }
     ],
-    prevSeasonFinal: { season: "25/26", rank: 8, played: 26, gd: -1, pts: 36 }
+    prevSeasonFinal: { season: "25/26", rank: 7, played: 30, gd: 5, pts: 45 }
   },
   {
     nameKo: "치폴로폴로 보이즈 FC", nameEn: "Chipolopolo Boys FC", logoSrc: "치폴로폴로.webp",
     venue: { nameKo: "루지 그라운드", nameEn: "Luzi Ground", lat: -10.996973616990681, lng: 33.95852479021444 },
-    prevSeasonFinal: { season: "25/26", rank: 9, played: 27, gd: -10, pts: 35 }
+    prevSeasonFinal: { season: "25/26", rank: 9, played: 30, gd: -11, pts: 38 }
   },
   {
     nameKo: "에크웬데니 FC", nameEn: "Ekwendeni FC", logoSrc: "에크웬데니.webp",
     venue: { nameKo: "에크웬데니 커뮤니티 그라운드", nameEn: "Ekwendeni Community Ground", lat: -11.361646682489035, lng: 33.878772291009554 },
-    prevSeasonFinal: { season: "25/26", rank: 13, played: 24, gd: -7, pts: 25 }
+    prevSeasonFinal: { season: "25/26", rank: 14, played: 30, gd: -15, pts: 29 }
   },
   {
     nameKo: "루베 마스터즈 FC", nameEn: "Lube Masters FC", logoSrc: "루베.webp",
     venue: { nameKo: "치바비 그라운드", nameEn: "Chibavi Ground", lat: -11.443131740663798, lng: 34.00202271076014 },
-    prevSeasonFinal: { season: "25/26", rank: 4, played: 25, gd: 6, pts: 45 }
+    prevSeasonFinal: { season: "25/26", rank: 2, played: 30, gd: 12, pts: 58 }
   },
   {
     nameKo: "치하메 올스타즈 FC", nameEn: "Chihame All Stars FC", logoSrc: "치하메.webp",
     venue: { nameKo: "마강가 그라운드", nameEn: "Maganga Ground", lat: -11.606119833712514, lng: 34.28363798021556 },
-    prevSeasonFinal: { season: "25/26", rank: 11, played: 26, gd: -14, pts: 30 }
+    prevSeasonFinal: { season: "25/26", rank: 11, played: 30, gd: -14, pts: 37 }
   },
   {
     nameKo: "라이플리 FC", nameEn: "Raiply FC", logoSrc: "라이플리.webp",
     venue: { nameKo: "라이플리 그라운드", nameEn: "Raiply Ground", lat: -11.872442758508145, lng: 33.79948562470589 },
-    prevSeasonFinal: { season: "25/26", rank: 5, played: 25, gd: 17, pts: 44 }
+    prevSeasonFinal: { season: "25/26", rank: 5, played: 30, gd: 20, pts: 51 }
   },
   {
     nameKo: "에우티니 베테랑스 FC", nameEn: "Euthini Veterans FC", logoSrc: "에우티니.webp",
     venue: { nameKo: "에우티니 CDSS 그라운드", nameEn: "Euthini CDSS Ground", lat: -11.452676853336099, lng: 33.41946042830683 },
-    prevSeasonFinal: { season: "25/26", rank: 12, played: 25, gd: -15, pts: 27 }
+    prevSeasonFinal: { season: "25/26", rank: 12, played: 30, gd: -18, pts: 36 }
   },
   {
     nameKo: "비전 S 아카데미", nameEn: "Vision S Academy", logoSrc: "비전아카데미.webp",
