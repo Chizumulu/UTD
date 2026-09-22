@@ -1332,7 +1332,8 @@ function computeStandingsHistory() {
 const leagueData = [
   {
     nameKo: "치바비 리얼 스타스 FC", nameEn: "Chibavi Real Stars FC", logoSrc: "치바비.webp",
-    venue: { nameKo: "치바비 그라운드", nameEn: "Chibavi Ground", lat: -11.443131740663798, lng: 34.00202271076014 }
+    venue: { nameKo: "치바비 그라운드", nameEn: "Chibavi Ground", lat: -11.443131740663798, lng: 34.00202271076014 },
+    prevSeasonFinal: { season: "25/26", rank: 2, played: 27, gd: 26, pts: 51 }
   },
   {
     nameKo: "젠다 유나이티드 FC", nameEn: "Jenda United FC", logoSrc: "젠다.webp",
@@ -1340,7 +1341,8 @@ const leagueData = [
   },
   {
     nameKo: "치주물루 유나이티드 FC", nameEn: "Chizumulu United FC", logoSrc: "dd.svg",
-    venue: { nameKo: "치테코 커뮤니티 그라운드", nameEn: "Chiteko Community Ground", lat: -12.013520053363743, lng: 34.61472198075732 }
+    venue: { nameKo: "치테코 커뮤니티 그라운드", nameEn: "Chiteko Community Ground", lat: -12.013520053363743, lng: 34.61472198075732 },
+    prevSeasonFinal: { season: "25/26", rank: 6, played: 25, gd: 0, pts: 42 }
   },
   {
     nameKo: "친테체 유나이티드 FC", nameEn: "Chintheche United FC", logoSrc: "친테체.webp",
@@ -1352,7 +1354,9 @@ const leagueData = [
   },
   {
     nameKo: "마푸 스타즈 FC", nameEn: "Mafu Stars FC", logoSrc: "마푸스타즈.webp",
-    venue: { nameKo: "망캄비라 그라운드", nameEn: "Mankhambira Ground", lat: -11.722050060500038, lng: 34.296560298979976 }
+    venue: { nameKo: "망캄비라 그라운드", nameEn: "Mankhambira Ground", lat: -11.722050060500038, lng: 34.296560298979976 },
+    // 25/26 시즌 당시 팀명은 "심보웨 스타즈(Simbowe Stars)"였고, 이후 "마푸 스타즈"로 개명함
+    prevSeasonFinal: { season: "25/26", rank: 3, played: 27, gd: 20, pts: 49 }
   },
   {
     nameKo: "음벨와 워리어스 FC", nameEn: "M'mbelwa Warriors FC", logoSrc: "음벨와.webp",
@@ -1362,31 +1366,38 @@ const leagueData = [
     // getTeamVenue(nameEn, weekNum)가 weekNum이 이 범위 안에 들면 아래 venue를 대신 씁니다.
     venueHistory: [
       { fromWeek: 1, toWeek: 11, venue: { nameKo: "치반자 그라운드", nameEn: "Chibanja Ground", lat: -11.459634955492291, lng: 34.00871941636782 } }
-    ]
+    ],
+    prevSeasonFinal: { season: "25/26", rank: 8, played: 26, gd: -1, pts: 36 }
   },
   {
     nameKo: "치폴로폴로 보이즈 FC", nameEn: "Chipolopolo Boys FC", logoSrc: "치폴로폴로.webp",
-    venue: { nameKo: "루지 그라운드", nameEn: "Luzi Ground", lat: -10.996973616990681, lng: 33.95852479021444 }
+    venue: { nameKo: "루지 그라운드", nameEn: "Luzi Ground", lat: -10.996973616990681, lng: 33.95852479021444 },
+    prevSeasonFinal: { season: "25/26", rank: 9, played: 27, gd: -10, pts: 35 }
   },
   {
     nameKo: "에크웬데니 FC", nameEn: "Ekwendeni FC", logoSrc: "에크웬데니.webp",
-    venue: { nameKo: "에크웬데니 커뮤니티 그라운드", nameEn: "Ekwendeni Community Ground", lat: -11.361646682489035, lng: 33.878772291009554 }
+    venue: { nameKo: "에크웬데니 커뮤니티 그라운드", nameEn: "Ekwendeni Community Ground", lat: -11.361646682489035, lng: 33.878772291009554 },
+    prevSeasonFinal: { season: "25/26", rank: 13, played: 24, gd: -7, pts: 25 }
   },
   {
     nameKo: "루베 마스터즈 FC", nameEn: "Lube Masters FC", logoSrc: "루베.webp",
-    venue: { nameKo: "치바비 그라운드", nameEn: "Chibavi Ground", lat: -11.443131740663798, lng: 34.00202271076014 }
+    venue: { nameKo: "치바비 그라운드", nameEn: "Chibavi Ground", lat: -11.443131740663798, lng: 34.00202271076014 },
+    prevSeasonFinal: { season: "25/26", rank: 4, played: 25, gd: 6, pts: 45 }
   },
   {
     nameKo: "치하메 올스타즈 FC", nameEn: "Chihame All Stars FC", logoSrc: "치하메.webp",
-    venue: { nameKo: "마강가 그라운드", nameEn: "Maganga Ground", lat: -11.606119833712514, lng: 34.28363798021556 }
+    venue: { nameKo: "마강가 그라운드", nameEn: "Maganga Ground", lat: -11.606119833712514, lng: 34.28363798021556 },
+    prevSeasonFinal: { season: "25/26", rank: 11, played: 26, gd: -14, pts: 30 }
   },
   {
     nameKo: "라이플리 FC", nameEn: "Raiply FC", logoSrc: "라이플리.webp",
-    venue: { nameKo: "라이플리 그라운드", nameEn: "Raiply Ground", lat: -11.872442758508145, lng: 33.79948562470589 }
+    venue: { nameKo: "라이플리 그라운드", nameEn: "Raiply Ground", lat: -11.872442758508145, lng: 33.79948562470589 },
+    prevSeasonFinal: { season: "25/26", rank: 5, played: 25, gd: 17, pts: 44 }
   },
   {
     nameKo: "에우티니 베테랑스 FC", nameEn: "Euthini Veterans FC", logoSrc: "에우티니.webp",
-    venue: { nameKo: "에우티니 CDSS 그라운드", nameEn: "Euthini CDSS Ground", lat: -11.452676853336099, lng: 33.41946042830683 }
+    venue: { nameKo: "에우티니 CDSS 그라운드", nameEn: "Euthini CDSS Ground", lat: -11.452676853336099, lng: 33.41946042830683 },
+    prevSeasonFinal: { season: "25/26", rank: 12, played: 25, gd: -15, pts: 27 }
   },
   {
     nameKo: "비전 S 아카데미", nameEn: "Vision S Academy", logoSrc: "비전아카데미.webp",
@@ -2136,7 +2147,13 @@ const nameAliases = {
   "ZACHARIAH MPHAMBA": "ZAKARIA MPHAMBA",
   "CLEMENT MUNTHALI": "CLEMENT KASEKA",
   "CLEMENT MTHALI": "CLEMENT KASEKA",
-  "CHISOMO MYEGHA": "CHISOMO MYGHA"
+  "CHISOMO MYEGHA": "CHISOMO MYGHA",
+  // 2026-09-22: 득점 순위표에서 같은 팀 내 철자 1~2자 차이로 갈려 있던 선수들을 통일
+  "KINGLEY MVULA": "KINGSLEY MVULA",
+  "JOMO PHIRI": "JOMOLE PHIRI",
+  "HEBERT CHIRAMBO": "HERBERT CHIRAMBO",
+  "SAMAN NYIRENDA": "SAMANI NYIRENDA",
+  "FORTUNE CHILAMBO": "FORTUNE CHIRAMBO"
 };
 
 // 영문 이름(대문자) -> 한글/영문 표기 사전. matchDetails 에 새 득점자가
@@ -2412,6 +2429,109 @@ function computeTopScorers() {
 
 // 득점 순위 데이터 (matchDetails 로부터 자동 계산됨. 더 이상 직접 수정할 필요 없음)
 const topScorersData = computeTopScorers();
+
+// ============================================================
+// 오타 감지: 같은 팀 안에서 영문 철자가 1~2자만 다른 득점자 표기가
+// 새로 들어와도 nameAliases 로 아직 묶이지 않았다면, 브라우저 콘솔에
+// 경고를 띄워줍니다. 실제로 동일 선수인지는 사람이 확인해야 하므로
+// (다른 팀에 진짜 비슷한 이름의 선수가 있을 수도 있음) 자동으로
+// 합치지는 않고, 위 nameAliases 에 추가할 한 줄을 제안만 합니다.
+// ============================================================
+function levenshteinDistance(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return dp[m][n];
+}
+
+function detectPotentialScorerNameTypos() {
+  const teamByShortName = buildShortNameToTeamMap();
+  // team -> Set(원문 그대로의 raw key, alias 적용 전)
+  const rawKeysByTeam = {};
+
+  function collectRaw(scorerText, team) {
+    if (!scorerText || scorerText === "없음" || !team) return;
+    scorerText.split(",").forEach(rawSegment => {
+      const segment = rawSegment.trim();
+      if (!segment) return;
+      const parenMatch = segment.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+      const rawName = (parenMatch ? parenMatch[1] : segment).trim();
+      const note = parenMatch ? parenMatch[2] : "";
+      if (/자책골/.test(note)) return;
+      const key = rawName.toUpperCase();
+      if (!rawKeysByTeam[team.nameEn]) rawKeysByTeam[team.nameEn] = new Set();
+      rawKeysByTeam[team.nameEn].add(key);
+    });
+  }
+
+  Object.keys(matchDetails).forEach(roundKey => {
+    matchDetails[roundKey].forEach(m => {
+      const parts = m.match.split(":").map(s => s.trim());
+      if (parts.length !== 2) return;
+      const homeParse = parts[0].match(/^(.+?)\s+(\d+)$/);
+      const awayParse = parts[1].match(/^(.+?)\s+(\d+)$/);
+      const homeTeam = homeParse ? teamByShortName[homeParse[1]] : null;
+      const awayTeam = awayParse ? teamByShortName[awayParse[1]] : null;
+      collectRaw(m.scorersHome, homeTeam);
+      collectRaw(m.scorersAway, awayTeam);
+    });
+  });
+
+  if (typeof scheduledRounds !== 'undefined' && scheduledRounds) {
+    Object.keys(scheduledRounds).forEach(roundKey => {
+      if (roundsData[roundKey]) return;
+      scheduledRounds[roundKey].forEach(m => {
+        if (m.byeKo || m.byeEn) return;
+        if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+        collectRaw(m.scorersHome, findTeamByNameEn(m.homeEn));
+        collectRaw(m.scorersAway, findTeamByNameEn(m.awayEn));
+      });
+    });
+  }
+
+  const warnings = [];
+  Object.keys(rawKeysByTeam).forEach(teamEn => {
+    const keys = Array.from(rawKeysByTeam[teamEn]);
+    for (let i = 0; i < keys.length; i++) {
+      for (let j = i + 1; j < keys.length; j++) {
+        const a = keys[i], b = keys[j];
+        if (a === b) continue;
+        // nameAliases 를 거쳐 이미 같은 이름으로 묶여있다면 건너뜀
+        const resolvedA = nameAliases[a] || a;
+        const resolvedB = nameAliases[b] || b;
+        if (resolvedA === resolvedB) continue;
+        const dist = levenshteinDistance(a, b);
+        if (dist >= 1 && dist <= 2) {
+          warnings.push({ teamEn, a, b, dist });
+        }
+      }
+    }
+  });
+
+  if (warnings.length && typeof console !== 'undefined') {
+    warnings.forEach(w => {
+      console.warn(
+        `[선수 이름 확인 필요] "${w.teamEn}" 팀에 철자가 ${w.dist}자만 다른 득점자 표기가 있습니다: ` +
+        `"${w.a}" / "${w.b}". 동일 선수라면 nameAliases 에 ` +
+        `"${w.a}": "${w.b}" (또는 반대 방향) 한 줄을 추가해주세요.`
+      );
+    });
+  }
+  return warnings;
+}
+
+// 페이지 로드 시 자동 실행 (개발자 콘솔에 경고만 띄우고, 데이터는 건드리지 않음)
+detectPotentialScorerNameTypos();
 
 // ============================================================
 // 다득점 기록 (Multi-goal Games): 한 경기에서 2골 이상 넣은 기록만 모아서

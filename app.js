@@ -3134,12 +3134,47 @@
     `;
   }
 
+  // ===== 지난 시즌 최종 순위 카드 (t.prevSeasonFinal 이 있는 팀만 표시) =====
+  // leagueData 의 각 팀 항목에 prevSeasonFinal: { season, rank, played, gd, pts }
+  // 을 넣어두면 자동으로 노출됩니다. 없는 팀(그 시즌에 없던 팀 등)은 그냥 빈 문자열을 반환합니다.
+  function buildPrevSeasonCardHtml(t) {
+    const p = t && t.prevSeasonFinal;
+    if (!p) return '';
+    const gdClass = p.gd > 0 ? 'gd-pos' : (p.gd < 0 ? 'gd-neg' : 'gd-zero');
+    const rows = [
+      { ko: '경기', en: 'PLAYED', value: p.played },
+      { ko: '득실차', en: 'GOAL DIFF', value: `<span class="${gdClass}">${p.gd}</span>` },
+      { ko: '승점', en: 'PTS', value: `<span class="pts">${p.pts}</span>` }
+    ];
+    const titleKo = `${p.season} 시즌 최종 순위`;
+    const titleEn = `${p.season} Final Standing`;
+    return `
+      <div class="ti-section">
+        <div class="ti-section-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>
+        <div class="ti-record-card">
+          <div class="ti-record-rank">
+            <span class="ti-record-rank-num">${p.rank}</span>
+            <span class="ti-record-rank-label lbl" data-en="Final Rank" data-ko="최종 순위">${isKorean ? '최종 순위' : 'Final Rank'}</span>
+          </div>
+          <div class="ti-record-grid">
+            ${rows.map(r => `
+              <div class="ti-record-item">
+                <span class="ti-record-item-label lbl" data-en="${r.en}" data-ko="${r.ko}">${isKorean ? r.ko : r.en}</span>
+                <span class="ti-record-item-value">${r.value}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderTeamRecordTab() {
     const el = document.getElementById('teamInfoRecordTab');
     if (!el) return;
     const info = getMyRankedTeam();
     if (!info) { el.innerHTML = ''; return; }
-    el.innerHTML = buildRecordCardHtml(info.team, info.rank, info.total);
+    el.innerHTML = buildRecordCardHtml(info.team, info.rank, info.total) + buildPrevSeasonCardHtml(info.team);
   }
 
   // 상대전적(H2H) 탭 렌더링 — h2hHistory(data.js에서 roundsData + matchLineups의
@@ -8332,6 +8367,7 @@
     const scorersHtml = buildTeamScorerCardsHtml(t.nameEn, t.nameKo);
     const nextMatchHtml = nextMatchOpponentHtml(t, rank);
     const pastResultsHtml = buildTeamPastResultsHtml(t.nameEn, t.nameKo);
+    const prevSeasonHtml = buildPrevSeasonCardHtml(t);
 
     const bodyEl = document.getElementById('otherTeamFullBody');
     if (bodyEl) {
@@ -8340,6 +8376,7 @@
           <div class="ti-section-title lbl" data-en="Record" data-ko="기록">${isKorean ? '기록' : 'Record'}</div>
           ${recordCardHtml}
         </div>
+        ${prevSeasonHtml}
         <div class="ti-section">
           <div class="ti-overview-grid other-team-full-grid">
             ${formGuideHtml}
