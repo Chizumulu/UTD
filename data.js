@@ -333,8 +333,8 @@ const squadData = [
   { number: 6, position: "MF", nameKo: "벤자민 니렌다", nameEn: "Benjamin Nyirenda", photoSrc: "no6.png" },
   { number: 7, position: "MF", nameKo: "디킨스 니렌다", nameEn: "Dickies Nyirenda", photoSrc: "no7.png" },
   { number: 8, position: "MF", nameKo: "엑스퍼트 카망가", nameEn: "Expert Kamanga", photoSrc: "no8.png" },
-  { position: "FW", nameKo: "헤르메스 제임스", nameEn: "Hermes James", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp" },
-  { position: "DF", nameKo: "켈빈 반다", nameEn: "Kelvin Banda", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp" },
+  { position: "FW", nameKo: "헤르메스 제임스", nameEn: "Hermes James", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp", photoSrc: "헤르메스.png" },
+  { position: "DF", nameKo: "켈빈 반다", nameEn: "Kelvin Banda", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp", photoSrc: "켈빈.png" },
   { number: 10, position: "MF", nameKo: "찰스 데야", nameEn: "Charles Deya", photoSrc: "no10.png" },
   { number: 11, position: "FW", nameKo: "해리 바튼", nameEn: "Harry Barton", photoSrc: "no11.png" },
   { number: 13, position: "DF", nameKo: "조셉 반다", nameEn: "Joseph Banda", photoSrc: "no13.png" },
@@ -1056,7 +1056,7 @@ const scheduledRounds = {
     { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },
     { byeKo: "에우티니 베테랑스 FC", byeEn: "Euthini Veterans FC" },
     // 10주차에서 연기됐던 칠룸바 vs 친테체 경기가 12주차 경기로 확정되었습니다.
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-23", kickoffTime: "14:30", movedFromWeek: 10 }
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-23", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 4, awayScore: 0, scorersHome: "WANANGWA GONDWE, DEUS NKUTU, BENJAMIN MAPUNDA (2골)", scorersAway: "없음" }
   ],
   round13: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-02", kickoffTime: "15:00" },
@@ -2214,6 +2214,7 @@ const playerDirectory = {
   "HERAND PHIRI": { nameKo: "헤란드 피리", nameEn: "Herand Phiri" },
   "WONGANI KAMANGA": { nameKo: "웡가니 카망가", nameEn: "Wongani Kamanga" },
   "WANANGWA GONDWE": { nameKo: "와낭과 곤드웨", nameEn: "Wanangwa Gondwe" },
+  "DEUS NKUTU": { nameKo: "데우스 은쿠투", nameEn: "Deus Nkutu" },
   "RAPHAEL PHIRI": { nameKo: "라파엘 피리", nameEn: "Raphael Phiri" },
   "EMMANUEL MIOTHA": { nameKo: "임마누엘 미오타", nameEn: "Emmanuel Miotha" },
   "JOLLY MFUNE": { nameKo: "졸리 음푸네", nameEn: "Jolly Mfune" },
