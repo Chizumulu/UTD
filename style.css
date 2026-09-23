@@ -4252,6 +4252,37 @@
   }
   .spm-tag-flag { display: inline-flex; align-items: center; gap: 5px; }
   .spm-tag-flag .national-flag-icon { flex-shrink: 0; border-radius: 2px; display: block; }
+  .spm-tag-former {
+    background: rgba(0,0,0,0.32);
+    border-color: transparent;
+  }
+  .spm-tag-loan {
+    background: var(--color-navy-light, #5b6b8c);
+    color: #fff;
+    border-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .spm-loan-club {
+    margin-top: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text-muted, rgba(255,255,255,0.6));
+  }
+  .spm-loan-club-logo {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    display: block;
+    background: #fff;
+  }
 
   /* --- 우측: 시즌 기록 / 수상 / 타임라인 패널 --- */
   .spm-right {
@@ -5105,6 +5136,109 @@
   }
   .squad-band-c { background: var(--color-gold-strong); }
   .squad-band-vc { background: var(--color-teal); }
+  .squad-band-loan { background: var(--color-navy-light, #5b6b8c); }
+  .squad-card-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+
+  /* ============================================================
+     방출 · 계약종료 선수단 (Released / Contract Terminated Squad)
+     - 기본 접힘 상태의 <details>/<summary>로 구현, 클릭 시 하단에 펼쳐짐.
+     - grid-template-rows 0fr↔1fr 트랜지션으로 부드럽게 펼쳐집니다.
+     ============================================================ */
+  .squad-former-details {
+    margin-top: 22px;
+  }
+  .squad-former-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    color: var(--color-text-darkest);
+    padding: 12px 14px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.08);
+    user-select: none;
+  }
+  .squad-former-details[open] .squad-former-summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    box-shadow: none;
+  }
+  .squad-former-summary::-webkit-details-marker { display: none; }
+  .squad-former-summary-text {
+    display: flex;
+    align-items: center;
+  }
+  .squad-former-summary-text::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    margin-right: 10px;
+    border-right: 2px solid var(--color-text-muted);
+    border-bottom: 2px solid var(--color-text-muted);
+    transform: rotate(45deg);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+  .squad-former-details[open] .squad-former-summary-text::before {
+    transform: rotate(-135deg);
+  }
+  .squad-former-summary-count {
+    background: var(--color-bg-table-alt);
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: var(--radius-md);
+    margin-left: auto;
+  }
+  .squad-former-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-top: none;
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+  }
+  .squad-former-panel > div {
+    padding: 14px;
+  }
+  .squad-former-card {
+    opacity: 0.62;
+    filter: grayscale(60%);
+  }
+  .squad-former-card:hover {
+    opacity: 0.9;
+  }
+  .squad-former-status-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 8px;
+    border-radius: var(--radius-xs);
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--color-text-muted);
+    background: var(--color-bg-table-alt);
+    border: 1px solid var(--color-border-light);
+    white-space: nowrap;
+  }
+  .squad-card-number-none {
+    background: var(--color-bg-table-alt);
+    color: var(--color-text-faint);
+  }
 
   /* ===== 팀 정보 페이지 "득점 순위" 카드 (Top Scorers Cards) ===== */
   .ti-scorer-card-row {

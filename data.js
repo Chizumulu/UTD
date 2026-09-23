@@ -323,6 +323,9 @@ const matchLineups = {
 };
 
 const squadData = [
+  // 임대 영입 선수는 기존 항목에 아래 필드를 추가하면 카드에 "임대" 배지가 붙습니다.
+  //   isLoan: true, loanClubKo: "원소속 구단명", loanClubEn: "Parent Club Name", loanClubLogo: "로고파일명.webp"(선택)
+  // 등번호가 아직 정해지지 않은 선수는 number 필드를 아예 생략하면 카드에 "-"로 표시됩니다.
   { number: 1, position: "GK", nameKo: "기프트 길버트", nameEn: "Gift Gilbert", photoSrc: "no1.png" },
   { number: 2, position: "DF", nameKo: "로날드 은달라마", nameEn: "Ronald Ndalama", photoSrc: "no2.png" },
   { number: 3, position: "DF", nameKo: "알란 음롱골라", nameEn: "Allan Mlongola", isViceCaptain: true, photoSrc: "no3.png" },
@@ -330,7 +333,8 @@ const squadData = [
   { number: 6, position: "MF", nameKo: "벤자민 니렌다", nameEn: "Benjamin Nyirenda", photoSrc: "no6.png" },
   { number: 7, position: "MF", nameKo: "디킨스 니렌다", nameEn: "Dickies Nyirenda", photoSrc: "no7.png" },
   { number: 8, position: "MF", nameKo: "엑스퍼트 카망가", nameEn: "Expert Kamanga", photoSrc: "no8.png" },
-  { number: 9, position: "FW", nameKo: "임마누엘 음칸다위레", nameEn: "Emmanuel Mkandawire", photoSrc: "no9.png" },
+  { position: "FW", nameKo: "헤르메스 제임스", nameEn: "Hermes James", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp" },
+  { position: "DF", nameKo: "켈빈 반다", nameEn: "Kelvin Banda", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp" },
   { number: 10, position: "MF", nameKo: "찰스 데야", nameEn: "Charles Deya", photoSrc: "no10.png" },
   { number: 11, position: "FW", nameKo: "해리 바튼", nameEn: "Harry Barton", photoSrc: "no11.png" },
   { number: 13, position: "DF", nameKo: "조셉 반다", nameEn: "Joseph Banda", photoSrc: "no13.png" },
@@ -346,6 +350,13 @@ const squadData = [
   { number: 90, position: "GK", nameKo: "마야미코 치우시와", nameEn: "Mayamiko Chiusiwa", photoSrc: "no90.png", nationalBadge: { flag: "MW", labelKo: "U-23 국가대표", labelEn: "U-23 International" } },
   { number: 98, position: "MF", nameKo: "스티브 피리", nameEn: "Steve Phiri", photoSrc: "no98.png" },
   { number: 99, position: "MF", nameKo: "패트릭 지야", nameEn: "Patrick Jiya", photoSrc: "no99.png" }
+];
+
+// ===== 방출 · 계약종료 선수단 =====
+// status: "released"(방출) 또는 "terminated"(계약종료)
+// number, photoSrc는 선택 항목이며 없으면 자동으로 대체 표시됩니다.
+const formerSquadData = [
+  { number: 9, position: "FW", nameKo: "임마누엘 음칸다위레", nameEn: "Emmanuel Mkandawire", status: "released", photoSrc: "no9.png" }
 ];
 
 // ===== 스태프 명단 =====
@@ -1036,7 +1047,7 @@ const upcomingMatchHistory = {
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
   round12: [
-    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-26", kickoffTime: "14:30" },
+    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-26", kickoffTime: "14:30" },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-26", kickoffTime: "14:30" },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },

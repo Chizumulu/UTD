@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '004',
-    data: '005',
-    app: '004',
+    style: '006',
+    data: '006',
+    app: '006',
     predictWorker: '001',
     pathfinderEngine: '001',
     poster: '001'
@@ -578,6 +578,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
     <div id="teamInfoStaffTab" class="team-info-tab-content"></div>
     <div id="squadGroups" class="team-info-tab-content"></div>
+    <details class="squad-former-details" id="squadFormerDetails">
+      <summary class="squad-former-summary">
+        <span class="squad-former-summary-text lbl" data-en="Released / Contract Terminated" data-ko="방출 · 계약종료 선수단">방출 · 계약종료 선수단</span>
+        <span class="squad-former-summary-count" id="squadFormerCount"></span>
+      </summary>
+      <div class="squad-former-panel">
+        <div id="squadFormerGroups"></div>
+      </div>
+    </details>
   </section>
   <section id="tiSection-honors" class="ti-section ti-tabpage">
     <div class="ti-section-title lbl" data-en="Player Records" data-ko="선수 기록">선수 기록</div>
@@ -976,8 +985,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div class="spm-tags">
               <span id="squadPlayerModalPosTag" class="spm-tag spm-tag-pos"></span>
               <span id="squadPlayerModalCaptainTag" class="spm-tag spm-tag-cap" style="display:none;">🎖️ <span class="lbl" data-en="Captain" data-ko="주장">주장</span></span>
+              <span id="squadPlayerModalLoanTag" class="spm-tag spm-tag-loan" style="display:none;"></span>
+              <span id="squadPlayerModalFormerTag" class="spm-tag spm-tag-former" style="display:none;"></span>
               <span id="squadPlayerModalNationalBadge" class="spm-tag spm-tag-flag" style="display: none;"></span>
             </div>
+            <div id="squadPlayerModalLoanClub" class="spm-loan-club" style="display:none;"></div>
           </div>
         </div>
       </div>

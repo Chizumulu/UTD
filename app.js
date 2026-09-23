@@ -4145,7 +4145,11 @@
       const players = squadData
         .filter(p => p.position === pos)
         .slice()
-        .sort((a, b) => a.number - b.number);
+        .sort((a, b) => {
+          const na = (a.number !== undefined && a.number !== null) ? a.number : Infinity;
+          const nb = (b.number !== undefined && b.number !== null) ? b.number : Infinity;
+          return na - nb;
+        });
       if (players.length === 0) return;
 
       const group = document.createElement('div');
@@ -4163,23 +4167,42 @@
       players.forEach(p => {
         const card = document.createElement('div');
         card.className = 'squad-card';
-        card.dataset.playerNumber = p.number;
-
-        let badge = '';
-        if (p.isCaptain) {
-          badge = `<span class="squad-band squad-band-c" title="${isKorean ? '주장' : 'Captain'}">C</span>`;
-        } else if (p.isViceCaptain) {
-          badge = `<span class="squad-band squad-band-vc" title="${isKorean ? '부주장' : 'Vice-Captain'}">VC</span>`;
+        const hasNumber = (p.number !== undefined && p.number !== null);
+        if (hasNumber) {
+          card.dataset.playerNumber = p.number;
+        } else if (p.nameEn) {
+          // 임대 등 등번호가 없는 선수도 클릭해서 상세 모달을 열 수 있도록
+          // 이름을 키로 사용합니다.
+          card.dataset.playerKey = p.nameEn;
         }
+
+        const badges = [];
+        if (p.isCaptain) {
+          badges.push(`<span class="squad-band squad-band-c" title="${isKorean ? '주장' : 'Captain'}">C</span>`);
+        } else if (p.isViceCaptain) {
+          badges.push(`<span class="squad-band squad-band-vc" title="${isKorean ? '부주장' : 'Vice-Captain'}">VC</span>`);
+        }
+        if (p.isLoan) {
+          const loanClub = isKorean ? (p.loanClubKo || '') : (p.loanClubEn || '');
+          const loanTitle = loanClub
+            ? (isKorean ? `임대 (원소속: ${loanClub})` : `On Loan (from ${loanClub})`)
+            : (isKorean ? '임대' : 'On Loan');
+          badges.push(`<span class="squad-band squad-band-loan lbl" data-en="Loan" data-ko="임대" title="${loanTitle}">${isKorean ? '임대' : 'Loan'}</span>`);
+        }
+        const badge = badges.length ? `<div class="squad-card-badges">${badges.join('')}</div>` : '';
 
         const playerName = isKorean ? p.nameKo : p.nameEn;
 
+        const numberHtml = hasNumber
+          ? `<div class="squad-card-number">${p.number}</div>`
+          : `<div class="squad-card-number squad-card-number-none" title="${isKorean ? '등번호 미정' : 'Number TBD'}">-</div>`;
+
         const photo = p.photoSrc
           ? `<img class="squad-card-photo" src="${p.photoSrc}" alt="${p.nameEn}">`
-          : `<div class="squad-card-photo squad-card-photo-placeholder">${p.number}</div>`;
+          : `<div class="squad-card-photo squad-card-photo-placeholder">${hasNumber ? p.number : (p.nameEn ? p.nameEn.charAt(0) : '?')}</div>`;
 
         card.innerHTML = `
-          <div class="squad-card-number">${p.number}</div>
+          ${numberHtml}
           ${photo}
           <div class="squad-card-body">
             <div class="squad-card-name lbl" data-en="${p.nameEn}" data-ko="${p.nameKo}">${playerName}</div>
@@ -4193,6 +4216,82 @@
       group.appendChild(grid);
       wrap.appendChild(group);
     });
+
+    renderFormerSquadView();
+  }
+
+  // ===== 방출 · 계약종료 선수단 (Released / Contract Terminated Squad) =====
+  const FORMER_STATUS_LABEL = {
+    released: { ko: '방출', en: 'Released' },
+    terminated: { ko: '계약종료', en: 'Contract Terminated' }
+  };
+  // details 엘리먼트는 언어 전환/화면 재진입 시에도 innerHTML로 다시 그려지지
+  // 않으므로, 열림/닫힘 상태를 여기 따로 저장해뒀다가 재렌더링할 때 그대로 복원합니다.
+  // 기본값은 항상 접힘(false)입니다.
+  let formerSquadOpen = false;
+
+  function renderFormerSquadView() {
+    const details = document.getElementById('squadFormerDetails');
+    const wrap = document.getElementById('squadFormerGroups');
+    const countEl = document.getElementById('squadFormerCount');
+    if (!details || !wrap) return;
+
+    const list = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+
+    if (list.length === 0) {
+      details.style.display = 'none';
+      return;
+    }
+    details.style.display = '';
+    details.open = formerSquadOpen;
+
+    if (countEl) countEl.textContent = String(list.length);
+
+    const grid = document.createElement('div');
+    grid.className = 'squad-card-grid squad-former-card-grid';
+
+    list
+      .slice()
+      .sort((a, b) => {
+        const pa = POSITION_ORDER.indexOf(a.position);
+        const pb = POSITION_ORDER.indexOf(b.position);
+        if (pa !== pb) return pa - pb;
+        return (a.number || 0) - (b.number || 0);
+      })
+      .forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'squad-card squad-former-card';
+        if (p.number !== undefined && p.number !== null) {
+          card.dataset.playerNumber = p.number;
+        } else if (p.nameEn) {
+          card.dataset.playerKey = p.nameEn;
+        }
+
+        const statusInfo = FORMER_STATUS_LABEL[p.status] || FORMER_STATUS_LABEL.released;
+        const playerName = isKorean ? p.nameKo : p.nameEn;
+
+        const numberHtml = (p.number !== undefined && p.number !== null)
+          ? `<div class="squad-card-number">${p.number}</div>`
+          : `<div class="squad-card-number squad-card-number-none">-</div>`;
+
+        const photo = p.photoSrc
+          ? `<img class="squad-card-photo" src="${p.photoSrc}" alt="${p.nameEn}">`
+          : `<div class="squad-card-photo squad-card-photo-placeholder">${p.number !== undefined && p.number !== null ? p.number : (p.nameEn ? p.nameEn.charAt(0) : '?')}</div>`;
+
+        card.innerHTML = `
+          ${numberHtml}
+          ${photo}
+          <div class="squad-card-body">
+            <div class="squad-card-name lbl" data-en="${p.nameEn}" data-ko="${p.nameKo}">${playerName}</div>
+            <div class="squad-card-pos">${p.position}</div>
+          </div>
+          <span class="squad-former-status-badge lbl" data-en="${statusInfo.en}" data-ko="${statusInfo.ko}">${isKorean ? statusInfo.ko : statusInfo.en}</span>
+        `;
+        grid.appendChild(card);
+      });
+
+    wrap.innerHTML = '';
+    wrap.appendChild(grid);
   }
 
 
@@ -8109,13 +8208,26 @@
   }
 
   // ===== 스쿼드 선수 통산 기록 모달 (Squad Player Career Stats Modal) =====
-  function openSquadPlayerModal(number) {
-    const num = parseInt(number, 10);
-    const player = squadData.find(p => p.number === num);
-    if (!player) return;
+  function openSquadPlayerModal(identifier) {
+    const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+    const num = parseInt(identifier, 10);
+    const isNumericId = !isNaN(num) && String(num) === String(identifier);
 
-    currentSquadPlayerModalNumber = num;
-    const stats = squadPlayerStats[num] || {
+    // 등번호로 먼저 찾고, 없으면(임대 선수 등 등번호 미배정) 이름 키로 찾습니다.
+    let player = null;
+    if (isNumericId) {
+      player = squadData.find(p => p.number === num) || former.find(p => p.number === num);
+    }
+    if (!player) {
+      player = squadData.find(p => (p.number === undefined || p.number === null) && p.nameEn === identifier)
+        || former.find(p => (p.number === undefined || p.number === null) && p.nameEn === identifier);
+    }
+    if (!player) return;
+    const isFormerPlayer = !squadData.includes(player) && former.includes(player);
+    const hasNumber = (player.number !== undefined && player.number !== null);
+
+    currentSquadPlayerModalNumber = identifier;
+    const stats = (hasNumber ? squadPlayerStats[player.number] : null) || {
       appearances: 0, starts: 0, subApps: 0, goals: 0,
       captainCount: 0, motmCount: 0, history: []
     };
@@ -8126,10 +8238,10 @@
     photoImgEl.alt = player.nameEn;
     photoImgEl.style.display = player.photoSrc ? '' : 'none';
     photoFallbackEl.style.display = player.photoSrc ? 'none' : '';
-    photoFallbackEl.textContent = player.photoSrc ? '' : player.number;
+    photoFallbackEl.textContent = player.photoSrc ? '' : (hasNumber ? player.number : (player.nameEn ? player.nameEn.charAt(0) : '?'));
 
-    document.getElementById('squadPlayerModalNumberChip').textContent = player.number;
-    document.getElementById('squadPlayerModalLeft').setAttribute('data-num', player.number);
+    document.getElementById('squadPlayerModalNumberChip').textContent = hasNumber ? player.number : '-';
+    document.getElementById('squadPlayerModalLeft').setAttribute('data-num', hasNumber ? player.number : '-');
 
     const myTeamObj = reportTeamByNameEn(REPORT_TEAM_EN);
     document.getElementById('squadPlayerModalTeamLogo').src = myTeamObj ? myTeamObj.logoSrc : '';
@@ -8138,10 +8250,46 @@
 
     document.getElementById('squadPlayerModalName').textContent = isKorean ? player.nameKo : player.nameEn;
     const posLabel = POSITION_LABEL[player.position] ? (isKorean ? POSITION_LABEL[player.position].ko : POSITION_LABEL[player.position].en) : player.position;
-    document.getElementById('squadPlayerModalPosTag').textContent = `${posLabel} · #${player.number}`;
+    const numTag = hasNumber ? `#${player.number}` : (isKorean ? '번호 미정' : 'No Number');
+    document.getElementById('squadPlayerModalPosTag').textContent = `${posLabel} · ${numTag}`;
 
     const captainTagEl = document.getElementById('squadPlayerModalCaptainTag');
     captainTagEl.style.display = player.isCaptain ? '' : 'none';
+
+    const loanTagEl = document.getElementById('squadPlayerModalLoanTag');
+    const loanClubEl = document.getElementById('squadPlayerModalLoanClub');
+    if (player.isLoan && loanTagEl) {
+      loanTagEl.textContent = isKorean ? '🔁 임대' : '🔁 On Loan';
+      loanTagEl.style.display = '';
+
+      const loanClub = isKorean ? (player.loanClubKo || '') : (player.loanClubEn || '');
+      if (loanClub && loanClubEl) {
+        const loanLogoHtml = player.loanClubLogo
+          ? `<img class="spm-loan-club-logo" src="${player.loanClubLogo}" alt="${loanClub}">`
+          : '';
+        const loanClubLabel = isKorean ? `원소속: ${loanClub}` : `From: ${loanClub}`;
+        loanClubEl.innerHTML = `${loanLogoHtml}<span>${loanClubLabel}</span>`;
+        loanClubEl.style.display = '';
+      } else if (loanClubEl) {
+        loanClubEl.style.display = 'none';
+        loanClubEl.innerHTML = '';
+      }
+    } else {
+      if (loanTagEl) loanTagEl.style.display = 'none';
+      if (loanClubEl) {
+        loanClubEl.style.display = 'none';
+        loanClubEl.innerHTML = '';
+      }
+    }
+
+    const formerTagEl = document.getElementById('squadPlayerModalFormerTag');
+    if (isFormerPlayer && formerTagEl) {
+      const statusInfo = FORMER_STATUS_LABEL[player.status] || FORMER_STATUS_LABEL.released;
+      formerTagEl.textContent = isKorean ? `🚪 ${statusInfo.ko}` : `🚪 ${statusInfo.en}`;
+      formerTagEl.style.display = '';
+    } else if (formerTagEl) {
+      formerTagEl.style.display = 'none';
+    }
 
     const nationalBadgeEl = document.getElementById('squadPlayerModalNationalBadge');
     if (player.nationalBadge) {
@@ -8505,8 +8653,8 @@
 
   document.addEventListener('click', function(event) {
     const card = event.target.closest('.squad-card');
-    if (card && card.dataset.playerNumber) {
-      openSquadPlayerModal(card.dataset.playerNumber);
+    if (card && (card.dataset.playerNumber || card.dataset.playerKey)) {
+      openSquadPlayerModal(card.dataset.playerNumber || card.dataset.playerKey);
     }
   });
 
@@ -9496,7 +9644,14 @@
     renderNextMatchStrip();
     renderHomeMatchCards();
     initSpotlightCards();
-  
+
+    const squadFormerDetailsEl = document.getElementById('squadFormerDetails');
+    if (squadFormerDetailsEl) {
+      squadFormerDetailsEl.addEventListener('toggle', () => {
+        formerSquadOpen = squadFormerDetailsEl.open;
+      });
+    }
+
     document.querySelectorAll('.lbl').forEach(el => {
       el.innerHTML = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');
     });
