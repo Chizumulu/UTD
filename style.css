@@ -8406,12 +8406,37 @@
   }
   .rmc-team {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     min-width: 0;
     font-size: 14px;
     font-weight: 600;
     color: var(--color-text-secondary);
+  }
+  .rmc-home { flex-wrap: wrap; }
+  .rmc-away { flex-wrap: wrap; }
+  /* 몰수승/몰수패 배지 - 팀 이름 옆에 표시되며, 줄바꿈 시 해당 팀쪽으로
+     정렬되도록 각 줄 전체 폭을 차지합니다. */
+  .rmc-forfeit-badge {
+    display: inline-block;
+    flex-basis: 100%;
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    padding: 2px 8px;
+    border-radius: var(--radius-md);
+  }
+  .rmc-home .rmc-forfeit-badge { text-align: right; }
+  .rmc-away .rmc-forfeit-badge { text-align: left; }
+  .rmc-forfeit-win {
+    background: rgba(0, 150, 100, 0.12);
+    color: var(--color-teal-dark, #0a7a5c);
+  }
+  .rmc-forfeit-loss {
+    background: rgba(200, 40, 40, 0.1);
+    color: #b23b3b;
   }
   .rmc-team span {
     overflow: hidden;

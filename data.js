@@ -887,6 +887,11 @@ const matchDetails = {
       scorersAway: "없음"
     },
     {
+      match: "음벨와 2 : 비전 0 (몰수승)",
+      scorersHome: "없음",
+      scorersAway: "없음"
+    },
+    {
       match: "루비리 3 : 친테체 0",
       scorersHome: "PHILIMON PHIRI (2골), SOLOMON MANDA",
       scorersAway: "없음"
@@ -1048,7 +1053,7 @@ const upcomingMatchHistory = {
 const scheduledRounds = {
   round12: [
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-26", kickoffTime: "14:30" },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-26", kickoffTime: "14:30", postponed: true },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-26", kickoffTime: "14:30" },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },
@@ -1189,7 +1194,11 @@ const roundsData = {
   ],
   round8: [
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-08-29", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "BENJAMIN MAPUNDA", scorersAway: "없음" },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-08-29", kickoffTime: "14:30", postponed: true, pendingResult: true },
+    // 비전 S 아카데미 측 사유로 인한 실격 처리 — 음벨와 워리어스 FC에 2:0 몰수승 부여(경기 자체는 열리지 않음).
+    // 승점/골득실/폼가이드는 applyComputedLeagueStats()·computeFormGuide()가 이 스코어를 그대로
+    // 정식 경기 결과처럼 반영합니다(국제 축구 관행과 동일). matchDetails.round8에 대응하는
+    // 득점자 항목("없음"/"없음")도 함께 추가했습니다.
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-08-29", kickoffTime: "14:30", homeScore: 2, awayScore: 0, forfeit: true },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-08-29", kickoffTime: "14:30", homeScore: 3, awayScore: 0, scorersHome: "PHILIMON PHIRI (2골), SOLOMON MANDA", scorersAway: "없음" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-08-30", kickoffTime: "14:30", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-08-30", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "ALICK CHAVULA (2골)", scorersAway: "OFFICIAL PHIRI" },
@@ -1361,7 +1370,13 @@ const leagueData = [
   },
   {
     nameKo: "칠룸바 배럭스 FC", nameEn: "Chilumba Barracks FC", logoSrc: "칠룸바.webp",
-    venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.437859548225552, lng: 34.244529365527434 }
+    venue: { nameKo: "치숨부 그라운드", nameEn: "Chisumbu Ground", lat: -10.43805973804846, lng: 34.24440986314656 },
+    // 8주차부터 새 홈구장(치숨부 그라운드)을 쓰고, 1~7주차 경기는
+    // 옛 홈구장(마잘리로 그라운드)에서 열렸던 것으로 남겨둡니다.
+    // getTeamVenue(nameEn, weekNum)가 weekNum이 이 범위 안에 들면 아래 venue를 대신 씁니다.
+    venueHistory: [
+      { fromWeek: 1, toWeek: 7, venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.437859548225552, lng: 34.244529365527434 } }
+    ]
   },
   {
     nameKo: "마푸 스타즈 FC", nameEn: "Mafu Stars FC", logoSrc: "마푸스타즈.webp",
@@ -1417,6 +1432,19 @@ const leagueData = [
   {
     nameKo: "루비리 FC", nameEn: "Luviri FC", logoSrc: "루비리.webp",
     venue: { nameKo: "루비리 그라운드", nameEn: "Luviri Ground", lat: -12.198627593817912, lng: 33.66767272397456 }
+  }
+];
+
+// ===== 구단 위치(지도) 화면에만 추가로 표시하는 보조 구장 목록 =====
+// leagueData의 팀은 팀당 하나의 항목만 있어야 순위표/폼가이드/순위변동 차트 등이
+// 정상 동작하므로(팀 개수 기준으로 계산), 한 팀이 구장을 2곳 쓰는 경우에도
+// leagueData에 팀을 중복으로 넣지 않습니다. 대신 '구단 위치' 지도/목록에만
+// 추가로 표시할 구장을 여기에 적어두면, 해당 팀의 로고 핀이 하나 더 찍힙니다.
+// refNameEn: leagueData에서 팀을 찾을 때 쓰는 nameEn (로고/팀명 표시에 사용).
+const extraVenues = [
+  {
+    refNameEn: "Chilumba Barracks FC",
+    venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.437859548225552, lng: 34.244529365527434 }
   }
 ];
 

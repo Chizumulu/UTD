@@ -4372,7 +4372,7 @@
           isBye: false, isScheduled: false,
           homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
           homeScore: m.homeScore, awayScore: m.awayScore,
-          movedFromWeek: m.movedFromWeek,
+          movedFromWeek: m.movedFromWeek, forfeit: m.forfeit,
           kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
           scorersHome: d.scorersHome, scorersAway: d.scorersAway
         };
@@ -4390,7 +4390,7 @@
           isBye: false, isScheduled: false,
           homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
           homeScore: m.homeScore, awayScore: m.awayScore,
-          movedFromWeek: m.movedFromWeek,
+          movedFromWeek: m.movedFromWeek, forfeit: m.forfeit,
           kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
           scorersHome: m.scorersHome, scorersAway: m.scorersAway
         };
@@ -4704,6 +4704,12 @@
       const scorersHomeText = (m.scorersHome === '없음' || !m.scorersHome) ? noneLabel : renderScorerNamesHtml(m.scorersHome, isKorean);
       const scorersAwayText = (m.scorersAway === '없음' || !m.scorersAway) ? noneLabel : renderScorerNamesHtml(m.scorersAway, isKorean);
 
+      // 몰수승/몰수패 배지: forfeit 플래그가 있는 경기는 이긴 팀에 "몰수승",
+      // 진 팀에 "몰수패" 배지를 붙입니다 (무승부인 몰수 케이스는 없다고 가정).
+      const forfeitBadgeHtml = (win) => m.forfeit
+        ? `<span class="rmc-forfeit-badge ${win ? 'rmc-forfeit-win' : 'rmc-forfeit-loss'} lbl" data-en="${win ? 'Forfeit Win' : 'Forfeit Loss'}" data-ko="${win ? '몰수승' : '몰수패'}">${isKorean ? (win ? '몰수승' : '몰수패') : (win ? 'Forfeit Win' : 'Forfeit Loss')}</span>`
+        : '';
+
       const card = document.createElement('div');
       card.className = 'round-match-card' + mineClass;
       card.innerHTML = `
@@ -4712,6 +4718,7 @@
           <div class="rmc-team rmc-home${homeWin ? ' rmc-winner' : ''}">
             ${homeLogo ? `<img class="team-logo-sm" src="${homeLogo}" alt="${m.homeEn}">` : ''}
             <span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span>
+            ${forfeitBadgeHtml(homeWin)}
           </div>
           <div class="rmc-score">
             <span class="rmc-score-num${homeWin ? ' rmc-score-win' : ''}">${m.homeScore}</span>
@@ -4721,6 +4728,7 @@
           <div class="rmc-team rmc-away${awayWin ? ' rmc-winner' : ''}">
             <span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span>
             ${awayLogo ? `<img class="team-logo-sm" src="${awayLogo}" alt="${m.awayEn}">` : ''}
+            ${forfeitBadgeHtml(awayWin)}
           </div>
         </div>
         <div class="rmc-scorers">
@@ -7229,9 +7237,36 @@
     renderVenuesList();
   }
 
+  // leagueData(팀별 현재 홈구장)에 extraVenues(구단 위치 화면에만 추가로 보여줄 보조 구장)를 합쳐서
+  // 지도/목록에서 공통으로 쓸 엔트리 목록을 만듭니다. idx는 마커·목록 매칭용 고유 키입니다.
+  // - leagueData 항목: idx가 leagueData 배열의 숫자 인덱스 (기존 동작 그대로 유지)
+  // - extraVenues 항목: idx가 "extra-N" 형태의 문자열 (leagueData 인덱스와 절대 겹치지 않음)
+  function getVenueEntries() {
+    const entries = [];
+    leagueData.forEach((team, idx) => {
+      if (!team.venue || typeof team.venue.lat !== 'number' || typeof team.venue.lng !== 'number') return;
+      entries.push({
+        idx, nameKo: team.nameKo, nameEn: team.nameEn, logoSrc: team.logoSrc,
+        venue: team.venue, isMine: team.nameEn === 'Chizumulu United FC'
+      });
+    });
+    if (Array.isArray(typeof extraVenues !== 'undefined' ? extraVenues : null)) {
+      extraVenues.forEach((extra, i) => {
+        if (!extra.venue || typeof extra.venue.lat !== 'number' || typeof extra.venue.lng !== 'number') return;
+        const refTeam = leagueData.find(t => t.nameEn === extra.refNameEn);
+        if (!refTeam) return;
+        entries.push({
+          idx: `extra-${i}`, nameKo: refTeam.nameKo, nameEn: refTeam.nameEn, logoSrc: refTeam.logoSrc,
+          venue: extra.venue, isMine: refTeam.nameEn === 'Chizumulu United FC'
+        });
+      });
+    }
+    return entries;
+  }
+
   // 마커 구성 로직을 map 인스턴스별로 공유합니다 (기본 지도 / 확대보기 모달 지도 공용)
   function populateVenueMap(mapInstance, markerStore) {
-    const teams = leagueData.filter(t => t.venue && typeof t.venue.lat === 'number' && typeof t.venue.lng === 'number');
+    const teams = getVenueEntries();
     if (teams.length === 0) return;
 
     const homeVenue = getHomeVenue();
@@ -7242,8 +7277,8 @@
 
     const bounds = [];
     teams.forEach(team => {
-      const idx = leagueData.indexOf(team);
-      const isMine = team.nameEn === 'Chizumulu United FC';
+      const idx = team.idx;
+      const isMine = team.isMine;
       const teamName = isKorean ? team.nameKo : team.nameEn;
       const venueName = isKorean ? team.venue.nameKo : team.venue.nameEn;
       const distLabel = formatDistanceLabel(team, homeVenue, isMine);
@@ -7347,20 +7382,20 @@
     wrap.innerHTML = '';
 
     const homeVenue = getHomeVenue();
-    const teams = leagueData.filter(t => t.venue).slice().sort((a, b) => {
+    const teams = getVenueEntries().slice().sort((a, b) => {
       const an = isKorean ? a.nameKo : a.nameEn;
       const bn = isKorean ? b.nameKo : b.nameEn;
       return an.localeCompare(bn);
     });
 
     teams.forEach(team => {
-      const idx = leagueData.indexOf(team);
+      const idx = team.idx;
       const row = document.createElement('div');
       row.className = 'venue-list-item';
       row.setAttribute('data-venue-idx', idx);
       const teamName = isKorean ? team.nameKo : team.nameEn;
       const venueName = isKorean ? team.venue.nameKo : team.venue.nameEn;
-      const isMine = team.nameEn === 'Chizumulu United FC';
+      const isMine = team.isMine;
       const distLabel = formatDistanceLabel(team, homeVenue, isMine);
       row.innerHTML = `
         <img class="team-logo venue-list-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}">
