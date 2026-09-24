@@ -1375,7 +1375,7 @@ const leagueData = [
     // 옛 홈구장(마잘리로 그라운드)에서 열렸던 것으로 남겨둡니다.
     // getTeamVenue(nameEn, weekNum)가 weekNum이 이 범위 안에 들면 아래 venue를 대신 씁니다.
     venueHistory: [
-      { fromWeek: 1, toWeek: 7, venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.437859548225552, lng: 34.244529365527434 } }
+      { fromWeek: 1, toWeek: 7, venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.382983254136427, lng: 34.21591084158308 } }
     ]
   },
   {
@@ -1444,7 +1444,7 @@ const leagueData = [
 const extraVenues = [
   {
     refNameEn: "Chilumba Barracks FC",
-    venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.437859548225552, lng: 34.244529365527434 }
+    venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.382983254136427, lng: 34.21591084158308 }
   }
 ];
 
