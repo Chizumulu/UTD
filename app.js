@@ -3247,9 +3247,11 @@
   // 주의: AI/파서가 구조화한 제3자 데이터라 100% 정확함을 보장하지 않고, 45분 이상
   // 업데이트가 없는 경기는 API가 알아서 목록에서 뺍니다(경기 자체가 사라지는 건 아님).
   const CHIZUMULU_API_BASE = 'https://api.chizumulu.net';
-  const LEAGUE_LIVE_POLL_MS = 60 * 1000; // 1분마다 갱신
+  const LEAGUE_LIVE_POLL_MS = 60 * 1000; // 기본 갱신 주기(1분)
+  const LEAGUE_LIVE_POLL_MAX_MS = 5 * 60 * 1000; // 429(요청 과다) 응답이 계속되면 최대 5분까지 늦춤
   let leagueLivePollTimer = null;
   let leagueLiveMatchesCache = [];
+  let leagueLivePollDelay = LEAGUE_LIVE_POLL_MS;
 
   // API의 homeTeam/awayTeam({id, name})을 우리 leagueData 팀과 이어붙여, 매칭되면
   // 우리 쪽 한글명/로고를 쓰고, 매칭 안 되는 팀(리그 밖 상대 등)은 API가 준 원문 이름을 그대로 씁니다.
@@ -3312,7 +3314,38 @@
     return null;
   }
 
+  // 같은 경기라도 홈/원정 조합(팀 이름 정규화 기준)이 같으면 같은 경기로 취급하기
+  // 위한 키입니다. /v1/live 결과와 /v1/structured 결과를 이어붙일 때 씁니다.
+  function leagueTeamPairKey(nameEnA, nameEnB) {
+    return [nameEnA, nameEnB].sort().join('|');
+  }
+
+  // data.js의 scheduledRounds(예정된 라운드 일정)에서 이 팀 조합의 킥오프 시각(ms, UTC)을
+  // 찾습니다. 라이브 티커가 "FULL TIME이 안 와도 끝없이" 떠 있지 않도록, 킥오프로부터
+  // 일정 시간 뒤에는 강제로 닫는 안전장치에 씁니다. 못 찾으면 null(안전장치 미적용).
+  function findScheduledKickoffMs(homeNameEn, awayNameEn) {
+    if (typeof scheduledRounds === 'undefined' || !scheduledRounds) return null;
+    const pairKey = leagueTeamPairKey(homeNameEn, awayNameEn);
+    for (const roundKey in scheduledRounds) {
+      const round = scheduledRounds[roundKey];
+      if (!Array.isArray(round)) continue;
+      for (const m of round) {
+        if (!m.homeEn || !m.awayEn) continue;
+        if (leagueTeamPairKey(m.homeEn, m.awayEn) === pairKey) {
+          return kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+        }
+      }
+    }
+    return null;
+  }
+
+  // 킥오프로부터 이 시간(4시간)이 지나면, FULL TIME이 확인되지 않았어도 라이브 티커에서
+  // 강제로 내립니다(경기 자체가 이상하게 오래 걸리거나, 소식이 끊긴 채 영영 안 올라오는
+  // 극단적인 경우를 대비한 안전장치).
+  const LEAGUE_LIVE_FORCE_CLOSE_MS = 4 * 60 * 60 * 1000;
+
   function formatLeagueLiveMinute(match) {
+    if (match.status === 'full_time') return isKorean ? '종료' : 'FT';
     if (match.status === 'half_time') return isKorean ? '전반 종료' : 'HT';
     if (typeof match.minute === 'number') return match.minute + "'";
     if (typeof match.minute === 'string' && match.minute) return match.minute;
@@ -3321,12 +3354,41 @@
 
   async function fetchLeagueLiveMatches() {
     const res = await fetch(CHIZUMULU_API_BASE + '/v1/live');
-    if (!res.ok) throw new Error('Chizumulu API /v1/live 요청 실패: ' + res.status);
+    if (!res.ok) {
+      const err = new Error('Chizumulu API /v1/live 요청 실패: ' + res.status);
+      err.status = res.status;
+      throw err;
+    }
     const data = await res.json();
     const matches = Array.isArray(data.matches) ? data.matches : [];
-    return matches.filter(m =>
-      !!resolveLeagueTeamNameEn(m.homeTeam) && !!resolveLeagueTeamNameEn(m.awayTeam)
-    );
+    const now = Date.now();
+    return matches.filter(m => {
+      const h = resolveLeagueTeamNameEn(m.homeTeam);
+      const a = resolveLeagueTeamNameEn(m.awayTeam);
+      if (!h || !a) return false;
+      // data.js(scheduledRounds)에 적힌 킥오프로부터 4시간이 지난 경기는 API가 아직
+      // "라이브"로 주더라도 화면에서는 강제로 제외합니다(안전장치).
+      const kickoffMs = findScheduledKickoffMs(h, a);
+      if (kickoffMs && now > kickoffMs + LEAGUE_LIVE_FORCE_CLOSE_MS) return false;
+      return true;
+    });
+  }
+
+  // /v1/matches/{matchId}는 팀 이름으로 추정하는 게 아니라, 그 경기 하나(matchId)의
+  // 실제 파생 상태(DerivedMatch.status)를 알려주는 API입니다. status === 'full_time'이면
+  // "정말로 FULL TIME이 확인됐다"는 뜻이고, completedAt에는 그 시점의 타임스탬프가 담깁니다.
+  // matchId가 없거나(오래된 캐시 등) 요청이 실패하면 null을 돌려주고, 호출부에서
+  // /v1/structured 기반 추정으로 대신 판단합니다.
+  async function fetchLeagueMatchDetail(matchId) {
+    if (!matchId) return null;
+    const res = await fetch(CHIZUMULU_API_BASE + '/v1/matches/' + encodeURIComponent(matchId));
+    if (res.status === 404) return null; // 알 수 없는 matchId
+    if (!res.ok) {
+      const err = new Error('Chizumulu API /v1/matches 요청 실패: ' + res.status);
+      err.status = res.status;
+      throw err;
+    }
+    return res.json();
   }
 
   function renderLeagueLiveTicker(matches) {
@@ -3347,37 +3409,301 @@
       const awayScore = m.score && m.score.away != null ? m.score.away : '-';
       const homeLogo = home.logo ? `<img class="llt-team-logo" src="./${home.logo}" alt="" loading="lazy">` : '';
       const awayLogo = away.logo ? `<img class="llt-team-logo" src="./${away.logo}" alt="" loading="lazy">` : '';
-      const cardClass = 'llt-card' + (home.isOurTeam || away.isOurTeam ? ' is-our-team' : '');
+      const cardClass = 'llt-card'
+        + (home.isOurTeam || away.isOurTeam ? ' is-our-team' : '')
+        + (m.stale ? ' is-stale' : '')
+        + (m.ended ? ' is-ended' : '');
+      // stale(m.stale === true): /v1/live에는 더 이상 안 나오지만(45분 이상 조용함),
+      // /v1/structured 최근 게시물 기준으로는 아직 경기 종료(full_time) 소식이 없는 경기.
+      // 실시간이 아니라 "마지막으로 확인된 소식"이라는 걸 배지로 알려줍니다.
+      // ended(m.ended === true): FULL TIME이 실제로 확인된 경기. 킥오프 후 4시간까지는
+      // 창에서 내리지 않고 최종 스코어를 보여주기로 했으므로 "종료" 배지를 답니다.
+      // (예전엔 "경기 종료"+분(minute) 배지의 "종료"가 같은 뜻을 두 번 보여줬는데,
+      // ended일 땐 분(minute) 배지를 아예 렌더링하지 않는 걸로 하나로 합쳤습니다.)
+      const topBadgeHtml = m.ended
+        ? `<span class="llt-ended-badge">${isKorean ? '종료' : 'FT'}</span>`
+        : (m.stale
+          ? `<span class="llt-stale-badge">${isKorean ? '최근 소식' : 'Recent'}</span><span class="llt-minute">${escapeHtml(formatLeagueLiveMinute(m))}</span>`
+          : `<span class="llt-minute">${escapeHtml(formatLeagueLiveMinute(m))}</span>`);
+      // 카드 폭이 좁아서 전체 팀명(예: "음벨와 워리어스 FC")이 잘리기 쉬우므로,
+      // 티커 카드 안에서는 팀명의 첫 단어만 짧게 보여줍니다(예: "음벨와", "마푸").
+      // 전체 이름은 title 속성(hover 툴팁)으로 남겨둡니다.
+      const shortTeamName = (name) => String(name || '').trim().split(/\s+/)[0] || name;
+      const homeNameShort = shortTeamName(home.name);
+      const awayNameShort = shortTeamName(away.name);
+
+      // m.goals: refreshLeagueLiveTicker에서 /v1/structured 이벤트를 이어붙여준 골 목록
+      // ({minuteText, scorer, isHome}). 홈팀 득점은 왼쪽 칸, 원정팀 득점은 오른쪽 칸에,
+      // 스코어 칸과 같은 3열 grid를 그대로 써서 팀 칼럼과 자연스럽게 줄이 맞도록 합니다.
+      // 득점 시각 표기를 통일합니다. /v1/structured 원문은 게시물마다 형식이 달라서
+      // ("4th minute", "4'", "45+2'" 등) 앞의 숫자(+추가시간)만 뽑아 "4분"(한국어) /
+      // "4'"(영어)로 다시 포맷합니다. 숫자를 못 찾으면 원문을 그대로 보여줍니다.
+      const formatGoalMinute = (minuteText) => {
+        if (!minuteText) return '';
+        const m = String(minuteText).match(/(\d+)\s*(?:\+\s*(\d+))?/);
+        if (!m) return minuteText;
+        const num = m[2] ? `${m[1]}+${m[2]}` : m[1];
+        return isKorean ? `${num}분` : `${num}'`;
+      };
+      const goals = Array.isArray(m.goals) ? m.goals : [];
+      const goalRowHtml = (g) => `<div class="llt-goal-row">⚽ ${escapeHtml(formatGoalMinute(g.minuteText))} ${escapeHtml(g.scorer || '')}</div>`;
+      const homeGoalsHtml = goals.filter(g => g.isHome).map(goalRowHtml).join('');
+      const awayGoalsHtml = goals.filter(g => !g.isHome).map(goalRowHtml).join('');
+      const goalsSectionHtml = goals.length
+        ? `<div class="llt-goals">
+             <div class="llt-goals-col llt-goals-home">${homeGoalsHtml}</div>
+             <div class="llt-goals-col llt-goals-mid"></div>
+             <div class="llt-goals-col llt-goals-away">${awayGoalsHtml}</div>
+           </div>`
+        : '';
       return `
         <div class="${cardClass}">
-          <div class="llt-card-top"><span class="llt-minute">${escapeHtml(formatLeagueLiveMinute(m))}</span></div>
+          <div class="llt-card-top">${topBadgeHtml}</div>
           <div class="llt-teams">
-            <div class="llt-team">${homeLogo}<span class="llt-team-name">${escapeHtml(home.name)}</span></div>
+            <div class="llt-team">${homeLogo}<span class="llt-team-name" title="${escapeHtml(home.name)}">${escapeHtml(homeNameShort)}</span></div>
             <div class="llt-score">${homeScore} : ${awayScore}</div>
-            <div class="llt-team">${awayLogo}<span class="llt-team-name">${escapeHtml(away.name)}</span></div>
+            <div class="llt-team">${awayLogo}<span class="llt-team-name" title="${escapeHtml(away.name)}">${escapeHtml(awayNameShort)}</span></div>
           </div>
+          ${goalsSectionHtml}
         </div>`;
     }).join('');
 
     wrap.style.display = '';
   }
 
-  async function refreshLeagueLiveTicker() {
-    try {
-      leagueLiveMatchesCache = await fetchLeagueLiveMatches();
-      renderLeagueLiveTicker(leagueLiveMatchesCache);
-    } catch (e) {
-      // 부가 기능이므로 실패 시 조용히 숨기고, 사이트의 나머지 기능에는 영향을 주지 않습니다.
-      leagueLiveMatchesCache = [];
-      const wrap = document.getElementById('leagueLiveTicker');
-      if (wrap) wrap.style.display = 'none';
+  // api.chizumulu.net/v1/structured 는 원문 게시물을 AI가 구조화한 전체 이력입니다(끊기지
+  // 않고 계속 쌓임). 같은 경기를 여러 게시물이 언급할 수 있으므로, 팀 조합(홈/원정)별로
+  // 가장 최근 게시물(sourceTimestamp 기준) 하나만 남겨서 "그 경기의 마지막으로 확인된 상태"를 구합니다.
+  const CHIZUMULU_STRUCTURED_LIMIT = 40;
+
+  async function fetchLeagueStructuredRecentMatches() {
+    const res = await fetch(CHIZUMULU_API_BASE + '/v1/structured?limit=' + CHIZUMULU_STRUCTURED_LIMIT);
+    if (!res.ok) {
+      const err = new Error('Chizumulu API /v1/structured 요청 실패: ' + res.status);
+      err.status = res.status;
+      throw err;
+    }
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    const latestByPair = new Map();
+    for (const item of items) {
+      const rawMatches = (item && item.structured && Array.isArray(item.structured.matches))
+        ? item.structured.matches
+        : [];
+      const ts = (item && item.sourceTimestamp) ? Date.parse(item.sourceTimestamp) : 0;
+      for (const m of rawMatches) {
+        const homeNameEn = resolveLeagueTeamNameEn({ name: m.homeTeam });
+        const awayNameEn = resolveLeagueTeamNameEn({ name: m.awayTeam });
+        if (!homeNameEn || !awayNameEn) continue; // 우리 리그 15개 팀끼리의 경기만 대상으로 합니다.
+        const pairKey = leagueTeamPairKey(homeNameEn, awayNameEn);
+        const prev = latestByPair.get(pairKey);
+        if (!prev || ts > prev.ts) {
+          latestByPair.set(pairKey, { ts, homeNameEn, awayNameEn, match: m });
+        }
+      }
+    }
+    return Array.from(latestByPair.values());
+  }
+
+  // "마지막으로 확인된 라이브 상태" 캐시: /v1/live에 매 주기마다 떠 있던 경기를 팀
+  // 조합(pairKey) 기준으로 저장해둡니다. 이 경기가 나중에 /v1/live에서 빠지더라도,
+  // /v1/structured에 "FULL TIME(종료)" 소식이 확인되기 전까지는 이 캐시의 마지막 스코어를
+  // 그대로 계속 보여줍니다. 즉 "경기 종료"는 45분간 조용해서 /v1/live 목록에서 빠지는 것이
+  // 아니라, FULL TIME이 실제로 확인됐을 때만 처리됩니다.
+  let leagueLiveLastKnownByPair = new Map();
+
+  function updateLeagueLiveLastKnownCache(freshMatches) {
+    const now = Date.now();
+    for (const m of (freshMatches || [])) {
+      const h = resolveLeagueTeamNameEn(m.homeTeam);
+      const a = resolveLeagueTeamNameEn(m.awayTeam);
+      if (h && a) {
+        leagueLiveLastKnownByPair.set(leagueTeamPairKey(h, a), { ts: now, match: m });
+      }
     }
   }
 
+  // /v1/structured에서 "아직 진행 중"(live/half_time)이거나 "방금 끝났음"(full_time)으로
+  // 보이는 경기 중, 캐시에 없고 지금 /v1/live에도 없는 것들을 새로 캐시에 심습니다. 브라우저를
+  // 새로 열었을 때처럼 /v1/live가 이미 이 경기를 놓친(45분 이상 조용함) 뒤라도, 혹은 경기가
+  // 이미 끝난 뒤에 페이지를 열었더라도, 킥오프 후 4시간 안에는 스코어가 창에 보이게 하기
+  // 위함입니다(matchId는 모르므로, 이후 FULL TIME 판정은 계속 /v1/structured 기준으로 이뤄짐).
+  const LEAGUE_LIVE_ONGOING_STATUSES = ['live', 'half_time'];
+  const LEAGUE_LIVE_SEEDABLE_STATUSES = ['live', 'half_time', 'full_time'];
+
+  function seedLeagueLiveCacheFromStructured(structuredEntries, freshPairKeys) {
+    const now = Date.now();
+    for (const entry of (structuredEntries || [])) {
+      const pairKey = leagueTeamPairKey(entry.homeNameEn, entry.awayNameEn);
+      if (freshPairKeys.has(pairKey)) continue;
+      if (leagueLiveLastKnownByPair.has(pairKey)) continue; // 이미 캐시에 있음
+      if (!LEAGUE_LIVE_SEEDABLE_STATUSES.includes(entry.match.status)) continue;
+
+      const kickoffMs = findScheduledKickoffMs(entry.homeNameEn, entry.awayNameEn);
+      const isFullTime = entry.match.status === 'full_time';
+      // 킥오프로부터 4시간이 이미 지난 경기는 애초에 새로 띄우지 않습니다.
+      if (kickoffMs && now > kickoffMs + LEAGUE_LIVE_FORCE_CLOSE_MS) continue;
+      // FULL TIME 경기는 언제 끝났는지(=4시간 창이 언제 닫힐지) 킥오프 시각으로만 판단할
+      // 수 있으므로, 킥오프 시각을 모르면 끝없이 떠 있게 될 수 있어 아예 심지 않습니다.
+      // (진행 중인 경기는 기존과 같이 킥오프를 몰라도 심습니다.)
+      if (isFullTime && !kickoffMs) continue;
+
+      leagueLiveLastKnownByPair.set(pairKey, {
+        ts: now,
+        match: {
+          homeTeam: { name: entry.match.homeTeam },
+          awayTeam: { name: entry.match.awayTeam },
+          score: { home: entry.match.homeScore, away: entry.match.awayScore },
+          status: entry.match.status,
+          minute: entry.match.minuteText || null
+        }
+      });
+    }
+  }
+
+  // 캐시에는 있지만 지금 /v1/live에는 없는 경기들을 대상으로 "진짜 FULL TIME인지"를 확인합니다.
+  // 1순위: matchId가 있으면 /v1/matches/{matchId}로 그 경기 하나의 실제 파생 상태를 직접
+  //        조회합니다(팀 이름 매칭에 기대지 않는, 가장 확실한 방법).
+  // 2순위: matchId가 없거나 그 조회가 실패하면, 기존처럼 /v1/structured 최신 스냅샷의
+  //        status로 대신 추정합니다.
+  // full_time이 확인되지 않았다면 마지막으로 확인된 스코어를 "최근 소식" 배지와 함께,
+  // full_time이 확인됐다면 최종 스코어를 "경기 종료" 배지와 함께 계속 보여줍니다 —
+  // 어느 쪽이든 data.js(scheduledRounds)에 적힌 킥오프로부터 LEAGUE_LIVE_FORCE_CLOSE_MS
+  // (4시간)가 지나기 전까지는 창에서 내리지 않습니다. 4시간이 지나면 FULL TIME 여부와
+  // 상관없이 강제로 닫습니다.
+  async function buildStaleLeagueLiveMatches(structuredEntries, liveMatches) {
+    const freshPairKeys = new Set(
+      (liveMatches || [])
+        .map(m => {
+          const h = resolveLeagueTeamNameEn(m.homeTeam);
+          const a = resolveLeagueTeamNameEn(m.awayTeam);
+          return (h && a) ? leagueTeamPairKey(h, a) : null;
+        })
+        .filter(Boolean)
+    );
+
+    const structuredByPairKey = new Map(
+      (structuredEntries || []).map(e => [leagueTeamPairKey(e.homeNameEn, e.awayNameEn), e])
+    );
+
+    seedLeagueLiveCacheFromStructured(structuredEntries, freshPairKeys);
+
+    const staleMatches = [];
+    for (const [pairKey, cached] of leagueLiveLastKnownByPair.entries()) {
+      if (freshPairKeys.has(pairKey)) continue; // 지금 /v1/live에 살아있으면 캐시가 필요 없음
+
+      const homeNameEn = resolveLeagueTeamNameEn(cached.match.homeTeam);
+      const awayNameEn = resolveLeagueTeamNameEn(cached.match.awayTeam);
+      const kickoffMs = (homeNameEn && awayNameEn) ? findScheduledKickoffMs(homeNameEn, awayNameEn) : null;
+      if (kickoffMs && Date.now() > kickoffMs + LEAGUE_LIVE_FORCE_CLOSE_MS) {
+        leagueLiveLastKnownByPair.delete(pairKey); // 킥오프 후 4시간 경과 → FULL TIME 여부와 무관하게 강제 종료
+        continue;
+      }
+
+      // 캐시에 이미 'full_time'으로 심어둔 경기(seedLeagueLiveCacheFromStructured 참고)는
+      // 그 자체로 FULL TIME 확인이 끝난 것이므로, 이번 폴링에서 구조화 게시물이 더는
+      // 이 경기를 "최근 게시물" 목록에 담지 않더라도 종료 배지가 다시 풀리지 않게 합니다.
+      let isFullTime = cached.match.status === 'full_time';
+      let detail = null;
+      if (cached.match.matchId) {
+        try {
+          detail = await fetchLeagueMatchDetail(cached.match.matchId);
+        } catch (e) { /* 네트워크 오류 시 2순위(구조화 추정)로 넘어감 */ }
+      }
+      if (detail) {
+        isFullTime = detail.status === 'full_time';
+      } else if (!isFullTime) {
+        const structuredEntry = structuredByPairKey.get(pairKey);
+        isFullTime = !!(structuredEntry && structuredEntry.match.status === 'full_time');
+      }
+
+      // FULL TIME이 확인돼도 바로 내리지 않습니다 — 킥오프 후 4시간까지는(이 루프 맨 위의
+      // 강제 종료 체크가 그 시점을 이미 걸러줍니다) 최종 스코어를 그대로 창에 띄워둡니다.
+      // 캐시도 지우지 않고 status만 'full_time'으로 갱신해서, 다음 폴링마다 같은 경기를
+      // 다시 조회하지 않고도 종료 스코어가 계속 남아있게 합니다.
+      const shownMatch = detail
+        ? Object.assign({}, cached.match, { score: detail.score, minute: detail.minute, status: detail.status })
+        : Object.assign({}, cached.match, isFullTime ? { status: 'full_time' } : null);
+      if (isFullTime) cached.match = shownMatch;
+      staleMatches.push(Object.assign({}, shownMatch, { stale: !isFullTime, ended: isFullTime }));
+    }
+    return staleMatches;
+  }
+
+  // structuredEntries(팀 조합별 최신 스냅샷)에서 "골" 이벤트만 뽑아, 각 경기(match)에
+  // 매칭해서 m.goals(선수/득점 시각/득점 팀이 홈인지 여부)로 붙여줍니다. /v1/live에서 온
+  // 경기든, /v1/structured로 보충한 경기든 상관없이 같은 방식으로 붙습니다.
+  function attachLeagueGoalEvents(matches, structuredEntries) {
+    const structuredByPairKey = new Map(
+      (structuredEntries || []).map(e => [leagueTeamPairKey(e.homeNameEn, e.awayNameEn), e])
+    );
+
+    return matches.map(m => {
+      const homeNameEn = resolveLeagueTeamNameEn(m.homeTeam);
+      const awayNameEn = resolveLeagueTeamNameEn(m.awayTeam);
+      const entry = (homeNameEn && awayNameEn)
+        ? structuredByPairKey.get(leagueTeamPairKey(homeNameEn, awayNameEn))
+        : null;
+      const rawEvents = (entry && entry.match && Array.isArray(entry.match.events)) ? entry.match.events : [];
+
+      const goals = rawEvents
+        .filter(ev => ev && ev.type === 'goal')
+        .map(ev => {
+          const scoringTeamNameEn = resolveLeagueTeamNameEn({ name: ev.team });
+          return {
+            minuteText: ev.minuteText || '',
+            scorer: (ev.players && ev.players[0] && ev.players[0].name) || '',
+            isHome: !!(scoringTeamNameEn && homeNameEn && scoringTeamNameEn === homeNameEn)
+          };
+        });
+
+      return goals.length ? Object.assign({}, m, { goals }) : m;
+    });
+  }
+
+  async function refreshLeagueLiveTicker() {
+    try {
+      leagueLiveMatchesCache = await fetchLeagueLiveMatches();
+      leagueLivePollDelay = LEAGUE_LIVE_POLL_MS; // 성공하면 원래 주기로 되돌립니다.
+      updateLeagueLiveLastKnownCache(leagueLiveMatchesCache); // FULL TIME 확인 전까지 유지할 스냅샷 갱신
+    } catch (e) {
+      // 일시적인 네트워크 오류나 429(요청 과다)일 수 있으므로, 마지막으로 성공했던 화면은
+      // 그대로 두고(갑자기 숨기지 않음) 다음 시도 간격만 늘립니다. 429가 아닌 오류는
+      // 계속 기본 주기로 재시도합니다(한 번의 일시적 오류로 갱신 주기를 늦추지 않음).
+      if (e && e.status === 429) {
+        leagueLivePollDelay = Math.min(leagueLivePollDelay * 2, LEAGUE_LIVE_POLL_MAX_MS);
+      }
+      // leagueLiveMatchesCache는 건드리지 않고 마지막 성공 값을 그대로 유지합니다.
+    }
+
+    // /v1/structured 보강(경기 보충 + 득점자/득점 시각)은 어디까지나 부가 기능이므로,
+    // 실패해도 위의 라이브 티커 결과는 그대로 보여줍니다(보강 부분만 빈 채로 넘어감).
+    // structuredEntries 조회와 stale 판정(주로 matchId 기반)을 서로 다른 try로 분리해서,
+    // /v1/structured가 잠깐 실패해도 matchId 기반 FULL TIME 확인은 영향받지 않게 합니다.
+    let structuredEntries = [];
+    try {
+      structuredEntries = await fetchLeagueStructuredRecentMatches();
+    } catch (e) { /* 무시: structuredEntries는 빈 배열로 유지 */ }
+
+    let combinedMatches = leagueLiveMatchesCache;
+    try {
+      const staleMatches = await buildStaleLeagueLiveMatches(structuredEntries, leagueLiveMatchesCache);
+      combinedMatches = attachLeagueGoalEvents([...leagueLiveMatchesCache, ...staleMatches], structuredEntries);
+    } catch (e) { /* 무시 */ }
+
+    renderLeagueLiveTicker(combinedMatches);
+
+    // 여러 방문자가 정확히 같은 간격으로 요청을 보내면 서버(또는 앞단 보호 계층)의
+    // 패턴 기반 차단을 유발하기 쉬우므로, 매번 ±15% 정도 무작위 오차(지터)를 더합니다.
+    const jitter = leagueLivePollDelay * (0.85 + Math.random() * 0.3);
+    leagueLivePollTimer = setTimeout(refreshLeagueLiveTicker, jitter);
+  }
+
   function startLeagueLiveTicker() {
+    if (leagueLivePollTimer) clearTimeout(leagueLivePollTimer);
+    leagueLivePollDelay = LEAGUE_LIVE_POLL_MS;
     refreshLeagueLiveTicker();
-    if (leagueLivePollTimer) clearInterval(leagueLivePollTimer);
-    leagueLivePollTimer = setInterval(refreshLeagueLiveTicker, LEAGUE_LIVE_POLL_MS);
   }
 
   // teamYoutubeChannel(data.js)에 설정된 채널의 "최신 업로드 영상"을 YouTube Data API v3로
