@@ -2341,7 +2341,8 @@ const playerDirectory = {
   "ALBERT KAUNDA": { nameKo: "앨버트 카운다", nameEn: "Albert Kaunda" },
   "JASON ZIMBA": { nameKo: "제이슨 짐바", nameEn: "Jason Zimba" },
   "JONATHAN MGUNTHA": { nameKo: "조나단 음군타", nameEn: "Jonathan Mguntha" },
-  "MARKO PHIRI": { nameKo: "마르코 피리", nameEn: "Marko Phiri" }
+  "MARKO PHIRI": { nameKo: "마르코 피리", nameEn: "Marko Phiri" },
+  "GREEN MWALE": { nameKo: "그린 므왈레", nameEn: "Green Mwale" }
 };
 
 function toTitleCase(upperName) {
