@@ -354,6 +354,13 @@
       playViewEnterAnimation(rankView);
     }
 
+    // 라이브 창은 메인(순위) 화면 전용이라, 화면을 옮길 때마다 최신 캐시로 다시 그려서
+    // rank로 돌아왔을 때만 보이고 다른 탭에서는 즉시 숨겨지도록 합니다.
+    // leagueLiveMatchesCache(순수 라이브 목록)가 아니라 leagueLiveRenderedCache(직전에
+    // 실제로 화면에 그려졌던 목록: stale/ended 경기 포함)를 써야 "종료" 배지가 붙은
+    // 경기도 rank로 돌아왔을 때 그대로 복원됩니다.
+    renderLeagueLiveTicker(leagueLiveRenderedCache);
+
     refreshScrollFadeHints();
   }
 
@@ -3251,6 +3258,11 @@
   const LEAGUE_LIVE_POLL_MAX_MS = 5 * 60 * 1000; // 429(요청 과다) 응답이 계속되면 최대 5분까지 늦춤
   let leagueLivePollTimer = null;
   let leagueLiveMatchesCache = [];
+  // renderLeagueLiveTicker에 마지막으로 실제 전달된 목록(= combinedMatches: 진짜 라이브 +
+  // 아직 "종료" 확인 전인 stale 경기 + FULL TIME 후 몇 시간 유지되는 ended 경기까지 합친 것).
+  // showView에서 rank 화면으로 돌아올 때 이 값으로 다시 그려야, "종료" 배지가 붙은 경기처럼
+  // leagueLiveMatchesCache(순수 라이브 목록)엔 없는 카드도 그대로 복원됩니다.
+  let leagueLiveRenderedCache = [];
   let leagueLivePollDelay = LEAGUE_LIVE_POLL_MS;
 
   // API의 homeTeam/awayTeam({id, name})을 우리 leagueData 팀과 이어붙여, 매칭되면
@@ -3395,6 +3407,16 @@
     const wrap = document.getElementById('leagueLiveTicker');
     const scroller = document.getElementById('leagueLiveTickerScroller');
     if (!wrap || !scroller) return;
+
+    // showView가 rank 화면 복귀 시 이 값 그대로 다시 그릴 수 있도록 최신 목록을 저장해둡니다.
+    leagueLiveRenderedCache = matches || [];
+
+    // 라이브 창은 메인(순위) 화면에서만 노출합니다. 다른 탭에 있을 땐 경기가
+    // 진행 중이어도 숨겨두고, rank 화면으로 돌아왔을 때 다시 그립니다(아래 showView 참고).
+    if (currentView !== 'rank') {
+      wrap.style.display = 'none';
+      return;
+    }
 
     if (!matches || !matches.length) {
       wrap.style.display = 'none';
@@ -9795,7 +9817,7 @@
     renderMainMiniTable();
     renderNextMatchStrip();
     renderHomeMatchCards();
-    renderLeagueLiveTicker(leagueLiveMatchesCache);
+    renderLeagueLiveTicker(leagueLiveRenderedCache);
     
     if (currentView === 'stats') {
       buildStatsTables();
