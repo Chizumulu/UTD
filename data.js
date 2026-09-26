@@ -19,7 +19,8 @@ const SEASON_TOTAL_ROUNDS = 30;
 const matchHighlights = {
   round1: 'https://www.youtube.com/watch?v=A5dGnTMTpw0',
   round2: 'https://www.youtube.com/watch?v=p5z6sYwoxJc&t=359s',
-  round3: 'https://youtu.be/goM_m99MrDQ?si=coMD5rW48IhFYh0q'
+  round3: 'https://youtu.be/goM_m99MrDQ?si=coMD5rW48IhFYh0q',
+  round10: 'https://www.youtube.com/watch?v=JEBuNaWeewo'
 };
 
 // ===== 구단 유튜브 코너 - 채널 최신 영상 자동 연동 설정 =====
