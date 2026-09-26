@@ -3500,11 +3500,11 @@
         const homeName = isKorean ? m.homeKo : m.homeEn;
         const awayName = isKorean ? m.awayKo : m.awayEn;
         html += `
-          <div class="round-match-card round-match-scheduled">
+          <div class="round-match-card round-match-scheduled${m.postponed && !m.movedToWeek ? ' rmc-postponed-card' : ''}">
             <span class="ti-result-week lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${weekLabel}</span>
             ${m.movedToWeek
               ? `<button type="button" class="rmc-pending-badge rmc-moved-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`
-              : `<span class="rmc-pending-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
+              : `<span class="rmc-pending-badge${m.postponed ? ' rmc-postponed-badge' : ''} lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
             <div class="rmc-teams">
               <div class="rmc-team rmc-home"><span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span></div>
               <div class="rmc-team rmc-away"><span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span></div>
@@ -4665,7 +4665,7 @@
       if (m.isScheduled) {
         const kickoffTxt = formatKickoff({ kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime });
         const card = document.createElement('div');
-        card.className = 'round-match-card round-match-scheduled' + mineClass;
+        card.className = 'round-match-card round-match-scheduled' + (m.postponed && !m.movedToWeek ? ' rmc-postponed-card' : '') + mineClass;
         card.innerHTML = `
           ${movedFromBadgeHtml(m, isKorean)}
           <div class="rmc-teams">
@@ -4676,7 +4676,7 @@
             <div class="rmc-score rmc-score-pending">
               ${m.movedToWeek
                 ? `<button type="button" class="rmc-pending-badge rmc-moved-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`
-                : `<span class="rmc-pending-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
+                : `<span class="rmc-pending-badge${m.postponed ? ' rmc-postponed-badge' : ''} lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
             </div>
             <div class="rmc-team rmc-away">
               <span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span>

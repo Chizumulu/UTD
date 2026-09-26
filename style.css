@@ -28,6 +28,7 @@
   --color-green: #2e7d32;   /* 승격 */
   --color-red: #c0392b;     /* 강등, 패 */
   --color-red-light: #e57368;
+  --color-red-rgb: 192, 57, 43; /* rgba() 용 (연기 경기 강조 등) */
   --color-stat-value: #0a6ea0; /* 승점 등 통계 강조 숫자 */
 
   /* --- 승/패 "텍스트" 전용 색상 ---
@@ -141,6 +142,7 @@
      밝기만 올린 값입니다. */
   --color-red-text: var(--color-red-light);
   --color-green-text: #45ba4b;
+  --color-red-rgb: 229, 115, 104; /* --color-red-light 기준 (다크모드 대비 확보) */
 
   --color-text-dark: #e6e9f2;
   --color-text-darkest: #f4f5fa;
@@ -8528,6 +8530,42 @@
     letter-spacing: 0.2px;
     padding: 4px 9px;
     border-radius: var(--radius-md);
+  }
+  /* 연기(postponed)된 경기 카드 - 예정 경기와 시각적으로 구분되도록
+     왼쪽에 붉은 포인트 라인 + 점선 테두리를 줘서 "일정이 확정되지 않음"을
+     한눈에 알 수 있게 합니다. */
+  .round-match-card.rmc-postponed-card {
+    border: 1px dashed rgba(var(--color-red-rgb), 0.35);
+    box-shadow: inset 3px 0 0 rgba(var(--color-red-rgb), 0.55), 0 4px 14px rgba(var(--color-navy-rgb), 0.1);
+    background: linear-gradient(90deg, rgba(var(--color-red-rgb), 0.05), transparent 60%);
+  }
+  /* 연기 배지("경기 연기" / "경기 결과 미정") - 기존의 밋밋한 회색-틸 배지 대신
+     붉은 톤 배경 + 은은하게 깜빡이는 점을 붙여서 "대기 중" 느낌을 살립니다. */
+  .rmc-pending-badge.rmc-postponed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(var(--color-red-rgb), 0.12);
+    color: var(--color-red-text);
+    border: 1px solid rgba(var(--color-red-rgb), 0.25);
+  }
+  .rmc-pending-badge.rmc-postponed-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: currentColor;
+    animation: rmcPostponedPulse 1.8s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rmc-pending-badge.rmc-postponed-badge::before {
+      animation: none;
+    }
+  }
+  @keyframes rmcPostponedPulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
   }
   /* 다른 주차로 이동된 연기 경기 배지 ("N주차 경기로 이동") - 누르면 해당 주차로 이동합니다 */
   .rmc-pending-badge.rmc-moved-badge {
