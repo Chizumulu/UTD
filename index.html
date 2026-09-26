@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '006',
-    data: '006',
-    app: '006',
+    style: '002',
+    data: '002',
+    app: '002',
     predictWorker: '001',
     pathfinderEngine: '001',
     poster: '001'
@@ -270,6 +270,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <span class="nmlb-text lbl" data-en="NRFA Facebook Live Text Commentary" data-ko="NRFA 페이스북 문자중계보기">NRFA 페이스북 문자중계보기</span>
   <svg class="nmlb-arrow" viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </a>
+<!-- ===== 리그 전체 라이브 스코어 티커 (api.chizumulu.net 연동) =====
+     지금 NRFA 리그 원에서 진행 중인 경기가 하나라도 있으면 노출되고,
+     없으면 app.js가 display:none으로 통째로 숨깁니다. -->
+<div class="league-live-ticker" id="leagueLiveTicker" style="display:none;" aria-live="polite">
+  <div class="llt-head">
+    <span class="llt-live-dot"></span>
+    <span class="llt-title lbl" data-en="Live Now · NRFA League One" data-ko="지금 진행 중 · NRFA 리그 원">지금 진행 중 · NRFA 리그 원</span>
+  </div>
+  <div class="llt-scroller" id="leagueLiveTickerScroller"></div>
+</div>
 <div id="rankView">
 <div class="home-matches-row">
   <div class="home-match-card">

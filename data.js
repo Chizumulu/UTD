@@ -1436,6 +1436,29 @@ const leagueData = [
   }
 ];
 
+// ===== 외부 API(Chizumulu API, api.chizumulu.net) teamId ↔ leagueData 매핑 =====
+// 리그 전체 라이브 스코어 티커(app.js의 renderLeagueLiveTicker 관련 함수들)가
+// api.chizumulu.net/v1/live 응답의 homeTeam.id / awayTeam.id 값을 우리 leagueData의
+// 팀(로고/한글명)과 이어붙이는 데 씁니다. 키는 그 API의 llms.txt에 공개된 15개
+// teamId 고정값이고, 값은 leagueData의 nameEn과 정확히 일치해야 매칭됩니다.
+const CHIZUMULU_API_TEAM_ID_TO_NAME_EN = {
+  chibavi_real_stars: "Chibavi Real Stars FC",
+  jenda_united: "Jenda United FC",
+  chizumulu_united: "Chizumulu United FC",
+  chintheche_united: "Chintheche United FC",
+  chilumba_barracks: "Chilumba Barracks FC",
+  mafu_stars: "Mafu Stars FC",
+  mmbelwa_warriors: "M'mbelwa Warriors FC",
+  chipolopolo_boys: "Chipolopolo Boys FC",
+  ekwendeni: "Ekwendeni FC",
+  lube_masters: "Lube Masters FC",
+  chihame_all_stars: "Chihame All Stars FC",
+  raiply: "Raiply FC",
+  euthini_veterans: "Euthini Veterans FC",
+  vision_s_academy: "Vision S Academy",
+  luviri: "Luviri FC"
+};
+
 // ===== 구단 위치(지도) 화면에만 추가로 표시하는 보조 구장 목록 =====
 // leagueData의 팀은 팀당 하나의 항목만 있어야 순위표/폼가이드/순위변동 차트 등이
 // 정상 동작하므로(팀 개수 기준으로 계산), 한 팀이 구장을 2곳 쓰는 경우에도

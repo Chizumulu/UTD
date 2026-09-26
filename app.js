@@ -3240,6 +3240,146 @@
       .replace(/'/g, '&#39;');
   }
 
+  // ===== 리그 전체 라이브 스코어 티커 (api.chizumulu.net 연동) =====
+  // api.chizumulu.net/v1/live 는 NRFA(말라위 축구협회) 리그 소식을 수집해 "지금 진행
+  // 중"이라고 판단되는 경기만 골라 보여주는 비공식 공개 API입니다. 인증이 필요 없고
+  // CORS가 열려 있어 브라우저에서 바로 호출할 수 있습니다.
+  // 주의: AI/파서가 구조화한 제3자 데이터라 100% 정확함을 보장하지 않고, 45분 이상
+  // 업데이트가 없는 경기는 API가 알아서 목록에서 뺍니다(경기 자체가 사라지는 건 아님).
+  const CHIZUMULU_API_BASE = 'https://api.chizumulu.net';
+  const LEAGUE_LIVE_POLL_MS = 60 * 1000; // 1분마다 갱신
+  let leagueLivePollTimer = null;
+  let leagueLiveMatchesCache = [];
+
+  // API의 homeTeam/awayTeam({id, name})을 우리 leagueData 팀과 이어붙여, 매칭되면
+  // 우리 쪽 한글명/로고를 쓰고, 매칭 안 되는 팀(리그 밖 상대 등)은 API가 준 원문 이름을 그대로 씁니다.
+  function getLeagueTeamDisplay(apiTeam) {
+    const nameEn = resolveLeagueTeamNameEn(apiTeam);
+    const found = (nameEn && typeof leagueData !== 'undefined')
+      ? leagueData.find(t => t.nameEn === nameEn)
+      : null;
+    if (found) {
+      return {
+        name: isKorean ? found.nameKo : found.nameEn,
+        logo: found.logoSrc,
+        isOurTeam: found.nameEn === 'Chizumulu United FC'
+      };
+    }
+    return { name: (apiTeam && apiTeam.name) || '?', logo: null, isOurTeam: false };
+  }
+
+  // homeTeam.id/awayTeam.id가 우리 리그 15개 팀(teamId)인지로 1차 확인하되, api.chizumulu.net은
+  // 소스 원문 표기가 자기네 "검수된 철자 목록"과 정확히 일치할 때만 id를 붙여줍니다(예: M'mbelwa는
+  // 표기가 자주 흔들려서 id가 비어 오는 경우가 있음). id가 없을 때는 그 API가 공개한 teamAlias
+  // (llms.txt 기준 검수된 축약/오탈자 표기)로 이름을 한 번 더 대조해 우리 15개 팀인지 확인합니다.
+  // "Vision"처럼 API 문서가 스스로 모호하다고 밝힌 표기는 팀 전체 이름이 다 나와야만 매칭합니다.
+  const CHIZUMULU_TEAM_NAME_ALIASES = {
+    "Chibavi Real Stars FC": ['chibavi'],
+    "Jenda United FC": ['jenda'],
+    "Chizumulu United FC": ['chizumulu'],
+    "Chintheche United FC": ['chintheche'],
+    "Chilumba Barracks FC": ['chilumba'],
+    "Mafu Stars FC": ['mafu'],
+    "M'mbelwa Warriors FC": ['mmbelwa', 'mmberwa'],
+    "Chipolopolo Boys FC": ['chipolopolo'],
+    "Ekwendeni FC": ['ekwendeni'],
+    "Lube Masters FC": ['lube'],
+    "Chihame All Stars FC": ['chihame'],
+    "Raiply FC": ['raiply'],
+    "Euthini Veterans FC": ['euthini'],
+    "Vision S Academy": ['visionsacademy'],
+    "Luviri FC": ['luviri']
+  };
+
+  function normalizeTeamText(s) {
+    return (s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
+  }
+
+  function resolveLeagueTeamNameEn(apiTeam) {
+    if (!apiTeam) return null;
+    const byId = (apiTeam.id && typeof CHIZUMULU_API_TEAM_ID_TO_NAME_EN !== 'undefined')
+      ? CHIZUMULU_API_TEAM_ID_TO_NAME_EN[apiTeam.id]
+      : null;
+    if (byId) return byId;
+
+    const normalizedName = normalizeTeamText(apiTeam.name);
+    if (!normalizedName) return null;
+    for (const nameEn in CHIZUMULU_TEAM_NAME_ALIASES) {
+      if (CHIZUMULU_TEAM_NAME_ALIASES[nameEn].some(alias => normalizedName.includes(alias))) {
+        return nameEn;
+      }
+    }
+    return null;
+  }
+
+  function formatLeagueLiveMinute(match) {
+    if (match.status === 'half_time') return isKorean ? '전반 종료' : 'HT';
+    if (typeof match.minute === 'number') return match.minute + "'";
+    if (typeof match.minute === 'string' && match.minute) return match.minute;
+    return isKorean ? '진행 중' : 'LIVE';
+  }
+
+  async function fetchLeagueLiveMatches() {
+    const res = await fetch(CHIZUMULU_API_BASE + '/v1/live');
+    if (!res.ok) throw new Error('Chizumulu API /v1/live 요청 실패: ' + res.status);
+    const data = await res.json();
+    const matches = Array.isArray(data.matches) ? data.matches : [];
+    return matches.filter(m =>
+      !!resolveLeagueTeamNameEn(m.homeTeam) && !!resolveLeagueTeamNameEn(m.awayTeam)
+    );
+  }
+
+  function renderLeagueLiveTicker(matches) {
+    const wrap = document.getElementById('leagueLiveTicker');
+    const scroller = document.getElementById('leagueLiveTickerScroller');
+    if (!wrap || !scroller) return;
+
+    if (!matches || !matches.length) {
+      wrap.style.display = 'none';
+      scroller.innerHTML = '';
+      return;
+    }
+
+    scroller.innerHTML = matches.map(m => {
+      const home = getLeagueTeamDisplay(m.homeTeam);
+      const away = getLeagueTeamDisplay(m.awayTeam);
+      const homeScore = m.score && m.score.home != null ? m.score.home : '-';
+      const awayScore = m.score && m.score.away != null ? m.score.away : '-';
+      const homeLogo = home.logo ? `<img class="llt-team-logo" src="./${home.logo}" alt="" loading="lazy">` : '';
+      const awayLogo = away.logo ? `<img class="llt-team-logo" src="./${away.logo}" alt="" loading="lazy">` : '';
+      const cardClass = 'llt-card' + (home.isOurTeam || away.isOurTeam ? ' is-our-team' : '');
+      return `
+        <div class="${cardClass}">
+          <div class="llt-card-top"><span class="llt-minute">${escapeHtml(formatLeagueLiveMinute(m))}</span></div>
+          <div class="llt-teams">
+            <div class="llt-team">${homeLogo}<span class="llt-team-name">${escapeHtml(home.name)}</span></div>
+            <div class="llt-score">${homeScore} : ${awayScore}</div>
+            <div class="llt-team">${awayLogo}<span class="llt-team-name">${escapeHtml(away.name)}</span></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    wrap.style.display = '';
+  }
+
+  async function refreshLeagueLiveTicker() {
+    try {
+      leagueLiveMatchesCache = await fetchLeagueLiveMatches();
+      renderLeagueLiveTicker(leagueLiveMatchesCache);
+    } catch (e) {
+      // 부가 기능이므로 실패 시 조용히 숨기고, 사이트의 나머지 기능에는 영향을 주지 않습니다.
+      leagueLiveMatchesCache = [];
+      const wrap = document.getElementById('leagueLiveTicker');
+      if (wrap) wrap.style.display = 'none';
+    }
+  }
+
+  function startLeagueLiveTicker() {
+    refreshLeagueLiveTicker();
+    if (leagueLivePollTimer) clearInterval(leagueLivePollTimer);
+    leagueLivePollTimer = setInterval(refreshLeagueLiveTicker, LEAGUE_LIVE_POLL_MS);
+  }
+
   // teamYoutubeChannel(data.js)에 설정된 채널의 "최신 업로드 영상"을 YouTube Data API v3로
   // 가져옵니다. localStorage에 12시간 동안 캐시해서(하루 최대 2번만 API 호출) API 사용량을 아낍니다.
   async function fetchTeamYoutubeChannelVideos() {
@@ -9329,6 +9469,7 @@
     renderMainMiniTable();
     renderNextMatchStrip();
     renderHomeMatchCards();
+    renderLeagueLiveTicker(leagueLiveMatchesCache);
     
     if (currentView === 'stats') {
       buildStatsTables();
@@ -9679,6 +9820,7 @@
     renderNextMatchStrip();
     renderHomeMatchCards();
     initSpotlightCards();
+    startLeagueLiveTicker();
 
     const squadFormerDetailsEl = document.getElementById('squadFormerDetails');
     if (squadFormerDetailsEl) {

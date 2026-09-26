@@ -6393,6 +6393,113 @@
     }
   }
 
+  /* ===== 리그 전체 라이브 스코어 티커 (api.chizumulu.net 연동) ===== */
+  .league-live-ticker {
+    width: calc(100% - 32px);
+    margin: 10px 16px 4px;
+    padding: 12px 14px 14px;
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--card-shadow-accent);
+    box-sizing: border-box;
+    transition: var(--theme-transition);
+  }
+  .llt-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .llt-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-red);
+    flex-shrink: 0;
+    animation: nmlb-pulse 1.6s ease-out infinite;
+  }
+  .llt-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--color-text-muted);
+    letter-spacing: 0.1px;
+  }
+  .llt-scroller {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .llt-scroller::-webkit-scrollbar { display: none; }
+  .llt-card {
+    flex: 0 0 auto;
+    min-width: 168px;
+    background: var(--color-bg-stripe);
+    border-radius: var(--radius-lg);
+    padding: 10px 12px;
+    transition: var(--theme-transition);
+  }
+  .llt-card.is-our-team {
+    background: var(--color-bg-myteam-1);
+    box-shadow: 0 0 0 1.5px rgba(var(--color-teal-rgb), 0.35) inset;
+  }
+  .llt-card-top {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 6px;
+  }
+  .llt-minute {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--color-red-text);
+    background: rgba(var(--color-red-rgb), 0.1);
+    padding: 1px 8px;
+    border-radius: var(--radius-pill);
+  }
+  .llt-teams {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .llt-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+  .llt-team-logo {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+  .llt-team-name {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-text-dark);
+    text-align: center;
+    line-height: 1.2;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .llt-score {
+    font-family: var(--font-num);
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--color-brand-text);
+    flex-shrink: 0;
+    padding: 0 2px;
+  }
+  @media (max-width: 480px) {
+    .league-live-ticker { margin: 8px 16px 4px; }
+    .llt-card { min-width: 148px; }
+  }
+
   .ti-next-match-kickoff {
     margin-top: 12px;
     padding-top: 10px;
