@@ -320,6 +320,25 @@ const matchLineups = {
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 16주차", score: "치주물루 2 : 3 음벨와", result: "음벨와 승" }
     ],
     historySummary: "최근 3경기 전적 1승 0무 2패로 열세"
+  },
+  round12: {
+    // TODO: 경기 종료 후 result("N : N 승/무/패")와 득점자(goals), 교체(subsIn/outMin), 결장자(subsUnused) 채우기.
+    formation: "4-2-3-1",
+    opponentKo: "치바비 리얼 스타스 FC",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
+      { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
+      { pos: "CAM", number: 9, nameKo: "제임스 헤르메스" },
+      { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
+      { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
+      { pos: "RCM", number: 7, nameKo: "디킨스 니렌다" },
+      { pos: "LB", number: 5, nameKo: "라반 몽웨" },
+      { pos: "LCB", number: 13, nameKo: "조셉 반다" },
+      { pos: "RCB", number: 3, nameKo: "알란 음롱골라" },
+      { pos: "RB", number: 25, nameKo: "모버트 카타파" },
+      { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
+    ],
+    subsUnused: [4, 8, 10, 11, 15, 66, 80, 88]
   }
 };
 
@@ -334,8 +353,8 @@ const squadData = [
   { number: 6, position: "MF", nameKo: "벤자민 니렌다", nameEn: "Benjamin Nyirenda", photoSrc: "no6.png" },
   { number: 7, position: "MF", nameKo: "디킨스 니렌다", nameEn: "Dickies Nyirenda", photoSrc: "no7.png" },
   { number: 8, position: "MF", nameKo: "엑스퍼트 카망가", nameEn: "Expert Kamanga", photoSrc: "no8.png" },
-  { position: "FW", nameKo: "헤르메스 제임스", nameEn: "Hermes James", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp", photoSrc: "헤르메스.png" },
-  { position: "DF", nameKo: "켈빈 반다", nameEn: "Kelvin Banda", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp", photoSrc: "켈빈.png" },
+  { number: 9, position: "FW", nameKo: "제임스 헤르메스", nameEn: "James Hermes", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp", photoSrc: "헤르메스.png" },
+  { number: 4, position: "DF", nameKo: "켈빈 반다", nameEn: "Kelvin Banda", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp", photoSrc: "켈빈.png" },
   { number: 10, position: "MF", nameKo: "찰스 데야", nameEn: "Charles Deya", photoSrc: "no10.png" },
   { number: 11, position: "FW", nameKo: "해리 바튼", nameEn: "Harry Barton", photoSrc: "no11.png" },
   { number: 13, position: "DF", nameKo: "조셉 반다", nameEn: "Joseph Banda", photoSrc: "no13.png" },

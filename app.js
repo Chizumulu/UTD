@@ -3301,7 +3301,9 @@
     "Chihame All Stars FC": ['chihame'],
     "Raiply FC": ['raiply'],
     "Euthini Veterans FC": ['euthini'],
-    "Vision S Academy": ['visionsacademy'],
+    // 실황 게시물은 종종 "Vision Academy"(S 없이)로만 표기해서, 정식 표기(visionsacademy)
+    // 만으로는 매칭이 안 되는 경우가 있어 짧은 표기도 함께 등록합니다.
+    "Vision S Academy": ['visionsacademy', 'visionacademy'],
     "Luviri FC": ['luviri']
   };
 
@@ -3508,7 +3510,14 @@
     const data = await res.json();
     const items = Array.isArray(data.items) ? data.items : [];
 
-    const latestByPair = new Map();
+    // pairKey별로 "가장 최근 게시물"(스코어/상태 표시용으로 사용)과는 별도로, 그 경기를
+    // 언급한 모든 게시물의 골 이벤트를 전부 모아 중복만 제거한 누적 목록을 만듭니다.
+    // 게시물마다 그 시점에 "새로" 보도된 이벤트만 담는 경우가 있어서(이전 골을 다시
+    // 언급하지 않음), 최신 게시물 하나만 보면 이전에 보도됐던 골이 통째로 사라지는
+    // 문제가 있었습니다 — 그래서 events는 최신 게시물 것으로 덮어쓰지 않고 누적합니다.
+    const latestByPair = new Map(); // pairKey -> { ts, homeNameEn, awayNameEn, match }
+    const goalsByPair = new Map();  // pairKey -> Map(dedupeKey -> goal event)
+
     for (const item of items) {
       const rawMatches = (item && item.structured && Array.isArray(item.structured.matches))
         ? item.structured.matches
@@ -3519,13 +3528,35 @@
         const awayNameEn = resolveLeagueTeamNameEn({ name: m.awayTeam });
         if (!homeNameEn || !awayNameEn) continue; // 우리 리그 15개 팀끼리의 경기만 대상으로 합니다.
         const pairKey = leagueTeamPairKey(homeNameEn, awayNameEn);
+
         const prev = latestByPair.get(pairKey);
         if (!prev || ts > prev.ts) {
           latestByPair.set(pairKey, { ts, homeNameEn, awayNameEn, match: m });
         }
+
+        // 골 이벤트는 게시물의 최신 여부와 무관하게 전부 모으고, 같은 골이 여러 게시물에
+        // 반복 언급될 수 있으므로 (팀+득점시각+득점자) 조합으로 중복만 제거합니다.
+        const rawEvents = Array.isArray(m.events) ? m.events : [];
+        let goalMap = goalsByPair.get(pairKey);
+        if (!goalMap) { goalMap = new Map(); goalsByPair.set(pairKey, goalMap); }
+        for (const ev of rawEvents) {
+          if (!ev || ev.type !== 'goal') continue;
+          const scorerName = (ev.players && ev.players[0] && ev.players[0].name) || '';
+          const dedupeKey = `${ev.team || ''}|${ev.minuteText || ''}|${scorerName}`;
+          if (!goalMap.has(dedupeKey)) goalMap.set(dedupeKey, ev);
+        }
       }
     }
-    return Array.from(latestByPair.values());
+
+    return Array.from(latestByPair.values()).map(entry => {
+      const pairKey = leagueTeamPairKey(entry.homeNameEn, entry.awayNameEn);
+      const goalMap = goalsByPair.get(pairKey);
+      const mergedEvents = goalMap ? Array.from(goalMap.values()) : [];
+      // match 자체(스코어/상태 등)는 최신 게시물 것을 그대로 쓰되, events만 누적된
+      // 목록으로 교체합니다.
+      const mergedMatch = Object.assign({}, entry.match, { events: mergedEvents });
+      return Object.assign({}, entry, { match: mergedMatch });
+    });
   }
 
   // "마지막으로 확인된 라이브 상태" 캐시: /v1/live에 매 주기마다 떠 있던 경기를 팀
@@ -3669,6 +3700,13 @@
         : null;
       const rawEvents = (entry && entry.match && Array.isArray(entry.match.events)) ? entry.match.events : [];
 
+      // "45+2" 같은 추가시간 표기도 정렬 가능하도록 숫자로 환산합니다.
+      const parseMinuteForSort = (minuteText) => {
+        const mm = String(minuteText || '').match(/(\d+)\s*(?:\+\s*(\d+))?/);
+        if (!mm) return 9999;
+        return parseInt(mm[1], 10) + (mm[2] ? parseInt(mm[2], 10) / 100 : 0);
+      };
+
       const goals = rawEvents
         .filter(ev => ev && ev.type === 'goal')
         .map(ev => {
@@ -3678,7 +3716,8 @@
             scorer: (ev.players && ev.players[0] && ev.players[0].name) || '',
             isHome: !!(scoringTeamNameEn && homeNameEn && scoringTeamNameEn === homeNameEn)
           };
-        });
+        })
+        .sort((a, b) => parseMinuteForSort(a.minuteText) - parseMinuteForSort(b.minuteText));
 
       return goals.length ? Object.assign({}, m, { goals }) : m;
     });
