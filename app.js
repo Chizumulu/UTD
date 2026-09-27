@@ -3337,20 +3337,34 @@
   // data.js의 scheduledRounds(예정된 라운드 일정)에서 이 팀 조합의 킥오프 시각(ms, UTC)을
   // 찾습니다. 라이브 티커가 "FULL TIME이 안 와도 끝없이" 떠 있지 않도록, 킥오프로부터
   // 일정 시간 뒤에는 강제로 닫는 안전장치에 씁니다. 못 찾으면 null(안전장치 미적용).
+  // data.js의 scheduledRounds(예정된 라운드 일정) + roundsData(이미 끝나서 옮겨진 라운드)에서
+  // 이 팀 조합의 킥오프 시각(ms, UTC)을 찾습니다. 라이브 티커가 "FULL TIME이 안 와도
+  // 끝없이" 떠 있지 않도록, 킥오프로부터 일정 시간 뒤에는 강제로 닫는 안전장치에 씁니다.
+  // 라운드가 종료되어 scheduledRounds → roundsData로 옮겨간 뒤에도 이 안전장치가 계속
+  // 작동해야 하므로 두 곳을 모두 찾습니다. 못 찾으면 null(안전장치 미적용).
   function findScheduledKickoffMs(homeNameEn, awayNameEn) {
-    if (typeof scheduledRounds === 'undefined' || !scheduledRounds) return null;
     const pairKey = leagueTeamPairKey(homeNameEn, awayNameEn);
-    for (const roundKey in scheduledRounds) {
-      const round = scheduledRounds[roundKey];
-      if (!Array.isArray(round)) continue;
-      for (const m of round) {
-        if (!m.homeEn || !m.awayEn) continue;
-        if (leagueTeamPairKey(m.homeEn, m.awayEn) === pairKey) {
-          return kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+    const sources = [
+      (typeof scheduledRounds !== 'undefined') ? scheduledRounds : null,
+      (typeof roundsData !== 'undefined') ? roundsData : null
+    ];
+    let best = null;
+    for (const source of sources) {
+      if (!source) continue;
+      for (const roundKey in source) {
+        const round = source[roundKey];
+        if (!Array.isArray(round)) continue;
+        for (const m of round) {
+          if (!m.homeEn || !m.awayEn) continue;
+          if (leagueTeamPairKey(m.homeEn, m.awayEn) !== pairKey) continue;
+          const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+          // 같은 두 팀이 시즌 중 두 번(홈/원정) 맞붙을 수 있으므로, 가장 최근(가장 큰) 킥오프
+          // 시각을 가진 경기를 씁니다 — 지금 라이브일 가능성이 있는 쪽은 그 경기이기 때문입니다.
+          if (ms && (best === null || ms > best)) best = ms;
         }
       }
     }
-    return null;
+    return best;
   }
 
   // 킥오프로부터 이 시간(4시간)이 지나면, FULL TIME이 확인되지 않았어도 라이브 티커에서
