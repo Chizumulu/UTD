@@ -3762,7 +3762,21 @@
         }
       }
 
-      return goals.length ? Object.assign({}, m, { goals, score: updatedScore }) : m;
+      // "전반 종료" 상태인데 45분을 넘긴 골이 이미 확인됐다면 모순입니다(전반 종료 후에는
+      // 45분대 골이 나올 수 없음) — /v1/live의 상태·분(minute) 갱신이 골 리포트보다 늦은
+      // 것으로 보고, 후반전이 진행 중인 것으로 보정해서 배지가 "전반 종료"에 멈춰있지
+      // 않게 합니다.
+      let updatedStatus = m.status;
+      let updatedMinute = m.minute;
+      if (goals.length && m.status === 'half_time') {
+        const latestGoalMinute = Math.max(...goals.map(g => parseMinuteForSort(g.minuteText)));
+        if (latestGoalMinute > 45) {
+          updatedStatus = 'live';
+          updatedMinute = latestGoalMinute;
+        }
+      }
+
+      return goals.length ? Object.assign({}, m, { goals, score: updatedScore, status: updatedStatus, minute: updatedMinute }) : m;
     });
   }
 
