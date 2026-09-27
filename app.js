@@ -3366,6 +3366,33 @@
     return isKorean ? '진행 중' : 'LIVE';
   }
 
+  // /v1/live가 같은 실제 경기를 두 번 내려줄 때가 있습니다(예: 한쪽은 갱신이 멈춘 채
+  // 예전 분(minute)/스코어에 멈춰있고, 다른 한쪽은 정상적으로 전반 종료/최신 스코어로
+  // 갱신된 경우). 팀 조합(pairKey)이 같은 항목이 여럿이면 "더 진행된" 쪽만 남깁니다:
+  // 상태 우선순위(종료 > 전반 종료 > 진행 중) → 그다음 분(minute)이 더 큰 쪽.
+  const LEAGUE_MATCH_STATUS_RANK = { full_time: 3, half_time: 2, live: 1 };
+
+  function dedupeLeagueMatchesByPair(matches) {
+    const bestByPair = new Map();
+    for (const m of (matches || [])) {
+      const h = resolveLeagueTeamNameEn(m.homeTeam);
+      const a = resolveLeagueTeamNameEn(m.awayTeam);
+      if (!h || !a) continue;
+      const pairKey = leagueTeamPairKey(h, a);
+      const prev = bestByPair.get(pairKey);
+      if (!prev) { bestByPair.set(pairKey, m); continue; }
+      const prevRank = LEAGUE_MATCH_STATUS_RANK[prev.status] || 0;
+      const curRank = LEAGUE_MATCH_STATUS_RANK[m.status] || 0;
+      if (curRank > prevRank) { bestByPair.set(pairKey, m); continue; }
+      if (curRank === prevRank) {
+        const prevMin = typeof prev.minute === 'number' ? prev.minute : -1;
+        const curMin = typeof m.minute === 'number' ? m.minute : -1;
+        if (curMin > prevMin) bestByPair.set(pairKey, m);
+      }
+    }
+    return Array.from(bestByPair.values());
+  }
+
   async function fetchLeagueLiveMatches() {
     const res = await fetch(CHIZUMULU_API_BASE + '/v1/live');
     if (!res.ok) {
@@ -3376,7 +3403,7 @@
     const data = await res.json();
     const matches = Array.isArray(data.matches) ? data.matches : [];
     const now = Date.now();
-    return matches.filter(m => {
+    const filtered = matches.filter(m => {
       const h = resolveLeagueTeamNameEn(m.homeTeam);
       const a = resolveLeagueTeamNameEn(m.awayTeam);
       if (!h || !a) return false;
@@ -3386,6 +3413,7 @@
       if (kickoffMs && now > kickoffMs + LEAGUE_LIVE_FORCE_CLOSE_MS) return false;
       return true;
     });
+    return dedupeLeagueMatchesByPair(filtered);
   }
 
   // /v1/matches/{matchId}는 팀 이름으로 추정하는 게 아니라, 그 경기 하나(matchId)의
@@ -3542,7 +3570,7 @@
         for (const ev of rawEvents) {
           if (!ev || ev.type !== 'goal') continue;
           const scorerName = (ev.players && ev.players[0] && ev.players[0].name) || '';
-          const dedupeKey = `${ev.team || ''}|${ev.minuteText || ''}|${scorerName}`;
+          const dedupeKey = `${(ev.team || '').trim().toLowerCase()}|${ev.minuteText || ''}|${scorerName.trim().toLowerCase()}`;
           if (!goalMap.has(dedupeKey)) goalMap.set(dedupeKey, ev);
         }
       }
