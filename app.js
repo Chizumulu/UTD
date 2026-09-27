@@ -3747,46 +3747,72 @@
         })
         .sort((a, b) => parseMinuteForSort(a.minuteText) - parseMinuteForSort(b.minuteText));
 
-      return goals.length ? Object.assign({}, m, { goals }) : m;
+      // /v1/live의 스코어 필드와 /v1/structured에서 누적한 득점자 수가 서로 다른 소스라서
+      // 순간적으로 어긋날 수 있습니다(예: 소셜 실황 게시물이 공식 라이브 스코어 갱신보다
+      // 먼저 올라오는 경우). 득점자가 실제로 몇 명 확인됐는지가 더 신뢰할 수 있는 정보이므로,
+      // 확인된 골 수가 스코어보다 많으면 화면에 보여줄 스코어를 그만큼 끌어올립니다.
+      let updatedScore = m.score;
+      if (goals.length && m.score) {
+        const homeGoalsCount = goals.filter(g => g.isHome).length;
+        const awayGoalsCount = goals.length - homeGoalsCount;
+        const curHome = m.score.home != null ? m.score.home : 0;
+        const curAway = m.score.away != null ? m.score.away : 0;
+        if (homeGoalsCount > curHome || awayGoalsCount > curAway) {
+          updatedScore = { home: Math.max(curHome, homeGoalsCount), away: Math.max(curAway, awayGoalsCount) };
+        }
+      }
+
+      return goals.length ? Object.assign({}, m, { goals, score: updatedScore }) : m;
     });
   }
 
   async function refreshLeagueLiveTicker() {
+    // 안쪽에서 무슨 일이 나든(특히 renderLeagueLiveTicker처럼 이전엔 보호되지 않았던 부분)
+    // 폴링 루프 자체는 절대 멈추면 안 되므로, 다음 예약(setTimeout)을 finally에 둬서
+    // 예외가 나도 항상 실행되게 합니다. 그렇지 않으면 한 번의 예외로 setTimeout 체인이
+    // 끊겨서, 사용자가 직접 새로고침하기 전까지 라이브 창이 다시는 갱신되지 않습니다.
     try {
-      leagueLiveMatchesCache = await fetchLeagueLiveMatches();
-      leagueLivePollDelay = LEAGUE_LIVE_POLL_MS; // 성공하면 원래 주기로 되돌립니다.
-      updateLeagueLiveLastKnownCache(leagueLiveMatchesCache); // FULL TIME 확인 전까지 유지할 스냅샷 갱신
-    } catch (e) {
-      // 일시적인 네트워크 오류나 429(요청 과다)일 수 있으므로, 마지막으로 성공했던 화면은
-      // 그대로 두고(갑자기 숨기지 않음) 다음 시도 간격만 늘립니다. 429가 아닌 오류는
-      // 계속 기본 주기로 재시도합니다(한 번의 일시적 오류로 갱신 주기를 늦추지 않음).
-      if (e && e.status === 429) {
-        leagueLivePollDelay = Math.min(leagueLivePollDelay * 2, LEAGUE_LIVE_POLL_MAX_MS);
+      try {
+        leagueLiveMatchesCache = await fetchLeagueLiveMatches();
+        leagueLivePollDelay = LEAGUE_LIVE_POLL_MS; // 성공하면 원래 주기로 되돌립니다.
+        updateLeagueLiveLastKnownCache(leagueLiveMatchesCache); // FULL TIME 확인 전까지 유지할 스냅샷 갱신
+      } catch (e) {
+        // 일시적인 네트워크 오류나 429(요청 과다)일 수 있으므로, 마지막으로 성공했던 화면은
+        // 그대로 두고(갑자기 숨기지 않음) 다음 시도 간격만 늘립니다. 429가 아닌 오류는
+        // 계속 기본 주기로 재시도합니다(한 번의 일시적 오류로 갱신 주기를 늦추지 않음).
+        if (e && e.status === 429) {
+          leagueLivePollDelay = Math.min(leagueLivePollDelay * 2, LEAGUE_LIVE_POLL_MAX_MS);
+        }
+        // leagueLiveMatchesCache는 건드리지 않고 마지막 성공 값을 그대로 유지합니다.
       }
-      // leagueLiveMatchesCache는 건드리지 않고 마지막 성공 값을 그대로 유지합니다.
+
+      // /v1/structured 보강(경기 보충 + 득점자/득점 시각)은 어디까지나 부가 기능이므로,
+      // 실패해도 위의 라이브 티커 결과는 그대로 보여줍니다(보강 부분만 빈 채로 넘어감).
+      // structuredEntries 조회와 stale 판정(주로 matchId 기반)을 서로 다른 try로 분리해서,
+      // /v1/structured가 잠깐 실패해도 matchId 기반 FULL TIME 확인은 영향받지 않게 합니다.
+      let structuredEntries = [];
+      try {
+        structuredEntries = await fetchLeagueStructuredRecentMatches();
+      } catch (e) { /* 무시: structuredEntries는 빈 배열로 유지 */ }
+
+      let combinedMatches = leagueLiveMatchesCache;
+      try {
+        const staleMatches = await buildStaleLeagueLiveMatches(structuredEntries, leagueLiveMatchesCache);
+        combinedMatches = attachLeagueGoalEvents([...leagueLiveMatchesCache, ...staleMatches], structuredEntries);
+      } catch (e) { /* 무시 */ }
+
+      try {
+        renderLeagueLiveTicker(combinedMatches);
+      } catch (e) {
+        // 렌더링 중 예상 못한 오류(예: 손상된 데이터)가 나도 여기서 삼켜서 폴링을 계속 이어갑니다.
+        console.error('renderLeagueLiveTicker 실패:', e);
+      }
+    } finally {
+      // 여러 방문자가 정확히 같은 간격으로 요청을 보내면 서버(또는 앞단 보호 계층)의
+      // 패턴 기반 차단을 유발하기 쉬우므로, 매번 ±15% 정도 무작위 오차(지터)를 더합니다.
+      const jitter = leagueLivePollDelay * (0.85 + Math.random() * 0.3);
+      leagueLivePollTimer = setTimeout(refreshLeagueLiveTicker, jitter);
     }
-
-    // /v1/structured 보강(경기 보충 + 득점자/득점 시각)은 어디까지나 부가 기능이므로,
-    // 실패해도 위의 라이브 티커 결과는 그대로 보여줍니다(보강 부분만 빈 채로 넘어감).
-    // structuredEntries 조회와 stale 판정(주로 matchId 기반)을 서로 다른 try로 분리해서,
-    // /v1/structured가 잠깐 실패해도 matchId 기반 FULL TIME 확인은 영향받지 않게 합니다.
-    let structuredEntries = [];
-    try {
-      structuredEntries = await fetchLeagueStructuredRecentMatches();
-    } catch (e) { /* 무시: structuredEntries는 빈 배열로 유지 */ }
-
-    let combinedMatches = leagueLiveMatchesCache;
-    try {
-      const staleMatches = await buildStaleLeagueLiveMatches(structuredEntries, leagueLiveMatchesCache);
-      combinedMatches = attachLeagueGoalEvents([...leagueLiveMatchesCache, ...staleMatches], structuredEntries);
-    } catch (e) { /* 무시 */ }
-
-    renderLeagueLiveTicker(combinedMatches);
-
-    // 여러 방문자가 정확히 같은 간격으로 요청을 보내면 서버(또는 앞단 보호 계층)의
-    // 패턴 기반 차단을 유발하기 쉬우므로, 매번 ±15% 정도 무작위 오차(지터)를 더합니다.
-    const jitter = leagueLivePollDelay * (0.85 + Math.random() * 0.3);
-    leagueLivePollTimer = setTimeout(refreshLeagueLiveTicker, jitter);
   }
 
   function startLeagueLiveTicker() {
