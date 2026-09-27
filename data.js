@@ -322,14 +322,14 @@ const matchLineups = {
     historySummary: "최근 3경기 전적 1승 0무 2패로 열세"
   },
   round12: {
-    // TODO: 경기 종료 후 result("N : N 승/무/패")와 득점자(goals), 교체(subsIn/outMin), 결장자(subsUnused) 채우기.
     formation: "4-2-3-1",
     opponentKo: "치바비 리얼 스타스 FC",
+    result: "1 : 2 패",
     starters: [
       { pos: "ST", number: 22, nameKo: "티모시 카타파" },
       { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
       { pos: "CAM", number: 9, nameKo: "제임스 헤르메스" },
-      { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
+      { pos: "RW", number: 6, nameKo: "벤자민 니렌다", goals: ["-"] },
       { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
       { pos: "RCM", number: 7, nameKo: "디킨스 니렌다" },
       { pos: "LB", number: 5, nameKo: "라반 몽웨" },
@@ -338,7 +338,14 @@ const matchLineups = {
       { pos: "RB", number: 25, nameKo: "모버트 카타파" },
       { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
     ],
-    subsUnused: [4, 8, 10, 11, 15, 66, 80, 88]
+    subsIn: [],
+    subsUnused: [4, 8, 10, 11, 15, 66, 80, 88],
+    recentHistory: [
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 25주차", score: "치바비 2 : 0 치주물루", result: "치바비 승" },
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 14주차", score: "치주물루 2 : 2 치바비", result: "무승부" },
+      { comp: "24시즌 MNRF 심소 프리미어 리그(8월 25일)", score: "치바비 5 : 0 치주물루", result: "치바비 승" },
+      { comp: "24시즌 MNRF 심소 프리미어 리그(5월 22일)", score: "치주물루 4 : 1 치바비", result: "치주물루 승" }
+    ]
   }
 };
 
@@ -487,8 +494,8 @@ function computeSquadPlayerStats() {
     return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
   });
 
-  roundKeysSorted.forEach((roundKey, idx) => {
-    const weekNum = idx + 1;
+  roundKeysSorted.forEach((roundKey) => {
+    const weekNum = parseInt(roundKey.replace('round', ''), 10);
     const lineup = matchLineups[roundKey];
     if (!lineup) return;
 
@@ -1042,6 +1049,42 @@ const matchDetails = {
       scorersHome: "ELIAS BOTTOMAN, JACK GAMA (2골), MUSA PHIRI",
       scorersAway: "RHEMA MAKAMO, FORTUNE CHILAMBO"
     }
+  ],
+  // 12주차는 전체 라운드가 종료되어 roundsData.round12로 옮겨졌으므로 matchDetails.round12를
+  // 아래에 새로 추가했습니다. 칠룸바 vs 치하메, 치폴로폴로 vs 루베는 연기(postponed)라
+  // 스코어가 없어 matchDetails에는 넣지 않습니다 — 나중에 결과가 나오면 이 목록 맨 뒤에 추가해주세요.
+  // (순서는 roundsData.round12의 스코어가 있는 경기 순서와 같아야 합니다.)
+  round12: [
+    {
+      match: "비전 2 : 친테체 3",
+      scorersHome: "BORNFACE MWANDIRA, JOMO PHIRI",
+      scorersAway: "TEMWA NDHLOVU, SIMEONE PHIRI, MATHEWS NUNDWE"
+    },
+    {
+      match: "음벨와 1 : 마푸 0",
+      scorersHome: "GREEN MWALE",
+      scorersAway: "없음"
+    },
+    {
+      match: "루비리 2 : 라이플리 0",
+      scorersHome: "SOLOMON MANDA, JONATHAN PHIRI",
+      scorersAway: "없음"
+    },
+    {
+      match: "젠다 3 : 에크웬데니 2",
+      scorersHome: "KONDE NYIRENDA, RICHARD SAKALA, WYSON NYIRENDA",
+      scorersAway: "WATIPA NYIRENDA, ALBERT KAUNDA"
+    },
+    {
+      match: "치바비 2 : 치주물루 1",
+      scorersHome: "OVERTON NGULUBE, HENDERSON KANYIKA",
+      scorersAway: "BENJAMIN NYIRENDA"
+    },
+    {
+      match: "칠룸바 4 : 친테체 0",
+      scorersHome: "WANANGWA GONDWE, DEUS NKUTU, BENJAMIN MAPUNDA (2골)",
+      scorersAway: "없음"
+    }
   ]
 };
 
@@ -1057,32 +1100,12 @@ const upcomingMatchHistory = {
       { comp: "2025 FDH 뱅크컵 2라운드", score: "칠룸바 3 : 1 치주물루", result: "칠룸바 승" },
       { comp: "24시즌 카스텔컵 북부 지역 예선", score: "치주물루 3 : 3 칠룸바 (PSO 4:1)", result: "무승부" }
     ]
-  },
-  round12: {
-    recentHistory: [
-      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 25주차", score: "치바비 2 : 0 치주물루", result: "치바비 승" },
-      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 14주차", score: "치주물루 2 : 2 치바비", result: "무승부" },
-      { comp: "24시즌 MNRF 심소 프리미어 리그(8월 25일)", score: "치바비 5 : 0 치주물루", result: "치바비 승" },
-      { comp: "24시즌 MNRF 심소 프리미어 리그(5월 22일)", score: "치주물루 4 : 1 치바비", result: "치주물루 승" }
-    ]
   }
 };
 
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
-  round12: [
-    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-26", kickoffTime: "14:30", postponed: true },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-26", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "GREEN MWALE", scorersAway: "없음" },
-    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30" },
-    { byeKo: "에우티니 베테랑스 FC", byeEn: "Euthini Veterans FC" },
-    // 10주차에서 연기됐던 칠룸바 vs 친테체 경기가 12주차 경기로 확정되었습니다.
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-23", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 4, awayScore: 0, scorersHome: "WANANGWA GONDWE, DEUS NKUTU, BENJAMIN MAPUNDA (2골)", scorersAway: "없음" }
-  ],
   round13: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-02", kickoffTime: "15:00" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-03", kickoffTime: "14:30" },
@@ -1275,6 +1298,22 @@ const roundsData = {
     { byeKo: "비전 S 아카데미", byeEn: "Vision S Academy" },
     // 10주차에서 연기됐던 에우티니 vs 루베 마스터즈 경기가 11주차 경기로 확정되었습니다.
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-16", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 5, awayScore: 2, scorersHome: "ELIAS BOTTOMAN, JACK GAMA (2골), MUSA PHIRI", scorersAway: "RHEMA MAKAMO, FORTUNE CHILAMBO" }
+  ],
+  // 12주차는 전체 라운드가 종료되어 roundsData.round12로 옮겨졌습니다.
+  // 단, 칠룸바 vs 치하메 / 치폴로폴로 vs 루베 경기는 연기(postponed)되어 스코어가 아직 없습니다.
+  // (round7의 마푸 vs 에크웬데니와 동일한 패턴 — 새 날짜가 확정되고 스코어가
+  // 채워지면 postponed를 지우고 matchDetails.round12 목록 맨 뒤에 추가해주세요.)
+  round12: [
+    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "BORNFACE MWANDIRA, JOMO PHIRI", scorersAway: "TEMWA NDHLOVU, SIMEONE PHIRI, MATHEWS NUNDWE" },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", postponed: true },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-26", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "GREEN MWALE", scorersAway: "없음" },
+    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "SOLOMON MANDA, JONATHAN PHIRI", scorersAway: "없음" },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", postponed: true },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 3, awayScore: 2, scorersHome: "KONDE NYIRENDA, RICHARD SAKALA, WYSON NYIRENDA", scorersAway: "WATIPA NYIRENDA, ALBERT KAUNDA" },
+    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "OVERTON NGULUBE, HENDERSON KANYIKA", scorersAway: "BENJAMIN NYIRENDA" },
+    { byeKo: "에우티니 베테랑스 FC", byeEn: "Euthini Veterans FC" },
+    // 10주차에서 연기됐던 칠룸바 vs 친테체 경기가 12주차 경기로 확정되었습니다.
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-23", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 4, awayScore: 0, scorersHome: "WANANGWA GONDWE, DEUS NKUTU, BENJAMIN MAPUNDA (2골)", scorersAway: "없음" }
   ]
 };
 
@@ -2241,6 +2280,12 @@ const nameAliases = {
 // 영문 이름(대문자) -> 한글/영문 표기 사전. matchDetails 에 새 득점자가
 // 나오면 이 사전에 한 줄만 추가하면 나머지는 자동으로 계산됩니다.
 const playerDirectory = {
+  "OVERTON NGULUBE": { nameKo: "오버턴 은굴루베", nameEn: "Overton Ngulube" },
+  "KONDE NYIRENDA": { nameKo: "콘데 니렌다", nameEn: "Konde Nyirenda" },
+  "RICHARD SAKALA": { nameKo: "리처드 사칼라", nameEn: "Richard Sakala" },
+  "BORNFACE MWANDIRA": { nameKo: "본페이스 므완디라", nameEn: "Bornface Mwandira" },
+  "SIMEONE PHIRI": { nameKo: "시메온 피리", nameEn: "Simeone Phiri" },
+  "MATHEWS NUNDWE": { nameKo: "매튜스 눈드웨", nameEn: "Mathews Nundwe" },
   "GIVEN MWANDIRA": { nameKo: "기븐 므완디라", nameEn: "Given Mwandira" },
   "JOMO PHIRI": { nameKo: "조모 피리", nameEn: "Jomo Phiri" },
   "ROBIN CHIOKO": { nameKo: "로빈 치오코", nameEn: "Robin Chioko" },
