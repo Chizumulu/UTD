@@ -334,7 +334,7 @@ const matchLineups = {
       { pos: "RCM", number: 7, nameKo: "디킨스 니렌다" },
       { pos: "LB", number: 5, nameKo: "라반 몽웨" },
       { pos: "LCB", number: 13, nameKo: "조셉 반다" },
-      { pos: "RCB", number: 3, nameKo: "알란 음롱골라" },
+      { pos: "RCB", number: 3, nameKo: "알란 음롱골라", captain: true },
       { pos: "RB", number: 25, nameKo: "모버트 카타파" },
       { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
     ],
@@ -1107,14 +1107,16 @@ const upcomingMatchHistory = {
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
   round13: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-02", kickoffTime: "15:00" },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", postponed: true },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-03", kickoffTime: "14:30" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-03", kickoffTime: "14:30" },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-03", kickoffTime: "14:30" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-04", kickoffTime: "14:30" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-04", kickoffTime: "14:30" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-04", kickoffTime: "14:30" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-04", kickoffTime: "14:30" },
     { byeKo: "친테체 유나이티드 FC", byeEn: "Chintheche United FC" },
+    // 11주차에서 연기됐던 치주물루 vs 칠룸바 경기가 13주차(10월 2일) 홈 경기로 확정되었습니다.
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-02", kickoffTime: "15:00", movedFromWeek: 11 },
     // 12주차에서 연기됐던 치폴로폴로 vs 루베 마스터즈 경기가 13주차 경기로 확정되었습니다.
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-30", kickoffTime: "14:30", movedFromWeek: 12 }
   ],
@@ -1290,7 +1292,7 @@ const roundsData = {
   // (round7의 마푸 vs 에크웬데니와 동일한 패턴 — 새 날짜가 확정되고 스코어가
   // 채워지면 postponed를 지우고 matchDetails.round11 목록 맨 뒤에 추가해주세요.)
   round11: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true, movedToWeek: 13 },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "ALBERT KAUNDA", scorersAway: "없음" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", postponed: true },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 5, awayScore: 0, scorersHome: "YAMIKANI NYIRENDA, JASON ZIMBA, JONATHAN MGUNTHA, KONDWANI CHIRWA, MOFFAT MVULA", scorersAway: "없음" },
@@ -1555,6 +1557,7 @@ function applyComputedLeagueStats() {
     stats[t.nameEn] = { played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, cleanSheets: 0, failedToScore: 0, form: [] };
   });
   const nextMatchFound = {};
+  const nextMatchRoundKey = {}; // 팀별로 다음 경기가 잡힌 라운드 키(같은 라운드 안에서만 더 빠른 경기로 교체)
 
   function accumulate(m) {
     if (m.byeKo || m.byeEn) return;
@@ -1604,12 +1607,20 @@ function applyComputedLeagueStats() {
         // (재편성되어 날짜가 확정되면 postponed를 지우면 자연스럽게 다음 경기 후보로 다시 잡힙니다.)
         return;
       } else {
-        if (!nextMatchFound[m.homeEn]) {
-          nextMatchFound[m.homeEn] = { isBye: false, homeAway: 'H', oppKo: m.awayKo, oppEn: m.awayEn, kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime };
-        }
-        if (!nextMatchFound[m.awayEn]) {
-          nextMatchFound[m.awayEn] = { isBye: false, homeAway: 'A', oppKo: m.homeKo, oppEn: m.homeEn, kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime };
-        }
+        // 재편성(movedFromWeek)으로 한 팀이 같은 주차에 경기가 둘 이상일 수 있으므로,
+        // "라운드 순으로 처음 만나는 라운드" 안에서는 킥오프가 가장 빠른 경기를 다음 경기로 씁니다.
+        // (배열 순서만 따르면 더 늦은 날짜의 경기가 먼저 잡힐 수 있습니다.)
+        const kickoffKey = (x) => (x.kickoffDate || '9999-12-31') + ' ' + (x.kickoffTime || '99:99');
+        const consider = (teamEn, cand) => {
+          const prev = nextMatchFound[teamEn];
+          if (!prev) { nextMatchFound[teamEn] = cand; nextMatchRoundKey[teamEn] = roundKey; return; }
+          if (prev.isBye) return;
+          if (nextMatchRoundKey[teamEn] === roundKey && kickoffKey(cand) < kickoffKey(prev)) {
+            nextMatchFound[teamEn] = cand;
+          }
+        };
+        consider(m.homeEn, { isBye: false, homeAway: 'H', oppKo: m.awayKo, oppEn: m.awayEn, kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime });
+        consider(m.awayEn, { isBye: false, homeAway: 'A', oppKo: m.homeKo, oppEn: m.homeEn, kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime });
       }
     });
   });
@@ -1996,19 +2007,22 @@ function computeNextMatchPreview(nameEn, nameKo) {
       return { isBye: true, roundKey };
     }
 
-    const found = matches.find(m => !(m.byeKo || m.byeEn) &&
+    // 재편성(movedFromWeek)으로 같은 팀의 경기가 한 주차에 둘 이상일 수 있습니다
+    // (예: 원래 경기는 연기, 다른 주차에서 연기된 경기가 새로 들어옴). 첫 번째 경기만 보면
+    // 연기된 경기에 걸려 라운드 전체를 건너뛰므로, 이 팀의 경기를 전부 모아서 판단합니다.
+    const candidates = matches.filter(m => !(m.byeKo || m.byeEn) &&
       (m.homeEn === nameEn || m.homeKo === nameKo || m.awayEn === nameEn || m.awayKo === nameKo));
-    if (!found) continue;
+    if (!candidates.length) continue;
 
-    // 진행 중인 라운드(scheduledRounds)에는 이미 끝난 경기의 스코어가 먼저 채워지는 경우가 있습니다.
-    // (그 라운드의 다른 경기들은 아직 예정 상태로 남아있는 동안) 이렇게 이미 스코어가 있는 경기는
-    // "다음 경기"가 아니라 이미 끝난 경기이므로, 건너뛰고 그다음 라운드에서 진짜 다음 경기를 찾습니다.
-    const alreadyPlayed = typeof found.homeScore === 'number' && typeof found.awayScore === 'number';
-    if (alreadyPlayed) continue;
-
-    // 연기(postponed)된 경기는 아직 새 날짜가 확정되지 않았으므로 "다음 경기"가 아닙니다.
-    // 재편성되어 postponed가 지워지면 자연스럽게 다음 경기 후보로 다시 잡힙니다.
-    if (found.postponed) continue;
+    // - 이미 스코어가 있는 경기(진행 중인 라운드에서 먼저 끝난 경기)는 "다음 경기"가 아닙니다.
+    // - 연기(postponed)된 경기는 아직 새 날짜가 확정되지 않았으므로 "다음 경기"가 아닙니다.
+    //   재편성되어 postponed가 지워지면 자연스럽게 다음 경기 후보로 다시 잡힙니다.
+    // 남은 후보 중 킥오프가 가장 빠른 경기를 고릅니다.
+    const upcoming = candidates
+      .filter(m => !(typeof m.homeScore === 'number' && typeof m.awayScore === 'number') && !m.postponed)
+      .sort((a, b) => ((a.kickoffDate || '9999') + ' ' + (a.kickoffTime || '')).localeCompare((b.kickoffDate || '9999') + ' ' + (b.kickoffTime || '')));
+    if (!upcoming.length) continue;
+    const found = upcoming[0];
 
     const isHome = found.homeEn === nameEn || found.homeKo === nameKo;
     const oppKo = isHome ? found.awayKo : found.homeKo;

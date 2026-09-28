@@ -403,13 +403,30 @@
     }
     const requestId = ++predictWorkerRequestSeq;
     return new Promise((resolve, reject) => {
+      function cleanup() {
+        worker.removeEventListener('message', handleMessage);
+        worker.removeEventListener('error', handleError);
+      }
       function handleMessage(e) {
         if (!e.data || e.data.requestId !== requestId) return; // 이전 요청의 응답은 무시
-        worker.removeEventListener('message', handleMessage);
+        cleanup();
         if (e.data.error) reject(new Error(e.data.error));
         else resolve(e.data.result);
       }
+      // 워커 파일을 못 불러오거나(importScripts 실패 등) 실행 중 죽으면 message가 영영 오지
+      // 않아서, 예전에는 예측표가 "시뮬레이션 실행 중..."에서 끝없이 멈춰 있었습니다.
+      // (getPredictWorker의 onerror는 다음 요청부터만 메인 스레드 계산으로 바꿔줄 뿐,
+      // 이미 보낸 요청은 구제하지 못합니다.) 이 요청도 메인 스레드 계산으로 다시 돌립니다.
+      function handleError() {
+        cleanup();
+        try {
+          resolve(runMonteCarloSimulation(iterations));
+        } catch (err) {
+          reject(err);
+        }
+      }
       worker.addEventListener('message', handleMessage);
+      worker.addEventListener('error', handleError);
       worker.postMessage({ requestId, iterations });
     });
   }
@@ -971,8 +988,7 @@
     const matches = buildRoundMatches(roundKey);
     const myBye = matches.find(m => m.isBye && isMyTeamName(m.teamEn, m.teamKo));
     if (myBye) return true;
-    const myMatch = matches.find(m => !m.isBye &&
-      (isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo)));
+    const myMatch = findMyRoundMatch(matches);
     return !!(myMatch && typeof myMatch.homeScore === 'number' && typeof myMatch.awayScore === 'number');
   }
 
@@ -1001,6 +1017,15 @@
     const s = ['th', 'st', 'nd', 'rd'];
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  // 한 라운드에 우리 팀 경기가 둘 이상일 수 있습니다(연기 경기 재편성 등). 결과 리포트는
+  // "실제로 치른(스코어가 있는)" 경기를 기준으로 해야 하므로, 스코어가 있는 경기를 우선 고르고
+  // 없으면 첫 번째 경기를 돌려줍니다.
+  function findMyRoundMatch(matches) {
+    const mine = matches.filter(m => !m.isBye &&
+      (isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo)));
+    return mine.find(m => typeof m.homeScore === 'number' && typeof m.awayScore === 'number') || mine[0];
   }
 
   function reportTeamByNameEn(nameEn) {
@@ -1228,8 +1253,7 @@
     const weekNum = parseInt(roundKey.replace('round', ''), 10);
     const matches = buildRoundMatches(roundKey);
     const myBye = matches.find(m => m.isBye && isMyTeamName(m.teamEn, m.teamKo));
-    const myMatch = matches.find(m => !m.isBye &&
-      (isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo)));
+    const myMatch = findMyRoundMatch(matches);
 
     const history = computeStandingsHistory();
     const afterSnap = history.find(h => h.week === weekNum);
@@ -2234,24 +2258,27 @@
     });
     const out = [];
     keys.forEach(roundKey => {
-      if (out.length >= n) return;
       const matches = scheduledRounds[roundKey] || [];
-      const found = matches.find(m => !(m.byeKo || m.byeEn) &&
-        (m.homeEn === nameEn || m.homeKo === nameKo || m.awayEn === nameEn || m.awayKo === nameKo));
-      if (!found) return;
-      const played = typeof found.homeScore === 'number' && typeof found.awayScore === 'number';
-      if (played) return;
-      if (found.postponed) return; // 연기된 경기는 새 날짜가 확정되기 전까지 홈 화면 "예정 경기" 카드에서 제외
-      const isHome = found.homeEn === nameEn || found.homeKo === nameKo;
-      const oppEn = isHome ? found.awayEn : found.homeEn;
-      const oppKo = isHome ? found.awayKo : found.homeKo;
-      out.push({
-        oppEn, oppKo,
-        oppLogo: getTeamLogo(oppEn),
-        homeAway: isHome ? 'H' : 'A',
-        kickoffDate: found.kickoffDate,
-        kickoffTime: found.kickoffTime,
-        roundKey
+      // 재편성(movedFromWeek)으로 한 라운드에 우리 경기가 둘 이상일 수 있으므로
+      // 첫 번째 경기만 보지 않고 전부 모아서, 아직 안 치렀고 연기되지 않은 경기만
+      // 킥오프 순으로 넣습니다. (연기된 경기는 새 날짜가 확정되기 전까지 제외)
+      const mine = matches.filter(m => !(m.byeKo || m.byeEn) &&
+        (m.homeEn === nameEn || m.homeKo === nameKo || m.awayEn === nameEn || m.awayKo === nameKo))
+        .filter(m => !(typeof m.homeScore === 'number' && typeof m.awayScore === 'number') && !m.postponed)
+        .sort((a, b) => ((a.kickoffDate || '9999') + ' ' + (a.kickoffTime || '')).localeCompare((b.kickoffDate || '9999') + ' ' + (b.kickoffTime || '')));
+      mine.forEach(found => {
+        if (out.length >= n) return;
+        const isHome = found.homeEn === nameEn || found.homeKo === nameKo;
+        const oppEn = isHome ? found.awayEn : found.homeEn;
+        const oppKo = isHome ? found.awayKo : found.homeKo;
+        out.push({
+          oppEn, oppKo,
+          oppLogo: getTeamLogo(oppEn),
+          homeAway: isHome ? 'H' : 'A',
+          kickoffDate: found.kickoffDate,
+          kickoffTime: found.kickoffTime,
+          roundKey
+        });
       });
     });
     return out;
@@ -5366,10 +5393,12 @@
     const playMatches = allMatches.filter(m => !m.isBye);
 
     // 치주물루 경기는 항상 최상단에 큰 카드로 고정해서 보여줍니다.
-    const mineMatch = playMatches.find(m => isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo));
-    if (mineMatch) {
-      listEl.appendChild(buildMatchCard(mineMatch));
-    }
+    // 연기된 경기가 다른 주차로 재편성되어 한 주차에 치주물루 경기가 둘 이상일 수 있으므로
+    // 전부 보여주며, 날짜가 잡힌 경기를 먼저, 연기(날짜 미정) 경기는 그 뒤에 둡니다.
+    const mineMatches = playMatches
+      .filter(m => isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo))
+      .sort((a, b) => (a.postponed ? 1 : 0) - (b.postponed ? 1 : 0));
+    mineMatches.forEach(m => listEl.appendChild(buildMatchCard(m)));
 
     // kickoffDate가 있는 경기끼리 날짜별로 묶습니다. (이미 결과가 나온 지난 라운드는
     // kickoffDate가 저장돼있지 않은 경우가 많아 그때는 '날짜 미정' 묶음으로 따로 모읍니다.)
@@ -6736,8 +6765,7 @@
         const awayScore = report.isHome ? report.oppGoals : report.myGoals;
 
         const matches = buildRoundMatches(report.roundKey);
-        const myMatch = matches.find(m => !m.isBye &&
-          (isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo)));
+        const myMatch = findMyRoundMatch(matches);
 
         const [homeLogo, awayLogo] = await Promise.all([
           loadImageForExport(getTeamLogo(homeEn)),
