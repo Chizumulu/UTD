@@ -9660,11 +9660,35 @@
   function getPriorMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey) {
     if (!roundKey) return null;
     if (!isMyTeamName(homeEn, homeKo) && !isMyTeamName(awayEn, awayKo)) return null;
-    const fromUpcoming = (typeof upcomingMatchHistory !== 'undefined' && upcomingMatchHistory[roundKey])
-      ? upcomingMatchHistory[roundKey] : null;
-    const fromLineup = (typeof matchLineups !== 'undefined' && matchLineups[roundKey])
-      ? matchLineups[roundKey] : null;
-    const entry = (fromUpcoming && fromUpcoming.recentHistory && fromUpcoming.recentHistory.length) ? fromUpcoming : fromLineup;
+
+    const pickEntry = (key) => {
+      const fromUpcoming = (typeof upcomingMatchHistory !== 'undefined' && upcomingMatchHistory[key])
+        ? upcomingMatchHistory[key] : null;
+      const fromLineup = (typeof matchLineups !== 'undefined' && matchLineups[key])
+        ? matchLineups[key] : null;
+      return (fromUpcoming && fromUpcoming.recentHistory && fromUpcoming.recentHistory.length) ? fromUpcoming : fromLineup;
+    };
+
+    let entry = pickEntry(roundKey);
+
+    // 연기됐다가 다른 주차로 재편성된 경기(movedFromWeek)는, 과거 상대전적 메모가
+    // "원래 잡혀 있던 주차"의 키(예: round11)에 적혀 있는 경우가 많습니다. 현재 주차 키(예: round13)로
+    // 못 찾았다면, 이 매치업의 movedFromWeek 원래 주차 키로도 찾아봅니다.
+    if (!(entry && entry.recentHistory && entry.recentHistory.length)) {
+      const sameMatch = m => !m.byeKo && !m.byeEn
+        && ((m.homeEn === homeEn || m.homeKo === homeKo) && (m.awayEn === awayEn || m.awayKo === awayKo));
+      const pools = [];
+      if (typeof scheduledRounds !== 'undefined' && scheduledRounds[roundKey]) pools.push(scheduledRounds[roundKey]);
+      if (typeof roundsData !== 'undefined' && roundsData[roundKey]) pools.push(roundsData[roundKey]);
+      for (const pool of pools) {
+        const found = pool.find(sameMatch);
+        if (found && found.movedFromWeek) {
+          const altEntry = pickEntry('round' + found.movedFromWeek);
+          if (altEntry && altEntry.recentHistory && altEntry.recentHistory.length) { entry = altEntry; break; }
+        }
+      }
+    }
+
     const list = entry ? entry.recentHistory : null;
     return (list && list.length) ? { list, historySummary: entry.historySummary || '' } : null;
   }

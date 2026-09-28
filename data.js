@@ -4129,9 +4129,21 @@ function getEffectiveRoundHistory(roundKey, weekNum, lineup) {
   }
 
   const autoEntry = buildAutoMatchEntry(roundKey, weekNum, lineup);
-  const priorList = (typeof upcomingMatchHistory !== 'undefined'
+  let priorList = (typeof upcomingMatchHistory !== 'undefined'
     && upcomingMatchHistory[roundKey]
     && upcomingMatchHistory[roundKey].recentHistory) || [];
+
+  // 연기 후 다른 주차로 재편성된 경기(movedFromWeek)는 과거 상대전적 메모가 원래 주차 키
+  // (예: round11)에 적혀 있을 수 있으므로, 현재 주차 키에 없으면 원래 주차 키에서도 찾아봅니다.
+  if (!priorList.length && typeof upcomingMatchHistory !== 'undefined') {
+    const pool = (typeof roundsData !== 'undefined' && roundsData[roundKey])
+      || (typeof scheduledRounds !== 'undefined' && scheduledRounds[roundKey])
+      || [];
+    const mv = pool.find(m => !m.byeKo && !m.byeEn && m.movedFromWeek
+      && (m.homeKo === lineup.opponentKo || m.awayKo === lineup.opponentKo));
+    const alt = mv && upcomingMatchHistory['round' + mv.movedFromWeek];
+    if (alt && alt.recentHistory) priorList = alt.recentHistory;
+  }
   const list = autoEntry ? [autoEntry, ...priorList] : priorList.slice();
   if (!list.length) return { list: [], summary: '' };
 
