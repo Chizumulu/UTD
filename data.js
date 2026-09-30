@@ -1117,8 +1117,8 @@ const scheduledRounds = {
     { byeKo: "친테체 유나이티드 FC", byeEn: "Chintheche United FC" },
     // 11주차에서 연기됐던 치주물루 vs 칠룸바 경기가 13주차(10월 2일) 홈 경기로 확정되었습니다.
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-02", kickoffTime: "15:00", movedFromWeek: 11 },
-    // 12주차에서 연기됐던 치폴로폴로 vs 루베 마스터즈 경기가 13주차 경기로 확정되었습니다.
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-30", kickoffTime: "14:30", movedFromWeek: 12, homeScore: 0, awayScore: 3, scorersHome: "없음" },
+    // 12주차에서 연기됐던 치폴로폴로 vs 루베 마스터즈 경기가 13주차 경기로 확정되었으며, 루베의 3:0 몰수승(치폴로폴로 몰수패)으로 처리되었습니다.
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-30", kickoffTime: "14:30", movedFromWeek: 12, homeScore: 0, awayScore: 3, forfeit: true },
     // 15주차 마푸 스타즈 vs 비전 S 아카데미 경기가 일정 변경으로 13주차 일요일(10월 4일)로 앞당겨졌습니다.
     // (15주차 쪽 항목에는 changed: true + movedToWeek: 13 → "변경됨" 배지가 표시됩니다.)
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-04", kickoffTime: "14:30", movedFromWeek: 15, changed: true }
