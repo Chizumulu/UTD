@@ -1118,7 +1118,7 @@ const scheduledRounds = {
     // 11주차에서 연기됐던 치주물루 vs 칠룸바 경기가 13주차(10월 2일) 홈 경기로 확정되었습니다.
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-02", kickoffTime: "15:00", movedFromWeek: 11 },
     // 12주차에서 연기됐던 치폴로폴로 vs 루베 마스터즈 경기가 13주차 경기로 확정되었습니다.
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-30", kickoffTime: "14:30", movedFromWeek: 12 }
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-30", kickoffTime: "14:30", movedFromWeek: 12, homeScore: 0, awayScore: 3, scorersHome: "없음" }
   ],
   round14: [
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-10", kickoffTime: "14:30" },
