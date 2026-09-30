@@ -4969,6 +4969,7 @@
   // - 넷 다 아니면 "경기 시작 전"
   function scheduledBadgeText(m, ko) {
     if (m.noBadge) return '';
+    if (m.movedToWeek && m.changed) return ko ? '변경됨' : 'Changed';
     if (m.movedToWeek) return ko ? `${m.movedToWeek}주차 경기로 이동` : `Moved to Week ${m.movedToWeek}`;
     if (m.postponed && m.pendingResult) return ko ? '경기 결과 미정' : 'Result Pending';
     if (m.postponed) return ko ? '경기 연기' : 'Postponed';
@@ -4979,8 +4980,8 @@
   // 붙일 안내 배지 HTML. 없으면 빈 문자열.
   function movedFromBadgeHtml(m, ko) {
     if (!m.movedFromWeek) return '';
-    const enText = `Rescheduled from Week ${m.movedFromWeek}`;
-    const koText = `${m.movedFromWeek}주차에서 연기된 경기`;
+    const enText = m.changed ? `Changed from Week ${m.movedFromWeek}` : `Rescheduled from Week ${m.movedFromWeek}`;
+    const koText = m.changed ? `${m.movedFromWeek}주차에서 변경된 경기` : `${m.movedFromWeek}주차에서 연기된 경기`;
     return `<span class="rmc-moved-badge lbl" data-en="${enText}" data-ko="${koText}">${ko ? koText : enText}</span>`;
   }
 
@@ -5023,7 +5024,7 @@
             isBye: false, isScheduled: !!m.postponed,
             homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
             homeScore: m.homeScore, awayScore: m.awayScore,
-            postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek,
+            postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek, changed: m.changed,
             pendingResult: m.pendingResult, noBadge: m.noBadge,
             kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
             scorersHome: undefined, scorersAway: undefined
@@ -5035,7 +5036,7 @@
           isBye: false, isScheduled: false,
           homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
           homeScore: m.homeScore, awayScore: m.awayScore,
-          movedFromWeek: m.movedFromWeek, forfeit: m.forfeit,
+          movedFromWeek: m.movedFromWeek, changed: m.changed, forfeit: m.forfeit,
           kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
           scorersHome: d.scorersHome, scorersAway: d.scorersAway
         };
@@ -5053,7 +5054,7 @@
           isBye: false, isScheduled: false,
           homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
           homeScore: m.homeScore, awayScore: m.awayScore,
-          movedFromWeek: m.movedFromWeek, forfeit: m.forfeit,
+          movedFromWeek: m.movedFromWeek, changed: m.changed, forfeit: m.forfeit,
           kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
           scorersHome: m.scorersHome, scorersAway: m.scorersAway
         };
@@ -5062,7 +5063,7 @@
         isBye: false, isScheduled: true,
         homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
         kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
-        postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek,
+        postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek, changed: m.changed,
         pendingResult: m.pendingResult, noBadge: m.noBadge
       };
     });
@@ -5491,6 +5492,8 @@
       const matches = roundsData[key] || (scheduledRounds && scheduledRounds[key]) || [];
       matches.forEach(m => {
         if (!m.postponed || m.byeKo || m.byeEn) return;
+        // 일정 변경(changed)으로 다른 주차로 옮겨진 경기는 '연기'가 아니므로 목록에서 제외합니다.
+        if (m.changed && m.movedToWeek) return;
         // 스코어가 이미 채워졌다면(=결과가 입력됐다면) postponed 플래그를 미처
         // 못 지웠더라도 자동으로 목록에서 제외합니다. (수동으로 postponed를
         // 지우는 걸 깜빡해도 "연기된 경기 모아보기"에 완료된 경기가 남지 않습니다.)

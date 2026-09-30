@@ -1118,7 +1118,10 @@ const scheduledRounds = {
     // 11주차에서 연기됐던 치주물루 vs 칠룸바 경기가 13주차(10월 2일) 홈 경기로 확정되었습니다.
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-02", kickoffTime: "15:00", movedFromWeek: 11 },
     // 12주차에서 연기됐던 치폴로폴로 vs 루베 마스터즈 경기가 13주차 경기로 확정되었습니다.
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-30", kickoffTime: "14:30", movedFromWeek: 12, homeScore: 0, awayScore: 3, scorersHome: "없음" }
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-30", kickoffTime: "14:30", movedFromWeek: 12, homeScore: 0, awayScore: 3, scorersHome: "없음" },
+    // 15주차 마푸 스타즈 vs 비전 S 아카데미 경기가 일정 변경으로 13주차 일요일(10월 4일)로 앞당겨졌습니다.
+    // (15주차 쪽 항목에는 changed: true + movedToWeek: 13 → "변경됨" 배지가 표시됩니다.)
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-04", kickoffTime: "14:30", movedFromWeek: 15, changed: true }
   ],
   round14: [
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-10", kickoffTime: "14:30" },
@@ -1136,7 +1139,7 @@ const scheduledRounds = {
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-17", kickoffTime: "14:30" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "14:30", postponed: true, movedToWeek: 13, changed: true },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
     { byeKo: "치주물루 유나이티드 FC", byeEn: "Chizumulu United FC" }
   ]
@@ -1281,10 +1284,7 @@ const roundsData = {
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "MASSA YOLLAM", scorersAway: "TIMOTHY KATAPA, DICKIES NYIRENDA" },
     { byeKo: "에크웬데니 FC", byeEn: "Ekwendeni FC" },
     // 7주차에서 연기됐던 마푸 vs 에크웬데니 경기가 10주차 경기로 확정되었습니다.
-    // 주의: 이 경기는 마푸의 홈구장(망캄비라 그라운드)이 아니라 Fukamalaza Ground에서
-    // 열립니다. 다만 현재 데이터 구조(leagueData.venue)는 팀별 홈구장만 지원하고
-    // 경기별 구장 재정의 필드는 없어서, 이 특이사항은 화면에는 표시되지 않고
-    // 주석으로만 남겨둡니다.
+    // 이 경기는 마푸의 새 홈구장인 Fukamalaza Ground에서 열렸습니다(leagueData.venue 기준).
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-10", kickoffTime: "14:30", movedFromWeek: 7, homeScore: 2, awayScore: 2, scorersHome: "WANANGWA GAMA, NORMAN NDLOVU", scorersAway: "WATIPA NYIRENDA (2골)" }
   ],
   // 11주차는 전체 라운드가 종료되어 roundsData.round11로 옮겨졌습니다.
@@ -1443,7 +1443,13 @@ const leagueData = [
   },
   {
     nameKo: "마푸 스타즈 FC", nameEn: "Mafu Stars FC", logoSrc: "마푸스타즈.webp",
-    venue: { nameKo: "망캄비라 그라운드", nameEn: "Mankhambira Ground", lat: -11.722050060500038, lng: 34.296560298979976 },
+    // 현재 홈구장은 Fukamalaza Ground입니다. 1~4주차 경기는 기존 홈구장(망캄비라 그라운드)에서
+    // 열렸던 것으로 남겨두고(getTeamVenue가 venueHistory를 사용), 5주차부터 Fukamalaza를 씁니다.
+    // '구단 위치' 화면에는 두 구장이 모두 표시됩니다(아래 extraVenues 참고).
+    venue: { nameKo: "푸카말라자 그라운드", nameEn: "Fukamalaza Ground", lat: -11.745400107544592, lng: 34.23314575707255 },
+    venueHistory: [
+      { fromWeek: 1, toWeek: 4, venue: { nameKo: "망캄비라 그라운드", nameEn: "Mankhambira Ground", lat: -11.722050060500038, lng: 34.296560298979976 } }
+    ],
     // 25/26 시즌 당시 팀명은 "심보웨 스타즈(Simbowe Stars)"였고, 이후 "마푸 스타즈"로 개명함
     prevSeasonFinal: { season: "25/26", rank: 4, played: 30, gd: 24, pts: 55 }
   },
@@ -1531,6 +1537,10 @@ const extraVenues = [
   {
     refNameEn: "Chilumba Barracks FC",
     venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.382983254136427, lng: 34.21591084158308 }
+  },
+  {
+    refNameEn: "Mafu Stars FC",
+    venue: { nameKo: "망캄비라 그라운드", nameEn: "Mankhambira Ground", lat: -11.722050060500038, lng: 34.296560298979976 }
   }
 ];
 
