@@ -3361,37 +3361,61 @@
     return [nameEnA, nameEnB].sort().join('|');
   }
 
-  // data.js의 scheduledRounds(예정된 라운드 일정)에서 이 팀 조합의 킥오프 시각(ms, UTC)을
-  // 찾습니다. 라이브 티커가 "FULL TIME이 안 와도 끝없이" 떠 있지 않도록, 킥오프로부터
-  // 일정 시간 뒤에는 강제로 닫는 안전장치에 씁니다. 못 찾으면 null(안전장치 미적용).
-  // data.js의 scheduledRounds(예정된 라운드 일정) + roundsData(이미 끝나서 옮겨진 라운드)에서
-  // 이 팀 조합의 킥오프 시각(ms, UTC)을 찾습니다. 라이브 티커가 "FULL TIME이 안 와도
-  // 끝없이" 떠 있지 않도록, 킥오프로부터 일정 시간 뒤에는 강제로 닫는 안전장치에 씁니다.
-  // 라운드가 종료되어 scheduledRounds → roundsData로 옮겨간 뒤에도 이 안전장치가 계속
-  // 작동해야 하므로 두 곳을 모두 찾습니다. 못 찾으면 null(안전장치 미적용).
-  function findScheduledKickoffMs(homeNameEn, awayNameEn) {
+  // ===== 라이브 창 활성 시간 판정 (data.js 킥오프 기준) =====
+  // api.chizumulu.net이 "진행 중"이라고 알려주더라도, data.js(scheduledRounds/roundsData)에
+  // 적힌 킥오프 시각 이후에만 라이브 창을 보여줍니다. 킥오프 전에는 숨기고, 킥오프 후
+  // LEAGUE_LIVE_FORCE_CLOSE_MS(4시간)가 지나면 다시 닫습니다.
+  //
+  // 같은 두 팀은 시즌 중 두 번(홈/원정) 맞붙으므로, 그 조합의 "가장 늦은" 킥오프를 쓰면
+  // 아직 안 온 두 번째 맞대결 때문에 지금 진행 중인 첫 번째 맞대결까지 "킥오프 전"으로
+  // 오판하게 됩니다. 그래서 "지금 이전에 시작한 킥오프 중 가장 늦은 것"을 기준으로 합니다.
+  //
+  // 반환값:
+  //   'unknown' — data.js에 이 조합의 킥오프 시각이 하나도 없음(판단 불가 → 기존처럼 표시)
+  //   'before'  — 아직 킥오프 전(창 숨김)
+  //   'active'  — 킥오프 후 4시간 이내(창 표시)
+  //   'expired' — 킥오프 후 4시간 초과(창 숨김)
+  function getLeagueLiveWindowState(homeNameEn, awayNameEn, nowMs) {
+    const now = (typeof nowMs === 'number') ? nowMs : Date.now();
     const pairKey = leagueTeamPairKey(homeNameEn, awayNameEn);
     const sources = [
       (typeof scheduledRounds !== 'undefined') ? scheduledRounds : null,
       (typeof roundsData !== 'undefined') ? roundsData : null
     ];
-    let best = null;
+    let hasAnyKickoff = false;
+    let latestStarted = null; // now 이전(또는 같은 시각)에 시작한 킥오프 중 가장 늦은 값
     for (const source of sources) {
       if (!source) continue;
       for (const roundKey in source) {
         const round = source[roundKey];
         if (!Array.isArray(round)) continue;
         for (const m of round) {
-          if (!m.homeEn || !m.awayEn) continue;
+          if (!m.homeEn || !m.awayEn || m.postponed) continue;
           if (leagueTeamPairKey(m.homeEn, m.awayEn) !== pairKey) continue;
           const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
-          // 같은 두 팀이 시즌 중 두 번(홈/원정) 맞붙을 수 있으므로, 가장 최근(가장 큰) 킥오프
-          // 시각을 가진 경기를 씁니다 — 지금 라이브일 가능성이 있는 쪽은 그 경기이기 때문입니다.
-          if (ms && (best === null || ms > best)) best = ms;
+          if (!ms) continue;
+          hasAnyKickoff = true;
+          if (ms <= now && (latestStarted === null || ms > latestStarted)) latestStarted = ms;
         }
       }
     }
-    return best;
+    if (!hasAnyKickoff) return 'unknown';
+    if (latestStarted === null) return 'before';
+    if (now > latestStarted + LEAGUE_LIVE_FORCE_CLOSE_MS) return 'expired';
+    return 'active';
+  }
+
+  // 'before'/'expired'가 아니면(=active 또는 판단 불가) 창에 보여도 되는 경기입니다.
+  function isLeagueLiveWindowOpen(windowState) {
+    return windowState !== 'before' && windowState !== 'expired';
+  }
+
+  // API 경기 객체({homeTeam, awayTeam, ...}) 하나가 지금 라이브 창에 보여도 되는지 판정합니다.
+  function isLeagueMatchInLiveWindow(m) {
+    const h = resolveLeagueTeamNameEn(m && m.homeTeam);
+    const a = resolveLeagueTeamNameEn(m && m.awayTeam);
+    if (!h || !a) return true; // 팀 판별이 안 되는 경우는 다른 필터에서 이미 걸러집니다.
+    return isLeagueLiveWindowOpen(getLeagueLiveWindowState(h, a));
   }
 
   // 킥오프로부터 이 시간(4시간)이 지나면, FULL TIME이 확인되지 않았어도 라이브 티커에서
@@ -3448,11 +3472,9 @@
       const h = resolveLeagueTeamNameEn(m.homeTeam);
       const a = resolveLeagueTeamNameEn(m.awayTeam);
       if (!h || !a) return false;
-      // data.js(scheduledRounds)에 적힌 킥오프로부터 4시간이 지난 경기는 API가 아직
-      // "라이브"로 주더라도 화면에서는 강제로 제외합니다(안전장치).
-      const kickoffMs = findScheduledKickoffMs(h, a);
-      if (kickoffMs && now > kickoffMs + LEAGUE_LIVE_FORCE_CLOSE_MS) return false;
-      return true;
+      // data.js에 적힌 킥오프 시각 이전이거나, 킥오프로부터 4시간이 지난 경기는 API가
+      // "라이브"로 주더라도 화면에서는 제외합니다(킥오프 시각부터 창을 활성화).
+      return isLeagueLiveWindowOpen(getLeagueLiveWindowState(h, a, now));
     });
     return dedupeLeagueMatchesByPair(filtered);
   }
@@ -3479,8 +3501,12 @@
     const scroller = document.getElementById('leagueLiveTickerScroller');
     if (!wrap || !scroller) return;
 
+    // 캐시로 다시 그리는 경로(showView)에서도 킥오프 시각 창을 벗어난 경기는 보이지 않도록
+    // 렌더링 직전에 한 번 더 걸러줍니다.
+    matches = (matches || []).filter(isLeagueMatchInLiveWindow);
+
     // showView가 rank 화면 복귀 시 이 값 그대로 다시 그릴 수 있도록 최신 목록을 저장해둡니다.
-    leagueLiveRenderedCache = matches || [];
+    leagueLiveRenderedCache = matches;
 
     // 라이브 창은 메인(순위) 화면에서만 노출합니다. 다른 탭에 있을 땐 경기가
     // 진행 중이어도 숨겨두고, rank 화면으로 돌아왔을 때 다시 그립니다(아래 showView 참고).
@@ -3662,14 +3688,14 @@
       if (leagueLiveLastKnownByPair.has(pairKey)) continue; // 이미 캐시에 있음
       if (!LEAGUE_LIVE_SEEDABLE_STATUSES.includes(entry.match.status)) continue;
 
-      const kickoffMs = findScheduledKickoffMs(entry.homeNameEn, entry.awayNameEn);
+      const windowState = getLeagueLiveWindowState(entry.homeNameEn, entry.awayNameEn, now);
       const isFullTime = entry.match.status === 'full_time';
-      // 킥오프로부터 4시간이 이미 지난 경기는 애초에 새로 띄우지 않습니다.
-      if (kickoffMs && now > kickoffMs + LEAGUE_LIVE_FORCE_CLOSE_MS) continue;
+      // 킥오프 전이거나 킥오프로부터 4시간이 이미 지난 경기는 애초에 새로 띄우지 않습니다.
+      if (!isLeagueLiveWindowOpen(windowState)) continue;
       // FULL TIME 경기는 언제 끝났는지(=4시간 창이 언제 닫힐지) 킥오프 시각으로만 판단할
       // 수 있으므로, 킥오프 시각을 모르면 끝없이 떠 있게 될 수 있어 아예 심지 않습니다.
       // (진행 중인 경기는 기존과 같이 킥오프를 몰라도 심습니다.)
-      if (isFullTime && !kickoffMs) continue;
+      if (isFullTime && windowState === 'unknown') continue;
 
       leagueLiveLastKnownByPair.set(pairKey, {
         ts: now,
@@ -3717,9 +3743,10 @@
 
       const homeNameEn = resolveLeagueTeamNameEn(cached.match.homeTeam);
       const awayNameEn = resolveLeagueTeamNameEn(cached.match.awayTeam);
-      const kickoffMs = (homeNameEn && awayNameEn) ? findScheduledKickoffMs(homeNameEn, awayNameEn) : null;
-      if (kickoffMs && Date.now() > kickoffMs + LEAGUE_LIVE_FORCE_CLOSE_MS) {
-        leagueLiveLastKnownByPair.delete(pairKey); // 킥오프 후 4시간 경과 → FULL TIME 여부와 무관하게 강제 종료
+      const windowState = (homeNameEn && awayNameEn) ? getLeagueLiveWindowState(homeNameEn, awayNameEn) : 'unknown';
+      if (!isLeagueLiveWindowOpen(windowState)) {
+        // 킥오프 전이거나, 킥오프 후 4시간 경과 → FULL TIME 여부와 무관하게 창에서 제외
+        leagueLiveLastKnownByPair.delete(pairKey);
         continue;
       }
 
