@@ -56,6 +56,10 @@
   let statBoardExpanded = false;
   let currentPlayerModalKey = null;
   let currentSquadPlayerModalNumber = null;
+  let lineupViewMode = 'pitch';                     // 경기 상세 라인업: 'pitch'(기본) | 'list'
+  let currentMatchDetailLineup = null;
+  let squadViewMode = 'card';                       // 'card'(기본) | 'table'
+  let squadTableSort = { key: 'pos', dir: 1 };      // 표 정렬 상태
   let currentTeamInfoKey = 'Chizumulu United FC';
   let selectedImpactPlayerNumber = null; // 핵심 선수 영향도 카드에서 선택된 선수 (null이면 첫 후보로 자동 선택)
   const otherTeamAccentCache = {};
@@ -4881,7 +4885,177 @@
     });
 
     renderFormerSquadView();
+    renderSquadTable();
+    applySquadViewMode();
   }
+
+  // ===== 선수단 표(엑셀) 보기 =====
+  const SQUAD_TABLE_COLS = [
+    { key: 'number',  ko: '번호',   en: 'No.',    num: true },
+    { key: 'name',    ko: '이름',   en: 'Name' },
+    { key: 'pos',     ko: '포지션', en: 'Pos' },
+    { key: 'apps',    ko: '출전',   en: 'Apps',   num: true },
+    { key: 'starts',  ko: '선발',   en: 'Starts', num: true },
+    { key: 'subApps', ko: '교체',   en: 'Subs',   num: true },
+    { key: 'goals',   ko: '득점',   en: 'Goals',  num: true },
+    { key: 'motm',    ko: 'MOTM',   en: 'MOTM',   num: true },
+    { key: 'cs',      ko: '클린시트', en: 'CS',    num: true },
+    { key: 'captain', ko: '주장',   en: 'Capt.',  num: true },
+    { key: 'unused',  ko: '벤치',   en: 'Bench',  num: true },
+    { key: 'note',    ko: '비고',   en: 'Notes',  nosort: true }
+  ];
+
+  function buildSquadTableRows() {
+    const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+    const gkRecords = (typeof computeGoalkeeperRecords === 'function') ? computeGoalkeeperRecords() : [];
+    const make = (p, isFormer) => {
+      const hasNumber = (p.number !== undefined && p.number !== null);
+      const statsKey = hasNumber ? (isFormer ? 'F' + p.number : p.number) : null;
+      const s = (statsKey !== null && squadPlayerStats[statsKey]) || {};
+      const gk = (!isFormer && p.position === 'GK' && hasNumber) ? gkRecords.find(r => r.number === p.number) : null;
+      return {
+        p, isFormer, hasNumber,
+        rowKey: hasNumber ? (isFormer ? 'F' + p.number : String(p.number)) : p.nameEn,
+        v: {
+          number: hasNumber ? p.number : Infinity,
+          name: isKorean ? p.nameKo : p.nameEn,
+          pos: POSITION_ORDER.indexOf(p.position),
+          apps: s.appearances || 0, starts: s.starts || 0, subApps: s.subApps || 0,
+          goals: s.goals || 0, motm: s.motmCount || 0, captain: s.captainCount || 0,
+          unused: s.unusedCount || 0,
+          cs: (p.position === 'GK' && !isFormer) ? (gk ? gk.cleanSheets : 0) : -1
+        }
+      };
+    };
+    return {
+      current: squadData.map(p => make(p, false)),
+      former: former.map(p => make(p, true))
+    };
+  }
+
+  function sortSquadTableRows(rows) {
+    const { key, dir } = squadTableSort;
+    return rows.slice().sort((x, y) => {
+      let r;
+      if (key === 'name') r = String(x.v.name).localeCompare(String(y.v.name), isKorean ? 'ko' : 'en');
+      else r = (x.v[key] === y.v[key]) ? 0 : (x.v[key] < y.v[key] ? -1 : 1);
+      r *= dir;
+      if (r !== 0) return r;
+      // 동률이면 포지션 → 등번호 순
+      return (x.v.pos - y.v.pos) || (x.v.number === y.v.number ? 0 : (x.v.number < y.v.number ? -1 : 1));
+    });
+  }
+
+  function squadTableRowHtml(row) {
+    const { p, v, isFormer, hasNumber } = row;
+    const name = isKorean ? p.nameKo : p.nameEn;
+    const photo = p.photoSrc
+      ? `<img class="sqt-photo" src="${p.photoSrc}" alt="">`
+      : `<span class="sqt-photo sqt-photo-ph">${hasNumber ? p.number : (p.nameEn ? p.nameEn.charAt(0) : '?')}</span>`;
+    const tags = [];
+    if (p.isCaptain) tags.push(`<span class="sqt-tag sqt-tag-c">${isKorean ? '주장' : 'Captain'}</span>`);
+    else if (p.isViceCaptain) tags.push(`<span class="sqt-tag sqt-tag-vc">${isKorean ? '부주장' : 'Vice-Capt.'}</span>`);
+    if (p.isLoan) {
+      const club = isKorean ? (p.loanClubKo || '') : (p.loanClubEn || '');
+      tags.push(`<span class="sqt-tag sqt-tag-loan">${isKorean ? '임대' : 'Loan'}${club ? ' · ' + club : ''}</span>`);
+    }
+    if (p.nationalBadge) {
+      tags.push(`<span class="sqt-tag sqt-tag-nat">${isKorean ? p.nationalBadge.labelKo : p.nationalBadge.labelEn}</span>`);
+    }
+    if (isFormer) {
+      const st = FORMER_STATUS_LABEL[p.status] || FORMER_STATUS_LABEL.released;
+      tags.push(`<span class="sqt-tag sqt-tag-former">${isKorean ? st.ko : st.en}</span>`);
+    }
+    const n = (val) => val > 0 ? `<td class="sqt-num">${val}</td>` : `<td class="sqt-num sqt-zero">0</td>`;
+    const cs = v.cs < 0 ? `<td class="sqt-num sqt-zero">-</td>` : n(v.cs);
+    return `<tr class="sqt-row${isFormer ? ' sqt-row-former' : ''}" data-player-key="${row.rowKey}">
+      <td class="sqt-num sqt-sticky-1">${hasNumber ? p.number : '-'}</td>
+      <td class="sqt-name sqt-sticky-2">${photo}<span class="sqt-name-text">${name}</span></td>
+      <td class="sqt-pos"><span class="sqt-pos-chip">${p.position}</span></td>
+      ${n(v.apps)}${n(v.starts)}${n(v.subApps)}${n(v.goals)}${n(v.motm)}${cs}${n(v.captain)}${n(v.unused)}
+      <td class="sqt-note">${tags.join('') || '<span class="sqt-zero">-</span>'}</td>
+    </tr>`;
+  }
+
+  function renderSquadTable() {
+    const wrap = document.getElementById('squadTableWrap');
+    if (!wrap) return;
+    const { current, former } = buildSquadTableRows();
+    const { key, dir } = squadTableSort;
+
+    const head = SQUAD_TABLE_COLS.map((c, i) => {
+      const label = isKorean ? c.ko : c.en;
+      const sortAttr = c.nosort ? '' : ` data-sort="${c.key}" role="button" tabindex="0"`;
+      const aria = (!c.nosort && c.key === key) ? ` aria-sort="${dir === 1 ? 'ascending' : 'descending'}"` : '';
+      const sticky = i === 0 ? ' sqt-sticky-1' : (i === 1 ? ' sqt-sticky-2' : '');
+      return `<th class="${c.num ? 'sqt-th-num' : ''}${sticky}${c.nosort ? '' : ' sqt-th-sortable'}"${sortAttr}${aria}>${label}</th>`;
+    }).join('');
+
+    let body = sortSquadTableRows(current).map(squadTableRowHtml).join('');
+    if (former.length) {
+      const label = isKorean ? '방출 · 계약종료 선수단' : 'Released / Contract Terminated';
+      body += `<tr class="sqt-divider"><td colspan="${SQUAD_TABLE_COLS.length}">${label} <span class="squad-group-count">${former.length}</span></td></tr>`;
+      body += sortSquadTableRows(former).map(squadTableRowHtml).join('');
+    }
+
+    wrap.innerHTML = `<div class="sqt-scroll"><table class="sqt-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  }
+
+  function applySquadViewMode() {
+    const isTable = squadViewMode === 'table';
+    const cards = document.getElementById('squadGroups');
+    const tbl = document.getElementById('squadTableWrap');
+    const formerDetails = document.getElementById('squadFormerDetails');
+    const hint = document.getElementById('squadViewHint');
+    if (cards) cards.style.display = isTable ? 'none' : '';
+    if (tbl) tbl.style.display = isTable ? '' : 'none';
+    // 표 모드에서는 방출 선수도 표 안에 함께 나오므로 접이식 영역은 숨깁니다.
+    if (formerDetails) {
+      const hasFormer = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData) && formerSquadData.length > 0);
+      formerDetails.style.display = (!isTable && hasFormer) ? '' : 'none';
+    }
+    if (hint) {
+      hint.style.visibility = isTable ? 'visible' : 'hidden';
+      hint.textContent = isKorean ? hint.getAttribute('data-ko') : hint.getAttribute('data-en');
+    }
+    document.querySelectorAll('.squad-view-toggle-btn').forEach(btn => {
+      const on = btn.dataset.squadMode === squadViewMode;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  document.addEventListener('click', function(event) {
+    const modeBtn = event.target.closest('.squad-view-toggle-btn');
+    if (modeBtn) {
+      squadViewMode = modeBtn.dataset.squadMode === 'table' ? 'table' : 'card';
+      applySquadViewMode();
+      return;
+    }
+    const th = event.target.closest('.sqt-th-sortable');
+    if (th && th.dataset.sort) {
+      const k = th.dataset.sort;
+      if (squadTableSort.key === k) {
+        squadTableSort.dir *= -1;
+      } else {
+        const col = SQUAD_TABLE_COLS.find(c => c.key === k);
+        // 기록 열은 큰 값부터, 번호/이름/포지션은 오름차순부터 시작
+        squadTableSort = { key: k, dir: (col && col.num && k !== 'number') ? -1 : 1 };
+      }
+      renderSquadTable();
+      return;
+    }
+    const row = event.target.closest('.sqt-row');
+    if (row && row.dataset.playerKey) {
+      openSquadPlayerModal(row.dataset.playerKey);
+    }
+  });
+  document.addEventListener('keydown', function(event) {
+    if ((event.key === 'Enter' || event.key === ' ') && event.target.classList && event.target.classList.contains('sqt-th-sortable')) {
+      event.preventDefault();
+      event.target.click();
+    }
+  });
 
   // ===== 방출 · 계약종료 선수단 (Released / Contract Terminated Squad) =====
   const FORMER_STATUS_LABEL = {
@@ -4925,7 +5099,7 @@
         const card = document.createElement('div');
         card.className = 'squad-card squad-former-card';
         if (p.number !== undefined && p.number !== null) {
-          card.dataset.playerNumber = p.number;
+          card.dataset.playerNumber = 'F' + p.number;
         } else if (p.nameEn) {
           card.dataset.playerKey = p.nameEn;
         }
@@ -8917,7 +9091,12 @@
 
     // 등번호로 먼저 찾고, 없으면(임대 선수 등 등번호 미배정) 이름 키로 찾습니다.
     let player = null;
-    if (isNumericId) {
+    // 방출/계약종료 선수는 현역 선수와 등번호가 겹칠 수 있어 'F9'처럼 F+등번호 키로 구분합니다.
+    const formerKeyMatch = /^F(\d+)$/.exec(String(identifier));
+    if (formerKeyMatch) {
+      player = former.find(p => p.number === parseInt(formerKeyMatch[1], 10)) || null;
+    }
+    if (!player && isNumericId) {
       player = squadData.find(p => p.number === num) || former.find(p => p.number === num);
     }
     if (!player) {
@@ -8929,7 +9108,8 @@
     const hasNumber = (player.number !== undefined && player.number !== null);
 
     currentSquadPlayerModalNumber = identifier;
-    const stats = (hasNumber ? squadPlayerStats[player.number] : null) || {
+    const statsKey = isFormerPlayer ? 'F' + player.number : player.number;
+    const stats = (hasNumber ? squadPlayerStats[statsKey] : null) || {
       appearances: 0, starts: 0, subApps: 0, goals: 0,
       captainCount: 0, motmCount: 0, history: []
     };
@@ -9461,7 +9641,7 @@
             <div class="lineup-pos">${pos}</div>
             <div class="lineup-player">
               <span class="lineup-num">${starter.number}</span>
-              <span class="lineup-name player-name-link lineup-squad-link" data-player-number="${starter.number}">${nameFor(starter)}</span>
+              <span class="lineup-name player-name-link lineup-squad-link" data-player-number="${starter.statKey || starter.number}">${nameFor(starter)}</span>
               ${captainTag}
               ${goalsTag(starter)}
             </div>
@@ -9483,7 +9663,7 @@
             <div class="lineup-sub-line lineup-sub-line-out">
               <span class="lineup-sub-arrow">▼</span>
               <span class="lineup-sub-num">${ev.number}</span>
-              <span class="lineup-sub-name player-name-link lineup-squad-link" data-player-number="${ev.number}">${nameFor(ev)}</span>
+              <span class="lineup-sub-name player-name-link lineup-squad-link" data-player-number="${ev.statKey || ev.number}">${nameFor(ev)}</span>
               ${evCaptainTag}
               ${ev.injury ? '<span class="lineup-sub-injury">🩹</span>' : ''}
             </div>`;
@@ -9495,7 +9675,7 @@
               <span class="lineup-sub-arrow">▲</span>
               ${timeText ? `<span class="lineup-sub-time">${timeText}</span>` : ''}
               <span class="lineup-sub-num">${ev.number}</span>
-              <span class="lineup-sub-name player-name-link lineup-squad-link" data-player-number="${ev.number}">${nameFor(ev)}</span>
+              <span class="lineup-sub-name player-name-link lineup-squad-link" data-player-number="${ev.statKey || ev.number}">${nameFor(ev)}</span>
               ${evCaptainTag}
               ${goalsTag(ev)}
             </div>`;
@@ -9504,7 +9684,7 @@
               <div class="lineup-sub-line lineup-sub-line-out">
                 <span class="lineup-sub-arrow">▼</span>
                 <span class="lineup-sub-num">${ev.number}</span>
-                <span class="lineup-sub-name player-name-link lineup-squad-link" data-player-number="${ev.number}">${nameFor(ev)}</span>
+                <span class="lineup-sub-name player-name-link lineup-squad-link" data-player-number="${ev.statKey || ev.number}">${nameFor(ev)}</span>
               </div>`;
           }
         }
@@ -9524,6 +9704,100 @@
     return `<div class="lineup-pitch">${rowsHtml}</div>`;
   }
 
+  // ===== 경기장(피치) 보기: 포지션 코드별 좌표(%) — 위쪽이 공격 방향 =====
+  const PITCH_COORDS = {
+    ST:  [50, 11], CF: [50, 11], LS: [37, 11], RS: [63, 11],
+    LW:  [17, 30], CAM: [50, 30], RW: [83, 30], LAM: [30, 30], RAM: [70, 30], LM: [15, 44], RM: [85, 44],
+    LCM: [35, 52], RCM: [65, 52], CM: [50, 52], LDM: [36, 56], RDM: [64, 56], CDM: [50, 58],
+    LWB: [13, 66], RWB: [87, 66],
+    LB:  [14, 74], LCB: [37, 76], CB: [50, 76], RCB: [63, 76], RB: [86, 74],
+    GK:  [50, 88]
+  };
+
+  function renderLineupField(lineup) {
+    const isKo = isKorean;
+    const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+    const lookup = (ev) => {
+      if (typeof ev.statKey === 'string' && /^F\d+$/.test(ev.statKey)) {
+        return former.find(p => p.number === parseInt(ev.statKey.slice(1), 10));
+      }
+      return squadData.find(p => p.number === ev.number);
+    };
+    const nameOf = (ev) => {
+      if (isKo) return ev.nameKo;
+      const sq = lookup(ev);
+      return (sq && sq.nameEn) || ev.nameEn || ev.nameKo;
+    };
+    const timeOf = (t) => (t && t !== '-') ? t : '';
+
+    const slots = lineup.starters.map(st => {
+      const [x, y] = PITCH_COORDS[st.pos];
+      const sq = lookup(st);
+      const link = st.statKey || st.number;
+      const goalN = (st.goals || []).length;
+      const subs = (lineup.subsIn || []).filter(s => s.pos === st.pos);
+
+      const photo = (sq && sq.photoSrc)
+        ? `<img class="pp-photo" src="${sq.photoSrc}" alt="" onerror="this.remove()">` : '';
+      const badges = [
+        st.captain ? `<span class="pp-badge pp-badge-c">C</span>` : '',
+        st.outMin ? `<span class="pp-badge pp-badge-out" title="${isKo ? '교체 아웃' : 'Subbed off'}">▼</span>` : '',
+        goalN ? `<span class="pp-badge pp-badge-goal">⚽${goalN > 1 ? goalN : ''}</span>` : '',
+        `<span class="pp-badge pp-badge-num">${st.number}</span>`
+      ].join('');
+
+      const subsHtml = subs.map(s => {
+        const sg = (s.goals || []).length;
+        const tm = timeOf(s.inMin);
+        return `<div class="pp-sub lineup-squad-link" data-player-number="${s.statKey || s.number}">▲ ${nameOf(s)}${tm ? `<small>${tm}</small>` : ''}${sg ? ' ⚽' + (sg > 1 ? sg : '') : ''}${s.outMin ? ' ▼' : ''}</div>`;
+      }).join('');
+
+      return `
+        <div class="pp-slot" style="left:${x}%;top:${y}%;">
+          <div class="pp-player lineup-squad-link${st.outMin ? ' pp-player-out' : ''}" data-player-number="${link}">
+            <div class="pp-marker"><span class="pp-ph">${st.number}</span>${photo}${badges}</div>
+            <div class="pp-name">${nameOf(st)}${st.injury ? ' 🩹' : ''}</div>
+          </div>
+          ${subsHtml}
+        </div>`;
+    }).join('');
+
+    const lines = `
+      <svg class="pp-lines" viewBox="0 0 68 92" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="0.35">
+          <rect x="2" y="2" width="64" height="88"/>
+          <line x1="2" y1="46" x2="66" y2="46"/>
+          <circle cx="34" cy="46" r="7.5"/>
+          <rect x="13.5" y="2" width="41" height="16.5"/>
+          <rect x="24" y="2" width="20" height="5.5"/>
+          <rect x="13.5" y="73.5" width="41" height="16.5"/>
+          <rect x="24" y="84.5" width="20" height="5.5"/>
+        </g>
+        <circle cx="34" cy="46" r="0.6" fill="rgba(255,255,255,0.7)"/>
+      </svg>`;
+    return `<div class="lineup-field">${lines}${slots}</div>`;
+  }
+
+  function renderLineupLeft(lineup) {
+    const positions = lineup.starters.map(s => s.pos);
+    const canField = positions.every(p => PITCH_COORDS[p]) && new Set(positions).size === positions.length;
+    const mode = (canField && lineupViewMode === 'pitch') ? 'pitch' : 'list';
+    const toggle = canField ? `
+      <div class="lineup-view-toggle" role="group">
+        <button type="button" class="lineup-view-btn${mode === 'pitch' ? ' is-active' : ''}" data-lineup-mode="pitch">${isKorean ? '경기장' : 'Pitch'}</button>
+        <button type="button" class="lineup-view-btn${mode === 'list' ? ' is-active' : ''}" data-lineup-mode="list">${isKorean ? '목록' : 'List'}</button>
+      </div>` : '';
+    return toggle + (mode === 'pitch' ? renderLineupField(lineup) : renderLineupPitch(lineup));
+  }
+
+  document.addEventListener('click', function(event) {
+    const btn = event.target.closest('.lineup-view-btn');
+    if (!btn || !currentMatchDetailLineup) return;
+    lineupViewMode = btn.dataset.lineupMode === 'list' ? 'list' : 'pitch';
+    const left = document.querySelector('#matchDetailBody .match-detail-left');
+    if (left) left.innerHTML = renderLineupLeft(currentMatchDetailLineup);
+  });
+
   function renderLineupSubs(lineup) {
     const isKo = isKorean;
     const inHtml = lineup.subsIn.length
@@ -9532,14 +9806,19 @@
           const goalsHtml = (s.goals && s.goals.length)
             ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>`
             : '';
-          return `<span class="lineup-sub-chip lineup-sub-chip-in">▲ ${s.inMin && s.inMin !== '-' ? s.inMin + ' ' : ''}${s.number} <span class="player-name-link lineup-squad-link" data-player-number="${s.number}">${s.nameKo}</span>${goalsHtml}</span>`;
+          return `<span class="lineup-sub-chip lineup-sub-chip-in">▲ ${s.inMin && s.inMin !== '-' ? s.inMin + ' ' : ''}${s.number} <span class="player-name-link lineup-squad-link" data-player-number="${s.statKey || s.number}">${s.nameKo}</span>${goalsHtml}</span>`;
         }).join('')
       : `<span class="lineup-sub-empty">${isKo ? '교체 없음' : 'No substitutions'}</span>`;
 
     const unusedHtml = (lineup.subsUnused || []).map(num => {
-      const sq = squadData.find(p => p.number === num);
-      const name = sq ? (isKo ? sq.nameKo : sq.nameEn) : num;
-      return `<span class="lineup-sub-chip lineup-sub-chip-unused">${num} <span class="player-name-link lineup-squad-link" data-player-number="${num}">${name}</span></span>`;
+      const isFormerKey = typeof num === 'string' && /^F\d+$/.test(num);
+      const dispNum = isFormerKey ? num.slice(1) : num;
+      const formerList = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+      const sq = isFormerKey
+        ? formerList.find(p => p.number === parseInt(dispNum, 10))
+        : squadData.find(p => p.number === num);
+      const name = sq ? (isKo ? sq.nameKo : sq.nameEn) : dispNum;
+      return `<span class="lineup-sub-chip lineup-sub-chip-unused">${dispNum} <span class="player-name-link lineup-squad-link" data-player-number="${num}">${name}</span></span>`;
     }).join('');
 
     return `
@@ -9623,12 +9902,13 @@
       ? getEffectiveRoundHistory(roundKey, weekNum, lineup)
       : { list: lineup.recentHistory || [], summary: lineup.historySummary || '' };
 
+    currentMatchDetailLineup = lineup;
     const bodyEl = document.getElementById('matchDetailBody');
     bodyEl.innerHTML = `
       <div class="lineup-formation-tag">${lineup.formation}</div>
       <div class="match-detail-layout">
         <div class="match-detail-left">
-          ${renderLineupPitch(lineup)}
+          ${renderLineupLeft(lineup)}
         </div>
         <div class="match-detail-right">
           ${renderLineupSubs(lineup)}

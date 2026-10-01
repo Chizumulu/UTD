@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '001',
-    data: '002',
-    app: '001',
+    style: '003',
+    data: '003',
+    app: '003',
     predictWorker: '002',
     pathfinderEngine: '001',
     poster: '001'
@@ -587,7 +587,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <section id="tiSection-squad" class="ti-section ti-tabpage">
     <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
     <div id="teamInfoStaffTab" class="team-info-tab-content"></div>
+    <div class="squad-view-toolbar">
+      <div class="squad-view-toggle" role="group" aria-label="선수단 보기 방식">
+        <button type="button" class="squad-view-toggle-btn is-active" data-squad-mode="card" aria-pressed="true"><span class="lbl" data-en="Cards" data-ko="카드">카드</span></button>
+        <button type="button" class="squad-view-toggle-btn" data-squad-mode="table" aria-pressed="false"><span class="lbl" data-en="Table" data-ko="표">표</span></button>
+      </div>
+      <span class="squad-view-hint lbl" id="squadViewHint" data-en="Tap a column header to sort" data-ko="열 제목을 누르면 정렬돼요"></span>
+    </div>
     <div id="squadGroups" class="team-info-tab-content"></div>
+    <div id="squadTableWrap" class="team-info-tab-content" style="display:none;"></div>
     <details class="squad-former-details" id="squadFormerDetails">
       <summary class="squad-former-summary">
         <span class="squad-former-summary-text lbl" data-en="Released / Contract Terminated" data-ko="방출 · 계약종료 선수단">방출 · 계약종료 선수단</span>

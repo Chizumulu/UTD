@@ -10520,3 +10520,260 @@
   color: var(--color-brand-text);
   text-decoration: underline;
 }
+
+
+/* ============================================================
+   선수단 카드 ↔ 표(엑셀) 보기 토글
+   ============================================================ */
+.squad-view-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+.squad-view-toggle {
+  display: inline-flex;
+  background: var(--color-bg-table-alt);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 2px;
+}
+.squad-view-toggle-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-toggle);
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.squad-view-toggle-btn:hover { color: var(--color-brand-text); }
+.squad-view-toggle-btn.is-active {
+  background: var(--color-surface);
+  color: var(--color-brand-text);
+  box-shadow: 0 1px 4px rgba(var(--color-navy-rgb), 0.18);
+}
+.squad-view-hint {
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+  text-align: right;
+}
+
+.sqt-scroll {
+  overflow-x: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 3px 10px rgba(var(--color-navy-rgb), 0.08);
+  -webkit-overflow-scrolling: touch;
+}
+.sqt-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  color: var(--color-text-dark);
+}
+.sqt-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-navy);
+  color: var(--color-white);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  white-space: nowrap;
+  padding: 10px 10px;
+  user-select: none;
+}
+.sqt-th-num { text-align: right !important; }
+.sqt-th-sortable { cursor: pointer; }
+.sqt-th-sortable:hover { background: var(--color-navy-light); }
+.sqt-th-sortable[aria-sort]::after {
+  content: ' \25B2';
+  font-size: 9px;
+  color: var(--color-gold);
+}
+.sqt-th-sortable[aria-sort="descending"]::after { content: ' \25BC'; }
+
+.sqt-row { --sqt-bg: var(--color-surface); cursor: pointer; }
+.sqt-row:nth-child(even) { --sqt-bg: var(--color-bg-stripe); }
+.sqt-row:hover { --sqt-bg: var(--color-bg-row-hover); }
+.sqt-row td {
+  background: var(--sqt-bg);
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--color-border-light);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.sqt-num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+.sqt-zero { color: var(--color-text-faint); font-weight: 500; opacity: 0.7; }
+.sqt-sticky-1 { position: sticky; left: 0; z-index: 1; min-width: 52px; }
+.sqt-sticky-2 { position: sticky; left: 52px; z-index: 1; min-width: 170px; box-shadow: 2px 0 4px rgba(var(--color-navy-rgb), 0.06); }
+.sqt-table thead th.sqt-sticky-1,
+.sqt-table thead th.sqt-sticky-2 { z-index: 3; }
+.sqt-name { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--color-text-darkest); }
+.sqt-name-text { overflow: hidden; text-overflow: ellipsis; }
+.sqt-photo {
+  width: 28px; height: 28px; flex: 0 0 28px;
+  border-radius: 50%;
+  object-fit: cover; object-position: center 15%;
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-table-alt);
+}
+.sqt-photo-ph { display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: var(--color-text-muted); }
+.sqt-pos-chip {
+  display: inline-block;
+  font-size: 11px; font-weight: 800;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-table-alt);
+  color: var(--color-teal-dark);
+}
+.sqt-note { white-space: normal !important; min-width: 150px; }
+.sqt-tag {
+  display: inline-block;
+  font-size: 10.5px; font-weight: 800;
+  padding: 2px 7px;
+  margin: 1px 4px 1px 0;
+  border-radius: var(--radius-pill);
+  color: var(--color-white);
+}
+.sqt-tag-c { background: var(--color-gold-strong); }
+.sqt-tag-vc { background: var(--color-gold-strong); opacity: 0.8; }
+.sqt-tag-loan { background: var(--color-navy-light, #5b6b8c); }
+.sqt-tag-nat { background: var(--color-teal); }
+.sqt-tag-former { background: var(--color-red); }
+.sqt-row-former td { opacity: 0.8; }
+.sqt-divider td {
+  background: var(--color-bg-table-alt);
+  color: var(--color-text-secondary);
+  font-size: 12px; font-weight: 800;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+@media (max-width: 600px) {
+  .squad-view-hint { display: none; }
+  .sqt-table { font-size: 12.5px; }
+}
+
+
+/* ============================================================
+   경기 상세: 경기장(피치) 라인업 보기
+   ============================================================ */
+.lineup-view-toggle {
+  display: inline-flex;
+  background: var(--color-bg-table-alt);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+.lineup-view-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-toggle);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.lineup-view-btn.is-active {
+  background: var(--color-surface);
+  color: var(--color-brand-text);
+  box-shadow: 0 1px 4px rgba(var(--color-navy-rgb), 0.18);
+}
+
+.lineup-field {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto 14px;
+  aspect-ratio: 68 / 92;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(180deg, rgba(255,255,255,0.045) 0 11.5%, rgba(0,0,0,0.045) 11.5% 23%),
+    linear-gradient(180deg, #2f8f4e, #277a42);
+  box-shadow: 0 3px 10px rgba(var(--color-navy-rgb), 0.18);
+}
+.pp-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pp-slot {
+  position: absolute;
+  transform: translate(-50%, -22px);
+  width: 25%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  z-index: 1;
+}
+.pp-player { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; width: 100%; }
+.pp-marker {
+  position: relative;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--color-navy);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  transition: transform 0.15s;
+}
+.pp-player:hover .pp-marker { transform: scale(1.08); }
+.pp-player-out .pp-marker { border-color: #ffb4a8; }
+.pp-ph {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: 15px;
+}
+.pp-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  object-fit: cover; object-position: center 15%;
+  background: var(--color-navy);
+}
+.pp-badge {
+  position: absolute;
+  min-width: 16px; height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  font-size: 9.5px; font-weight: 900; line-height: 16px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+.pp-badge-c    { top: -4px; right: -4px; background: var(--color-gold-strong); color: #1b2333; }
+.pp-badge-out  { top: -4px; left: -4px; background: var(--color-red); color: #fff; }
+.pp-badge-goal { bottom: -4px; right: -6px; background: #fff; color: #1b2333; }
+.pp-badge-num  { bottom: -4px; left: -4px; background: #1b2333; color: #fff; }
+.pp-name {
+  max-width: 100%;
+  font-size: 11px; font-weight: 800; line-height: 1.15;
+  color: #fff; text-align: center;
+  word-break: keep-all;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+.pp-sub {
+  max-width: 100%;
+  font-size: 9.5px; font-weight: 800; line-height: 1.2;
+  text-align: center;
+  color: #0b3d1e;
+  background: rgba(255,255,255,0.88);
+  border-radius: var(--radius-pill);
+  padding: 1px 7px;
+  cursor: pointer;
+  word-break: keep-all;
+}
+.pp-sub small { font-size: 9px; font-weight: 700; margin-left: 3px; opacity: 0.75; }
+
+@media (max-width: 480px) {
+  .pp-marker { width: 38px; height: 38px; }
+  .pp-slot { transform: translate(-50%, -19px); width: 27%; }
+  .pp-name { font-size: 10.5px; }
+}

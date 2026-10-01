@@ -81,7 +81,7 @@ const matchLineups = {
       { number: 15, nameKo: "만토", pos: "RCB", inMin: "후반" },
       { number: 3, nameKo: "음롱골라", pos: "RB", inMin: "후반" }
     ],
-    subsUnused: [9, 20, 66, 90],
+    subsUnused: ["F9", 20, 66, 90],
     recentHistory: [
       { comp: "26/27 시즌 NRFA 리그 원 1주차", score: "치주물루 3 : 1 치하메", result: "치주물루 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 23주차", score: "치하메 2 : 1 치주물루", result: "치하메 승" },
@@ -138,7 +138,7 @@ const matchLineups = {
       { pos: "GK", number: 90, nameKo: "마야미코" }
     ],
     subsIn: [],
-    subsUnused: [9, 10, 20, 25, 66, 77, 88],
+    subsUnused: ["F9", 10, 20, 25, 66, 77, 88],
     recentHistory: [
       { comp: "26/27 시즌 NRFA 리그 원 3주차", score: "치주물루 1 : 0 라이플리", result: "치주물루 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 28주차", score: "치주물루 2 : 0 라이플리", result: "치주물루 승" },
@@ -167,7 +167,7 @@ const matchLineups = {
       { number: 10, nameKo: "찰스", pos: "LW", inMin: "후반" },
       { number: 77, nameKo: "군도", pos: "RB", inMin: "후반" }
     ],
-    subsUnused: [9, 20, 49, 66, 88],
+    subsUnused: ["F9", 20, 49, 66, 88],
     recentHistory: [
       { comp: "26/27 시즌 NRFA 리그 원 4주차", score: "루베 0 : 0 치주물루", result: "무승부" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 27주차", score: "치주물루 4 : 1 루베", result: "치주물루 승" },
@@ -181,7 +181,7 @@ const matchLineups = {
     opponentKo: "에크웬데니 FC",
     result: "2 : 0 승",
     starters: [
-      { pos: "ST", number: 9, nameKo: "음칸다위레", outMin: "전반" },
+      { pos: "ST", number: 9, statKey: "F9", nameKo: "음칸다위레", outMin: "전반" },
       { pos: "LW", number: 49, nameKo: "쿰부카니", goals: ["-"] },
       { pos: "CAM", number: 7, nameKo: "디킨스" },
       { pos: "RW", number: 6, nameKo: "벤자민", outMin: "후반" },
@@ -228,7 +228,7 @@ const matchLineups = {
       { number: 11, nameKo: "해리", pos: "LW", inMin: "후반", outMin: "후반" },
       { number: 7, nameKo: "디킨스", pos: "CAM", inMin: "전반" },
       { number: 8, nameKo: "엑스퍼트", pos: "LCM", inMin: "후반" },
-      { number: 9, nameKo: "임마누엘", pos: "LW", inMin: "후반" }
+      { number: 9, statKey: "F9", nameKo: "임마누엘", pos: "LW", inMin: "후반" }
     ],
     subsUnused: [66, 80, 88],
     recentHistory: [
@@ -262,7 +262,7 @@ const matchLineups = {
       { number: 8, nameKo: "엑스퍼트", pos: "LCM", inMin: "후반" },
       { number: 80, nameKo: "스쿠카", pos: "ST", inMin: "후반" }
     ],
-    subsUnused: [9, 20, 88],
+    subsUnused: ["F9", 20, 88],
     recentHistory: [
       { comp: "26/27 시즌 NRFA 리그 원 7주차", score: "치주물루 4 : 0 젠다", result: "치주물루 승" }
     ],
@@ -286,7 +286,7 @@ const matchLineups = {
       { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
     ],
     subsIn: [],
-    subsUnused: [8, 9, 10, 11, 66, 80, 88],
+    subsUnused: [8, "F9", 10, 11, 66, 80, 88],
     recentHistory: [
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 29주차", score: "치주물루 2 : 0 치폴로폴로", result: "치주물루 승(몰수승)" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 12주차", score: "치폴로폴로 4 : 4 치주물루", result: "무승부" }
@@ -332,7 +332,7 @@ const matchLineups = {
       { pos: "RW", number: 6, nameKo: "벤자민 니렌다", goals: ["-"] },
       { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
       { pos: "RCM", number: 7, nameKo: "디킨스 니렌다" },
-      { pos: "LB", number: 5, nameKo: "라반 몽웨" },
+      { pos: "LB", number: 5, nameKo: "라반 롱웨" },
       { pos: "LCB", number: 13, nameKo: "조셉 반다" },
       { pos: "RCB", number: 3, nameKo: "알란 음롱골라", captain: true },
       { pos: "RB", number: 25, nameKo: "모버트 카타파" },
@@ -353,6 +353,10 @@ const squadData = [
   // 임대 영입 선수는 기존 항목에 아래 필드를 추가하면 카드에 "임대" 배지가 붙습니다.
   //   isLoan: true, loanClubKo: "원소속 구단명", loanClubEn: "Parent Club Name", loanClubLogo: "로고파일명.webp"(선택)
   // 등번호가 아직 정해지지 않은 선수는 number 필드를 아예 생략하면 카드에 "-"로 표시됩니다.
+  // 별칭(선택): 애칭/약칭을 같은 선수로 인정시킵니다.
+  //   aliasesKo: 한글 별칭. 예) ["군도"]   — 라인업 이름 검증에서 같은 선수로 인정
+  //   aliasesEn: 영문 별칭. 예) ["TK", "TEEKAY"] — 득점자 표기(대소문자 무관)와 라인업 검증에서 같은 선수로 인정
+  //              득점 순위·득점자 번역에는 아래 nameAliases 에 자동으로 합쳐집니다.
   { number: 1, position: "GK", nameKo: "기프트 길버트", nameEn: "Gift Gilbert", photoSrc: "no1.png" },
   { number: 2, position: "DF", nameKo: "로날드 은달라마", nameEn: "Ronald Ndalama", photoSrc: "no2.png" },
   { number: 3, position: "DF", nameKo: "알란 음롱골라", nameEn: "Allan Mlongola", isViceCaptain: true, photoSrc: "no3.png" },
@@ -367,11 +371,11 @@ const squadData = [
   { number: 13, position: "DF", nameKo: "조셉 반다", nameEn: "Joseph Banda", photoSrc: "no13.png" },
   { number: 15, position: "DF", nameKo: "만토 카망가", nameEn: "Mantoh Kamanga", isCaptain: true, photoSrc: "no15.png" },
   { number: 20, position: "DF", nameKo: "프란시스 피리", nameEn: "Francis Phiri", photoSrc: "no20.png" },
-  { number: 22, position: "FW", nameKo: "티모시 카타파", nameEn: "Timothy Katapa", photoSrc: "no22.png" },
+  { number: 22, position: "FW", nameKo: "티모시 카타파", nameEn: "Timothy Katapa", aliasesEn: ["TK", "TEEKAY"], photoSrc: "no22.png" },
   { number: 25, position: "DF", nameKo: "모버트 카타파", nameEn: "Movert Katapa", photoSrc: "no25.png" },
   { number: 49, position: "FW", nameKo: "쿰부카니 바냐", nameEn: "Kumbukani Banya", photoSrc: "no49.png" },
   { number: 66, position: "DF", nameKo: "조던 칠와", nameEn: "Jordon Chirwa", photoSrc: "no66.png" },
-  { number: 77, position: "DF", nameKo: "제임스 귄도안", nameEn: "James Gundogan", photoSrc: "no77.png" },
+  { number: 77, position: "DF", nameKo: "제임스 귄도안", nameEn: "James Gundogan", aliasesKo: ["군도"], photoSrc: "no77.png" },
   { number: 80, position: "FW", nameKo: "다니엘 스쿠카", nameEn: "Daniel Scuka", photoSrc: "no80.png" },
   { number: 88, position: "GK", nameKo: "티나시 카삼발라", nameEn: "Tinashe Kasambala", photoSrc: "no88.png" },
   { number: 90, position: "GK", nameKo: "마야미코 치우시와", nameEn: "Mayamiko Chiusiwa", photoSrc: "no90.png", nationalBadge: { flag: "MW", labelKo: "U-23 국가대표", labelEn: "U-23 International" } },
@@ -502,13 +506,13 @@ function computeSquadPlayerStats() {
     const motmList = (teamAwards.motm && teamAwards.motm[roundKey]) || [];
 
     (lineup.starters || []).forEach(p => {
-      const s = ensure(p.number);
+      const s = ensure(p.statKey || p.number);
       s.appearances++;
       s.starts++;
       const goalCount = (p.goals || []).length;
       s.goals += goalCount;
       if (p.captain) s.captainCount++;
-      const wasMotm = motmList.includes(p.number);
+      const wasMotm = motmList.includes(p.statKey || p.number);
       if (wasMotm) s.motmCount++;
       s.history.push({
         roundKey, weekNum,
@@ -519,12 +523,12 @@ function computeSquadPlayerStats() {
     });
 
     (lineup.subsIn || []).forEach(p => {
-      const s = ensure(p.number);
+      const s = ensure(p.statKey || p.number);
       s.appearances++;
       s.subApps++;
       const goalCount = (p.goals || []).length;
       s.goals += goalCount;
-      const wasMotm = motmList.includes(p.number);
+      const wasMotm = motmList.includes(p.statKey || p.number);
       if (wasMotm) s.motmCount++;
       s.history.push({
         roundKey, weekNum,
@@ -601,8 +605,8 @@ function computeKeyPlayerImpact(number) {
     const parsed = parseLineupResult(lineup.result);
     if (!parsed) return;
 
-    const isStarter = (lineup.starters || []).some(p => p.number === number);
-    const isSubIn = (lineup.subsIn || []).some(p => p.number === number);
+    const isStarter = (lineup.starters || []).some(p => (p.statKey || p.number) === number);
+    const isSubIn = (lineup.subsIn || []).some(p => (p.statKey || p.number) === number);
 
     let target = null;
     if (isStarter) target = withG;
@@ -2302,6 +2306,18 @@ const nameAliases = {
   "SAMAN NYIRENDA": "SAMANI NYIRENDA",
   "FORTUNE CHILAMBO": "FORTUNE CHIRAMBO"
 };
+
+// 우리 선수단(squadData)의 aliasesEn(영문 별칭)을 위 nameAliases 에 자동으로 합칩니다.
+// 별칭은 명단 한 곳(squadData)에만 적으면 득점 순위/득점자 표기에도 그대로 적용됩니다.
+// 이미 nameAliases 에 직접 적어둔 항목은 덮어쓰지 않습니다.
+squadData.forEach(p => {
+  if (!p.nameEn || !Array.isArray(p.aliasesEn)) return;
+  const canonical = p.nameEn.toUpperCase();
+  p.aliasesEn.forEach(alias => {
+    const key = String(alias).trim().toUpperCase();
+    if (key && key !== canonical && !nameAliases[key]) nameAliases[key] = canonical;
+  });
+});
 
 // 영문 이름(대문자) -> 한글/영문 표기 사전. matchDetails 에 새 득점자가
 // 나오면 이 사전에 한 줄만 추가하면 나머지는 자동으로 계산됩니다.
@@ -5195,7 +5211,7 @@ function computeSeasonPlayerStats() {
       const s = compStats[number];
       if (!season[number]) {
         season[number] = {
-          number: Number(number),
+          number: isNaN(Number(number)) ? number : Number(number),
           appearances: 0, starts: 0, subApps: 0, goals: 0,
           captainCount: 0, motmCount: 0, potmCount: 0, gotmCount: 0,
           unusedCount: 0, history: []
@@ -5247,3 +5263,193 @@ const squadPlayerStatsSeason = computeSeasonPlayerStats();
 //   // competitions.filter(c => c.active).forEach(c => competitionData[c.id].roundsData 훑기)
 // }
 
+
+
+// ============================================================
+// 데이터 검증 (validateSiteData)
+// ------------------------------------------------------------
+// 페이지를 열 때마다 squadData / formerSquadData / matchLineups / teamAwards 를
+// 서로 맞춰보고, 입력 실수가 있으면 브라우저 콘솔(F12)에 경고를 띄웁니다.
+//   - 🔴 error : 화면이 틀리게 나오는 문제 (없는 선수 번호, 등번호 중복 등)
+//   - 🟡 warn  : 의심스러운 입력 (이름 불일치, 득점 수 불일치 등)
+//   - 🔵 info  : 참고용 (오프 더 레코드 득점 등, 정상일 수도 있음)
+// 콘솔에서 validateSiteData() 를 직접 호출해 다시 돌려볼 수도 있습니다.
+// 이 함수는 데이터를 읽기만 하고 아무것도 바꾸지 않습니다.
+// ============================================================
+function validateSiteData() {
+  const issues = [];
+  const add = (level, where, msg) => issues.push({ level, where, msg });
+
+  const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+  const hasNum = (p) => p.number !== undefined && p.number !== null;
+
+  // ---- 1) 명단 자체 ----
+  const POS_OK = ['GK', 'DF', 'MF', 'FW'];
+  const seen = {};
+  squadData.forEach(p => {
+    const label = `squadData · ${p.nameKo || p.nameEn || '(이름 없음)'}`;
+    if (hasNum(p)) {
+      if (seen[p.number]) add('error', label, `등번호 ${p.number}번이 현역 선수단에서 중복됩니다 (${seen[p.number]} 과 겹침)`);
+      else seen[p.number] = p.nameKo;
+    }
+    if (!p.nameKo) add('warn', label, 'nameKo(한글 이름)가 없습니다');
+    if (!p.nameEn) add('warn', label, 'nameEn(영문 이름)이 없습니다');
+    if (!POS_OK.includes(p.position)) add('error', label, `position 값이 올바르지 않습니다: "${p.position}" (GK/DF/MF/FW 중 하나)`);
+    if (!p.photoSrc) add('info', label, 'photoSrc(사진)가 없습니다');
+    if (p.isLoan && !(p.loanClubKo || p.loanClubEn)) add('warn', label, '임대 선수인데 loanClubKo/En(원소속 구단)이 없습니다');
+  });
+  const captains = squadData.filter(p => p.isCaptain);
+  if (captains.length !== 1) add('warn', 'squadData', `주장(isCaptain)이 ${captains.length}명입니다 (1명이어야 정상)`);
+
+  const formerSeen = {};
+  former.forEach(p => {
+    const label = `formerSquadData · ${p.nameKo || p.nameEn || '(이름 없음)'}`;
+    if (hasNum(p)) {
+      if (formerSeen[p.number]) add('error', label, `방출/계약종료 명단에서 등번호 ${p.number}번이 중복됩니다`);
+      else formerSeen[p.number] = true;
+    }
+    if (!hasNum(p)) add('warn', label, 'number가 없어 라인업 기록(F번호)과 연결할 수 없습니다');
+  });
+
+  const currentByNum = {};
+  squadData.forEach(p => { if (hasNum(p)) currentByNum[p.number] = p; });
+  const formerByNum = {};
+  former.forEach(p => { if (hasNum(p)) formerByNum[p.number] = p; });
+
+  // 라인업 항목 하나가 가리키는 선수를 찾습니다. ref: 숫자 또는 "F9" 형태
+  const resolveRef = (ref) => {
+    if (typeof ref === 'string' && /^F\d+$/.test(ref)) {
+      return { player: formerByNum[parseInt(ref.slice(1), 10)], isFormer: true };
+    }
+    return { player: currentByNum[ref], isFormer: false };
+  };
+  const refOf = (ev) => ev.statKey || ev.number;
+  const displayRef = (ref) => (typeof ref === 'string' && ref[0] === 'F') ? `${ref.slice(1)}번(방출선수 ${ref})` : `${ref}번`;
+
+  // 한글 이름 일치 검사: 라인업 이름의 각 단어가 명단 이름 안에 들어 있어야 합니다.
+  // 명단의 aliasesKo(애칭/약칭)에 적힌 이름과 정확히 같으면 같은 선수로 인정합니다.
+  const nameMatches = (lineupName, player) => {
+    if (!lineupName || !player || !player.nameKo) return true;
+    if ((player.aliasesKo || []).includes(lineupName)) return true;
+    const up = lineupName.trim().toUpperCase();
+    if ((player.aliasesEn || []).some(a => String(a).trim().toUpperCase() === up)) return true;
+    const sq = player.nameKo.replace(/\s+/g, ' ');
+    return lineupName.split(/\s+/).filter(Boolean).every(tok => sq.includes(tok));
+  };
+
+  // ---- 2) 라운드별 라인업 ----
+  const roundKeys = Object.keys(matchLineups || {});
+  roundKeys.forEach(roundKey => {
+    const lu = matchLineups[roundKey];
+    if (!lu) return;
+    const R = `matchLineups.${roundKey}`;
+    const starters = lu.starters || [];
+    const subsIn = lu.subsIn || [];
+    const unused = lu.subsUnused || [];
+
+    if (starters.length !== 11) add('error', R, `선발이 ${starters.length}명입니다 (11명이어야 정상)`);
+
+    const gkCount = starters.filter(s => s.pos === 'GK').length;
+    if (gkCount !== 1) add('error', R, `선발 골키퍼(GK)가 ${gkCount}명입니다`);
+
+    const posSeen = {};
+    starters.forEach(s => {
+      if (posSeen[s.pos]) add('error', R, `포지션 ${s.pos}이(가) 선발에 중복됩니다`);
+      posSeen[s.pos] = true;
+    });
+
+    const capCount = starters.filter(s => s.captain).length;
+    if (capCount !== 1) add('warn', R, `선발 중 주장(captain: true)이 ${capCount}명입니다`);
+
+    if (lu.formation) {
+      const sum = String(lu.formation).split('-').reduce((n, x) => n + (parseInt(x, 10) || 0), 0);
+      if (sum !== 10) add('warn', R, `포메이션 "${lu.formation}"의 합이 10이 아닙니다`);
+    }
+
+    const parsed = parseLineupResult(lu.result);
+    if (!parsed) add('error', R, `result 형식이 올바르지 않습니다: "${lu.result}" ("3 : 1 승" 형식)`);
+
+    // 같은 선수 중복 / 선발·교체·벤치 겹침
+    const used = {};
+    const mark = (ref, role) => {
+      const k = String(ref);
+      if (used[k]) add('error', R, `${displayRef(ref)}이(가) ${used[k]} 와(과) ${role} 에 동시에 들어 있습니다`);
+      else used[k] = role;
+    };
+    starters.forEach(s => mark(refOf(s), '선발'));
+    subsIn.forEach(s => mark(refOf(s), '교체 투입'));
+    unused.forEach(ref => mark(ref, '벤치(미출전)'));
+
+    // 존재하지 않는 선수 + 이름 불일치
+    const checkEv = (ev, role) => {
+      const ref = refOf(ev);
+      const { player } = resolveRef(ref);
+      if (!player) {
+        add('error', R, `${role} ${displayRef(ref)} "${ev.nameKo}" 은(는) 명단에 없는 번호입니다`);
+        return;
+      }
+      if (!nameMatches(ev.nameKo, player)) {
+        add('warn', R, `${role} ${displayRef(ref)}: 라인업 이름 "${ev.nameKo}" 이(가) 명단 이름 "${player.nameKo}" 과 다릅니다`);
+      }
+    };
+    starters.forEach(s => checkEv(s, '선발'));
+    subsIn.forEach(s => checkEv(s, '교체'));
+    unused.forEach(ref => {
+      if (!resolveRef(ref).player) add('error', R, `벤치 ${displayRef(ref)} 은(는) 명단에 없는 번호입니다`);
+    });
+
+    // 교체 투입 선수의 포지션이 선발 포지션과 맞아야 화면(경기장/목록)에 붙습니다
+    subsIn.forEach(s => {
+      if (!posSeen[s.pos]) add('warn', R, `교체 ${displayRef(refOf(s))}의 포지션 ${s.pos} 에 해당하는 선발이 없어 화면에 표시되지 않습니다`);
+    });
+
+    // 득점 수 vs 스코어
+    if (parsed) {
+      const goalsSum = starters.concat(subsIn).reduce((n, p) => n + (p.goals || []).length, 0);
+      if (goalsSum > parsed.ownGoals) {
+        add('warn', R, `선수 득점 합(${goalsSum})이 우리 팀 스코어(${parsed.ownGoals})보다 많습니다`);
+      } else if (goalsSum < parsed.ownGoals) {
+        add('info', R, `선수 득점 합(${goalsSum}) < 우리 팀 스코어(${parsed.ownGoals}) — 상대 자책골이거나 득점자 미입력일 수 있습니다`);
+      }
+    }
+  });
+
+  // ---- 3) 수상 기록 ----
+  const awards = (typeof teamAwards !== 'undefined') ? teamAwards : null;
+  if (awards) {
+    Object.keys(awards.motm || {}).forEach(roundKey => {
+      const lu = matchLineups[roundKey];
+      (awards.motm[roundKey] || []).forEach(num => {
+        if (!currentByNum[num]) { add('error', `teamAwards.motm.${roundKey}`, `MOTM ${num}번은 명단에 없는 번호입니다`); return; }
+        if (!lu) { add('info', `teamAwards.motm.${roundKey}`, `${roundKey} 라인업 기록이 없어 MOTM 출전 여부를 확인할 수 없습니다`); return; }
+        const played = (lu.starters || []).concat(lu.subsIn || []).some(p => !p.statKey && p.number === num);
+        if (!played) add('warn', `teamAwards.motm.${roundKey}`, `MOTM ${num}번 ${currentByNum[num].nameKo}이(가) 그 경기 선발/교체 명단에 없습니다`);
+      });
+    });
+    ['playerOfTheMonth', 'goalOfTheMonth'].forEach(kind => {
+      Object.keys(awards[kind] || {}).forEach(month => {
+        const num = awards[kind][month];
+        if (!currentByNum[num]) add('error', `teamAwards.${kind}.${month}`, `${num}번은 명단에 없는 번호입니다`);
+      });
+    });
+  }
+
+  // ---- 결과 출력 ----
+  const count = (lv) => issues.filter(i => i.level === lv).length;
+  const summary = { errors: count('error'), warnings: count('warn'), infos: count('info'), issues };
+  if (typeof console !== 'undefined') {
+    if (!issues.length) {
+      console.info('%c✅ 데이터 검증 통과', 'color:#2e7d32;font-weight:bold', '— 문제 없음');
+    } else {
+      const title = `데이터 검증: 🔴 ${summary.errors} · 🟡 ${summary.warnings} · 🔵 ${summary.infos}`;
+      (summary.errors ? console.group : console.groupCollapsed).call(console, title);
+      issues.filter(i => i.level === 'error').forEach(i => console.error(`[${i.where}] ${i.msg}`));
+      issues.filter(i => i.level === 'warn').forEach(i => console.warn(`[${i.where}] ${i.msg}`));
+      issues.filter(i => i.level === 'info').forEach(i => console.info(`[${i.where}] ${i.msg}`));
+      console.groupEnd();
+    }
+  }
+  return summary;
+}
+
+try { validateSiteData(); } catch (e) { console.warn('데이터 검증 중 오류가 발생했습니다:', e); }
