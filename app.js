@@ -4308,12 +4308,15 @@
     roundKeys.slice().reverse().forEach((key, revIdx) => {
       const weekNum = totalRounds - revIdx;
       const matches = buildRoundMatches(key);
-      const teamMatch = matches.find(m => !m.isBye && (
+      // 한 주차에 같은 팀의 경기가 2개 이상일 수 있습니다(예: 연기된 경기 + 다른 주차에서 옮겨온 경기).
+      // find()로 첫 경기만 잡으면 나머지가 사라지므로 전부 모아서 차례로 그립니다.
+      // 끝난 경기를 위에, 연기/예정 경기를 아래에 두어 결과가 먼저 보이게 합니다.
+      const teamMatches = matches.filter(m => !m.isBye && (
         (m.homeEn === teamEn || m.homeKo === teamKo) ||
         (m.awayEn === teamEn || m.awayKo === teamKo)
-      ));
+      )).sort((a, b) => (a.isScheduled ? 1 : 0) - (b.isScheduled ? 1 : 0));
       const teamBye = matches.find(m => m.isBye && (m.teamEn === teamEn || m.teamKo === teamKo));
-      if (!teamMatch && !teamBye) return;
+      if (!teamMatches.length && !teamBye) return;
 
       const weekLabel = isKorean ? `${weekNum}주차` : `Week ${weekNum}`;
 
@@ -4328,6 +4331,7 @@
 
       // 연기(postponed)되었거나 스코어가 아직 없는 경기는 "결과"가 아니므로
       // 무승부 등으로 잘못 표시하지 않고 연기 배지만 보여줍니다.
+      teamMatches.forEach(teamMatch => {
       if (teamMatch.isScheduled) {
         const m = teamMatch;
         const homeName = isKorean ? m.homeKo : m.homeEn;
@@ -4402,6 +4406,7 @@
             </a>` : ''}
           </div>` : ''}
         </div>`;
+      });
     });
 
     return html;
