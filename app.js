@@ -3579,6 +3579,54 @@
              <div class="llt-goals-col llt-goals-away">${awayGoalsHtml}</div>
            </div>`
         : '';
+      // 치주물루 경기만: 골을 제외한 경기 진행 이벤트를 최신순 타임라인으로 보여줍니다.
+      let eventsSectionHtml = '';
+      const isOurMatch = home.isOurTeam || away.isOurTeam;
+      const commentaryFeed = isOurMatch && Array.isArray(m.commentary) ? m.commentary : [];
+      const progressEvents = isOurMatch && Array.isArray(m.events) ? m.events : [];
+      if (commentaryFeed.length) {
+        const LIVE_EVENTS_COLLAPSED_COUNT = 3;
+        const rowsHtml = commentaryFeed.slice().reverse().map((c, i) => {
+          const meta = c.type ? leagueEventMeta({ type: c.type, note: '' }) : null;
+          const icon = (meta && meta.icon && meta.icon !== '•') ? meta.icon : '💬';
+          const text = isKorean ? c.ko : c.en;
+          return `<div class="llt-event-row${i >= LIVE_EVENTS_COLLAPSED_COUNT ? ' is-extra' : ''}">
+            <span class="llt-event-min">${escapeHtml(formatLeagueCommentaryClock(c.ts))}</span>
+            <span class="llt-event-icon">${icon}</span>
+            <span class="llt-event-text">${escapeHtml(text)}</span>
+          </div>`;
+        }).join('');
+        const hasMore = commentaryFeed.length > LIVE_EVENTS_COLLAPSED_COUNT;
+        eventsSectionHtml = `
+          <div class="llt-events${leagueLiveEventsExpanded ? ' is-expanded' : ''}">
+            <div class="llt-events-title">${isKorean ? '경기 진행' : 'Match Events'}</div>
+            ${rowsHtml}
+            ${hasMore ? `<button type="button" class="llt-events-toggle" onclick="toggleLeagueLiveEvents(this)">${leagueLiveEventsExpanded ? (isKorean ? '접기' : 'Show less') : (isKorean ? '전체 보기' : 'Show all')}</button>` : ''}
+          </div>`;
+      } else if (progressEvents.length) {
+        const LIVE_EVENTS_COLLAPSED_COUNT = 3;
+        const rowsHtml = progressEvents.slice().reverse().map((ev, i) => {
+          const meta = leagueEventMeta(ev);
+          const label = isKorean ? meta.ko : meta.en;
+          const min = formatGoalMinute(ev.minuteText);
+          const who = ev.players.join(isKorean ? ' ↔ ' : ' / ');
+          const sideTeam = ev.isHome ? homeNameShort : (ev.isAway ? awayNameShort : '');
+          const text = [label, who].filter(Boolean).join(' ');
+          const note = ev.note && ev.note.toLowerCase() !== who.toLowerCase() ? ev.note : '';
+          return `<div class="llt-event-row${i >= LIVE_EVENTS_COLLAPSED_COUNT ? ' is-extra' : ''}${(ev.isHome && home.isOurTeam) || (ev.isAway && away.isOurTeam) ? ' is-ours' : ''}">
+            <span class="llt-event-min">${escapeHtml(min)}</span>
+            <span class="llt-event-icon">${meta.icon}</span>
+            <span class="llt-event-text">${escapeHtml(text)}${sideTeam ? ` <em class="llt-event-team">${escapeHtml(sideTeam)}</em>` : ''}${note ? `<span class="llt-event-note">${escapeHtml(note)}</span>` : ''}</span>
+          </div>`;
+        }).join('');
+        const hasMore = progressEvents.length > LIVE_EVENTS_COLLAPSED_COUNT;
+        eventsSectionHtml = `
+          <div class="llt-events${leagueLiveEventsExpanded ? ' is-expanded' : ''}">
+            <div class="llt-events-title">${isKorean ? '경기 진행' : 'Match Events'}</div>
+            ${rowsHtml}
+            ${hasMore ? `<button type="button" class="llt-events-toggle" onclick="toggleLeagueLiveEvents(this)">${leagueLiveEventsExpanded ? (isKorean ? '접기' : 'Show less') : (isKorean ? '전체 보기' : 'Show all')}</button>` : ''}
+          </div>`;
+      }
       return `
         <div class="${cardClass}">
           <div class="llt-card-top">${topBadgeHtml}</div>
@@ -3588,6 +3636,7 @@
             <div class="llt-team">${awayLogo}<span class="llt-team-name" title="${escapeHtml(away.name)}">${escapeHtml(awayNameShort)}</span></div>
           </div>
           ${goalsSectionHtml}
+          ${eventsSectionHtml}
         </div>`;
     }).join('');
 
@@ -3598,6 +3647,30 @@
   // 않고 계속 쌓임). 같은 경기를 여러 게시물이 언급할 수 있으므로, 팀 조합(홈/원정)별로
   // 가장 최근 게시물(sourceTimestamp 기준) 하나만 남겨서 "그 경기의 마지막으로 확인된 상태"를 구합니다.
   const CHIZUMULU_STRUCTURED_LIMIT = 40;
+
+  // live_update 게시물 본문(영문 원문 / 한글 번역)에서 해시태그, 스코어 줄, 대진 줄을 걷어내고
+  // "무슨 일이 있었는지"를 설명하는 문장만 남깁니다.
+  function cleanLeagueCommentary(text) {
+    if (!text) return '';
+    const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean).filter(l => {
+      if (l.startsWith('#') || l.startsWith('@')) return false;
+      if (l.indexOf('🆚') !== -1) return false;
+      // "A 0–0 B" 같은 스코어 전용 줄(문장부호가 없고 짧은 줄)
+      if (/\d+\s*[–\-:]\s*\d+/.test(l) && !/[.!?]/.test(l) && l.length <= 90) return false;
+      return true;
+    });
+    return lines.join(' ').trim();
+  }
+
+  function formatLeagueCommentaryClock(ts) {
+    if (!ts) return '';
+    try {
+      return new Date(ts).toLocaleTimeString('en-GB', {
+        hour: '2-digit', minute: '2-digit', hour12: false,
+        timeZone: isKorean ? 'Asia/Seoul' : 'Africa/Blantyre'
+      });
+    } catch (e) { return ''; }
+  }
 
   async function fetchLeagueStructuredRecentMatches() {
     const res = await fetch(CHIZUMULU_API_BASE + '/v1/structured?limit=' + CHIZUMULU_STRUCTURED_LIMIT);
@@ -3616,12 +3689,18 @@
     // 문제가 있었습니다 — 그래서 events는 최신 게시물 것으로 덮어쓰지 않고 누적합니다.
     const latestByPair = new Map(); // pairKey -> { ts, homeNameEn, awayNameEn, match }
     const goalsByPair = new Map();  // pairKey -> Map(dedupeKey -> goal event)
+    // 실황 게시물(live_update) 본문을 시간순으로 모은 "경기 진행" 피드. 경고/교체 같은
+    // 구조화 이벤트가 없는 문장형 중계(점유율, 코너킥, 위기 상황 등)까지 담기 위함입니다.
+    const commentaryByPair = new Map(); // pairKey -> Map(sourceMessageId -> {ts, ko, en, type})
 
     for (const item of items) {
       const rawMatches = (item && item.structured && Array.isArray(item.structured.matches))
         ? item.structured.matches
         : [];
       const ts = (item && item.sourceTimestamp) ? Date.parse(item.sourceTimestamp) : 0;
+      // 한 게시물이 여러 경기를 묶어 알리는 경우(결과 모음 등)는 어느 경기 중계인지 알 수 없으므로
+      // 경기가 정확히 1개인 live_update만 진행 피드로 씁니다.
+      const isSingleLiveUpdate = rawMatches.length === 1 && item.structured && item.structured.postType === 'live_update';
       for (const m of rawMatches) {
         const homeNameEn = resolveLeagueTeamNameEn({ name: m.homeTeam });
         const awayNameEn = resolveLeagueTeamNameEn({ name: m.awayTeam });
@@ -3633,15 +3712,36 @@
           latestByPair.set(pairKey, { ts, homeNameEn, awayNameEn, match: m });
         }
 
+        if (isSingleLiveUpdate) {
+          const koText = cleanLeagueCommentary(item.korean && item.korean.text);
+          const enText = cleanLeagueCommentary(item.latestObservation && item.latestObservation.text);
+          if (koText || enText) {
+            let feed = commentaryByPair.get(pairKey);
+            if (!feed) { feed = new Map(); commentaryByPair.set(pairKey, feed); }
+            const msgKey = item.sourceMessageId || (ts + '|' + enText);
+            if (!feed.has(msgKey)) {
+              const firstEvType = (Array.isArray(m.events) && m.events[0] && m.events[0].type) ? m.events[0].type : '';
+              feed.set(msgKey, { ts, ko: koText || enText, en: enText || koText, type: firstEvType });
+            }
+          }
+        }
+
         // 골 이벤트는 게시물의 최신 여부와 무관하게 전부 모으고, 같은 골이 여러 게시물에
         // 반복 언급될 수 있으므로 (팀+득점시각+득점자) 조합으로 중복만 제거합니다.
         const rawEvents = Array.isArray(m.events) ? m.events : [];
         let goalMap = goalsByPair.get(pairKey);
         if (!goalMap) { goalMap = new Map(); goalsByPair.set(pairKey, goalMap); }
         for (const ev of rawEvents) {
-          if (!ev || ev.type !== 'goal') continue;
+          if (!ev) continue;
           const scorerName = (ev.players && ev.players[0] && ev.players[0].name) || '';
-          const dedupeKey = `${(ev.team || '').trim().toLowerCase()}|${ev.minuteText || ''}|${scorerName.trim().toLowerCase()}`;
+          // 골은 기존 키 그대로(득점 목록 동작 불변). 골이 아닌 이벤트(경고/퇴장/교체 등)는
+          // 종류·설명까지 키에 넣어, 같은 분의 서로 다른 이벤트가 합쳐지지 않게 합니다.
+          let dedupeKey = `${(ev.team || '').trim().toLowerCase()}|${ev.minuteText || ''}|${scorerName.trim().toLowerCase()}`;
+          if (ev.type !== 'goal') {
+            const allNames = (Array.isArray(ev.players) ? ev.players : []).map(p => (p && p.name || '').trim().toLowerCase()).join(',');
+            const descKey = String(ev.description || ev.text || ev.detail || ev.note || '').trim().toLowerCase();
+            dedupeKey = `evt|${String(ev.type || '').toLowerCase()}|${dedupeKey}|${allNames}|${descKey}`;
+          }
           if (!goalMap.has(dedupeKey)) goalMap.set(dedupeKey, ev);
         }
       }
@@ -3654,7 +3754,9 @@
       // match 자체(스코어/상태 등)는 최신 게시물 것을 그대로 쓰되, events만 누적된
       // 목록으로 교체합니다.
       const mergedMatch = Object.assign({}, entry.match, { events: mergedEvents });
-      return Object.assign({}, entry, { match: mergedMatch });
+      const feedMap = commentaryByPair.get(pairKey);
+      const commentary = feedMap ? Array.from(feedMap.values()).sort((a, b) => a.ts - b.ts) : [];
+      return Object.assign({}, entry, { match: mergedMatch, commentary });
     });
   }
 
@@ -3848,8 +3950,65 @@
         }
       }
 
-      return goals.length ? Object.assign({}, m, { goals, score: updatedScore, status: updatedStatus, minute: updatedMinute }) : m;
+      // 골을 제외한 경기 진행 이벤트(경고/퇴장/교체/부상 등). 치주물루 경기 카드에서만 보여줍니다.
+      const progressEvents = rawEvents
+        .filter(ev => ev && ev.type && ev.type !== 'goal')
+        .map(ev => {
+          const evTeamNameEn = resolveLeagueTeamNameEn({ name: ev.team });
+          const names = (Array.isArray(ev.players) ? ev.players : []).map(p => (p && p.name) || '').filter(Boolean);
+          return {
+            type: String(ev.type),
+            minuteText: ev.minuteText || '',
+            players: names,
+            note: String(ev.description || ev.text || ev.detail || ev.note || ''),
+            isHome: !!(evTeamNameEn && homeNameEn && evTeamNameEn === homeNameEn),
+            isAway: !!(evTeamNameEn && awayNameEn && evTeamNameEn === awayNameEn)
+          };
+        })
+        .sort((a, b) => parseMinuteForSort(a.minuteText) - parseMinuteForSort(b.minuteText));
+
+      const patch = {};
+      if (goals.length) Object.assign(patch, { goals, score: updatedScore, status: updatedStatus, minute: updatedMinute });
+      if (progressEvents.length) patch.events = progressEvents;
+      if (entry && Array.isArray(entry.commentary) && entry.commentary.length) patch.commentary = entry.commentary;
+      return Object.keys(patch).length ? Object.assign({}, m, patch) : m;
     });
+  }
+
+  // 라이브 카드 "경기 진행" 타임라인: 이벤트 종류(type)를 아이콘/한글 라벨로 바꿉니다.
+  // API가 내려주는 type 문자열을 포괄적으로 매칭하고, 모르는 종류는 기본 아이콘으로 보여줍니다.
+  function leagueEventMeta(ev) {
+    const t = String(ev.type || '').toLowerCase();
+    const note = String(ev.note || '').toLowerCase();
+    if (/red/.test(t) || (/card|book/.test(t) && /red|straight|퇴장/.test(note))) return { icon: '🟥', ko: '퇴장', en: 'Red card' };
+    if (/yellow/.test(t) || /card|book/.test(t)) return { icon: '🟨', ko: '경고', en: 'Yellow card' };
+    if (/sub/.test(t)) return { icon: '🔄', ko: '교체', en: 'Substitution' };
+    if (/corner/.test(t)) return { icon: '🚩', ko: '코너킥', en: 'Corner' };
+    if (/offside/.test(t)) return { icon: '🚩', ko: '오프사이드', en: 'Offside' };
+    if (/foul/.test(t)) return { icon: '⚠️', ko: '파울', en: 'Foul' };
+    if (/free.?kick/.test(t)) return { icon: '🦶', ko: '프리킥', en: 'Free kick' };
+    if (/own/.test(t)) return { icon: '⚽', ko: '자책골', en: 'Own goal' };
+    if (/goal/.test(t)) return { icon: '⚽', ko: '골', en: 'Goal' };
+    if (/pen/.test(t)) return { icon: '🎯', ko: '페널티', en: 'Penalty' };
+    if (/save/.test(t)) return { icon: '🧤', ko: '선방', en: 'Save' };
+    if (/miss|chance|shot|post|bar/.test(t)) return { icon: '💥', ko: '찬스', en: 'Chance' };
+    if (/injur/.test(t)) return { icon: '🩹', ko: '부상', en: 'Injury' };
+    if (/var/.test(t)) return { icon: '📺', ko: 'VAR', en: 'VAR' };
+    if (/kick/.test(t)) return { icon: '▶️', ko: '킥오프', en: 'Kick-off' };
+    if (/half/.test(t)) return { icon: '⏸️', ko: '하프타임', en: 'Half-time' };
+    if (/full|end/.test(t)) return { icon: '🏁', ko: '경기 종료', en: 'Full-time' };
+    return { icon: '•', ko: '', en: '' };
+  }
+
+  // 새로고침(1분 주기 재렌더)마다 펼침 상태가 풀리지 않도록 모듈 변수로 기억합니다.
+  let leagueLiveEventsExpanded = false;
+  function toggleLeagueLiveEvents(btn) {
+    leagueLiveEventsExpanded = !leagueLiveEventsExpanded;
+    const box = btn.closest('.llt-events');
+    if (box) box.classList.toggle('is-expanded', leagueLiveEventsExpanded);
+    btn.textContent = leagueLiveEventsExpanded
+      ? (isKorean ? '접기' : 'Show less')
+      : (isKorean ? '전체 보기' : 'Show all');
   }
 
   async function refreshLeagueLiveTicker() {

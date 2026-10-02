@@ -347,6 +347,31 @@ const matchLineups = {
       { comp: "24시즌 MNRF 심소 프리미어 리그(5월 22일)", score: "치주물루 4 : 1 치바비", result: "치주물루 승" }
     ]
   }
+  // ===== 13주차 vs 칠룸바 배럭스 FC (2026-10-02 홈) 선발 라인업 =====
+  // 경기 결과가 나오면 아래 주석을 풀고 result(치주물루 스코어가 앞)와 득점/교체 정보만 채워주세요.
+  // (결과 없이 켜두면 출전 기록이 먼저 집계되고 result 형식 검증 오류가 납니다.)
+  // 모버트 카타파 등번호는 라인업 이미지에는 2번으로 잘못 적혀 있으나 실제는 25번입니다.
+  //
+  // , round13: {
+  //   formation: "4-2-3-1",
+  //   opponentKo: "칠룸바 배럭스 FC",
+  //   result: "0 : 0 무",   // ← 경기 후 실제 스코어로 수정
+  //   starters: [
+  //     { pos: "ST", number: 22, nameKo: "티모시 카타파" },
+  //     { pos: "LW", number: 9, nameKo: "제임스 헤르메스" },
+  //     { pos: "CAM", number: 7, nameKo: "디킨스 니렌다" },
+  //     { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
+  //     { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
+  //     { pos: "RCM", number: 98, nameKo: "스티브 피리" },
+  //     { pos: "LB", number: 5, nameKo: "라반 롱웨" },
+  //     { pos: "LCB", number: 13, nameKo: "조셉 반다" },
+  //     { pos: "RCB", number: 3, nameKo: "알란 음롱골라", captain: true },
+  //     { pos: "RB", number: 66, nameKo: "조던 칠와" },
+  //     { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
+  //   ],
+  //   subsIn: [],
+  //   subsUnused: [4, 8, 10, 11, 25, 49, 77, 80, 88]
+  // }
 };
 
 const squadData = [

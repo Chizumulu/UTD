@@ -10777,3 +10777,50 @@
   .pp-slot { transform: translate(-50%, -19px); width: 27%; }
   .pp-name { font-size: 10.5px; }
 }
+
+
+/* ===== 라이브 카드: 치주물루 경기 진행(경고/교체 등) 타임라인 ===== */
+.llt-events {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border-subtle, rgba(0,0,0,0.06));
+  text-align: left;
+}
+.llt-events-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  margin-bottom: 5px;
+}
+.llt-event-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  padding: 1.5px 0;
+}
+.llt-event-row.is-extra { display: none; }
+.llt-events.is-expanded .llt-event-row.is-extra { display: flex; }
+.llt-event-row.is-ours { font-weight: 600; }
+.llt-event-min { flex: 0 0 34px; font-variant-numeric: tabular-nums; opacity: 0.85; }
+.llt-event-icon { flex: 0 0 18px; text-align: center; }
+.llt-event-text { flex: 1 1 auto; min-width: 0; word-break: break-word; }
+.llt-event-team { font-style: normal; opacity: 0.65; font-size: 10.5px; margin-left: 2px; }
+.llt-event-note { display: block; font-weight: 400; font-size: 10.5px; opacity: 0.75; }
+.llt-events-toggle {
+  margin-top: 4px;
+  padding: 2px 0;
+  background: none;
+  border: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-teal-dark);
+  cursor: pointer;
+}
+@media (min-width: 721px) {
+  .llt-event-row { font-size: 12.5px; }
+  .llt-events-title { font-size: 11px; }
+}
