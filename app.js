@@ -3430,7 +3430,7 @@
   function formatLeagueLiveMinute(match) {
     if (match.status === 'full_time') return isKorean ? '종료' : 'FT';
     if (match.status === 'half_time') return isKorean ? '전반 종료' : 'HT';
-    if (typeof match.minute === 'number') return match.minute + "'";
+    if (typeof match.minute === 'number' && match.minute > 0 && match.minute < 200) return Math.floor(match.minute) + "'";
     if (typeof match.minute === 'string' && match.minute) return match.minute;
     return isKorean ? '진행 중' : 'LIVE';
   }
@@ -3943,10 +3943,17 @@
       let updatedStatus = m.status;
       let updatedMinute = m.minute;
       if (goals.length && m.status === 'half_time') {
-        const latestGoalMinute = Math.max(...goals.map(g => parseMinuteForSort(g.minuteText)));
-        if (latestGoalMinute > 45) {
-          updatedStatus = 'live';
-          updatedMinute = latestGoalMinute;
+        // parseMinuteForSort는 분을 못 읽으면 정렬용 센티널(9999)을 돌려주므로,
+        // 상태/분 보정에는 실제로 파싱된 값만 사용합니다(안 그러면 9999'로 표시됨).
+        const parsedGoalMinutes = goals
+          .map(g => parseMinuteForSort(g.minuteText))
+          .filter(v => v < 9999);
+        if (parsedGoalMinutes.length) {
+          const latestGoalMinute = Math.max(...parsedGoalMinutes);
+          if (latestGoalMinute > 45) {
+            updatedStatus = 'live';
+            updatedMinute = Math.floor(latestGoalMinute); // 45+2 → 45.02 방지
+          }
         }
       }
 
