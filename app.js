@@ -7956,7 +7956,8 @@
     const avgGF = teams.reduce((s, t) => s + t.goalsForPerGame, 0) / teams.length;
     const avgGA = teams.reduce((s, t) => s + t.goalsAgainstPerGame, 0) / teams.length;
 
-    function xPos(v) { return margin.left + (v / domainX) * plotW; }
+    // X축(실점)은 반전: 실점이 적을수록 오른쪽 → 오른쪽 위가 "강팀"이 되도록
+    function xPos(v) { return margin.left + plotW - (v / domainX) * plotW; }
     function yPos(v) { return margin.top + plotH - (v / domainY) * plotH; }
 
     const avgX = xPos(avgGA);
@@ -7965,15 +7966,16 @@
     const ct = chartTheme();
 
     // quadrant background rects
+    // (X축이 반전돼 있으므로) 왼쪽 = 실점 많음, 오른쪽 = 실점 적음
     const quads = [
-      { x: margin.left, y: margin.top, w: avgX - margin.left, h: avgY - margin.top, fill: ct.quadStrong, labelColor: ct.quadStrongLabel,
-        ko: '강팀', en: 'STRONG', lx: margin.left + (avgX - margin.left) / 2, ly: margin.top + 18 },
-      { x: avgX, y: margin.top, w: margin.left + plotW - avgX, h: avgY - margin.top, fill: ct.quadAttack, labelColor: ct.quadAttackLabel,
-        ko: '공격형', en: 'ATTACKING', lx: avgX + (margin.left + plotW - avgX) / 2, ly: margin.top + 18 },
-      { x: margin.left, y: avgY, w: avgX - margin.left, h: margin.top + plotH - avgY, fill: ct.quadDefense, labelColor: ct.quadDefenseLabel,
-        ko: '수비형', en: 'DEFENSIVE', lx: margin.left + (avgX - margin.left) / 2, ly: margin.top + plotH - 10 },
-      { x: avgX, y: avgY, w: margin.left + plotW - avgX, h: margin.top + plotH - avgY, fill: ct.quadWeak, labelColor: ct.quadWeakLabel,
-        ko: '약팀', en: 'WEAK', lx: avgX + (margin.left + plotW - avgX) / 2, ly: margin.top + plotH - 10 }
+      { x: margin.left, y: margin.top, w: avgX - margin.left, h: avgY - margin.top, fill: ct.quadAttack, labelColor: ct.quadAttackLabel,
+        ko: '공격형', en: 'ATTACKING', lx: margin.left + (avgX - margin.left) / 2, ly: margin.top + 18 },
+      { x: avgX, y: margin.top, w: margin.left + plotW - avgX, h: avgY - margin.top, fill: ct.quadStrong, labelColor: ct.quadStrongLabel,
+        ko: '강팀', en: 'STRONG', lx: avgX + (margin.left + plotW - avgX) / 2, ly: margin.top + 18 },
+      { x: margin.left, y: avgY, w: avgX - margin.left, h: margin.top + plotH - avgY, fill: ct.quadWeak, labelColor: ct.quadWeakLabel,
+        ko: '약팀', en: 'WEAK', lx: margin.left + (avgX - margin.left) / 2, ly: margin.top + plotH - 10 },
+      { x: avgX, y: avgY, w: margin.left + plotW - avgX, h: margin.top + plotH - avgY, fill: ct.quadDefense, labelColor: ct.quadDefenseLabel,
+        ko: '수비형', en: 'DEFENSIVE', lx: avgX + (margin.left + plotW - avgX) / 2, ly: margin.top + plotH - 10 }
     ];
 
     quads.forEach(q => {
@@ -8018,7 +8020,7 @@
 
     // axis titles
     const xTitle = svgEl('text', { x: margin.left + plotW / 2, y: H - 10, 'text-anchor': 'middle', class: 'scatter-axis-label' });
-    xTitle.textContent = isKorean ? '경기당 실점 →' : 'Goals Against / Game →';
+    xTitle.textContent = isKorean ? '경기당 실점 (적을수록 →)' : 'Goals Against / Game (fewer →)';
     svg.appendChild(xTitle);
 
     const yTitle = svgEl('text', { x: 14, y: margin.top + plotH / 2, 'text-anchor': 'middle', class: 'scatter-axis-label', transform: `rotate(-90 14 ${margin.top + plotH / 2})` });
@@ -8070,8 +8072,11 @@
       if (!moved) break;
     }
 
+    // 실점이 적은 팀이 이제 오른쪽 끝에 몰리므로, 라벨이 차트 밖으로 넘칠 것 같으면 점의 왼쪽에 둡니다.
+    const labelRightLimit = W - 6;
     points.forEach(p => {
-      p.lx = p.cx + p.r + 5;
+      p.labelLeft = (p.cx + p.r + 5 + p.labelW) > labelRightLimit;
+      p.lx = p.labelLeft ? p.cx - p.r - 5 : p.cx + p.r + 5;
       p.ly = p.cy + 3.5;
     });
 
@@ -8081,8 +8086,8 @@
       for (let i = 0; i < points.length; i++) {
         for (let j = i + 1; j < points.length; j++) {
           const a = points[i], b = points[j];
-          const ax1 = a.lx - 2, ax2 = a.lx + a.labelW, ay1 = a.ly - 9, ay2 = a.ly + 3;
-          const bx1 = b.lx - 2, bx2 = b.lx + b.labelW, by1 = b.ly - 9, by2 = b.ly + 3;
+          const ax1 = a.labelLeft ? a.lx - a.labelW : a.lx - 2, ax2 = a.labelLeft ? a.lx + 2 : a.lx + a.labelW, ay1 = a.ly - 9, ay2 = a.ly + 3;
+          const bx1 = b.labelLeft ? b.lx - b.labelW : b.lx - 2, bx2 = b.labelLeft ? b.lx + 2 : b.lx + b.labelW, by1 = b.ly - 9, by2 = b.ly + 3;
           const overlapX = Math.min(ax2, bx2) - Math.max(ax1, bx1);
           const overlapY = Math.min(ay2, by2) - Math.max(ay1, by1);
           if (overlapX > 0 && overlapY > 0) {
@@ -8199,15 +8204,17 @@
       g.addEventListener('click', () => toggleScatterHighlight(p.idx));
       svg.appendChild(g);
 
-      if (Math.abs(p.ly - (p.cy + 3.5)) > 4 || Math.abs(p.lx - (p.cx + p.r + 5)) > 4) {
+      const labelHomeX = p.labelLeft ? p.cx - p.r - 5 : p.cx + p.r + 5;
+      if (Math.abs(p.ly - (p.cy + 3.5)) > 4 || Math.abs(p.lx - labelHomeX) > 4) {
         svg.appendChild(svgEl('line', {
-          x1: p.cx + p.r, y1: p.cy, x2: p.lx - 2, y2: p.ly - 3,
+          x1: p.labelLeft ? p.cx - p.r : p.cx + p.r, y1: p.cy, x2: p.labelLeft ? p.lx + 2 : p.lx - 2, y2: p.ly - 3,
           stroke: ct.guideLine, 'stroke-width': 0.8
         }));
       }
 
       const label = svgEl('text', {
         x: p.lx, y: p.ly,
+        'text-anchor': p.labelLeft ? 'end' : 'start',
         class: p.isMine ? 'scatter-dot-label-mine' : 'scatter-dot-label',
         opacity: isDimmed ? '0.4' : '1'
       });
