@@ -985,13 +985,14 @@
   }
 
   function isReportReadyRound(roundKey) {
-    if (countPlayedMatchesInRound(roundKey) < REPORT_MIN_MATCHES) return false;
-    // 라운드 안의 다른 경기들이 충분히 채워졌더라도, 정작 우리 팀(치주물루) 경기
-    // 자체에 스코어가 없으면(아직 안 열렸거나 누락) 리포트를 만들면 안 됩니다.
-    // (부전승 주간은 예외 — myMatch가 없는 게 정상이라 그대로 통과)
     const matches = buildRoundMatches(roundKey);
+    // 부전승 주간은 우리 팀 경기가 없으므로, 다른 경기가 충분히(6경기 이상) 끝난 뒤에 만듭니다.
     const myBye = matches.find(m => m.isBye && isMyTeamName(m.teamEn, m.teamKo));
-    if (myBye) return true;
+    if (myBye) return countPlayedMatchesInRound(roundKey) >= REPORT_MIN_MATCHES;
+    // 그 외에는 우리 팀(치주물루) 경기에 스코어가 있으면 리포트를 만듭니다.
+    // 연기됐던 경기가 다른 주차에서 먼저 치러지는 경우처럼, 라운드 전체가 6경기 미만으로만
+    // 끝나 있어도 우리 경기 결과는 바로 보여줘야 하기 때문입니다.
+    // (순위 스냅샷은 computeStandingsHistory가 부분 라운드도 이미 반영합니다.)
     const myMatch = findMyRoundMatch(matches);
     return !!(myMatch && typeof myMatch.homeScore === 'number' && typeof myMatch.awayScore === 'number');
   }
