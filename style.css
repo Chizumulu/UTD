@@ -1745,6 +1745,7 @@
   #mainTable td:nth-child(7),
   #mainTable td:nth-child(8),
   #mainTable td:nth-child(9),
+  #mainTable td:nth-child(10),
   td.pts,
   .gd-pos,
   .gd-neg,
@@ -11109,3 +11110,13 @@
 @media (max-width: 560px) {
   .ti-club-list { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+/* ===== 순위표 '홈/원정' 열 (경기 오른쪽): 홈경기수 / 원정경기수 ===== */
+#mainTable .ha-count-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
+#mainTable .ha-count-h { color: var(--color-teal-dark); font-weight: 700; }
+#mainTable .ha-count-a { color: var(--color-text-secondary); font-weight: 700; }
+#mainTable .ha-count-sep { margin: 0 2px; color: var(--color-text-faint); font-weight: 400; }
+#mainTable.hide-ha-count .ha-count-cell,
+#mainTable.hide-ha-count .ha-count-th { display: none; }
+#mainTable .ha-count-th { white-space: nowrap; }

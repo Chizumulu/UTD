@@ -6647,6 +6647,36 @@
   // 순위표 필터 상태: 'all' | 'home' | 'away'
   let currentRankFilter = 'all';
 
+  // ===== 팀별 홈/원정 경기수 =====
+  // 순위표의 '홈/원정' 열용. 스코어가 입력된(=치른) 경기만, 연기된 경기는 제외하고 셉니다.
+  // 'form'(최근5) 필터에서는 각 팀의 최근 5경기 안에서만 홈/원정을 셉니다.
+  function computeHomeAwayCounts(filterType) {
+    const counts = {};
+    leagueData.forEach(t => { counts[t.nameEn] = { home: 0, away: 0 }; });
+
+    if (filterType === 'form') {
+      const log = buildTeamMatchLog();
+      leagueData.forEach(t => {
+        (log[t.nameEn] || []).slice(-5).forEach(m => { counts[t.nameEn][m.home ? 'home' : 'away'] += 1; });
+      });
+      return counts;
+    }
+
+    const merged = {};
+    Object.keys(roundsData || {}).forEach(k => { merged[k] = roundsData[k]; });
+    Object.keys(scheduledRounds || {}).forEach(k => { if (!merged[k]) merged[k] = scheduledRounds[k]; });
+    Object.keys(merged).forEach(roundKey => {
+      (merged[roundKey] || []).forEach(m => {
+        if (m.byeKo || m.byeEn) return;
+        if (!m.homeEn || !m.awayEn) return;
+        if (m.postponed || typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+        if (counts[m.homeEn]) counts[m.homeEn].home += 1;
+        if (counts[m.awayEn]) counts[m.awayEn].away += 1;
+      });
+    });
+    return counts;
+  }
+
   // roundsData(라운드별 홈/원정 결과)를 홈 경기만 또는 원정 경기만으로
   // 걸러서 팀별 경기수/승무패/득실/최근 폼을 다시 계산합니다.
   // (전체 순위는 leagueData에 이미 계산되어 있으므로 그대로 사용)
@@ -6864,6 +6894,7 @@
     // 홈/원정/최근5 분할표에서는 순위 변동 열 자체를 숨깁니다(전주 순위와 비교할 기준이 없음).
     const table = document.getElementById('mainTable');
     if (table) table.classList.toggle('hide-rank-change', filterType !== 'all');
+    if (table) table.classList.toggle('hide-ha-count', filterType === 'home' || filterType === 'away');
     const formNote = document.getElementById('rankFormNote');
     if (formNote) formNote.style.display = filterType === 'form' ? '' : 'none';
     renderLeagueTable();
@@ -7072,6 +7103,7 @@
   // ===== 팀 순위 렌더링 (League Table) =====
   function renderLeagueTable() {
     const processedData = getRankedTeams();
+    const haCounts = computeHomeAwayCounts(currentRankFilter);
 
     // 순위 변동 표시는 '전체' 순위표 기준으로만 의미가 있으므로(홈/원정 분할표는
     // 전주 순위와 직접 비교할 대상이 없음) 필터가 'all'일 때만 계산합니다.
@@ -7160,6 +7192,7 @@
           <span class="lbl" data-en="${team.nameEn}" data-ko="${team.nameKo}">${name}</span>
         </td>
         <td>${team.played}</td>
+        <td class="ha-count-cell"><span class="ha-count-h">${(haCounts[team.nameEn] || {}).home || 0}</span><span class="ha-count-sep">/</span><span class="ha-count-a">${(haCounts[team.nameEn] || {}).away || 0}</span></td>
         <td>${team.won}</td>
         <td>${team.drawn}</td>
         <td>${team.lost}</td>
@@ -7665,14 +7698,16 @@
         log[m.homeEn].push({
           result: m.homeScore > m.awayScore ? 'W' : (m.homeScore < m.awayScore ? 'L' : 'D'),
           gf: m.homeScore,
-          ga: m.awayScore
+          ga: m.awayScore,
+          home: true
         });
       }
       if (log[m.awayEn]) {
         log[m.awayEn].push({
           result: m.awayScore > m.homeScore ? 'W' : (m.awayScore < m.homeScore ? 'L' : 'D'),
           gf: m.awayScore,
-          ga: m.homeScore
+          ga: m.homeScore,
+          home: false
         });
       }
     }
