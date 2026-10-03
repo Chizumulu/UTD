@@ -1256,12 +1256,14 @@ const upcomingMatchHistory = {
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
   round13: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", postponed: true },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-03", kickoffTime: "14:30" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-03", kickoffTime: "14:30" },
+    // 13주차 치주물루 vs 비전 S 아카데미 경기는 연기되어 15주차(10월 13일)로 옮겨졌습니다.
+    // (15주차 쪽 항목에 movedFromWeek: 13이 있고, 이쪽에는 changed + movedToWeek로 "변경됨" 배지가 표시됩니다.)
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", postponed: true, movedToWeek: 15, changed: true },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 0, awayScore: 2, scorersHome: "없음", scorersAway: "ZIKANI KASAMBALA, MIKE LUHANGA" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 2, scorersHome: "TYGO GOMEKA, ALLAN NKHONJERA", scorersAway: "TYSON NYIRONGO, ABRAHAM MVULA" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-04", kickoffTime: "14:30" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-03", kickoffTime: "14:30" },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FRANK KAUNDA, ROBIN CHIOKO", scorersAway: "HENDERSON KANYIKA (2골), PETER LUNGU" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-04", kickoffTime: "14:30" },
     { byeKo: "친테체 유나이티드 FC", byeEn: "Chintheche United FC" },
     // 11주차에서 연기됐던 치주물루 vs 칠룸바 경기가 13주차(10월 2일) 홈 경기로 확정되었습니다.
@@ -1290,7 +1292,9 @@ const scheduledRounds = {
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "14:30", postponed: true, movedToWeek: 13, changed: true },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
-    { byeKo: "치주물루 유나이티드 FC", byeEn: "Chizumulu United FC" }
+    // 13주차에서 연기됐던 치주물루 vs 비전 S 아카데미 경기가 15주차 홈 경기(10월 13일)로 확정되었습니다.
+    // 치주물루의 15주차 휴식(bye) 자리를 이 경기가 대신합니다.
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-13", kickoffTime: "15:00", movedFromWeek: 13, changed: true }
   ]
 };
 
@@ -2593,7 +2597,11 @@ const playerDirectory = {
   "JASON ZIMBA": { nameKo: "제이슨 짐바", nameEn: "Jason Zimba" },
   "JONATHAN MGUNTHA": { nameKo: "조나단 음군타", nameEn: "Jonathan Mguntha" },
   "MARKO PHIRI": { nameKo: "마르코 피리", nameEn: "Marko Phiri" },
-  "GREEN MWALE": { nameKo: "그린 므왈레", nameEn: "Green Mwale" }
+  "GREEN MWALE": { nameKo: "그린 므왈레", nameEn: "Green Mwale" },
+  "PETER LUNGU": { nameKo: "피터 룽구", nameEn: "Peter Lungu" },
+  "TYGO GOMEKA": { nameKo: "타이고 고메카", nameEn: "Tygo Gomeka" },
+  "ALLAN NKHONJERA": { nameKo: "앨런 은콘제라", nameEn: "Allan Nkhonjera" },
+  "TYSON NYIRONGO": { nameKo: "타이슨 니롱고", nameEn: "Tyson Nyirongo" }
 };
 
 function toTitleCase(upperName) {
