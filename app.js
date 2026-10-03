@@ -4761,8 +4761,8 @@
         ? `<img class="ti-appear-mini-photo" src="${sq.photoSrc}" alt="${r.nameEn || r.nameKo}">`
         : `<div class="ti-appear-mini-photo ti-appear-mini-photo-placeholder">👤</div>`;
       return `
-        <div class="ti-appear-mini-card ${rankClass[idx] || ''} lineup-squad-link" data-player-number="${r.number}">
-          <span class="ti-appear-mini-rank">${idx + 1}</span>
+        <div class="ti-appear-mini-card ${rankClass[(r.rank || idx + 1) - 1] || ''} lineup-squad-link" data-player-number="${r.number}">
+          <span class="ti-appear-mini-rank">${r.rank || idx + 1}</span>
           ${photo}
           <span class="ti-appear-mini-num">#${r.number}</span>
           <span class="ti-appear-mini-name lbl" data-en="${r.nameEn || r.nameKo}" data-ko="${r.nameKo}">${name}</span>
@@ -4770,6 +4770,373 @@
         </div>`;
     }).join('')}</div>`;
   }
+
+  // ===== 도움 & 공격포인트 카드 =====
+  // squadPlayerStats(골/도움)와 computeAssistCombos()로 자동 계산됩니다.
+  // 도움 최다 / 공격포인트(골+도움) 상위 3순위(동률은 모두 포함) / 2회 이상 호흡을 맞춘 콤비.
+  function renderAssistLeadersCard() {
+    if (typeof computeAssistCombos !== 'function') return '';
+    const { combos, totalGoals, assistedGoals, solo } = computeAssistCombos();
+    if (!assistedGoals) return '';
+
+    const MIN_APPS_FOR_PER_GAME = 3; // 출전이 너무 적으면 경기당 수치가 부풀려져서 제외
+    const rows = squadData.map(p => {
+      const s = squadPlayerStats[p.number] || {};
+      const goals = s.goals || 0, assists = s.assists || 0, apps = s.appearances || 0;
+      const ga = goals + assists;
+      // 경기당 공격포인트 = (골+도움) ÷ 출전(선발+교체). 소수 둘째 자리 기준으로 동률 처리
+      return { number: p.number, nameKo: p.nameKo, nameEn: p.nameEn, goals, assists, ga, apps,
+               pg: apps ? Math.round((ga / apps) * 100) / 100 : 0 };
+    });
+    const topRanked = (key, filterFn) => {
+      const sorted = rows.filter(r => r[key] > 0 && (!filterFn || filterFn(r)))
+        .sort((x, y) => (y[key] - x[key]) || (y.ga - x.ga) || (x.number - y.number));
+      let rank = 0, prev = null;
+      const out = [];
+      sorted.forEach((r, i) => {
+        if (r[key] !== prev) { rank = i + 1; prev = r[key]; }
+        if (rank <= 3 && out.length < 5) out.push(Object.assign({}, r, { rank }));
+      });
+      return out;
+    };
+
+    const unit = (n) => isKorean ? `${n}도움` : `${n} A`;
+    const nameOfNum = (num) => {
+      const p = squadData.find(x => x.number === num);
+      return p ? (isKorean ? p.nameKo : (p.nameEn || p.nameKo)) : String(num);
+    };
+    const firstWord = (t) => String(t).split(' ')[0];
+
+    const pairs = combos.filter(c => c.count >= 2).slice(0, 4);
+    const comboRows = pairs.length
+      ? `<div class="ti-assist-combo-list">${pairs.map(c => `
+          <div class="ti-assist-combo-row">
+            <span class="ti-assist-combo-name lineup-squad-link" data-player-number="${c.from}">${firstWord(nameOfNum(c.from))}</span>
+            <span class="ti-assist-combo-arrow">→</span>
+            <span class="ti-assist-combo-name lineup-squad-link" data-player-number="${c.to}">${firstWord(nameOfNum(c.to))}</span>
+            <span class="ti-assist-combo-count">${isKorean ? c.count + '회' : '×' + c.count}</span>
+          </div>`).join('')}</div>`
+      : `<div class="ti-appear-empty lbl" data-en="No repeat pairs yet" data-ko="아직 2회 이상 호흡을 맞춘 조합이 없습니다">${isKorean ? '아직 2회 이상 호흡을 맞춘 조합이 없습니다' : 'No repeat pairs yet'}</div>`;
+
+    // ---- 전체 콤비 표 (행 = 도운 선수, 열 = 득점 선수) ----
+    // 칸 색이 진할수록 그 조합이 많다는 뜻입니다. 맨 아래에 "도움 없는 골"과 득점 합계도 붙입니다.
+    const matrixHtml = (() => {
+      const keyOf = (v) => (typeof v === 'number') ? v : (/^\d+$/.test(String(v)) ? Number(v) : v);
+      const assisters = [...new Set(combos.map(c => c.from))];
+      const scorers = [...new Set(combos.map(c => c.to).concat(Object.keys(solo).map(keyOf)))];
+      const cnt = {};
+      combos.forEach(c => { cnt[c.from + '>' + c.to] = c.count; });
+      const assistTotal = (f) => combos.filter(c => c.from === f).reduce((n, c) => n + c.count, 0);
+      const goalsOf = (t) => (squadPlayerStats[t] && squadPlayerStats[t].goals) || 0;
+      assisters.sort((x, y) => (assistTotal(y) - assistTotal(x)) || (Number(x) - Number(y)));
+      scorers.sort((x, y) => (goalsOf(y) - goalsOf(x)) || (Number(x) - Number(y)));
+      const maxCnt = Math.max(1, ...combos.map(c => c.count));
+      const link = (num) => `<span class="lineup-squad-link" data-player-number="${num}">${firstWord(nameOfNum(num))}</span>`;
+
+      const head = `<tr><th class="ti-am-corner">${isKorean ? '도움 ↓ / 득점 →' : 'Assist ↓ / Goal →'}</th>${scorers.map(t => `<th>${link(t)}</th>`).join('')}<th class="ti-am-total">${isKorean ? '도움' : 'Ast'}</th></tr>`;
+      const body = assisters.map(f => `<tr><th class="ti-am-rowhead">${link(f)}</th>${scorers.map(t => {
+        const n = cnt[f + '>' + t] || 0;
+        return n
+          ? `<td class="ti-am-cell" style="background: rgba(var(--color-teal-rgb), ${(0.18 + 0.5 * n / maxCnt).toFixed(2)});"><b>${n}</b></td>`
+          : `<td class="ti-am-cell ti-am-zero">·</td>`;
+      }).join('')}<td class="ti-am-total"><b>${assistTotal(f)}</b></td></tr>`).join('');
+      const soloTotal = scorers.reduce((n, t) => n + (solo[t] || 0), 0);
+      const soloRow = `<tr class="ti-am-foot"><th class="ti-am-rowhead">${isKorean ? '도움 없음' : 'Unassisted'}</th>${scorers.map(t => `<td class="ti-am-cell${solo[t] ? '' : ' ti-am-zero'}">${solo[t] || '·'}</td>`).join('')}<td class="ti-am-total"><b>${soloTotal}</b></td></tr>`;
+      const goalRow = `<tr class="ti-am-foot"><th class="ti-am-rowhead">${isKorean ? '득점 합계' : 'Goals'}</th>${scorers.map(t => `<td class="ti-am-cell"><b>${goalsOf(t)}</b></td>`).join('')}<td class="ti-am-total"><b>${scorers.reduce((n, t) => n + goalsOf(t), 0)}</b></td></tr>`;
+      const sumKo = '전체 콤비 표 보기 (누가 → 누구)';
+      const sumEn = 'Full combo table (who → whom)';
+      return `
+        <details class="ti-assist-matrix">
+          <summary class="lbl" data-en="${sumEn}" data-ko="${sumKo}">${isKorean ? sumKo : sumEn}</summary>
+          <div class="ti-am-scroll"><table class="ti-am-table"><thead>${head}</thead><tbody>${body}${soloRow}${goalRow}</tbody></table></div>
+        </details>`;
+    })();
+
+    const blocks = [
+      { type: 'assists', titleKo: '도움 최다', titleEn: 'Most Assists', subKo: '골을 만들어주는 선수', subEn: 'The creator',
+        rows: appearanceLeaderRowsHtml(topRanked('assists'), r => unit(r.assists)) },
+      { type: 'ga', titleKo: '공격포인트', titleEn: 'Goal Contributions', subKo: '골 + 도움', subEn: 'Goals + assists',
+        rows: appearanceLeaderRowsHtml(topRanked('ga'), r => `${r.ga}P`) },
+      { type: 'pg', titleKo: '경기당 공격포인트', titleEn: 'Contributions per Game', subKo: `출전 ${MIN_APPS_FOR_PER_GAME}경기 이상 기준`, subEn: `${MIN_APPS_FOR_PER_GAME}+ appearances`,
+        rows: appearanceLeaderRowsHtml(topRanked('pg', r => r.apps >= MIN_APPS_FOR_PER_GAME), r => r.pg.toFixed(2)) },
+      { type: 'combo', titleKo: '최강 콤비', titleEn: 'Best Duos', subKo: '2회 이상 합작 (도움 → 골)', subEn: '2+ combos (assist → goal)',
+        rows: comboRows }
+    ];
+    const blocksHtml = blocks.map(b => `
+      <div class="ti-appear-block">
+        <div class="ti-appear-block-head">
+          <span class="ti-appear-block-title lbl" data-en="${b.titleEn}" data-ko="${b.titleKo}">${isKorean ? b.titleKo : b.titleEn}</span>
+          <span class="ti-appear-block-sub lbl" data-en="${b.subEn}" data-ko="${b.subKo}">${isKorean ? b.subKo : b.subEn}</span>
+        </div>
+        <div class="ti-appear-block-rows">${b.rows}</div>
+        ${fullRecordBtnHtml(b.type)}
+      </div>`).join('');
+
+    const noteKo = `라인업에 기록된 ${totalGoals}골 중 ${assistedGoals}골에 도움 기록이 있어요`;
+    const noteEn = `${assistedGoals} of ${totalGoals} recorded goals have an assist logged`;
+    return `
+      <div class="ti-card ti-appear-card">
+        <div class="ti-card-title lbl" data-en="Assists" data-ko="도움 기록">${isKorean ? '도움 기록' : 'Assists'}</div>
+        <div class="ti-gk-card-note lbl" data-en="${noteEn}" data-ko="${noteKo}">${isKorean ? noteKo : noteEn}</div>
+        <div class="ti-appear-grid">${blocksHtml}</div>
+        ${matrixHtml}
+      </div>`;
+  }
+
+  // ===== 10-10 클럽 (골 + 도움 동반 달성 트래커) =====
+  // 3-3 → 5-5 → 10-10 단계별로, 한 시즌에 골 N개 + 도움 N개를 모두 채운 선수를 보여줍니다.
+  // 팀당 28경기(15팀 리그: 30라운드 중 2번은 휴식) 기준이며, 라인업이 기록된 경기 수로
+  // "지금 페이스면 시즌 몇 골·몇 도움인지"를 환산합니다. 라인업을 추가하면 자동으로 갱신됩니다.
+  const CLUB_SEASON_GAMES = 28;
+  const CLUB_TIERS = [3, 5, 10];
+
+  function renderClubTrackerCard() {
+    const played = Object.keys(matchLineups || {}).length;
+    if (!played) return '';
+
+    const rows = squadData.map(p => {
+      const s = squadPlayerStats[p.number] || {};
+      const g = s.goals || 0, a = s.assists || 0;
+      const reached = CLUB_TIERS.filter(t => g >= t && a >= t);
+      const next = CLUB_TIERS.find(t => !(g >= t && a >= t)) || null;
+      const target = next || CLUB_TIERS[CLUB_TIERS.length - 1];
+      const progress = (Math.min(g, target) + Math.min(a, target)) / (2 * target);
+      const paceG = Math.round(g / played * CLUB_SEASON_GAMES);
+      const paceA = Math.round(a / played * CLUB_SEASON_GAMES);
+      return { number: p.number, nameKo: p.nameKo, nameEn: p.nameEn, photoSrc: p.photoSrc || null,
+               g, a, ga: g + a, reached, next, target, progress, paceG, paceA };
+    }).filter(r => r.ga >= 2)
+      .sort((x, y) => (y.reached.length - x.reached.length) || (y.progress - x.progress) || (y.ga - x.ga) || (x.number - y.number))
+      .slice(0, 8);
+    if (!rows.length) return '';
+
+    const first = (r) => String(isKorean ? r.nameKo : (r.nameEn || r.nameKo)).split(' ')[0];
+    const all = squadData.map(p => {
+      const s = squadPlayerStats[p.number] || {};
+      return { p, g: s.goals || 0, a: s.assists || 0 };
+    });
+    const clubChips = CLUB_TIERS.map(t => {
+      const members = all.filter(x => x.g >= t && x.a >= t).map(x => String(isKorean ? x.p.nameKo : (x.p.nameEn || x.p.nameKo)).split(' ')[0]);
+      return `<div class="ti-club-chip${members.length ? ' is-on' : ''}">
+        <span class="ti-club-chip-tier">${t}-${t}</span>
+        <span class="ti-club-chip-who">${members.length ? escapeHtml(members.join(', ')) : (isKorean ? '아직 없음' : 'None yet')}</span>
+      </div>`;
+    }).join('');
+
+    const rowsHtml = rows.map(r => {
+      const name = isKorean ? r.nameKo : (r.nameEn || r.nameKo);
+      const photo = r.photoSrc
+        ? `<img class="ti-club-photo" src="${r.photoSrc}" alt="${escapeHtml(r.nameEn || r.nameKo)}">`
+        : `<span class="ti-club-photo ti-club-photo-empty">👤</span>`;
+      const badges = CLUB_TIERS.map(t => `<span class="ti-club-badge${r.reached.includes(t) ? ' is-on' : ''}">${t}-${t}</span>`).join('');
+      const bar = (label, val) => {
+        const pct = Math.min(100, Math.round(val / r.target * 100));
+        return `<div class="ti-club-bar-row">
+          <span class="ti-club-bar-label">${label}</span>
+          <span class="ti-club-bar"><span class="ti-club-bar-fill${val >= r.target ? ' is-done' : ''}" style="width:${pct}%"></span></span>
+          <span class="ti-club-bar-num">${val}<small>${val >= r.target ? ' ✓' : '/' + r.target}</small></span>
+        </div>`;
+      };
+      const needG = Math.max(0, r.target - r.g), needA = Math.max(0, r.target - r.a);
+      let status;
+      if (!r.next) {
+        status = isKorean ? `${r.target}-${r.target} 클럽 달성!` : `${r.target}-${r.target} club reached!`;
+      } else {
+        const parts = [];
+        if (needG) parts.push(isKorean ? `골 ${needG}개` : `${needG} goal${needG > 1 ? 's' : ''}`);
+        if (needA) parts.push(isKorean ? `도움 ${needA}개` : `${needA} assist${needA > 1 ? 's' : ''}`);
+        status = isKorean ? `${r.next}-${r.next}까지 ${parts.join(' · ')} 남음` : `${parts.join(' + ')} to ${r.next}-${r.next}`;
+      }
+      const onPace = r.paceG >= 10 && r.paceA >= 10;
+      const paceText = isKorean
+        ? `시즌 페이스 ${r.paceG}골 ${r.paceA}도움${onPace ? ' · 10-10 가능권' : ''}`
+        : `Season pace ${r.paceG}G ${r.paceA}A${onPace ? ' · on track for 10-10' : ''}`;
+      return `<div class="ti-club-row lineup-squad-link" data-player-number="${r.number}">
+        <div class="ti-club-row-head">
+          ${photo}
+          <span class="ti-club-name">${escapeHtml(name)}<small>#${r.number}</small></span>
+          <span class="ti-club-badges">${badges}</span>
+        </div>
+        <div class="ti-club-bars">${bar(isKorean ? '골' : 'G', r.g)}${bar(isKorean ? '도움' : 'A', r.a)}</div>
+        <div class="ti-club-foot">
+          <span class="ti-club-status${r.next ? '' : ' is-done'}">${status}</span>
+          <span class="ti-club-pace${onPace ? ' is-hot' : ''}">${paceText}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    const titleKo = '10-10 클럽', titleEn = '10-10 Club';
+    const noteKo = `골 + 도움을 모두 채운 선수 · 시즌 ${CLUB_SEASON_GAMES}경기 중 ${played}경기 치렀어요`;
+    const noteEn = `Goals + assists, both reached · ${played} of ${CLUB_SEASON_GAMES} games played`;
+    return `
+      <div class="ti-card ti-club-card">
+        <div class="ti-card-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>
+        <div class="ti-gk-card-note lbl" data-en="${noteEn}" data-ko="${noteKo}">${isKorean ? noteKo : noteEn}</div>
+        <div class="ti-club-chips">${clubChips}</div>
+        <div class="ti-club-list">${rowsHtml}</div>
+      </div>`;
+  }
+
+  // ===== 선수 기록 "전체기록 보기" 팝업 =====
+  // 각 기록 카드(득점/도움 최다/공격포인트/경기당 공격포인트/최강 콤비) 우측 하단 버튼을 누르면
+  // 상위 3위까지만 보여주던 카드와 같은 기준으로 1위부터 꼴찌까지 전부 보여줍니다.
+  // 동률은 같은 순위(1, 2, 2, 4 …)로 표시하며, 라인업/득점 데이터가 갱신되면 자동으로 반영됩니다.
+  const FULL_RECORD_MIN_APPS = 3; // 경기당 공격포인트는 출전 3경기 이상만 순위에 포함 (카드와 동일 기준)
+  let currentFullRecordType = null;
+
+  const FULL_RECORD_META = {
+    goals:  { ko: '득점', en: 'Goals' },
+    assists:{ ko: '도움 최다', en: 'Most Assists' },
+    ga:     { ko: '공격포인트', en: 'Goal Contributions' },
+    pg:     { ko: '경기당 공격포인트', en: 'Contributions per Game' },
+    combo:  { ko: '최강 콤비', en: 'Best Duos' }
+  };
+
+  function fullRecordBtnHtml(type) {
+    const ko = '전체기록 보기', en = 'View all';
+    return `<div class="ti-fullrec-wrap">
+      <button type="button" class="ti-fullrec-btn lbl" data-fullrec="${type}" data-ko="${ko}" data-en="${en}">${isKorean ? ko : en}</button>
+    </div>`;
+  }
+
+  // 값 내림차순 + 동률 공동순위가 붙은 배열로 만듭니다.
+  function assignFullRanks(list, valueOf) {
+    let rank = 0, prev = null;
+    return list.map((r, i) => {
+      const v = valueOf(r);
+      if (v !== prev) { rank = i + 1; prev = v; }
+      return Object.assign({}, r, { rank });
+    });
+  }
+
+  function computeFullRecordRows(type) {
+    const sq = (num) => squadData.find(p => p.number === num);
+    const statOf = (num) => squadPlayerStats[num] || {};
+    const byNum = (x, y) => (Number(x.number) || 999) - (Number(y.number) || 999);
+
+    if (type === 'goals') {
+      const mine = topScorersData.filter(p => p.teamEn === 'Chizumulu United FC' || p.teamKo === '치주물루 유나이티드 FC')
+        .slice().sort((x, y) => y.goals - x.goals);
+      const seen = new Set();
+      const rows = mine.map(p => {
+        const m = squadData.find(s => (s.nameEn || '').toUpperCase() === (p.nameEn || '').toUpperCase());
+        if (m) seen.add(m.number);
+        return { number: m ? m.number : null, nameKo: p.nameKo, nameEn: p.nameEn, photoSrc: p.photoSrc || (m && m.photoSrc) || null, value: p.goals };
+      });
+      // 골이 없는 선수도 꼴찌까지 이어서 보여줍니다.
+      squadData.filter(s => !seen.has(s.number)).sort(byNum).forEach(s => {
+        rows.push({ number: s.number, nameKo: s.nameKo, nameEn: s.nameEn, photoSrc: s.photoSrc || null, value: 0 });
+      });
+      return assignFullRanks(rows, r => r.value).map(r => Object.assign(r, { valueText: isKorean ? `${r.value}골` : `${r.value}` }));
+    }
+
+    if (type === 'combo') {
+      const { combos } = computeAssistCombos();
+      const nm = (num) => { const p = sq(num); return p ? (isKorean ? p.nameKo : (p.nameEn || p.nameKo)).split(' ')[0] : String(num); };
+      return assignFullRanks(combos, c => c.count).map(c => ({
+        rank: c.rank, combo: true, from: c.from, to: c.to,
+        fromName: nm(c.from), toName: nm(c.to),
+        valueText: isKorean ? `${c.count}회` : `×${c.count}`
+      }));
+    }
+
+    const base = squadData.map(p => {
+      const s = statOf(p.number);
+      const goals = s.goals || 0, assists = s.assists || 0, apps = s.appearances || 0, ga = goals + assists;
+      return { number: p.number, nameKo: p.nameKo, nameEn: p.nameEn, photoSrc: p.photoSrc || null,
+               goals, assists, ga, apps, pg: apps ? Math.round((ga / apps) * 100) / 100 : 0 };
+    });
+    const sortBy = (key) => (x, y) => (y[key] - x[key]) || (y.ga - x.ga) || byNum(x, y);
+
+    if (type === 'assists') {
+      return assignFullRanks(base.slice().sort(sortBy('assists')), r => r.assists)
+        .map(r => Object.assign(r, { valueText: isKorean ? `${r.assists}도움` : `${r.assists} A` }));
+    }
+    if (type === 'ga') {
+      return assignFullRanks(base.slice().sort(sortBy('ga')), r => r.ga)
+        .map(r => Object.assign(r, { valueText: `${r.ga}P`, subText: isKorean ? `${r.goals}골 ${r.assists}도움` : `${r.goals}G ${r.assists}A` }));
+    }
+    if (type === 'pg') {
+      const ok = base.filter(r => r.apps >= FULL_RECORD_MIN_APPS).sort(sortBy('pg'));
+      return assignFullRanks(ok, r => r.pg)
+        .map(r => Object.assign(r, { valueText: r.pg.toFixed(2), subText: isKorean ? `${r.ga}P / ${r.apps}경기` : `${r.ga}P / ${r.apps} apps` }));
+    }
+    return [];
+  }
+
+  function renderFullRecordModal() {
+    const type = currentFullRecordType;
+    const meta = FULL_RECORD_META[type];
+    if (!meta) return;
+    const rows = computeFullRecordRows(type);
+    document.getElementById('fullRecordTitle').textContent =
+      (isKorean ? meta.ko : meta.en) + (isKorean ? ' 전체 기록' : ' – Full Ranking');
+
+    const noteKo = type === 'pg' ? `출전 ${FULL_RECORD_MIN_APPS}경기 이상 선수만 집계돼요` :
+                   type === 'combo' ? '도움 → 골 조합 전체 (1회 포함)' :
+                   '동률은 같은 순위로 표시돼요';
+    const noteEn = type === 'pg' ? `Players with ${FULL_RECORD_MIN_APPS}+ appearances only` :
+                   type === 'combo' ? 'All assist → goal pairs (including one-offs)' :
+                   'Ties share the same rank';
+
+    const body = document.getElementById('fullRecordBody');
+    if (!rows.length) {
+      body.innerHTML = `<div class="ti-appear-empty">${isKorean ? '아직 데이터가 없습니다' : 'No data yet'}</div>`;
+      return;
+    }
+    const medal = (n) => n <= 3 ? ` fullrec-rank-${n}` : '';
+    const list = rows.map(r => {
+      if (r.combo) {
+        return `<li class="fullrec-row${medal(r.rank)}">
+          <span class="fullrec-rank">${r.rank}</span>
+          <span class="fullrec-name fullrec-combo-name">
+            <span class="lineup-squad-link" data-player-number="${r.from}">${escapeHtml(r.fromName)}</span>
+            <span class="fullrec-arrow">→</span>
+            <span class="lineup-squad-link" data-player-number="${r.to}">${escapeHtml(r.toName)}</span>
+          </span>
+          <span class="fullrec-value">${r.valueText}</span>
+        </li>`;
+      }
+      const name = isKorean ? r.nameKo : (r.nameEn || r.nameKo);
+      const photo = r.photoSrc
+        ? `<img class="fullrec-photo" src="${r.photoSrc}" alt="${escapeHtml(r.nameEn || r.nameKo)}">`
+        : `<span class="fullrec-photo fullrec-photo-empty">👤</span>`;
+      const hasNum = r.number !== null && r.number !== undefined && r.number !== '';
+      const link = hasNum ? ` lineup-squad-link" data-player-number="${r.number}` : '';
+      const isZero = type === 'goals' ? r.value === 0 : (type === 'assists' ? r.assists === 0 : (type === 'ga' ? r.ga === 0 : r.pg === 0));
+      return `<li class="fullrec-row${medal(r.rank)}${isZero ? ' fullrec-row-zero' : ''}">
+        <span class="fullrec-rank">${r.rank}</span>
+        ${photo}
+        <span class="fullrec-name${link}">${escapeHtml(name)}${hasNum ? `<small>#${r.number}</small>` : ''}</span>
+        ${r.subText ? `<span class="fullrec-sub">${r.subText}</span>` : ''}
+        <span class="fullrec-value">${r.valueText}</span>
+      </li>`;
+    }).join('');
+
+    body.innerHTML = `<div class="fullrec-note">${isKorean ? noteKo : noteEn}</div><ol class="fullrec-list">${list}</ol>`;
+  }
+
+  function openFullRecordModal(type) {
+    if (!FULL_RECORD_META[type]) return;
+    currentFullRecordType = type;
+    renderFullRecordModal();
+    const modal = document.getElementById('fullRecordModal');
+    if (modal) {
+      showModalAnimated(modal);
+      const bodyEl = document.getElementById('fullRecordBody');
+      if (bodyEl) bodyEl.scrollTop = 0;
+    }
+  }
+
+  function closeFullRecordModal() {
+    const modal = document.getElementById('fullRecordModal');
+    if (modal) closeModalAnimated(modal);
+  }
+
+  document.addEventListener('click', function(event) {
+    const btn = event.target.closest('.ti-fullrec-btn');
+    if (btn && btn.dataset.fullrec) openFullRecordModal(btn.dataset.fullrec);
+  });
 
   function renderAppearanceStatsCard() {
     const leaders = computeAppearanceLeaders();
@@ -4825,13 +5192,16 @@
     GK: 'var(--color-neutral-mid)'
   };
 
-  function renderGoalsByPositionCard() {
-    const data = (typeof goalsByPositionData !== 'undefined') ? goalsByPositionData : { totalGoals: 0, groups: [] };
-    if (!data.totalGoals || !data.groups.length) {
+  // 득점/도움이 같은 도넛 카드 모양을 쓰므로 설정값(cfg)만 바꿔서 재사용합니다.
+  function renderPositionDonutCard(cfg) {
+    const data = cfg.data || { groups: [] };
+    const total = data[cfg.totalKey] || 0;
+    const title = isKorean ? cfg.titleKo : cfg.titleEn;
+    if (!total || !data.groups.length) {
       return `
         <div class="ti-card ti-position-card">
-          <div class="ti-card-title lbl" data-en="Goals by Position" data-ko="포지션별 득점 기여도">${isKorean ? '포지션별 득점 기여도' : 'Goals by Position'}</div>
-          <div class="ti-appear-empty lbl" data-en="No goal data yet" data-ko="아직 득점 데이터가 없습니다">${isKorean ? '아직 득점 데이터가 없습니다' : 'No goal data yet'}</div>
+          <div class="ti-card-title lbl" data-en="${cfg.titleEn}" data-ko="${cfg.titleKo}">${title}</div>
+          <div class="ti-appear-empty lbl" data-en="${cfg.emptyEn}" data-ko="${cfg.emptyKo}">${isKorean ? cfg.emptyKo : cfg.emptyEn}</div>
         </div>`;
     }
 
@@ -4854,28 +5224,60 @@
           <i class="ti-pos-legend-dot" style="background:${POSITION_COLOR[g.position] || 'var(--color-text-faint)'}"></i>
           <div class="ti-pos-legend-main">
             <span class="ti-pos-legend-label lbl" data-en="${g.labelEn}" data-ko="${g.labelKo}">${label}</span>
-            ${topName ? `<span class="ti-pos-legend-top">${isKorean ? '최다 득점: ' : 'Top scorer: '}${topName} (${topPlayer.goals}${isKorean ? '골' : ''})</span>` : ''}
+            ${topName ? `<span class="ti-pos-legend-top">${isKorean ? cfg.topPrefixKo : cfg.topPrefixEn}${topName} (${topPlayer[cfg.valueKey]}${isKorean ? cfg.unitKo : ''})</span>` : ''}
           </div>
           <div class="ti-pos-legend-value">
-            <b>${g.goals}</b><span class="ti-pos-legend-pct">${g.pct}%</span>
+            <b>${g[cfg.valueKey]}</b><span class="ti-pos-legend-pct">${g.pct}%</span>
           </div>
         </div>`;
     }).join('');
 
     return `
       <div class="ti-card ti-position-card">
-        <div class="ti-card-title lbl" data-en="Goals by Position" data-ko="포지션별 득점 기여도">${isKorean ? '포지션별 득점 기여도' : 'Goals by Position'}</div>
-        <div class="ti-gk-card-note lbl" data-en="Share of team goals scored by each position" data-ko="포지션별로 팀 득점에 기여한 비중">${isKorean ? '포지션별로 팀 득점에 기여한 비중' : 'Share of team goals scored by each position'}</div>
+        <div class="ti-card-title lbl" data-en="${cfg.titleEn}" data-ko="${cfg.titleKo}">${title}</div>
+        <div class="ti-gk-card-note lbl" data-en="${cfg.noteEn}" data-ko="${cfg.noteKo}">${isKorean ? cfg.noteKo : cfg.noteEn}</div>
         <div class="ti-pos-body">
           <div class="ti-pos-donut" style="background: conic-gradient(${stops});">
             <div class="ti-pos-donut-hole">
-              <b>${data.totalGoals}</b>
-              <span class="lbl" data-en="Goals" data-ko="골">${isKorean ? '골' : 'Goals'}</span>
+              <b>${total}</b>
+              <span class="lbl" data-en="${cfg.holeEn}" data-ko="${cfg.holeKo}">${isKorean ? cfg.holeKo : cfg.holeEn}</span>
             </div>
           </div>
           <div class="ti-pos-legend">${legendHtml}</div>
         </div>
       </div>`;
+  }
+
+  function renderGoalsByPositionCard() {
+    return renderPositionDonutCard({
+      data: (typeof goalsByPositionData !== 'undefined') ? goalsByPositionData : null,
+      totalKey: 'totalGoals', valueKey: 'goals',
+      titleKo: '포지션별 득점 기여도', titleEn: 'Goals by Position',
+      noteKo: '포지션별로 팀 득점에 기여한 비중', noteEn: 'Share of team goals scored by each position',
+      emptyKo: '아직 득점 데이터가 없습니다', emptyEn: 'No goal data yet',
+      holeKo: '골', holeEn: 'Goals',
+      topPrefixKo: '최다 득점: ', topPrefixEn: 'Top scorer: ', unitKo: '골'
+    });
+  }
+
+  function renderAssistsByPositionCard() {
+    return renderPositionDonutCard({
+      data: (typeof assistsByPositionData !== 'undefined') ? assistsByPositionData : null,
+      totalKey: 'totalAssists', valueKey: 'assists',
+      titleKo: '포지션별 도움 기여도', titleEn: 'Assists by Position',
+      noteKo: '포지션별로 팀 득점 기회를 만든 비중', noteEn: 'Share of team assists made by each position',
+      emptyKo: '아직 도움 데이터가 없습니다', emptyEn: 'No assist data yet',
+      holeKo: '도움', holeEn: 'Assists',
+      topPrefixKo: '최다 도움: ', topPrefixEn: 'Top assister: ', unitKo: '도움'
+    });
+  }
+
+  // 득점 도넛과 도움 도넛을 나란히 보여줍니다(좁은 화면에서는 위아래로 쌓임).
+  // 도움 기록이 아직 없으면 득점 카드만 보여줍니다.
+  function renderPositionPairCards() {
+    const hasAssists = (typeof assistsByPositionData !== 'undefined') && assistsByPositionData.totalAssists > 0;
+    if (!hasAssists) return renderGoalsByPositionCard();
+    return `<div class="ti-pos-pair">${renderGoalsByPositionCard()}${renderAssistsByPositionCard()}</div>`;
   }
 
   // ===== 핵심 선수 출전/결장 영향도 카드 (With & Without Stats) =====
@@ -4964,9 +5366,12 @@
     const el = document.getElementById('teamInfoScorersTab');
     if (!el) return;
     el.innerHTML = buildTeamScorerCardsHtml('Chizumulu United FC', '치주물루 유나이티드 FC')
+      + fullRecordBtnHtml('goals')
+      + renderAssistLeadersCard()
+      + renderClubTrackerCard()
       + renderGoalkeeperRecordCard()
       + renderAppearanceStatsCard()
-      + renderGoalsByPositionCard()
+      + renderPositionPairCards()
       + renderKeyPlayerImpactCard();
   }
 
@@ -5070,6 +5475,7 @@
     { key: 'starts',  ko: '선발',   en: 'Starts', num: true },
     { key: 'subApps', ko: '교체',   en: 'Subs',   num: true },
     { key: 'goals',   ko: '득점',   en: 'Goals',  num: true },
+    { key: 'assists', ko: '도움',   en: 'Ast',    num: true },
     { key: 'motm',    ko: 'MOTM',   en: 'MOTM',   num: true },
     { key: 'cs',      ko: '클린시트', en: 'CS',    num: true },
     { key: 'captain', ko: '주장',   en: 'Capt.',  num: true },
@@ -5093,7 +5499,7 @@
           name: isKorean ? p.nameKo : p.nameEn,
           pos: POSITION_ORDER.indexOf(p.position),
           apps: s.appearances || 0, starts: s.starts || 0, subApps: s.subApps || 0,
-          goals: s.goals || 0, motm: s.motmCount || 0, captain: s.captainCount || 0,
+          goals: s.goals || 0, assists: s.assists || 0, motm: s.motmCount || 0, captain: s.captainCount || 0,
           unused: s.unusedCount || 0,
           cs: (p.position === 'GK' && !isFormer) ? (gk ? gk.cleanSheets : 0) : -1
         }
@@ -5144,7 +5550,7 @@
       <td class="sqt-num sqt-sticky-1">${hasNumber ? p.number : '-'}</td>
       <td class="sqt-name sqt-sticky-2">${photo}<span class="sqt-name-text">${name}</span></td>
       <td class="sqt-pos"><span class="sqt-pos-chip">${p.position}</span></td>
-      ${n(v.apps)}${n(v.starts)}${n(v.subApps)}${n(v.goals)}${n(v.motm)}${cs}${n(v.captain)}${n(v.unused)}
+      ${n(v.apps)}${n(v.starts)}${n(v.subApps)}${n(v.goals)}${n(v.assists)}${n(v.motm)}${cs}${n(v.captain)}${n(v.unused)}
       <td class="sqt-note">${tags.join('') || '<span class="sqt-zero">-</span>'}</td>
     </tr>`;
   }
@@ -9262,6 +9668,104 @@
     </svg>`;
   }
 
+  // ===== 선수 모달: 도움 관계 =====
+  // "가장 많이 도운 선수 / 가장 많이 도움받은 선수 / 골 중 도움받은 비율"을 보여줍니다.
+  // 계산은 data.js의 computeAssistRelationsForPlayer()가 하고, 여기서는 그리기만 합니다.
+  // 보여줄 내용이 없는 항목은 아예 그리지 않고, 항목이 하나도 없으면 섹션 제목까지 숨깁니다.
+  // (언어 전환 시 openSquadPlayerModal이 다시 호출되므로 한/영 전환도 자동으로 반영됩니다.)
+  function renderSquadPlayerAssistRelations(statsKey, hasNumber) {
+    const titleEl = document.getElementById('squadPlayerModalAssistTitle');
+    const bodyEl = document.getElementById('squadPlayerModalAssistBody');
+    if (!titleEl || !bodyEl) return;
+
+    const rel = (hasNumber && typeof computeAssistRelationsForPlayer === 'function')
+      ? computeAssistRelationsForPlayer(statsKey) : null;
+
+    const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+    // 라인업에 적힌 키(등번호 또는 방출 선수의 'F9')를 화면에 보일 이름/번호로 바꿉니다.
+    const resolvePerson = (key) => {
+      const isFormerKey = typeof key === 'string' && /^F\d+$/.test(key);
+      const num = isFormerKey ? parseInt(key.slice(1), 10) : key;
+      const p = (isFormerKey ? former : squadData).find(x => x.number === num);
+      return { num, name: p ? (isKorean ? p.nameKo : (p.nameEn || p.nameKo)) : '#' + num };
+    };
+    // 가장 많이 한 상대. 동률이면 공동 1위를 모두 돌려줍니다.
+    const topOf = (list) => {
+      if (!list || !list.length) return null;
+      const max = list[0].count;
+      return { count: max, people: list.filter(x => x.count === max).map(x => resolvePerson(x.key)) };
+    };
+    const MAX_NAMES = 3;
+    const peopleHtml = (top) => {
+      const shown = top.people.slice(0, MAX_NAMES).map(p =>
+        `<span class="spm-assist-person">${escapeHtml(p.name)}<small>#${p.num}</small></span>`).join('');
+      const extra = top.people.length - MAX_NAMES;
+      return shown + (extra > 0 ? `<span class="spm-assist-more">${isKorean ? `외 ${extra}명` : `+${extra} more`}</span>` : '');
+    };
+    const countText = (top) => {
+      const tie = top.people.length > 1;
+      return isKorean
+        ? (tie ? `각 ${top.count}회` : `${top.count}회`)
+        : (tie ? `×${top.count} each` : `×${top.count}`);
+    };
+    const relationItemHtml = (labelKo, labelEn, top) => `
+      <div class="spm-assist-item">
+        <span class="spm-assist-item-label">${isKorean ? labelKo : labelEn}</span>
+        <div class="spm-assist-item-main">
+          <div class="spm-assist-people">${peopleHtml(top)}</div>
+          <span class="spm-assist-count">${countText(top)}</span>
+        </div>
+      </div>`;
+
+    const items = [];
+    let barPct = null;
+
+    if (rel) {
+      // 골 중 도움받은 비율: 도움 여부가 확정된 골(도움 있음 + 도움 없음으로 확정)만 분모로 씁니다.
+      // 도움 기록을 아직 안 적은 골까지 "도움 없음"으로 세면 비율이 실제보다 낮게 나오기 때문입니다.
+      const confirmed = rel.assistedGoals + rel.unassistedGoals;
+      if (confirmed > 0) {
+        barPct = Math.round((rel.assistedGoals / confirmed) * 100);
+        const sub = isKorean
+          ? `${confirmed}골 중 ${rel.assistedGoals}골이 도움받은 골`
+          : `${rel.assistedGoals} of ${confirmed} ${confirmed === 1 ? 'goal was' : 'goals were'} assisted`;
+        const note = rel.unconfirmedGoals > 0
+          ? (isKorean ? ` · 도움 미확인 ${rel.unconfirmedGoals}골 제외` : ` · ${rel.unconfirmedGoals} unconfirmed excluded`)
+          : '';
+        items.push(`
+          <div class="spm-assist-item spm-assist-item-ratio">
+            <div class="spm-assist-item-head">
+              <span class="spm-assist-item-label">${isKorean ? '골 중 도움받은 비율' : 'Share of Goals Assisted'}</span>
+              <span class="spm-assist-ratio-value">${barPct}%</span>
+            </div>
+            <div class="spm-assist-bar" aria-hidden="true"><span class="spm-assist-bar-fill" style="width:0"></span></div>
+            <div class="spm-assist-item-sub">${sub}${note}</div>
+          </div>`);
+      }
+      const topGiven = topOf(rel.assistedTo);
+      if (topGiven) items.push(relationItemHtml('가장 많이 도운 선수', 'Most Assisted Teammate', topGiven));
+      const topReceived = topOf(rel.assistedBy);
+      if (topReceived) items.push(relationItemHtml('가장 많이 도움받은 선수', 'Most Assisted By', topReceived));
+    }
+
+    if (!items.length) {
+      titleEl.style.display = 'none';
+      bodyEl.style.display = 'none';
+      bodyEl.innerHTML = '';
+      return;
+    }
+
+    bodyEl.innerHTML = items.join('');
+    titleEl.style.display = '';
+    bodyEl.style.display = '';
+
+    // 비율 막대는 0%에서 시작해 채워지도록 두 프레임 뒤에 목표 너비를 줍니다(CSS transition).
+    if (barPct !== null) {
+      const fill = bodyEl.querySelector('.spm-assist-bar-fill');
+      if (fill) requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = barPct + '%'; }));
+    }
+  }
+
   // ===== 스쿼드 선수 통산 기록 모달 (Squad Player Career Stats Modal) =====
   function openSquadPlayerModal(identifier) {
     const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
@@ -9366,6 +9870,7 @@
 
     animateCountUp(document.getElementById('squadPlayerModalApps'), stats.appearances);
     animateCountUp(document.getElementById('squadPlayerModalGoals'), stats.goals, { delay: 60 });
+    animateCountUp(document.getElementById('squadPlayerModalAssists'), stats.assists || 0, { delay: 90 });
     document.getElementById('squadPlayerModalStarts').textContent = `${stats.starts} / ${stats.subApps}`;
     animateCountUp(document.getElementById('squadPlayerModalMotm'), stats.motmCount, { delay: 120 });
 
@@ -9380,6 +9885,10 @@
       csStatEl.style.display = '';
     } else if (csStatEl) {
       csStatEl.style.display = 'none';
+    }
+    // 카드 수가 홀수(골키퍼가 아닐 때)면 마지막 카드를 한 줄 전체로 늘려 균형을 맞춥니다.
+    if (csStatEl && csStatEl.parentElement) {
+      csStatEl.parentElement.classList.toggle('spm-stat-grid-odd', player.position !== 'GK');
     }
 
     // 주장 선발 출전 횟수 + 이달의 선수/이달의 골/MOTM 수상 경력을 하나의 칩 목록으로 모아 보여줍니다.
@@ -9416,6 +9925,8 @@
       awardsRowEl.innerHTML = '';
     }
 
+    renderSquadPlayerAssistRelations(statsKey, hasNumber);
+
     const listEl = document.getElementById('squadPlayerTimeline');
     listEl.innerHTML = '';
 
@@ -9426,6 +9937,9 @@
         : (isKorean ? '교체' : 'Sub');
       const goalsTag = entry.goals > 0
         ? `<span class="timeline-goals-badge">${isKorean ? entry.goals + '골' : (entry.goals > 1 ? entry.goals + ' goals' : entry.goals + ' goal')}</span>`
+        : '';
+      const assistsTag = entry.assists > 0
+        ? `<span class="timeline-assists-badge">${isKorean ? '도움 ' + entry.assists : (entry.assists > 1 ? entry.assists + ' assists' : entry.assists + ' assist')}</span>`
         : '';
       const capTag = entry.isCaptain ? `<span class="timeline-pk-tag">${isKorean ? 'C' : 'C'}</span>` : '';
       const motmTag = entry.wasMotm ? `<span class="timeline-pk-tag timeline-motm-tag">MOTM</span>` : '';
@@ -9449,6 +9963,7 @@
         </div>
         <div class="timeline-goals">
           ${goalsTag}
+          ${assistsTag}
           ${capTag}
           ${motmTag}
         </div>
@@ -9764,6 +10279,7 @@
   const DETAIL_MODAL_IDS = [
     // z-index가 더 높아 다른 모달 위에 겹쳐 뜨는 것부터 먼저 닫습니다.
     { id: 'squadPlayerModal', close: () => closeSquadPlayerModal() },
+    { id: 'fullRecordModal', close: () => closeFullRecordModal() },
     { id: 'playerModal', close: () => closePlayerModal() },
     { id: 'matchDetailModal', close: () => closeMatchDetail() },
     { id: 'matchCompareModal', close: () => closeMatchCompareModal() },
@@ -9797,6 +10313,66 @@
     return lineup.starters.find(s => s.pos === pos);
   }
 
+  // ===== 라인업 도움(어시스트) 표시용 헬퍼 =====
+  // 득점 선수의 assists[i] = i번째 골을 도운 선수 등번호(없으면 null). data.js 주석 참고.
+  function lineupAssisterName(ref) {
+    const sq = squadData.find(p => p.number === ref);
+    const full = sq ? (isKorean ? sq.nameKo : (sq.nameEn || sq.nameKo)) : String(ref);
+    return full.split(' ')[0];
+  }
+  function lineupGoalAssistNote(ev) {
+    const names = (ev.assists || []).filter(x => x !== null && x !== undefined).map(lineupAssisterName);
+    if (!names.length) return '';
+    return `<span class="lineup-assist-tag">(${isKorean ? '도움' : 'ast.'} ${names.join(', ')})</span>`;
+  }
+  // 한 경기 라인업에서 ref 선수가 기록한 어시스트 수
+  function lineupAssistsMade(lineup, ref) {
+    let n = 0;
+    (lineup.starters || []).concat(lineup.subsIn || []).forEach(p => {
+      (p.assists || []).forEach(x => { if (x !== null && x !== undefined && x === ref) n++; });
+    });
+    return n;
+  }
+
+  // 경기 상세(라인업) 화면 맨 위에 붙이는 "도움 한 줄 요약".
+  // 득점 선수의 assists 기록만으로 자동 생성됩니다. 도움을 아직 안 적은 경기는 아무것도 표시하지 않습니다.
+  function buildMatchAssistSummary(lineup) {
+    const all = (lineup.starters || []).concat(lineup.subsIn || []);
+    let goals = 0, tracked = 0, assisted = 0;
+    const made = {};
+    all.forEach(p => {
+      const g = (p.goals || []).length;
+      goals += g;
+      if (!Array.isArray(p.assists)) return;
+      tracked += g;
+      p.assists.forEach(x => {
+        if (x === null || x === undefined || x === '-') return;
+        assisted++;
+        made[x] = (made[x] || 0) + 1;
+      });
+    });
+    if (!goals || !tracked) return '';
+
+    let main;
+    if (tracked < goals) {
+      main = isKorean ? `${goals}골 중 ${assisted}골에 도움 기록` : `${assisted} of ${goals} goals have an assist logged`;
+    } else if (assisted === goals) {
+      main = goals === 1
+        ? (isKorean ? '유일한 골이 도움 골' : 'The only goal was assisted')
+        : (isKorean ? `${goals}골 전부 도움 골` : `All ${goals} goals assisted`);
+    } else if (assisted === 0) {
+      main = isKorean ? `${goals}골 모두 도움 없는 골` : `${goals === 1 ? 'The goal was' : 'All ' + goals + ' goals were'} unassisted`;
+    } else {
+      main = isKorean ? `${goals}골 중 ${assisted}골이 도움 골` : `${assisted} of ${goals} goals assisted`;
+    }
+
+    const multi = Object.keys(made).filter(k => made[k] >= 2)
+      .sort((x, y) => (made[y] - made[x]) || (Number(x) - Number(y)))
+      .map(k => `${lineupAssisterName(/^\d+$/.test(k) ? Number(k) : k)} ${made[k]}${isKorean ? '도움' : ' assists'}`);
+    const text = main + (multi.length ? ' · ' + multi.join(', ') : '');
+    return `<div class="match-assist-summary"><span class="match-assist-icon" aria-hidden="true">🎯</span>${text}</div>`;
+  }
+
   function renderLineupPitch(lineup) {
     const isKo = isKorean;
 
@@ -9805,7 +10381,7 @@
     const goalsTag = (ev) => {
       const goalMins = (ev.goals || []).filter(g => g !== '-');
       return (ev.goals && ev.goals.length)
-        ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>`
+        ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>${lineupGoalAssistNote(ev)}`
         : '';
     };
 
@@ -9914,6 +10490,7 @@
       const sq = lookup(st);
       const link = st.statKey || st.number;
       const goalN = (st.goals || []).length;
+      const assistN = lineupAssistsMade(lineup, link);
       const subs = (lineup.subsIn || []).filter(s => s.pos === st.pos);
 
       const photo = (sq && sq.photoSrc)
@@ -9922,13 +10499,15 @@
         st.captain ? `<span class="pp-badge pp-badge-c">C</span>` : '',
         st.outMin ? `<span class="pp-badge pp-badge-out" title="${isKo ? '교체 아웃' : 'Subbed off'}">▼</span>` : '',
         goalN ? `<span class="pp-badge pp-badge-goal">⚽${goalN > 1 ? goalN : ''}</span>` : '',
+        assistN ? `<span class="pp-badge pp-badge-assist" title="${isKo ? '도움' : 'Assist'}">A${assistN > 1 ? assistN : ''}</span>` : '',
         `<span class="pp-badge pp-badge-num">${st.number}</span>`
       ].join('');
 
       const subsHtml = subs.map(s => {
         const sg = (s.goals || []).length;
+        const sa = lineupAssistsMade(lineup, s.statKey || s.number);
         const tm = timeOf(s.inMin);
-        return `<div class="pp-sub lineup-squad-link" data-player-number="${s.statKey || s.number}">▲ ${nameOf(s)}${tm ? `<small>${tm}</small>` : ''}${sg ? ' ⚽' + (sg > 1 ? sg : '') : ''}${s.outMin ? ' ▼' : ''}</div>`;
+        return `<div class="pp-sub lineup-squad-link" data-player-number="${s.statKey || s.number}">▲ ${nameOf(s)}${tm ? `<small>${tm}</small>` : ''}${sg ? ' ⚽' + (sg > 1 ? sg : '') : ''}${sa ? ' A' + (sa > 1 ? sa : '') : ''}${s.outMin ? ' ▼' : ''}</div>`;
       }).join('');
 
       return `
@@ -9983,7 +10562,7 @@
       ? lineup.subsIn.map(s => {
           const goalMins = (s.goals || []).filter(g => g !== '-');
           const goalsHtml = (s.goals && s.goals.length)
-            ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>`
+            ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>${lineupGoalAssistNote(s)}`
             : '';
           return `<span class="lineup-sub-chip lineup-sub-chip-in">▲ ${s.inMin && s.inMin !== '-' ? s.inMin + ' ' : ''}${s.number} <span class="player-name-link lineup-squad-link" data-player-number="${s.statKey || s.number}">${s.nameKo}</span>${goalsHtml}</span>`;
         }).join('')
@@ -10085,6 +10664,7 @@
     const bodyEl = document.getElementById('matchDetailBody');
     bodyEl.innerHTML = `
       <div class="lineup-formation-tag">${lineup.formation}</div>
+      ${buildMatchAssistSummary(lineup)}
       <div class="match-detail-layout">
         <div class="match-detail-left">
           ${renderLineupLeft(lineup)}
@@ -10474,6 +11054,7 @@
     document.getElementById('langBtnText').textContent = isKorean ? 'View in English' : '한국어로 보기';
     updateSeasonInfo();
     equalizeTitleLines();
+    { const frm = document.getElementById('fullRecordModal'); if (frm && frm.style.display !== 'none') renderFullRecordModal(); }
     
     renderLeagueTable();
     renderMainMiniTable();

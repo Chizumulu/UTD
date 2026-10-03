@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '001',
-    data: '001',
-    app: '001',
+    style: '003',
+    data: '003',
+    app: '003',
     predictWorker: '002',
     pathfinderEngine: '001',
     poster: '001'
@@ -925,6 +925,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
+<div id="fullRecordModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content fullrec-modal-content" role="dialog" aria-modal="true" aria-labelledby="fullRecordTitle">
+    <div class="modal-header">
+      <h2 id="fullRecordTitle"></h2>
+      <button class="close-btn" type="button" onclick="closeFullRecordModal()" aria-label="닫기">&times;</button>
+    </div>
+    <div class="modal-body fullrec-modal-body" id="fullRecordBody"></div>
+  </div>
+</div>
+
 <div id="statModal" class="modal-overlay" style="display: none;">
   <div class="modal-content">
     <div class="modal-header">
@@ -1023,6 +1033,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <span class="spm-stat-num" id="squadPlayerModalGoals"></span>
             <span class="spm-stat-label lbl" data-en="Goals" data-ko="득점">득점</span>
           </div>
+          <div class="spm-stat-card">
+            <span class="spm-stat-num" id="squadPlayerModalAssists"></span>
+            <span class="spm-stat-label lbl" data-en="Assists" data-ko="도움">도움</span>
+          </div>
           <div class="spm-stat-card" id="squadPlayerModalCleanSheetsStat" style="display:none;">
             <span class="spm-stat-num" id="squadPlayerModalCleanSheets"></span>
             <span class="spm-stat-label lbl" data-en="Clean Sheets" data-ko="클린시트">클린시트</span>
@@ -1038,6 +1052,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
 
         <div id="squadPlayerModalAwardsRow" class="spm-award-row" style="display:none;"></div>
+
+        <div class="spm-section-title lbl" id="squadPlayerModalAssistTitle" data-en="Assist Connections" data-ko="도움 관계" style="display:none;">도움 관계</div>
+        <div class="spm-assist-list" id="squadPlayerModalAssistBody" style="display:none;"></div>
 
         <div class="spm-section-title lbl" data-en="Recent Appearances" data-ko="최근 출전 기록">최근 출전 기록</div>
         <div class="player-timeline" id="squadPlayerTimeline"></div>

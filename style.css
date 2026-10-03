@@ -10824,3 +10824,288 @@
   .llt-event-row { font-size: 12.5px; }
   .llt-events-title { font-size: 11px; }
 }
+
+
+/* ===== 도움(어시스트) 표시 ===== */
+.lineup-assist-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+.pp-badge-assist {
+  top: 50%; right: -9px;
+  transform: translateY(-50%);
+  min-width: 14px; height: 14px; line-height: 14px;
+  font-size: 9px;
+  background: var(--color-teal);
+  color: #fff;
+}
+.timeline-assists-badge {
+  background: var(--color-teal);
+  color: var(--color-white);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: var(--radius-lg);
+  white-space: nowrap;
+}
+.spm-stat-grid-odd > .spm-stat-card:last-child { grid-column: 1 / -1; }
+.ti-assist-combo-list { display: flex; flex-direction: column; gap: 6px; }
+.ti-assist-combo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-bg-stripe);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.ti-assist-combo-name { cursor: pointer; }
+.ti-assist-combo-name:hover { text-decoration: underline; }
+.ti-assist-combo-arrow { color: var(--color-text-faint); font-weight: 700; }
+.ti-assist-combo-count { margin-left: auto; color: var(--color-teal-dark); font-weight: 900; }
+
+/* ===== 선수 모달: 도움 관계 (가장 많이 도운/도움받은 선수, 골 중 도움받은 비율) ===== */
+.spm-assist-list { display: flex; flex-direction: column; gap: 8px; }
+.spm-assist-item {
+  background: var(--color-bg-stripe);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+.spm-assist-item-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.spm-assist-item-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.spm-assist-ratio-value {
+  font-family: var(--font-num);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--color-teal-dark, var(--color-teal));
+}
+.spm-assist-bar {
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: var(--color-bg-spinner-track);
+  overflow: hidden;
+}
+.spm-assist-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-teal);
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.spm-assist-item-sub {
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.spm-assist-item-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+.spm-assist-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-text-dark);
+}
+.spm-assist-person small {
+  margin-left: 4px;
+  font-family: var(--font-num);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+}
+.spm-assist-more { font-size: 12px; font-weight: 700; color: var(--color-text-muted); }
+.spm-assist-count {
+  flex-shrink: 0;
+  font-family: var(--font-num);
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--color-teal-dark, var(--color-teal));
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spm-assist-bar-fill { transition: none; }
+}
+
+/* 득점/도움 포지션 도넛을 나란히 배치 (좁으면 자동으로 세로로 쌓임) */
+.ti-pos-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+  margin-bottom: 16px;
+}
+.ti-pos-pair > .ti-position-card { margin: 0; }
+
+/* ===== 경기 상세: 도움 한 줄 요약 ===== */
+.match-assist-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px 8px;
+  padding: 4px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-stripe);
+  border: 1px solid var(--color-border-light);
+  color: var(--color-text-darkest);
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: top;
+}
+.match-assist-icon { font-size: 12px; }
+
+/* ===== 전체 콤비 표 (누가 → 누구) ===== */
+.ti-assist-matrix { margin-top: 12px; }
+.ti-assist-matrix > summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--color-teal-dark);
+  padding: 6px 2px;
+  user-select: none;
+}
+.ti-am-scroll { overflow-x: auto; margin-top: 8px; -webkit-overflow-scrolling: touch; }
+.ti-am-table { border-collapse: separate; border-spacing: 2px; font-size: 12px; min-width: 100%; }
+.ti-am-table th, .ti-am-table td { padding: 6px 8px; text-align: center; white-space: nowrap; }
+.ti-am-table thead th { font-weight: 800; color: var(--color-text-darkest); }
+.ti-am-table .lineup-squad-link { cursor: pointer; }
+.ti-am-table .lineup-squad-link:hover { text-decoration: underline; }
+.ti-am-corner { text-align: left !important; font-size: 10.5px; font-weight: 700; color: var(--color-text-faint); }
+.ti-am-rowhead {
+  position: sticky; left: 0; z-index: 1;
+  text-align: left !important;
+  font-weight: 800;
+  background: var(--color-surface);
+  color: var(--color-text-darkest);
+}
+.ti-am-cell { border-radius: 6px; background: var(--color-bg-stripe); color: var(--color-text-darkest); font-weight: 800; }
+.ti-am-zero { color: var(--color-text-faint); font-weight: 600; }
+.ti-am-total { font-weight: 900; color: var(--color-teal-dark); }
+.ti-am-foot .ti-am-rowhead, .ti-am-foot .ti-am-cell { border-top: 1px dashed var(--color-border-light); }
+
+
+/* ===== 선수 기록 "전체기록 보기" 버튼 + 팝업 ===== */
+.ti-fullrec-wrap { display: flex; justify-content: flex-end; margin-top: 10px; }
+.ti-appear-block { display: flex; flex-direction: column; }
+.ti-appear-block .ti-appear-block-rows { flex: 1 1 auto; }
+.ti-fullrec-btn {
+  background: none;
+  border: 1px solid var(--color-border-light);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--color-teal-dark);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ti-fullrec-btn:hover { background: var(--color-bg-btn-hover); border-color: var(--color-teal); }
+.ti-fullrec-btn:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; }
+.ti-scorer-card-row + .ti-fullrec-wrap { margin: 8px 2px 14px; }
+
+.fullrec-modal-content { max-width: 460px; }
+.fullrec-note { padding: 10px 18px 0; font-size: 11.5px; font-weight: 600; color: var(--color-text-muted); }
+.fullrec-list { list-style: none; margin: 0; padding: 8px 12px 14px; }
+.fullrec-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 8px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.fullrec-row:last-child { border-bottom: 0; }
+.fullrec-row-zero { opacity: 0.62; }
+.fullrec-rank {
+  flex: 0 0 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+  background: var(--color-bg-table-alt); color: var(--color-text-secondary);
+}
+.fullrec-rank-1 .fullrec-rank { background: #e8b51f; color: #fff; }
+.fullrec-rank-2 .fullrec-rank { background: #98a1b3; color: #fff; }
+.fullrec-rank-3 .fullrec-rank { background: #b87b3d; color: #fff; }
+.fullrec-photo {
+  flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%;
+  object-fit: cover; background: var(--color-bg-table-alt);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.fullrec-name {
+  flex: 1 1 auto; min-width: 0;
+  font-size: 13.5px; font-weight: 800; color: var(--color-text-darkest);
+  display: flex; align-items: baseline; gap: 6px;
+}
+.fullrec-name small { font-size: 10.5px; font-weight: 700; color: var(--color-text-faint); }
+.fullrec-name.lineup-squad-link, .fullrec-combo-name .lineup-squad-link { cursor: pointer; }
+.fullrec-name.lineup-squad-link:hover, .fullrec-combo-name .lineup-squad-link:hover { text-decoration: underline; }
+.fullrec-combo-name { gap: 8px; align-items: center; }
+.fullrec-arrow { color: var(--color-text-faint); font-weight: 700; }
+.fullrec-sub { font-size: 10.5px; font-weight: 600; color: var(--color-text-faint); white-space: nowrap; }
+.fullrec-value { flex: 0 0 auto; min-width: 44px; text-align: right; font-size: 15px; font-weight: 900; color: var(--color-teal-dark); }
+@media (max-width: 480px) {
+  .fullrec-sub { display: none; }
+}
+
+/* ===== 10-10 클럽 카드 ===== */
+.ti-club-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.ti-club-chip {
+  background: var(--color-bg-stripe); border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg); padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0;
+}
+.ti-club-chip.is-on { background: rgba(var(--color-teal-rgb), 0.1); border-color: var(--color-teal); }
+.ti-club-chip-tier { font-size: 14px; font-weight: 900; color: var(--color-text-darkest); }
+.ti-club-chip-who { font-size: 11px; font-weight: 700; color: var(--color-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ti-club-chip.is-on .ti-club-chip-who { color: var(--color-teal-dark); }
+.ti-club-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ti-club-row {
+  background: var(--color-surface); border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg); padding: 10px 12px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 8px; min-width: 0;
+  box-shadow: 0 3px 10px rgba(var(--color-navy-rgb), 0.06);
+}
+.ti-club-row:hover { background: var(--color-bg-stripe); }
+.ti-club-row-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ti-club-photo {
+  flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
+  background: var(--color-bg-table-alt); display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.ti-club-name { flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 800; color: var(--color-text-darkest); display: flex; align-items: baseline; gap: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ti-club-name small { font-size: 10.5px; font-weight: 700; color: var(--color-text-faint); }
+.ti-club-badges { display: flex; gap: 3px; flex: 0 0 auto; }
+.ti-club-badge {
+  font-size: 9.5px; font-weight: 800; padding: 2px 5px; border-radius: 999px;
+  border: 1px dashed var(--color-border-chip); color: var(--color-text-faint);
+}
+.ti-club-badge.is-on { background: var(--color-teal); border: 1px solid var(--color-teal); color: #fff; }
+.ti-club-bars { display: flex; flex-direction: column; gap: 5px; }
+.ti-club-bar-row { display: flex; align-items: center; gap: 8px; }
+.ti-club-bar-label { flex: 0 0 26px; font-size: 11px; font-weight: 700; color: var(--color-text-muted); }
+.ti-club-bar { flex: 1 1 auto; height: 7px; border-radius: 999px; background: var(--color-bg-table-alt); overflow: hidden; }
+.ti-club-bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--color-teal-light); }
+.ti-club-bar-fill.is-done { background: var(--color-teal); }
+.ti-club-bar-num { flex: 0 0 38px; text-align: right; font-size: 12.5px; font-weight: 900; color: var(--color-teal-dark); }
+.ti-club-bar-num small { font-size: 10px; font-weight: 700; color: var(--color-text-faint); }
+.ti-club-foot { display: flex; flex-direction: column; gap: 2px; }
+.ti-club-status { font-size: 11.5px; font-weight: 800; color: var(--color-text-secondary); }
+.ti-club-status.is-done { color: var(--color-teal-dark); }
+.ti-club-pace { font-size: 10.5px; font-weight: 600; color: var(--color-text-faint); }
+.ti-club-pace.is-hot { color: var(--color-teal-dark); font-weight: 800; }
+@media (max-width: 560px) {
+  .ti-club-list { grid-template-columns: minmax(0, 1fr); }
+}

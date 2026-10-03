@@ -49,6 +49,8 @@ const teamYoutubeChannel = {
 //   배열에 나온 순서대로 이어 붙여 이중/삼중 교체 체인을 구성합니다. 자신도 이후 교체되어
 //   나갔다면 outMin을 추가로 적어주세요(다음 pos 일치 항목이 그 자리를 이어받습니다).
 // subsUnused: 미출전 명단(등번호)
+// assists: (선택) goals와 같은 순서의 배열. i번째 골을 도운 선수의 등번호, 어시스트가 없거나 모르면 null.
+//   예) goals: ["8'", "78'"], assists: [null, 22]  → 78' 골은 22번이 도움
 // recentHistory / historySummary: "최근 상대 전적" 표. 이제는 안 채워도 됩니다!
 //   비워두면(필드 자체를 안 써도) 상세보기가 자동으로 다음을 합쳐서 채워줍니다:
 //   [이번 경기 결과(roundsData/scheduledRounds에 채운 스코어에서 자동 계산)]
@@ -64,7 +66,7 @@ const matchLineups = {
     starters: [
       { pos: "ST", number: 22, nameKo: "티모시 카타파" },
       { pos: "LW", number: 49, nameKo: "쿰부카니 바냐", outMin: "후반" },
-      { pos: "CAM", number: 7, nameKo: "디킨스", goals: ["8'", "78'"], outMin: "후반" },
+      { pos: "CAM", number: 7, nameKo: "디킨스", goals: ["8'", "78'"], assists: [null, 22], outMin: "후반" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
       { pos: "LCM", number: 77, nameKo: "군도", captain: true },
       { pos: "RCM", number: 98, nameKo: "스티브", outMin: "후반" },
@@ -75,7 +77,7 @@ const matchLineups = {
       { pos: "GK", number: 88, nameKo: "티나시" }
     ],
     subsIn: [
-      { number: 11, nameKo: "해리", pos: "LW", inMin: "후반", goals: ["76'"] },
+      { number: 11, nameKo: "해리", pos: "LW", inMin: "후반", goals: ["76'"], assists: [7] },
       { number: 80, nameKo: "스쿠카", pos: "CAM", inMin: "후반" },
       { number: 10, nameKo: "찰스", pos: "RCM", inMin: "후반" },
       { number: 15, nameKo: "만토", pos: "RCB", inMin: "후반" },
@@ -125,7 +127,7 @@ const matchLineups = {
     opponentKo: "라이플리 FC",
     result: "1 : 0 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"] },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"], assists: [25] },
       { pos: "LW", number: 11, nameKo: "해리" },
       { pos: "CAM", number: 7, nameKo: "디킨스" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
@@ -137,8 +139,11 @@ const matchLineups = {
       { pos: "RB", number: 2, nameKo: "로날드" },
       { pos: "GK", number: 90, nameKo: "마야미코" }
     ],
-    subsIn: [],
-    subsUnused: ["F9", 10, 20, 25, 66, 77, 88],
+    // 모버트(25)는 교체 출전(TK 골 도움). 교체 시각/아웃 선수는 미확인이라 inMin "-", 아웃 선수에는 outMin을 달지 않았습니다.
+    subsIn: [
+      { number: 25, nameKo: "모버트", pos: "RB", inMin: "-" }
+    ],
+    subsUnused: ["F9", 10, 20, 66, 77, 88],
     recentHistory: [
       { comp: "26/27 시즌 NRFA 리그 원 3주차", score: "치주물루 1 : 0 라이플리", result: "치주물루 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 28주차", score: "치주물루 2 : 0 라이플리", result: "치주물루 승" },
@@ -182,10 +187,10 @@ const matchLineups = {
     result: "2 : 0 승",
     starters: [
       { pos: "ST", number: 9, statKey: "F9", nameKo: "음칸다위레", outMin: "전반" },
-      { pos: "LW", number: 49, nameKo: "쿰부카니", goals: ["-"] },
+      { pos: "LW", number: 49, nameKo: "쿰부카니", goals: ["-"], assists: [25] },
       { pos: "CAM", number: 7, nameKo: "디킨스" },
       { pos: "RW", number: 6, nameKo: "벤자민", outMin: "후반" },
-      { pos: "LCM", number: 98, nameKo: "스티브", goals: ["-"] },
+      { pos: "LCM", number: 98, nameKo: "스티브", goals: ["-"], assists: [25] },
       { pos: "RCM", number: 3, nameKo: "음롱골라", captain: true },
       { pos: "LB", number: 20, nameKo: "프란시스", outMin: "전반" },
       { pos: "LCB", number: 13, nameKo: "조셉" },
@@ -243,11 +248,11 @@ const matchLineups = {
     opponentKo: "젠다 유나이티드 FC",
     result: "4 : 0 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"], outMin: "후반" },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"], assists: [7], outMin: "후반" },
       { pos: "LW", number: 49, nameKo: "쿰부카니", outMin: "후반" },
-      { pos: "CAM", number: 7, nameKo: "디킨스", goals: ["-"] },
-      { pos: "RW", number: 6, nameKo: "벤자민", goals: ["-"], outMin: "전반" },
-      { pos: "LCM", number: 98, nameKo: "스티브", goals: ["-"], outMin: "후반" },
+      { pos: "CAM", number: 7, nameKo: "디킨스", goals: ["-"], assists: [null] },
+      { pos: "RW", number: 6, nameKo: "벤자민", goals: ["-"], assists: [22], outMin: "전반" },
+      { pos: "LCM", number: 98, nameKo: "스티브", goals: ["-"], assists: [25], outMin: "후반" },
       { pos: "RCM", number: 99, nameKo: "패트릭" },
       { pos: "LB", number: 5, nameKo: "라반", outMin: "후반" },
       { pos: "LCB", number: 13, nameKo: "조셉" },
@@ -298,12 +303,12 @@ const matchLineups = {
     opponentKo: "음벨와 워리어스 FC",
     result: "2 : 1 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"], captain: true },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"], assists: [88], captain: true },
       { pos: "LW", number: 49, nameKo: "쿰부카니" },
       { pos: "CAM", number: 10, nameKo: "찰스", outMin: "전반" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
       { pos: "LCM", number: 98, nameKo: "스티브" },
-      { pos: "RCM", number: 7, nameKo: "디킨스", goals: ["-"] },
+      { pos: "RCM", number: 7, nameKo: "디킨스", goals: ["-"], assists: [13] },
       { pos: "LB", number: 5, nameKo: "라반" },
       { pos: "LCB", number: 13, nameKo: "조셉" },
       { pos: "RCB", number: 99, nameKo: "패트릭" },
@@ -329,7 +334,7 @@ const matchLineups = {
       { pos: "ST", number: 22, nameKo: "티모시 카타파" },
       { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
       { pos: "CAM", number: 9, nameKo: "제임스 헤르메스" },
-      { pos: "RW", number: 6, nameKo: "벤자민 니렌다", goals: ["-"] },
+      { pos: "RW", number: 6, nameKo: "벤자민 니렌다", goals: ["-"], assists: [9] },
       { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
       { pos: "RCM", number: 7, nameKo: "디킨스 니렌다" },
       { pos: "LB", number: 5, nameKo: "라반 롱웨" },
@@ -349,16 +354,16 @@ const matchLineups = {
   }
   // ===== 13주차 vs 칠룸바 배럭스 FC (2026-10-02 홈, 4 : 0 승) 선발 라인업 =====
   // 모버트 카타파 등번호는 라인업 이미지에는 2번으로 잘못 적혀 있으나 실제는 25번입니다.
-  // 득점 시각은 확인된 것만 적고(디킨스 35'), 나머지는 "-"로 둡니다. 쿰부카니(49)는
+  // 득점 시각은 확인된 것만 적고(디킨스 36' 첫 골), 나머지는 "-"로 둡니다. 쿰부카니(49)는
   // 대기 명단에 있었지만 득점했으므로 교체 투입(subsIn)으로 처리했고, 교체 시각/아웃 선수는 미확인입니다.
   , round13: {
     formation: "4-2-3-1",
     opponentKo: "칠룸바 배럭스 FC",
     result: "4 : 0 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"] },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"], assists: [6] },
       { pos: "LW", number: 9, nameKo: "제임스 헤르메스" },
-      { pos: "CAM", number: 7, nameKo: "디킨스 니렌다", goals: ["35'", "-"] },
+      { pos: "CAM", number: 7, nameKo: "디킨스 니렌다", goals: ["36'", "-"], assists: [6, 22] },
       { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
       { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
       { pos: "RCM", number: 98, nameKo: "스티브 피리" },
@@ -369,7 +374,7 @@ const matchLineups = {
       { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
     ],
     subsIn: [
-      { number: 49, nameKo: "쿰부카니 바냐", pos: "LW", inMin: "-", goals: ["-"] }
+      { number: 49, nameKo: "쿰부카니 바냐", pos: "LW", inMin: "-", goals: ["-"], assists: [66] }
     ],
     subsUnused: [4, 8, 10, 11, 25, 77, 80, 88]
   }
@@ -477,7 +482,8 @@ const teamAwards = {
     round3: [22, 6],
     round5: [49],
     round7: [98],
-    round10: [88]
+    round10: [88],
+    round13: [7]
   },
   playerOfTheMonth: {
     '2026-07': 90,
@@ -511,6 +517,7 @@ function computeSquadPlayerStats() {
         starts: 0,
         subApps: 0,
         goals: 0,
+        assists: 0,
         captainCount: 0,
         motmCount: 0,
         unusedCount: 0,
@@ -543,7 +550,7 @@ function computeSquadPlayerStats() {
       s.history.push({
         roundKey, weekNum,
         opponentKo: lineup.opponentKo, result: lineup.result,
-        wasStarter: true, goals: goalCount,
+        wasStarter: true, goals: goalCount, assists: 0,
         isCaptain: !!p.captain, wasMotm
       });
     });
@@ -559,7 +566,7 @@ function computeSquadPlayerStats() {
       s.history.push({
         roundKey, weekNum,
         opponentKo: lineup.opponentKo, result: lineup.result,
-        wasStarter: false, goals: goalCount,
+        wasStarter: false, goals: goalCount, assists: 0,
         isCaptain: false, wasMotm
       });
     });
@@ -567,6 +574,21 @@ function computeSquadPlayerStats() {
     (lineup.subsUnused || []).forEach(number => {
       const s = ensure(number);
       s.unusedCount++;
+    });
+
+    // 어시스트 집계: 득점 선수의 assists[i] = i번째 골을 도운 선수의 등번호(없으면 null)
+    const assistsThisRound = {};
+    (lineup.starters || []).concat(lineup.subsIn || []).forEach(p => {
+      (p.assists || []).forEach(a => {
+        if (a === null || a === undefined || a === '-') return;
+        assistsThisRound[a] = (assistsThisRound[a] || 0) + 1;
+      });
+    });
+    Object.keys(assistsThisRound).forEach(k => {
+      const st = ensure(/^\d+$/.test(k) ? Number(k) : k);
+      st.assists += assistsThisRound[k];
+      const h = st.history.find(x => x.roundKey === roundKey);
+      if (h) h.assists = assistsThisRound[k]; // 그 경기 명단에 없는 선수면 합계에만 반영됨
     });
   });
 
@@ -583,6 +605,103 @@ function computeSquadPlayerStats() {
 
 // 스쿼드 선수별 통산 기록 데이터 (matchLineups/teamAwards 로부터 자동 계산됨)
 const squadPlayerStats = computeSquadPlayerStats();
+
+// ============================================================
+// 어시스트 콤비 / 어시스트 기록 현황 (computeAssistCombos)
+// ------------------------------------------------------------
+// matchLineups의 goals[i] ↔ assists[i]를 짝지어 "누가 → 누구" 조합별 횟수를 셉니다.
+// 반환값: { combos: [{ from, to, count }], totalGoals, assistedGoals, solo }
+//   solo = { [득점 선수 키]: 도움 없음(null)으로 확정된 골 수 } — 시간처럼 "-"(미확인)는 포함하지 않음
+//   from = 어시스트한 선수 등번호, to = 득점한 선수 등번호
+//   totalGoals = 라인업에 기록된 치주물루 골 수, assistedGoals = 그중 어시스트가 기록된 골 수
+// 어시스트를 안 적은 골(assists 필드 없음)은 totalGoals에만 잡히고, 명시적으로 null이면
+// "어시스트 없음"으로 확정된 골로 보고 assistedGoals에는 포함하지 않습니다.
+// ============================================================
+function computeAssistCombos() {
+  const map = {};
+  const solo = {};
+  let totalGoals = 0, assistedGoals = 0;
+  Object.keys(matchLineups).forEach(roundKey => {
+    const lu = matchLineups[roundKey];
+    if (!lu) return;
+    (lu.starters || []).concat(lu.subsIn || []).forEach(p => {
+      const goals = p.goals || [];
+      totalGoals += goals.length;
+      (p.assists || []).forEach(a => {
+        const to = p.statKey || p.number;
+        if (a === null || a === undefined) { solo[to] = (solo[to] || 0) + 1; return; }
+        if (a === '-') return;
+        assistedGoals++;
+        const key = a + '>' + to;
+        if (!map[key]) map[key] = { from: a, to, count: 0 };
+        map[key].count++;
+      });
+    });
+  });
+  const combos = Object.values(map).sort((x, y) => (y.count - x.count) || (Number(x.from) - Number(y.from)));
+  return { combos, totalGoals, assistedGoals, solo };
+}
+
+// ============================================================
+// 선수 한 명의 도움 관계 (computeAssistRelationsForPlayer)
+// ------------------------------------------------------------
+// matchLineups의 goals[i] ↔ assists[i]를 훑어서, playerKey 선수 한 명의 도움 관계를 계산합니다.
+// playerKey = 등번호(숫자) 또는 방출/계약종료 선수의 'F9' 같은 키 (squadPlayerStats 키와 동일).
+// 선수 모달의 "도움 관계" 섹션이 사용합니다.
+// 반환값:
+//   assistedTo       : 이 선수가 도운 선수(= 그 골을 넣은 선수)별 횟수 [{ key, count }] — 많은 순
+//   assistedBy       : 이 선수의 골을 도운 선수별 횟수 [{ key, count }] — 많은 순
+//   goals            : 이 선수의 총 골 수 (squadPlayerStats[playerKey].goals 와 같음)
+//   assistedGoals    : 그중 도움 선수가 기록된 골
+//   unassistedGoals  : 도움 없음(null)으로 확정된 골
+//   unconfirmedGoals : assists 를 안 적었거나 '-'(미확인)인 골 — "도움받은 비율"에서는 제외합니다
+//   assistsMade      : 이 선수가 기록한 총 도움 (squadPlayerStats[playerKey].assists 와 같음)
+// key 는 라인업에 적힌 그대로의 값(숫자 또는 'F9')이며, 타입이 섞여도 구분되도록 Map 으로 모읍니다.
+// 동률은 그대로 모두 돌려주므로(count 가 같은 항목이 여럿) 화면에서 "공동 1위"로 보여줄 수 있습니다.
+// ============================================================
+function computeAssistRelationsForPlayer(playerKey) {
+  const result = { assistedTo: [], assistedBy: [], goals: 0, assistedGoals: 0, unassistedGoals: 0, unconfirmedGoals: 0, assistsMade: 0 };
+  if (playerKey === undefined || playerKey === null) return result; // 등번호가 없는 선수는 라인업과 연결할 수 없음
+
+  const givenMap = new Map();    // 이 선수가 도운 선수 → 횟수
+  const receivedMap = new Map(); // 이 선수의 골을 도운 선수 → 횟수
+
+  Object.keys(matchLineups).forEach(roundKey => {
+    const lu = matchLineups[roundKey];
+    if (!lu) return;
+    (lu.starters || []).concat(lu.subsIn || []).forEach(p => {
+      const scorerKey = p.statKey || p.number;
+      const assistList = Array.isArray(p.assists) ? p.assists : [];
+
+      // 이 선수가 득점한 골: i번째 골 ↔ assists[i]
+      if (scorerKey === playerKey) {
+        (p.goals || []).forEach((_, i) => {
+          result.goals++;
+          const a = assistList[i];
+          if (a === null) result.unassistedGoals++;
+          else if (a === undefined || a === '-') result.unconfirmedGoals++;
+          else { result.assistedGoals++; receivedMap.set(a, (receivedMap.get(a) || 0) + 1); }
+        });
+      }
+
+      // 이 선수가 도운 골: 다른 선수의 assists 배열에서 playerKey 를 찾습니다.
+      assistList.forEach(a => {
+        if (a !== playerKey) return;
+        result.assistsMade++;
+        givenMap.set(scorerKey, (givenMap.get(scorerKey) || 0) + 1);
+      });
+    });
+  });
+
+  // 숫자 등번호는 번호순, 'F9' 같은 방출 선수 키는 그 뒤로 — 동률일 때 항상 같은 순서가 되도록 합니다.
+  const keyOrder = (k) => typeof k === 'number' ? k : 1000 + (parseInt(String(k).replace(/\D/g, ''), 10) || 0);
+  const toSortedList = (map) => Array.from(map, ([key, count]) => ({ key, count }))
+    .sort((x, y) => (y.count - x.count) || (keyOrder(x.key) - keyOrder(y.key)));
+
+  result.assistedTo = toSortedList(givenMap);
+  result.assistedBy = toSortedList(receivedMap);
+  return result;
+}
 
 // ============================================================
 // 핵심 선수 출전/결장 영향도 (With & Without Stats)
@@ -2888,6 +3007,44 @@ function computeGoalsByPositionData() {
 }
 
 const goalsByPositionData = computeGoalsByPositionData();
+
+// ============================================================
+// 포지션별 도움 기여도 (assistsByPositionData) 자동 계산
+// ------------------------------------------------------------
+// squadPlayerStats(matchLineups의 assists로 자동 집계)와 squadData의 position(FW/MF/DF/GK)을
+// 연결해 포지션별 도움을 합산합니다. goalsByPositionData와 같은 모양이라
+// 도넛 카드를 그대로 재사용합니다. (방출 선수는 squadData에 없으므로 집계에서 제외)
+// 반환값: { totalAssists, groups: [{ position, assists, pct, labelKo, labelEn,
+//           players: [{ number, nameKo, nameEn, assists }] }] }
+// ============================================================
+function computeAssistsByPositionData() {
+  const byPosition = {};
+  squadData.forEach(p => {
+    const s = squadPlayerStats[p.number];
+    if (!s || !s.assists) return;
+    if (!byPosition[p.position]) byPosition[p.position] = { position: p.position, assists: 0, players: [] };
+    byPosition[p.position].assists += s.assists;
+    byPosition[p.position].players.push({ number: p.number, nameKo: p.nameKo, nameEn: p.nameEn, assists: s.assists });
+  });
+
+  const totalAssists = Object.values(byPosition).reduce((sum, g) => sum + g.assists, 0);
+
+  const groups = GOALS_BY_POSITION_ORDER
+    .filter(pos => byPosition[pos])
+    .map(pos => {
+      const g = byPosition[pos];
+      g.players.sort((a, b) => (b.assists - a.assists) || (a.number - b.number));
+      return Object.assign({}, g, {
+        labelKo: GOALS_BY_POSITION_LABEL[pos].ko, labelEn: GOALS_BY_POSITION_LABEL[pos].en,
+        pct: totalAssists ? Math.round((g.assists / totalAssists) * 100) : 0
+      });
+    })
+    .sort((a, b) => b.assists - a.assists);
+
+  return { totalAssists, groups };
+}
+
+const assistsByPositionData = computeAssistsByPositionData();
 
 // ============================================================
 // 선수별 득점 타임라인 (playerGoalTimelines) 자동 계산
@@ -5427,6 +5584,23 @@ function validateSiteData() {
     // 교체 투입 선수의 포지션이 선발 포지션과 맞아야 화면(경기장/목록)에 붙습니다
     subsIn.forEach(s => {
       if (!posSeen[s.pos]) add('warn', R, `교체 ${displayRef(refOf(s))}의 포지션 ${s.pos} 에 해당하는 선발이 없어 화면에 표시되지 않습니다`);
+    });
+
+    // 어시스트 검증: goals 와 같은 길이, 도운 선수가 그 경기 출전 명단에 있는지, 자기 자신 아님
+    starters.concat(subsIn).forEach(p => {
+      if (!p.assists) return;
+      const who = `${displayRef(refOf(p))} ${p.nameKo}`;
+      if (p.assists.length !== (p.goals || []).length) {
+        add('warn', R, `${who}: assists(${p.assists.length}개)와 goals(${(p.goals || []).length}개)의 길이가 다릅니다`);
+      }
+      p.assists.forEach(a => {
+        if (a === null || a === undefined) return;
+        if (a === (p.statKey || p.number)) { add('error', R, `${who}: 자기 자신의 골을 어시스트할 수 없습니다`); return; }
+        const { player } = resolveRef(a);
+        if (!player) { add('error', R, `${who}: 어시스트 ${displayRef(a)} 은(는) 명단에 없는 번호입니다`); return; }
+        const played = starters.concat(subsIn).some(x => refOf(x) === a);
+        if (!played) add('warn', R, `${who}: 어시스트 ${displayRef(a)} ${player.nameKo}이(가) 이 경기 선발/교체 명단에 없습니다 (벤치 미출전으로 적혀 있지 않은지 확인)`);
+      });
     });
 
     // 득점 수 vs 스코어
