@@ -1234,6 +1234,47 @@ const matchDetails = {
       scorersHome: "WANANGWA GONDWE, DEUS NKUTU, BENJAMIN MAPUNDA (2골)",
       scorersAway: "없음"
     }
+  ],
+  // 13주차는 전체 라운드가 종료되어 roundsData.round13으로 옮겨졌으므로 matchDetails.round13을
+  // 아래에 새로 추가했습니다. 치주물루 vs 비전, 마푸 vs 칠룸바는 연기(postponed)라
+  // 스코어가 없어 matchDetails에는 넣지 않습니다 — 나중에 결과가 나오면 이 목록 맨 뒤에 추가해주세요.
+  // (순서는 roundsData.round13의 스코어가 있는 경기 순서와 같아야 합니다.)
+  // 에우티니 vs 젠다의 에우티니 득점자(1골)는 아직 확인되지 않아 비워뒀습니다.
+  round13: [
+    {
+      match: "에크웬데니 0 : 치폴로폴로 2",
+      scorersHome: "없음",
+      scorersAway: "ZIKANI KASAMBALA, MIKE LUHANGA"
+    },
+    {
+      match: "루베 2 : 루비리 2",
+      scorersHome: "TYGO GOMEKA, ALLAN NKHONJERA",
+      scorersAway: "TYSON NYIRONGO, ABRAHAM MVULA"
+    },
+    {
+      match: "라이플리 2 : 음벨와 0",
+      scorersHome: "PEARSON NYIRENDA, ZAKALIA MPHAMBA",
+      scorersAway: "없음"
+    },
+    {
+      match: "치하메 2 : 치바비 3",
+      scorersHome: "FRANK KAUNDA, ROBIN CHIOKO",
+      scorersAway: "HENDERSON KANYIKA (2골), PETER LUNGU"
+    },
+    {
+      match: "에우티니 1 : 젠다 3",
+      scorersAway: "WYSON NYIRENDA, CHISOMO MYEGHA (2골)"
+    },
+    {
+      match: "치주물루 4 : 칠룸바 0",
+      scorersHome: "DICKIES NYIRENDA (2골), TIMOTHY KATAPA, KUMBUKANI BANYA",
+      scorersAway: "없음"
+    },
+    {
+      match: "치폴로폴로 0 : 루베 3",
+      scorersHome: "없음",
+      scorersAway: "없음"
+    }
   ]
 };
 
@@ -1255,25 +1296,6 @@ const upcomingMatchHistory = {
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
-  round13: [
-    // 13주차 치주물루 vs 비전 S 아카데미 경기는 연기되어 15주차(10월 13일)로 옮겨졌습니다.
-    // (15주차 쪽 항목에 movedFromWeek: 13이 있고, 이쪽에는 changed + movedToWeek로 "변경됨" 배지가 표시됩니다.)
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", postponed: true, movedToWeek: 15, changed: true },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 0, awayScore: 2, scorersHome: "없음", scorersAway: "ZIKANI KASAMBALA, MIKE LUHANGA" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 2, scorersHome: "TYGO GOMEKA, ALLAN NKHONJERA", scorersAway: "TYSON NYIRONGO, ABRAHAM MVULA" },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-04", kickoffTime: "14:30" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FRANK KAUNDA, ROBIN CHIOKO", scorersAway: "HENDERSON KANYIKA (2골), PETER LUNGU" },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-04", kickoffTime: "14:30" },
-    { byeKo: "친테체 유나이티드 FC", byeEn: "Chintheche United FC" },
-    // 11주차에서 연기됐던 치주물루 vs 칠룸바 경기가 13주차(10월 2일) 홈 경기로 확정되었습니다.
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-02", kickoffTime: "15:00", movedFromWeek: 11, homeScore: 4, awayScore: 0, scorersHome: "DICKIES NYIRENDA (2골), TIMOTHY KATAPA, KUMBUKANI BANYA", scorersAway: "없음" },
-    // 12주차에서 연기됐던 치폴로폴로 vs 루베 마스터즈 경기가 13주차 경기로 확정되었으며, 루베의 3:0 몰수승(치폴로폴로 몰수패)으로 처리되었습니다.
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-30", kickoffTime: "14:30", movedFromWeek: 12, homeScore: 0, awayScore: 3, forfeit: true },
-    // 15주차 마푸 스타즈 vs 비전 S 아카데미 경기가 일정 변경으로 13주차 일요일(10월 4일)로 앞당겨졌습니다.
-    // (15주차 쪽 항목에는 changed: true + movedToWeek: 13 → "변경됨" 배지가 표시됩니다.)
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-04", kickoffTime: "14:30", movedFromWeek: 15, changed: true }
-  ],
   round14: [
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-10", kickoffTime: "14:30" },
     { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-10-10", kickoffTime: "14:30" },
@@ -1290,7 +1312,7 @@ const scheduledRounds = {
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-17", kickoffTime: "14:30" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "14:30", postponed: true, movedToWeek: 13, changed: true },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
     // 13주차에서 연기됐던 치주물루 vs 비전 S 아카데미 경기가 15주차 홈 경기(10월 13일)로 확정되었습니다.
     // 치주물루의 15주차 휴식(bye) 자리를 이 경기가 대신합니다.
@@ -1471,6 +1493,25 @@ const roundsData = {
     { byeKo: "에우티니 베테랑스 FC", byeEn: "Euthini Veterans FC" },
     // 10주차에서 연기됐던 칠룸바 vs 친테체 경기가 12주차 경기로 확정되었습니다.
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-23", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 4, awayScore: 0, scorersHome: "WANANGWA GONDWE, DEUS NKUTU, BENJAMIN MAPUNDA (2골)", scorersAway: "없음" }
+  ],
+  // 13주차는 전체 라운드가 종료되어 roundsData.round13으로 옮겨졌습니다.
+  // 단, 치주물루 vs 비전(15주차로 이동)과 마푸 vs 칠룸바는 연기(postponed)되어 스코어가 아직 없습니다.
+  // (새 날짜가 확정되고 스코어가 채워지면 postponed를 지우고 matchDetails.round13 목록 맨 뒤에 추가해주세요.)
+  round13: [
+    // 13주차 치주물루 vs 비전 S 아카데미 경기는 연기되어 15주차(10월 13일)로 옮겨졌습니다.
+    // (15주차 쪽 항목에 movedFromWeek: 13이 있고, 이쪽에는 changed + movedToWeek로 "변경됨" 배지가 표시됩니다.)
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", postponed: true, movedToWeek: 15, changed: true },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 0, awayScore: 2, scorersHome: "없음", scorersAway: "ZIKANI KASAMBALA, MIKE LUHANGA" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 2, scorersHome: "TYGO GOMEKA, ALLAN NKHONJERA", scorersAway: "TYSON NYIRONGO, ABRAHAM MVULA" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-04", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "PEARSON NYIRENDA, ZAKALIA MPHAMBA", scorersAway: "없음" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FRANK KAUNDA, ROBIN CHIOKO", scorersAway: "HENDERSON KANYIKA (2골), PETER LUNGU" },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-04", kickoffTime: "14:30", homeScore: 1, awayScore: 3, scorersAway: "WYSON NYIRENDA, CHISOMO MYEGHA (2골)" },
+    { byeKo: "친테체 유나이티드 FC", byeEn: "Chintheche United FC" },
+    // 11주차에서 연기됐던 치주물루 vs 칠룸바 경기가 13주차(10월 2일) 홈 경기로 확정되었습니다.
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-02", kickoffTime: "15:00", movedFromWeek: 11, homeScore: 4, awayScore: 0, scorersHome: "DICKIES NYIRENDA (2골), TIMOTHY KATAPA, KUMBUKANI BANYA", scorersAway: "없음" },
+    // 12주차에서 연기됐던 치폴로폴로 vs 루베 마스터즈 경기가 13주차 경기로 확정되었으며, 루베의 3:0 몰수승(치폴로폴로 몰수패)으로 처리되었습니다.
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-30", kickoffTime: "14:30", movedFromWeek: 12, homeScore: 0, awayScore: 3, forfeit: true }
   ]
 };
 
@@ -2445,6 +2486,7 @@ const nameAliases = {
   "LUMABANI KAMANGA": "LIMBANI KAMANGA",
   "SOLOMON INKOSI": "SOLOMON NKOSI",
   "ZACHARIAH MPHAMBA": "ZAKARIA MPHAMBA",
+  "ZAKALIA MPHAMBA": "ZAKARIA MPHAMBA",
   "CLEMENT MUNTHALI": "CLEMENT KASEKA",
   "CLEMENT MTHALI": "CLEMENT KASEKA",
   "CHISOMO MYEGHA": "CHISOMO MYGHA",
