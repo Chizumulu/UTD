@@ -787,8 +787,8 @@
       const oppName = isKorean ? p.oppKo : p.oppEn;
       const haTxt = isKorean ? (p.isHome ? '홈' : '원정') : (p.isHome ? 'H' : 'A');
       title.textContent = isKorean
-        ? `${p.weekNum}주차 · ${teamName}(${haTxt}) vs ${oppName} — 예상 ${p.expected.toFixed(2)}골 / 실제 ${p.actual}골`
-        : `WK${p.weekNum} · ${teamName} (${haTxt}) vs ${oppName} — expected ${p.expected.toFixed(2)}, actual ${p.actual}`;
+        ? `${wkKo(p.weekNum)} · ${teamName}(${haTxt}) vs ${oppName} — 예상 ${p.expected.toFixed(2)}골 / 실제 ${p.actual}골`
+        : `${wkEn(p.weekNum, 'WK', '')} · ${teamName} (${haTxt}) vs ${oppName} — expected ${p.expected.toFixed(2)}, actual ${p.actual}`;
       g.appendChild(dot);
       g.appendChild(title);
       svg.appendChild(g);
@@ -1442,7 +1442,7 @@
     if (myBye) {
       return {
         roundKey, weekNum, isBye: true, rankAfter, rankBefore, ptsAfter,
-        headline: { ko: `${weekNum}주차: 이번 주는 부전승 주간`, en: `Round ${weekNum}: Bye week` },
+        headline: { ko: `${wkKo(weekNum)}: 이번 주는 부전승 주간`, en: `${wkEn(weekNum, 'Round', ' ')}: Bye week` },
         paragraphs: [pickSentence(rngResult, [
           ['이번 주차는 치주물루의 경기가 없는 부전승 주간이었다. 다른 팀들의 결과를 지켜보며 다음 경기를 준비할 시간이다.',
            'Chizumulu had no fixture this week due to the bye round — a chance to rest up and watch how the rest of the league moved.']
@@ -1603,8 +1603,8 @@
       roundKey, weekNum, isBye: false, isHome, oppKo, oppEn, myGoals, oppGoals, result,
       rankBefore, rankAfter, ptsBefore, ptsAfter, milestones,
       headline: {
-        ko: `${weekNum}주차: 치주물루 ${myGoals} - ${oppGoals} ${oppKo} (${isHome ? '홈' : '원정'})`,
-        en: `Round ${weekNum}: Chizumulu ${myGoals}-${oppGoals} ${oppEn} (${isHome ? 'Home' : 'Away'})`
+        ko: `${wkKo(weekNum)}: 치주물루 ${myGoals} - ${oppGoals} ${oppKo} (${isHome ? '홈' : '원정'})`,
+        en: `${wkEn(weekNum, 'Round', ' ')}: Chizumulu ${myGoals}-${oppGoals} ${oppEn} (${isHome ? 'Home' : 'Away'})`
       },
       paragraphs,
       rivalWatch: buildRivalWatch(afterSnap, beforeSnap, matches, rngRival)
@@ -1712,7 +1712,7 @@
       </section>`;
     }
 
-    const weekLabel = isKorean ? `${pred.weekNum}주차` : `Round ${pred.weekNum}`;
+    const weekLabel = isKorean ? `${wkKo(pred.weekNum)}` : `${wkEn(pred.weekNum, 'Round', ' ')}`;
 
     if (pred.isBye) {
       return `<section class="report-card report-card-prediction">
@@ -1914,7 +1914,7 @@
       const myScore = h2h.aIsHome ? h2h.aScore : h2h.bScore;
       const oppScore = h2h.aIsHome ? h2h.bScore : h2h.aScore;
       const h2hResult = myScore > oppScore ? 'W' : (myScore < oppScore ? 'L' : 'D');
-      const weekLbl = isKorean ? `${h2h.weekNum}주차` : `Round ${h2h.weekNum}`;
+      const weekLbl = isKorean ? `${wkKo(h2h.weekNum)}` : `${wkEn(h2h.weekNum, 'Round', ' ')}`;
       if (h2hResult === 'W') {
         paragraphs.push(pickSentence(rng, [
           [`이번 시즌 ${weekLbl} 맞대결에서 ${myScore}-${oppScore}로 승리했던 만큼, 상대전적에서는 앞서 있다.`,
@@ -2082,7 +2082,7 @@
     const nextWeek = preview && preview.roundKey
       ? parseInt(preview.roundKey.replace('round', ''), 10)
       : (sortedRoundKeys().length + 1);
-    const weekLbl = isKorean ? `${nextWeek}주차` : `WK ${nextWeek}`;
+    const weekLbl = isKorean ? `${wkKo(nextWeek)}` : `${wkEn(nextWeek, 'WK', ' ')}`;
 
     if (t.nextMatch.isBye) {
       el.classList.remove('nms-matchday');
@@ -2226,7 +2226,7 @@
   function shareRoundResults() {
     if (!currentRoundKey) return;
     const weekNum = allRoundKeysIncludingScheduled().indexOf(currentRoundKey) + 1;
-    const weekLabel = isKorean ? `${weekNum}주차` : `Week ${weekNum}`;
+    const weekLabel = isKorean ? `${wkKo(weekNum)}` : `${wkEn(weekNum, 'Week', ' ')}`;
     const matches = buildRoundMatches(currentRoundKey).filter(m => !m.isBye && !m.isScheduled);
     if (!matches.length) {
       showShareToast(isKorean ? '공유할 결과가 아직 없어요' : 'No results to share yet');
@@ -2480,7 +2480,7 @@
         const resultClass = m.result === 'W' ? 'win' : (m.result === 'L' ? 'loss' : 'draw');
         const resultLabel = m.result === 'W' ? (isKorean ? '승' : 'W') : (m.result === 'L' ? (isKorean ? '패' : 'L') : (isKorean ? '무' : 'D'));
         const oppName = homeMatchTeamName(m.oppEn, m.oppKo);
-        const weekTxt = isKorean ? `${m.weekNum}주차` : `WK${m.weekNum}`;
+        const weekTxt = isKorean ? `${wkKo(m.weekNum)}` : `${wkEn(m.weekNum, 'WK', '')}`;
         return `
           <div class="home-match-item">
             <img class="team-logo home-match-crest" src="${m.oppLogo}" alt="${m.oppEn}" title="${oppName}">
@@ -2500,7 +2500,7 @@
         const haClass = m.homeAway === 'H' ? 'home' : 'away';
         const haLabel = m.homeAway === 'H' ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A');
         const weekNum = parseInt(String(m.roundKey).replace('round', ''), 10);
-        const weekTxt = isKorean ? `${weekNum}주차` : `WK${weekNum}`;
+        const weekTxt = isKorean ? `${wkKo(weekNum)}` : `${wkEn(weekNum, 'WK', '')}`;
         return `
           <div class="home-match-item">
             <img class="team-logo home-match-crest" src="${m.oppLogo}" alt="${m.oppEn}" title="${oppName}">
@@ -2733,7 +2733,7 @@
 
     return `
       <div class="ti-next-match">
-        <div class="ti-next-match-label lbl" data-en="Next Match · Week ${nextWeek}" data-ko="다음 경기 · ${nextWeek}주차">${isKorean ? `다음 경기 · ${nextWeek}주차` : `Next Match · Week ${nextWeek}`}</div>
+        <div class="ti-next-match-label lbl" data-en="Next Match · ${wkEn(nextWeek, 'Week', ' ')}" data-ko="다음 경기 · ${wkKo(nextWeek)}">${isKorean ? `다음 경기 · ${wkKo(nextWeek)}` : `Next Match · ${wkEn(nextWeek, 'Week', ' ')}`}</div>
         <div class="ti-next-match-body">
           <div class="ti-next-match-team">
             <img class="team-logo" src="${team.logoSrc}" alt="${team.nameEn}">
@@ -2893,7 +2893,7 @@
 
     if (!flow.hasBye) {
       const bodyKo = flow.upcomingBye
-        ? `${flow.upcomingBye}주차에 휴식 라운드가 예정되어 있어요. 그 전후 경기가 쌓이면 여기에 흐름이 표시됩니다.`
+        ? `${wkKo(flow.upcomingBye)}에 휴식 라운드가 예정되어 있어요. 그 전후 경기가 쌓이면 여기에 흐름이 표시됩니다.`
         : '이번 시즌 휴식 라운드 일정이 아직 없어요.';
       const bodyEn = flow.upcomingBye
         ? `This team's bye is scheduled for round ${flow.upcomingBye}. The flow will appear here once matches on both sides are played.`
@@ -3040,7 +3040,7 @@
     // 최다 연승/무패 기록은 "N연승 (3~7주차)"처럼 기록이 세워진 구간까지 함께 보여줍니다.
     function streakRangeLabel(streak) {
       if (!streak || streak.count === 0) return isKorean ? '기록 없음' : 'No streak yet';
-      const weekLbl = (w) => isKorean ? `${w}주차` : `Wk ${w}`;
+      const weekLbl = (w) => isKorean ? `${wkKo(w)}` : `${wkEn(w, 'Wk', ' ')}`;
       return streak.startWeek === streak.endWeek
         ? weekLbl(streak.startWeek)
         : `${weekLbl(streak.startWeek)}~${weekLbl(streak.endWeek).replace(/^Wk /, '')}`;
@@ -3196,7 +3196,7 @@
     // 최신 라운드가 맨 왼쪽에 오도록 좌우 나열합니다.
     const motmHtml = motmKeys.map(key => {
       const weekNum = parseInt(key.replace('round', ''), 10);
-      const weekLabel = isKorean ? `${weekNum}주차` : `Wk ${weekNum}`;
+      const weekLabel = isKorean ? `${wkKo(weekNum)}` : `${wkEn(weekNum, 'Wk', ' ')}`;
       return teamAwards.motm[key].map(number => awardPlayerHtml(number, weekLabel)).join('');
     }).join('');
 
@@ -4474,7 +4474,7 @@
     let html = '';
 
     roundKeys.slice().reverse().forEach((key, revIdx) => {
-      const weekNum = totalRounds - revIdx;
+      const weekNum = roundKeyPos(key);
       const matches = buildRoundMatches(key);
       // 한 주차에 같은 팀의 경기가 2개 이상일 수 있습니다(예: 연기된 경기 + 다른 주차에서 옮겨온 경기).
       // find()로 첫 경기만 잡으면 나머지가 사라지므로 전부 모아서 차례로 그립니다.
@@ -4486,12 +4486,12 @@
       const teamBye = matches.find(m => m.isBye && (m.teamEn === teamEn || m.teamKo === teamKo));
       if (!teamMatches.length && !teamBye) return;
 
-      const weekLabel = isKorean ? `${weekNum}주차` : `Week ${weekNum}`;
+      const weekLabel = isKorean ? `${wkKo(weekNum)}` : `${wkEn(weekNum, 'Week', ' ')}`;
 
       if (teamBye) {
         html += `
           <div class="round-match-card round-bye-card">
-            <span class="ti-result-week lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${weekLabel}</span>
+            <span class="ti-result-week lbl" data-en="${wkEn(weekNum, 'Week', ' ')}" data-ko="${wkKo(weekNum)}">${weekLabel}</span>
             <span class="round-bye-badge lbl" data-en="BYE" data-ko="휴식주">${isKorean ? '휴식주' : 'BYE'}</span>
           </div>`;
         return;
@@ -4506,7 +4506,7 @@
         const awayName = isKorean ? m.awayKo : m.awayEn;
         html += `
           <div class="round-match-card round-match-scheduled${m.postponed && !m.movedToWeek ? ' rmc-postponed-card' : ''}">
-            <span class="ti-result-week lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${weekLabel}</span>
+            <span class="ti-result-week lbl" data-en="${wkEn(weekNum, 'Week', ' ')}" data-ko="${wkKo(weekNum)}">${weekLabel}</span>
             ${m.movedToWeek
               ? `<button type="button" class="rmc-pending-badge rmc-moved-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`
               : `<span class="rmc-pending-badge${m.postponed ? ' rmc-postponed-badge' : ''} lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
@@ -4537,7 +4537,7 @@
 
       html += `
         <div class="round-match-card${isMine ? ' my-team' : ''}">
-          <div class="ti-result-week lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${weekLabel}</div>
+          <div class="ti-result-week lbl" data-en="${wkEn(weekNum, 'Week', ' ')}" data-ko="${wkKo(weekNum)}">${weekLabel}</div>
           <span class="form-badge ${resultClass} ti-result-badge">${resultLabel}</span>
           <div class="rmc-teams">
             <div class="rmc-team rmc-home${homeWin ? ' rmc-winner' : ''}">
@@ -5889,7 +5889,7 @@
   function scheduledBadgeText(m, ko) {
     if (m.noBadge) return '';
     if (m.movedToWeek && m.changed) return ko ? '변경됨' : 'Changed';
-    if (m.movedToWeek) return ko ? `${m.movedToWeek}주차 경기로 이동` : `Moved to Week ${m.movedToWeek}`;
+    if (m.movedToWeek) return ko ? `${wkKo(m.movedToWeek)} 경기로 이동` : `Moved to ${wkEn(m.movedToWeek, 'Week', ' ')}`;
     if (m.postponed && m.pendingResult) return ko ? '경기 결과 미정' : 'Result Pending';
     if (m.postponed) return ko ? '경기 연기' : 'Postponed';
     return ko ? '경기 시작 전' : 'Upcoming';
@@ -5899,8 +5899,8 @@
   // 붙일 안내 배지 HTML. 없으면 빈 문자열.
   function movedFromBadgeHtml(m, ko) {
     if (!m.movedFromWeek) return '';
-    const enText = m.changed ? `Changed from Week ${m.movedFromWeek}` : `Rescheduled from Week ${m.movedFromWeek}`;
-    const koText = m.changed ? `${m.movedFromWeek}주차에서 변경된 경기` : `${m.movedFromWeek}주차에서 연기된 경기`;
+    const enText = m.changed ? `Changed from ${wkEn(m.movedFromWeek, 'Week', ' ')}` : `Rescheduled from ${wkEn(m.movedFromWeek, 'Week', ' ')}`;
+    const koText = m.changed ? `${wkKo(m.movedFromWeek)}에서 변경된 경기` : `${wkKo(m.movedFromWeek)}에서 연기된 경기`;
     return `<span class="rmc-moved-badge lbl" data-en="${enText}" data-ko="${koText}">${ko ? koText : enText}</span>`;
   }
 
@@ -5908,6 +5908,20 @@
     const team = leagueData.find(t => t.nameEn === nameEn);
     return team ? team.logoSrc : '';
   }
+
+  // ===== 연기경기주차(보충 주차) 표시 헬퍼 =====
+  // roundN 의 N(=순서)을 화면용 주차 이름으로 바꿉니다. 정규 주차는 "N주차"/"Week N",
+  // data.js 의 MAKEUP_ROUND_KEYS 에 등록된 순서는 "연기경기주차"/"Makeup Week" 로 나옵니다.
+  // 연기경기주차 뒤의 정규 주차는 번호가 자동으로 당겨집니다(예: round17 → 16주차).
+  function wkKo(pos) {
+    return (typeof weekLabelKo === 'function') ? weekLabelKo(pos) : `${pos}주차`;
+  }
+  function wkEn(pos, prefix, sep) {
+    if (typeof weekLabelEn === 'function') return weekLabelEn(pos, prefix || 'Week', sep === undefined ? ' ' : sep);
+    return `${prefix || 'Week'}${sep === undefined ? ' ' : sep}${pos}`;
+  }
+  function isMakeupPos(pos) { return (typeof isMakeupWeek === 'function') && isMakeupWeek(pos); }
+  function roundKeyPos(key) { return parseInt(String(key).replace('round', ''), 10); }
 
   function sortedRoundKeys() {
     return Object.keys(roundsData).sort((a, b) => {
@@ -6202,7 +6216,7 @@
       const btn = document.createElement('button');
       const isActive = key === currentRoundKey;
       btn.className = 'round-tab-btn' + (isActive ? ' active' : '');
-      btn.innerHTML = `<span class="lbl" data-en="Week ${weekNum}" data-ko="${weekNum}주차">${isKorean ? weekNum + '주차' : 'Week ' + weekNum}</span>`;
+      btn.innerHTML = `<span class="lbl" data-en="${wkEn(weekNum, 'Week', ' ')}" data-ko="${wkKo(weekNum)}">${isKorean ? wkKo(weekNum) : wkEn(weekNum, 'Week', ' ')}</span>`;
       btn.onclick = () => { currentRoundKey = key; renderRoundsView(); };
       if (isActive) activeBtn = btn;
       tabBar.appendChild(btn);
@@ -6458,14 +6472,14 @@
     }
 
     body.innerHTML = list.map(m => {
-      const weekLabel = isKorean ? `${m.weekNum}주차` : `Week ${m.weekNum}`;
+      const weekLabel = isKorean ? `${wkKo(m.weekNum)}` : `${wkEn(m.weekNum, 'Week', ' ')}`;
       const homeLogo = getTeamLogo(m.homeEn);
       const awayLogo = getTeamLogo(m.awayEn);
       const homeName = isKorean ? m.homeKo : m.homeEn;
       const awayName = isKorean ? m.awayKo : m.awayEn;
       // 새 일정이 확정된(movedToWeek가 있는) 경기라면 "N주차 경기에서 확정" 배지를 추가로 보여줍니다.
-      const confirmedEnText = `Confirmed for Week ${m.movedToWeek}`;
-      const confirmedKoText = `${m.movedToWeek}주차 경기에서 확정`;
+      const confirmedEnText = `Confirmed for ${wkEn(m.movedToWeek, 'Week', ' ')}`;
+      const confirmedKoText = `${wkKo(m.movedToWeek)} 경기에서 확정`;
       const pendingEnText = 'Result Pending';
       const pendingKoText = '경기 결과 미정';
       const confirmedBadge = m.noBadge
@@ -6477,7 +6491,7 @@
         : '';
       return `
         <div class="postponed-match-row">
-          <span class="postponed-week-badge lbl" data-en="Week ${m.weekNum}" data-ko="${m.weekNum}주차">${weekLabel}</span>
+          <span class="postponed-week-badge lbl" data-en="${wkEn(m.weekNum, 'Week', ' ')}" data-ko="${wkKo(m.weekNum)}">${weekLabel}</span>
           <div class="postponed-match-teams">
             <div class="postponed-match-team">
               ${homeLogo ? `<img class="team-logo-sm" src="${homeLogo}" alt="${m.homeEn}">` : ''}
@@ -6772,7 +6786,7 @@
 
         const scoreLine = entry.isHome ? `${entry.homeScore} : ${entry.awayScore}` : `${entry.awayScore} : ${entry.homeScore}`;
         const roundLabelKo = `${entry.roundNum}라운드`;
-        const roundLabelEn = `Round ${entry.roundNum}`;
+        const roundLabelEn = `${wkEn(entry.roundNum, 'Round', ' ')}`;
 
         const scorerPhoto = entry.photoSrc
           ? `<img class="scorer-player-photo" src="${entry.photoSrc}" alt="${entry.nameEn}">`
@@ -7087,7 +7101,7 @@
       .map(key => parseInt(key.replace('round', ''), 10))
       .filter(Number.isFinite);
     const currentRound = completedRoundNumbers.length ? Math.max.apply(null, completedRoundNumbers) : 0;
-    const remainingRounds = Math.max(0, seasonRounds - currentRound);
+    const remainingRounds = Math.max(0, seasonRounds - (typeof regularWeekNumber === 'function' ? regularWeekNumber(currentRound) : currentRound));
     const maxPoints = team => team.pts + Math.max(0, seasonGames - team.played) * 3;
     return { remainingRounds, seasonGames, maxPoints, safeSlots: teamCount - 3 };
   }
@@ -7756,7 +7770,7 @@
 
         data = {
           isKorean,
-          roundLabel: isKorean ? `${report.weekNum}주차 경기 결과` : `Round ${report.weekNum} Result`,
+          roundLabel: isKorean ? `${wkKo(report.weekNum)} 경기 결과` : `${wkEn(report.weekNum, 'Round', ' ')} Result`,
           weekLabel: weekLabelText,
           homeKo, awayKo, homeScore, awayScore,
           result: report.result,
@@ -7781,7 +7795,7 @@
 
         data = {
           isKorean,
-          roundLabel: isKorean ? `${pred.weekNum}주차 매치데이` : `Round ${pred.weekNum} Matchday`,
+          roundLabel: isKorean ? `${wkKo(pred.weekNum)} 매치데이` : `${wkEn(pred.weekNum, 'Round', ' ')} Matchday`,
           weekLabel: weekLabelText,
           homeKo: pred.homeKo, awayKo: pred.awayKo,
           homeLogo, awayLogo,
@@ -8329,7 +8343,7 @@
     const awayName = isKorean ? entry.awayKo : entry.awayEn;
     const homeWin = entry.homeScore > entry.awayScore;
     const awayWin = entry.awayScore > entry.homeScore;
-    const weekTxt = isKorean ? `${entry.week}주차` : `Week ${entry.week}`;
+    const weekTxt = isKorean ? `${wkKo(entry.week)}` : `${wkEn(entry.week, 'Week', ' ')}`;
     const titleKo = kind === 'highest' ? '최다 득점 경기' : '최다 점수 차 경기';
     const titleEn = kind === 'highest' ? 'Highest-Scoring Match' : 'Biggest Margin of Victory';
     const subKo = kind === 'highest' ? `총 ${entry.totalGoals}골` : `${entry.margin}골 차`;
@@ -8358,7 +8372,7 @@
     }
     const teamName = isKorean ? entry.teamKo : entry.teamEn;
     const oppName = isKorean ? entry.oppKo : entry.oppEn;
-    const weekTxt = isKorean ? `${entry.week}주차` : `Week ${entry.week}`;
+    const weekTxt = isKorean ? `${wkKo(entry.week)}` : `${wkEn(entry.week, 'Week', ' ')}`;
     const vsKo = `${oppName} 상대`;
     const vsEn = `vs ${oppName}`;
     return `
@@ -9245,7 +9259,7 @@
       dot.dataset.teamKey = tl.team.nameEn;
       const title = svgEl('title', {});
       const name = isKorean ? tl.team.nameKo : tl.team.nameEn;
-      const weekLabel = isKorean ? `${c.week}주차` : `Week ${c.week}`;
+      const weekLabel = isKorean ? `${wkKo(c.week)}` : `${wkEn(c.week, 'Week', ' ')}`;
       const rankLabel = isKorean ? `${c.rank}위` : `Rank ${c.rank}`;
       title.textContent = `${name} — ${weekLabel}: ${rankLabel}`;
       dot.appendChild(title);
@@ -9529,7 +9543,7 @@
         const dot = svgEl('circle', { cx: c.x, cy: c.y, r: compact ? 4.5 : 3.5, fill: line.color, stroke: '#fff', 'stroke-width': 1.4, class: 'points-hist-dot' });
         dot.dataset.teamKey = line.team.nameEn;
         const title = svgEl('title', {});
-        title.textContent = `${isKorean ? line.team.nameKo : line.team.nameEn} — ${isKorean ? `${c.week}주차` : `Week ${c.week}`}: ${c.points}${isKorean ? '점' : ' pts'}`;
+        title.textContent = `${isKorean ? line.team.nameKo : line.team.nameEn} — ${isKorean ? `${wkKo(c.week)}` : `${wkEn(c.week, 'Week', ' ')}`}: ${c.points}${isKorean ? '점' : ' pts'}`;
         dot.appendChild(title);
         svg.appendChild(dot);
         return dot;
@@ -9685,7 +9699,7 @@
         const dot = svgEl('circle', { cx: c.x, cy: c.y, r: compact ? 4.5 : 3.5, fill: line.color, stroke: '#fff', 'stroke-width': 1.4, class: 'points-hist-dot' });
         dot.dataset.teamKey = line.team.nameEn;
         const title = svgEl('title', {});
-        title.textContent = `${isKorean ? line.team.nameKo : line.team.nameEn} — ${isKorean ? `${c.round}주차` : `Week ${c.round}`}: ${c.pct.toFixed(1)}%`;
+        title.textContent = `${isKorean ? line.team.nameKo : line.team.nameEn} — ${isKorean ? `${wkKo(c.round)}` : `${wkEn(c.round, 'Week', ' ')}`}: ${c.pct.toFixed(1)}%`;
         dot.appendChild(title);
         svg.appendChild(dot);
         return dot;
@@ -9844,7 +9858,7 @@
     listEl.innerHTML = '';
 
     timeline.forEach(entry => {
-      const weekLabel = isKorean ? `${entry.weekNum}주차` : `Week ${entry.weekNum}`;
+      const weekLabel = isKorean ? `${wkKo(entry.weekNum)}` : `${wkEn(entry.weekNum, 'Week', ' ')}`;
       const oppName = isKorean ? entry.oppKo : entry.oppEn;
       const haClass = entry.homeAway === 'H' ? 'ha-home' : 'ha-away';
       const scoreLine = entry.homeAway === 'H'
@@ -10192,7 +10206,7 @@
     listEl.innerHTML = '';
 
     stats.history.slice().reverse().forEach(entry => {
-      const weekLabel = isKorean ? `${entry.weekNum}주차` : `Week ${entry.weekNum}`;
+      const weekLabel = isKorean ? `${wkKo(entry.weekNum)}` : `${wkEn(entry.weekNum, 'Week', ' ')}`;
       const roleLabel = entry.wasStarter
         ? (isKorean ? '선발' : 'Start')
         : (isKorean ? '교체' : 'Sub');
@@ -10910,7 +10924,7 @@
     if (!lineup) return;
 
     const isKo = isKorean;
-    const weekLabel = isKo ? `${weekNum}주차` : `Week ${weekNum}`;
+    const weekLabel = isKo ? `${wkKo(weekNum)}` : `${wkEn(weekNum, 'Week', ' ')}`;
     const opponentTeam = leagueData.find(t => t.nameKo === lineup.opponentKo);
     const opponentName = opponentTeam ? (isKo ? opponentTeam.nameKo : opponentTeam.nameEn) : lineup.opponentKo;
     const resultText = translateResultSuffix(lineup.result);
@@ -11165,7 +11179,7 @@
     let h2hHtml;
     if (h2h) {
       const scoreTxt = h2h.aIsHome ? `${h2h.aScore} : ${h2h.bScore}` : `${h2h.bScore} : ${h2h.aScore}`;
-      const weekLbl = isKorean ? `${h2h.weekNum}주차` : `Week ${h2h.weekNum}`;
+      const weekLbl = isKorean ? `${wkKo(h2h.weekNum)}` : `${wkEn(h2h.weekNum, 'Week', ' ')}`;
       h2hHtml = `
         <div class="mc-h2h-note">
           <span class="mc-h2h-week">${weekLbl}</span>
@@ -11264,8 +11278,8 @@
     const weekBadgeNumEl = document.getElementById('weekBadgeNum');
     const dateEl = document.getElementById('dateLabel');
     const dateShortEl = document.getElementById('dateLabelShort');
-    if (weekEl) weekEl.textContent = isKorean ? `${week}주차` : `Week ${week}`;
-    if (weekBadgeNumEl) weekBadgeNumEl.textContent = week;
+    if (weekEl) weekEl.textContent = isKorean ? `${wkKo(week)}` : `${wkEn(week, 'Week', ' ')}`;
+    if (weekBadgeNumEl) weekBadgeNumEl.textContent = isMakeupPos(week) ? (isKorean ? '연기' : 'MU') : week;
     if (dateEl) {
       dateEl.textContent = isKorean
         ? `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`

@@ -14,6 +14,28 @@ const SEASON_START = '2026-07-12';
 // 매직넘버는 이 값을 기준으로 남은 경기와 각 팀의 이론상 최대 승점을 계산합니다.
 const SEASON_TOTAL_ROUNDS = 30;
 
+// ===== 연기경기주차(보충 주차) =====
+// 정규 라운드 번호를 차지하지 않는 "연기된 경기만 모아 치르는 주차"입니다.
+// scheduledRounds/roundsData에는 다른 주차와 똑같이 roundN 키로 순서대로 들어가지만(순서/집계용),
+// 화면에는 "N주차" 대신 "연기경기주차"로 표시되고 정규 주차 번호 계산에서는 빠집니다.
+//   예) round15 → 15주차, round16(연기경기주차) → "연기경기주차", round17 → 16주차(정규)
+// 새 연기경기주차가 생기면 해당 키만 아래 배열에 추가하고, 그 뒤 정규 라운드는 한 키씩 밀어서 입력해주세요.
+const MAKEUP_ROUND_KEYS = ['round16'];
+const MAKEUP_WEEK_POSITIONS = new Set(MAKEUP_ROUND_KEYS.map(k => parseInt(k.replace('round', ''), 10)));
+function isMakeupWeek(pos) { return MAKEUP_WEEK_POSITIONS.has(Number(pos)); }
+// 순서(roundN의 N) → 정규 주차 번호. 연기경기주차는 직전 정규 번호를 그대로 돌려줍니다.
+function regularWeekNumber(pos) {
+  pos = Number(pos);
+  let n = pos;
+  MAKEUP_WEEK_POSITIONS.forEach(p => { if (p <= pos) n -= 1; });
+  return n;
+}
+function weekLabelKo(pos) { return isMakeupWeek(pos) ? '연기경기주차' : `${regularWeekNumber(pos)}주차`; }
+function weekLabelEn(pos, prefix, sep) {
+  if (isMakeupWeek(pos)) return 'Makeup Week';
+  return `${prefix || 'Week'}${sep === undefined ? ' ' : sep}${regularWeekNumber(pos)}`;
+}
+
 // ===== 라운드별 경기 하이라이트 영상 링크 =====
 // roundKey(round1, round2 ...)를 키로, 해당 라운드의 치주물루 경기 하이라이트 유튜브 링크를 담습니다.
 const matchHighlights = {
@@ -1314,9 +1336,17 @@ const scheduledRounds = {
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
-    // 13주차에서 연기됐던 치주물루 vs 비전 S 아카데미 경기가 15주차 홈 경기(10월 13일)로 확정되었습니다.
+    // 13주차에서 연기됐던 치주물루 vs 비전 S 아카데미 경기가 15주차 홈 경기(10월 16일 금요일)로 확정되었습니다.
     // 치주물루의 15주차 휴식(bye) 자리를 이 경기가 대신합니다.
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-13", kickoffTime: "15:00", movedFromWeek: 13, changed: true }
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-16", kickoffTime: "15:00", movedFromWeek: 13, changed: true }
+  ],
+  // ── 연기경기주차 (정규 15주차와 정규 16주차 사이) ──
+  // 9주차에서 연기됐던 치주물루 vs 루비리 경기를 15주차(비전전) 다음 경기로 잡아둔 보충 주차입니다.
+  // 화면에는 "연기경기주차"로 표시되고(MAKEUP_ROUND_KEYS 참고), 정규 16주차 일정은 round17 키에 입력해주세요.
+  // 정확한 날짜/시간은 아직 미정이라 kickoffDate/kickoffTime을 비워뒀습니다 — 확정되면
+  // kickoffDate: "YYYY-MM-DD", kickoffTime: "HH:MM" 만 추가해주세요.
+  round16: [
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", movedFromWeek: 9 }
   ]
 };
 
@@ -1436,7 +1466,7 @@ const roundsData = {
   // (round7의 마푸 vs 에크웬데니와 동일한 패턴 — 새 날짜가 확정되고 스코어가
   // 채워지면 postponed를 지우고 matchDetails.round9 목록 맨 뒤에 추가해주세요.)
   round9: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-04", kickoffTime: "15:00", postponed: true },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-04", kickoffTime: "15:00", postponed: true, movedToWeek: 16 },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-05", kickoffTime: "14:30", homeScore: 6, awayScore: 0, scorersHome: "YAMIKANI NYIRENDA, ZAKARIA MPHAMBA, MOFFAT MVULA, LIMBANI KAMANGA (2골), PEARSON NYIRENDA", scorersAway: "없음" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-09-05", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "HERBERT CHIRAMBO", scorersAway: "없음" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 2, awayScore: 2, scorersHome: "ROBIN CHIOKO, SAMAN NYIRENDA", scorersAway: "ZIKANI KASAMBALA, KING NYASULU" },
@@ -4370,7 +4400,7 @@ function buildAutoMatchEntry(roundKey, weekNum, lineup) {
   const shortKo = nameKo => (nameKo || '').trim().split(' ')[0];
   const homeShort = (found.homeKo === ourKo) ? '치주물루' : shortKo(found.homeKo);
   const awayShort = (found.awayKo === ourKo) ? '치주물루' : shortKo(found.awayKo);
-  const comp = `26/27 시즌 NRFA 리그 원 ${weekNum}주차`;
+  const comp = `26/27 시즌 NRFA 리그 원 ${(isMakeupWeek(weekNum) && found.movedFromWeek) ? found.movedFromWeek : regularWeekNumber(weekNum)}주차`;
   const score = `${homeShort} ${found.homeScore} : ${found.awayScore} ${awayShort}`;
   let result;
   if (found.homeScore === found.awayScore) {
