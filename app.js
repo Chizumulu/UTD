@@ -450,6 +450,7 @@
       runMonteCarloSimulationAsync(4000).then(result => {
         predictionCache = result;
         drawPredictionTable();
+        renderTitleProbabilityHistoryChart(); // 마지막 주차 점을 정식 결과로 맞추기 위해 다시 그림
         refreshBtn.disabled = false;
       }).catch(err => {
         console.error('몬테카를로 시뮬레이션 실행 중 오류:', err);
@@ -616,7 +617,8 @@
     const byEn = {};
     ranked.forEach(t => { byEn[t.nameEn] = t; });
 
-    const safeSlots = teamCount - 3; // 이 순위 이내면 강등권 탈출
+    const releg1st = teamCount - 2; // 강등 시작 순위(13위). 13위 칸 오른쪽(12위와의 경계)에 강등선
+    const promoEdge = 2;            // 2위 칸 오른쪽(1위와의 경계)에 승격선
     const cols = [];
     for (let k = teamCount - 1; k >= 1; k--) cols.push(k); // 14위 ... 1위 (15위 이내는 항상 100%)
 
@@ -625,7 +627,7 @@
 
     let html = '<thead><tr><th class="rpm-team-h">' + (isKorean ? '팀' : 'TEAM') + '</th>';
     cols.forEach(k => {
-      const cls = k === 1 ? ' rpm-col-promo' : (k === safeSlots ? ' rpm-col-safe' : '');
+      const cls = k === promoEdge ? ' rpm-col-promo' : (k === releg1st ? ' rpm-col-safe' : '');
       html += `<th class="rpm-col${cls}">${isKorean ? k + '위' : k}</th>`;
     });
     html += '</tr></thead><tbody>';
@@ -649,7 +651,7 @@
       html += `<tr class="${mine.trim()}"><td class="rpm-team"><img class="team-logo" src="${r.logoSrc}" data-en-name="${r.nameEn}" alt="${r.nameEn}"><span class="pt-team-name-full">${name}</span><span class="pt-team-name-short">${shortName}</span></td>`;
 
       cols.forEach(k => {
-        const colCls = k === 1 ? ' rpm-col-promo' : (k === safeSlots ? ' rpm-col-safe' : '');
+        const colCls = k === promoEdge ? ' rpm-col-promo' : (k === releg1st ? ' rpm-col-safe' : '');
         if (team && better + 1 <= k) {
           html += `<td class="rpm-cell rpm-lock${colCls}">${lockLabel}</td>`;
         } else if (team && worse + 1 > k) {
@@ -9598,8 +9600,20 @@
     svg.innerHTML = '';
     if (legendEl) legendEl.innerHTML = '';
 
-    const history = getTitleProbabilityHistory();
+    let history = getTitleProbabilityHistory();
     if (!history.length) return;
+
+    // 가장 최근 주차(마지막 점)는 예측 탭의 정식 몬테카를로 결과와 같은 값으로 맞춥니다.
+    // 추이용 간이 시뮬레이션(600회, 단순 모델)과 정식 시뮬레이션(4000회, 보정 모델)은
+    // 값이 달라서, 그대로 두면 표의 우승 확률과 그래프 끝점이 어긋나 보이기 때문입니다.
+    if (predictionCache && Array.isArray(predictionCache.results) && predictionCache.results.length) {
+      const officialPct = {};
+      predictionCache.results.forEach(r => { officialPct[r.nameEn] = r.championPct; });
+      const lastEntry = history[history.length - 1];
+      history = history.slice(0, -1).concat([Object.assign({}, lastEntry, {
+        championPct: Object.assign({}, lastEntry.championPct, officialPct)
+      })]);
+    }
 
     const teamByEn = {};
     leagueData.forEach(t => { teamByEn[t.nameEn] = t; });
