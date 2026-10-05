@@ -506,8 +506,87 @@
       tbody.appendChild(tr);
     });
 
+    renderRankProbMatrix();
     attachImageFallback();
     refreshScrollFadeHints();
+  }
+
+  // ===== 순위별 확률표 (팀 × "N위 이내") =====
+  // 칸 값은 몬테카를로 결과(predictionCache.results[].rankPcts)의 누적 확률입니다.
+  // 승점만으로 이미 정해진 칸은 확률 대신 "확보"/"불가"로 덮어씁니다 (매직넘버와 같은
+  // 보수적 가정: 동률은 미정으로 취급, 팀 간 맞대결은 고려하지 않음).
+  //  - 확보: 내가 남은 경기를 전부 져도(승점 그대로), 나를 넘을 수 있는 팀이 N-1팀 이하
+  //  - 불가: 내가 남은 경기를 전부 이겨도, 이미 나를 확실히 앞선 팀이 N팀 이상
+  function renderRankProbMatrix() {
+    const table = document.getElementById('rankProbMatrix');
+    if (!table || !predictionCache) return;
+
+    const results = predictionCache.results || [];
+    const teamCount = results.length;
+    if (teamCount < 2) { table.innerHTML = ''; return; }
+
+    const ranked = getRankedTeams('all');
+    const ctx = getMagicNumberContext(ranked);
+    const byEn = {};
+    ranked.forEach(t => { byEn[t.nameEn] = t; });
+
+    const safeSlots = teamCount - 3; // 이 순위 이내면 강등권 탈출
+    const cols = [];
+    for (let k = teamCount - 1; k >= 1; k--) cols.push(k); // 14위 ... 1위 (15위 이내는 항상 100%)
+
+    const lockLabel = isKorean ? '확보' : 'Locked';
+    const outLabel = isKorean ? '불가' : 'Out';
+
+    let html = '<thead><tr><th class="rpm-team-h">' + (isKorean ? '팀' : 'TEAM') + '</th>';
+    cols.forEach(k => {
+      const cls = k === 1 ? ' rpm-col-promo' : (k === safeSlots ? ' rpm-col-safe' : '');
+      html += `<th class="rpm-col${cls}">${isKorean ? k + '위' : k}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    results.forEach(r => {
+      const team = byEn[r.nameEn];
+      const name = isKorean ? r.nameKo : r.nameEn;
+      const shortName = name.split(' ')[0];
+      const mine = r.nameEn === 'Chizumulu United FC' ? ' rpm-mine' : '';
+
+      let better = 0, worse = 0;
+      if (team) {
+        const myMax = ctx.maxPoints(team);
+        ranked.forEach(o => {
+          if (o.nameEn === team.nameEn) return;
+          if (ctx.maxPoints(o) >= team.pts) better++;   // 최악의 경우 나를 넘거나 동률 가능
+          if (o.pts > myMax) worse++;                   // 이미 확실히 나보다 위
+        });
+      }
+
+      html += `<tr class="${mine.trim()}"><td class="rpm-team"><img class="team-logo" src="${r.logoSrc}" data-en-name="${r.nameEn}" alt="${r.nameEn}"><span class="pt-team-name-full">${name}</span><span class="pt-team-name-short">${shortName}</span></td>`;
+
+      cols.forEach(k => {
+        const colCls = k === 1 ? ' rpm-col-promo' : (k === safeSlots ? ' rpm-col-safe' : '');
+        if (team && better + 1 <= k) {
+          html += `<td class="rpm-cell rpm-lock${colCls}">${lockLabel}</td>`;
+        } else if (team && worse + 1 > k) {
+          html += `<td class="rpm-cell rpm-out${colCls}">${outLabel}</td>`;
+        } else if (Array.isArray(r.rankPcts)) {
+          let p = 0;
+          for (let i = 0; i < k; i++) p += r.rankPcts[i] || 0;
+          p = Math.min(100, p);
+          let txt;
+          if (p >= 99.5) txt = '>99';
+          else if (p > 0 && p < 0.5) txt = '<1';
+          else txt = String(Math.round(p));
+          const alpha = (Math.min(100, p) / 100 * 0.5).toFixed(3);
+          const strong = p >= 50 ? ' rpm-strong' : '';
+          html += `<td class="rpm-cell rpm-pct${strong}${colCls}" style="--rpm-a:${alpha}">${txt}</td>`;
+        } else {
+          html += `<td class="rpm-cell rpm-out${colCls}">-</td>`;
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    table.innerHTML = html;
   }
 
   // ===== 예상 득점(xG) vs 실제 득점 산점도 =====
@@ -11571,6 +11650,7 @@
     registerScrollFadeHint('magicNumberStatsScroller', 'magicNumberStatsFade');
     registerScrollFadeHint('scorersTableScroller', 'scorersTableFade');
     registerScrollFadeHint('predictTableScroller', 'predictTableFade');
+    registerScrollFadeHint('rankProbMatrixScroller', 'rankProbMatrixFade');
   }
 
   // 데이터가 다시 렌더링되거나(언어 전환, 필터 변경, 화면 전환 등) 콘텐츠 폭이

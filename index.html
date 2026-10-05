@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '005',
-    data: '007',
-    app: '005',
+    style: '009',
+    data: '009',
+    app: '009',
     predictWorker: '002',
     pathfinderEngine: '001',
     poster: '001'
@@ -787,6 +787,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div class="scatter-body"><svg id="titleProbHistorySvg" viewBox="0 0 820 410" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <div class="rank-hist-legend" id="titleProbHistLegend"></div>
+  </div>
+  <div class="scatter-card rpm-card" style="margin-top:20px;">
+    <div class="stats-title">
+      <span class="lbl" data-en="FINAL RANK PROBABILITY" data-ko="순위별 확률표">순위별 확률표</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'rankProbMatrixInfo')">ⓘ</span>
+      <div class="info-tooltip" id="rankProbMatrixInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-ko="시즌 종료 시 각 팀이 'N위 이내'로 끝낼 확률이에요. 위 시뮬레이션 결과를 그대로 쓰고, 남은 경기 결과와 상관없이 수학적으로 이미 정해진 칸은 '확보'(그 순위 이내 확정) 또는 '불가'(도달 불가능)로 표시합니다. 확정 판정은 승점만 보는 보수적 계산이라 동률은 미정으로 취급해요." data-en="The chance each team finishes the season in the top N. Uses the simulation above; cells that are already mathematically settled show LOCKED (top N guaranteed) or OUT (can no longer reach it). The check is points-only and conservative, so ties count as undecided.">시즌 종료 시 각 팀이 'N위 이내'로 끝낼 확률이에요. 위 시뮬레이션 결과를 그대로 쓰고, 남은 경기 결과와 상관없이 수학적으로 이미 정해진 칸은 '확보'(그 순위 이내 확정) 또는 '불가'(도달 불가능)로 표시합니다. 확정 판정은 승점만 보는 보수적 계산이라 동률은 미정으로 취급해요.</span>
+      </div>
+    </div>
+    <div class="scroll-fade-wrap" id="rankProbMatrixFade">
+      <div class="rpm-scroller" id="rankProbMatrixScroller">
+        <table class="rpm-table" id="rankProbMatrix"></table>
+      </div>
+    </div>
+    <div class="legend rpm-legend">
+      <span><span class="rpm-chip rpm-chip-lock"></span><span class="lbl" data-en="Locked: top N guaranteed" data-ko="확보: 해당 순위 이내 확정">확보: 해당 순위 이내 확정</span></span>
+      <span><span class="rpm-chip rpm-chip-out"></span><span class="lbl" data-en="Out: can no longer reach it" data-ko="불가: 도달 불가능">불가: 도달 불가능</span></span>
+      <span><span class="rpm-chip rpm-chip-heat"></span><span class="lbl" data-en="Number = probability (%) — darker is likelier" data-ko="숫자: 확률(%) · 진할수록 높음">숫자: 확률(%) · 진할수록 높음</span></span>
+    </div>
   </div>
   <section class="magic-number-stats-section" aria-live="polite">
     <div class="stats-title advanced">

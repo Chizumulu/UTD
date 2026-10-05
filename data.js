@@ -1239,7 +1239,6 @@ const matchDetails = {
   // 아래에 새로 추가했습니다. 치주물루 vs 비전, 마푸 vs 칠룸바는 연기(postponed)라
   // 스코어가 없어 matchDetails에는 넣지 않습니다 — 나중에 결과가 나오면 이 목록 맨 뒤에 추가해주세요.
   // (순서는 roundsData.round13의 스코어가 있는 경기 순서와 같아야 합니다.)
-  // 에우티니 vs 젠다의 에우티니 득점자(1골)는 아직 확인되지 않아 비워뒀습니다.
   round13: [
     {
       match: "에크웬데니 0 : 치폴로폴로 2",
@@ -1263,6 +1262,7 @@ const matchDetails = {
     },
     {
       match: "에우티니 1 : 젠다 3",
+      scorersHome: "EDSON NYIRENDA",
       scorersAway: "WYSON NYIRENDA, CHISOMO MYEGHA (2골)"
     },
     {
@@ -1506,7 +1506,7 @@ const roundsData = {
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-04", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "PEARSON NYIRENDA, ZAKALIA MPHAMBA", scorersAway: "없음" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FRANK KAUNDA, ROBIN CHIOKO", scorersAway: "HENDERSON KANYIKA (2골), PETER LUNGU" },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-04", kickoffTime: "14:30", homeScore: 1, awayScore: 3, scorersAway: "WYSON NYIRENDA, CHISOMO MYEGHA (2골)" },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-04", kickoffTime: "14:30", homeScore: 1, awayScore: 3, scorersHome: "EDSON NYIRENDA", scorersAway: "WYSON NYIRENDA, CHISOMO MYEGHA (2골)" },
     { byeKo: "친테체 유나이티드 FC", byeEn: "Chintheche United FC" },
     // 11주차에서 연기됐던 치주물루 vs 칠룸바 경기가 13주차(10월 2일) 홈 경기로 확정되었습니다.
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-02", kickoffTime: "15:00", movedFromWeek: 11, homeScore: 4, awayScore: 0, scorersHome: "DICKIES NYIRENDA (2골), TIMOTHY KATAPA, KUMBUKANI BANYA", scorersAway: "없음" },
@@ -2643,7 +2643,8 @@ const playerDirectory = {
   "PETER LUNGU": { nameKo: "피터 룽구", nameEn: "Peter Lungu" },
   "TYGO GOMEKA": { nameKo: "타이고 고메카", nameEn: "Tygo Gomeka" },
   "ALLAN NKHONJERA": { nameKo: "앨런 은콘제라", nameEn: "Allan Nkhonjera" },
-  "TYSON NYIRONGO": { nameKo: "타이슨 니롱고", nameEn: "Tyson Nyirongo" }
+  "TYSON NYIRONGO": { nameKo: "타이슨 니롱고", nameEn: "Tyson Nyirongo" },
+  "EDSON NYIRENDA": { nameKo: "에드슨 니렌다", nameEn: "Edson Nyirenda" }
 };
 
 function toTitleCase(upperName) {
@@ -4569,7 +4570,9 @@ function runMonteCarloSimulation(iterations) {
     top3Pct: (top3Count[t.nameEn] / N) * 100,
     bottom3Pct: (bottom3Count[t.nameEn] / N) * 100,
     avgFinalPts: finalPtsSum[t.nameEn] / N,
-    avgFinalRank: finalRankSum[t.nameEn] / N
+    avgFinalRank: finalRankSum[t.nameEn] / N,
+    // 순위별 확률(%) — 인덱스 0이 1위. '순위별 확률 표'(rankProbMatrix)가 사용합니다.
+    rankPcts: rankCounts[t.nameEn].map(c => (c / N) * 100)
   }));
 
   results.sort((a, b) => b.championPct - a.championPct || a.avgFinalRank - b.avgFinalRank);

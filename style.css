@@ -11120,3 +11120,40 @@
 #mainTable.hide-ha-count .ha-count-cell,
 #mainTable.hide-ha-count .ha-count-th { display: none; }
 #mainTable .ha-count-th { white-space: nowrap; }
+
+  /* ===== 순위별 확률표 (rankProbMatrix) ===== */
+  .rpm-scroller { width: 100%; overflow-x: auto; padding: 4px 8px 10px; }
+  table.rpm-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+  table.rpm-table th {
+    padding: 9px 4px;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-table-alt);
+    text-align: center;
+    white-space: nowrap;
+  }
+  table.rpm-table th.rpm-team-h { text-align: left; padding-left: 10px; position: sticky; left: 0; z-index: 2; min-width: 96px; }
+  table.rpm-table td { padding: 0; border-bottom: 1px solid var(--color-border-light); text-align: center; white-space: nowrap; }
+  table.rpm-table td.rpm-team {
+    position: sticky; left: 0; z-index: 1;
+    text-align: left; padding: 7px 10px;
+    font-weight: 700; color: var(--color-text-darkest);
+    background: var(--color-surface);
+  }
+  table.rpm-table td.rpm-team .team-logo { margin-right: 6px; vertical-align: middle; }
+  tr.rpm-mine td.rpm-team { box-shadow: inset 3px 0 0 var(--color-gold-strong); }
+  .rpm-cell { min-width: 38px; height: 34px; font-weight: 700; color: var(--color-text-dark); }
+  .rpm-pct { background: rgba(10, 86, 184, var(--rpm-a, 0)); font-variant-numeric: tabular-nums; }
+  .rpm-pct.rpm-strong { color: var(--color-text-darkest); font-weight: 800; }
+  .rpm-lock { background: rgba(10, 86, 184, 0.16); color: #0a56b8; font-weight: 800; font-size: 11.5px; }
+  .rpm-out  { background: var(--color-bg-table-alt); color: var(--color-text-faint); font-size: 11.5px; }
+  th.rpm-col-promo, td.rpm-col-promo { box-shadow: inset 0 0 0 0 transparent, inset -2px 0 0 var(--color-green); }
+  th.rpm-col-safe, td.rpm-col-safe { box-shadow: inset -2px 0 0 var(--color-red); }
+  .rpm-legend { padding: 4px 16px 14px; }
+  .rpm-chip { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .rpm-chip-lock { background: rgba(10, 86, 184, 0.16); border: 1px solid rgba(10, 86, 184, 0.4); }
+  .rpm-chip-out  { background: var(--color-bg-table-alt); border: 1px solid var(--color-border-chip); }
+  .rpm-chip-heat { background: linear-gradient(90deg, rgba(10,86,184,0.05), rgba(10,86,184,0.5)); }
+  :root[data-theme="dark"] .rpm-lock { color: #8fbdf2; background: rgba(111, 168, 224, 0.2); }
+  :root[data-theme="dark"] .rpm-pct { background: rgba(111, 168, 224, calc(var(--rpm-a, 0) * 0.9)); }
