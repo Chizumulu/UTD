@@ -43,6 +43,9 @@
     { id: 'defenseIdx', labelKo: '수비 지수', labelEn: 'Defense Index', unitKo: '높은 순', unitEn: 'Highest first', tier: 'advanced',
       infoKo: '리그 평균 경기당 실점을 100%로 놓고, 이 팀이 그 대비 얼마나 덜 실점하는지를 보여주는 지표예요. 숫자가 높을수록 수비가 평균보다 견고하다는 뜻이고, 실점이 0인 팀은 \'무실점\'으로 표시됩니다.',
       infoEn: 'League-wide average goals conceded per game is set to 100%, and this shows how much less this team concedes relative to that average. A higher number means a stronger-than-average defense; a team with zero goals conceded shows as \'Perfect\'.' },
+    { id: 'scorerDep', labelKo: '득점 의존도', labelEn: 'Scorer Dependence', unitKo: '높은 순', unitEn: 'Highest first', tier: 'advanced',
+      infoKo: '팀 전체 득점 중 팀 내 최다 득점자 한 명이 넣은 비율이에요. 높을수록 골이 한 선수에게 몰려 있다는 뜻이고(그 선수가 빠지면 타격이 큼), 낮을수록 여러 선수가 고르게 넣는 팀이에요. 상대 자책골은 팀 득점에는 포함되지만 선수 기록에는 없어서 비율이 조금 낮게 나올 수 있어요.',
+      infoEn: 'The share of a team\'s total goals scored by its single top scorer. A high number means goals are concentrated in one player (a big hit if he is missing); a low number means the scoring is spread across the squad. Opponents\' own goals count toward the team total but not any player, so the share can read slightly low.' },
     { id: 'streakWin', labelKo: '연승', labelEn: 'Winning Streak', unitKo: '많은 순', unitEn: 'Highest first' },
     { id: 'streakLoss', labelKo: '연패', labelEn: 'Losing Streak', unitKo: '많은 순', unitEn: 'Highest first' },
     { id: 'streakDraw', labelKo: '연속 무승부', labelEn: 'Drawing Streak', unitKo: '많은 순', unitEn: 'Highest first' },
@@ -507,8 +510,91 @@
     });
 
     renderRankProbMatrix();
+    renderRankLines();
     attachImageFallback();
     refreshScrollFadeHints();
+  }
+
+  // ===== 우승·잔류 라인 예상 승점 =====
+  // 시뮬레이션이 낸 rankLines(순위별 최종 승점의 10/50/90% 분위)를 1위·3위·잔류선(12위)만
+  // 골라 범위 막대로 보여줍니다. 치주물루의 현재 승점은 금색 세로선으로 겹쳐 그립니다.
+  function renderRankLines() {
+    const host = document.getElementById('rankLinesBody');
+    if (!host || !predictionCache || !Array.isArray(predictionCache.rankLines)) return;
+    const lines = predictionCache.rankLines;
+    const teamCount = lines.length;
+    if (teamCount < 4) { host.innerHTML = ''; return; }
+
+    const safeRank = teamCount - 3;
+    const defs = [
+      { rank: 1, ko: '우승 라인', en: 'Title line', subKo: '1위 최종 승점', subEn: '1st-place total', cls: 'rl-title' },
+      { rank: 3, ko: '3위 라인', en: 'Top-3 line', subKo: '3위 최종 승점', subEn: '3rd-place total', cls: 'rl-top3' },
+      { rank: safeRank, ko: '잔류 라인', en: 'Safety line', subKo: `${safeRank}위 최종 승점`, subEn: `${safeRank}th-place total`, cls: 'rl-safe' }
+    ].map(d => Object.assign({}, d, { line: lines[d.rank - 1] })).filter(d => d.line);
+    if (!defs.length) { host.innerHTML = ''; return; }
+
+    const ranked = getRankedTeams('all');
+    const me = ranked.find(t => t.nameEn === 'Chizumulu United FC');
+    const myPts = me ? me.pts : null;
+
+    let lo = Math.min.apply(null, defs.map(d => d.line.p10));
+    let hi = Math.max.apply(null, defs.map(d => d.line.p90));
+    if (myPts !== null) lo = Math.min(lo, myPts);
+    lo = Math.max(0, Math.floor(lo / 10) * 10 - 10);
+    hi = Math.ceil(hi / 10) * 10 + 10;
+    const span = Math.max(1, hi - lo);
+    const pos = v => ((v - lo) / span * 100).toFixed(2);
+
+    const ticks = [];
+    const tickStep = span > 40 ? 10 : 5;
+    for (let v = lo; v <= hi; v += tickStep) ticks.push(v);
+
+    const myLineHtml = (myPts !== null)
+      ? `<div class="rl-me-line" style="left:calc(var(--rl-label-w) + var(--rl-gap) + (100% - var(--rl-label-w) - var(--rl-val-w) - 2 * var(--rl-gap)) * ${(pos(myPts) / 100).toFixed(4)})"><span class="rl-me-tag">${isKorean ? '현재 ' : 'Now '}${myPts}</span></div>`
+      : '';
+
+    const rowsHtml = defs.map(d => {
+      const L = d.line;
+      const left = pos(L.p10), width = Math.max(1.2, pos(L.p90) - pos(L.p10));
+      return `
+        <div class="rl-row">
+          <div class="rl-label">
+            <b>${isKorean ? d.ko : d.en}</b>
+            <span>${isKorean ? d.subKo : d.subEn}</span>
+          </div>
+          <div class="rl-track">
+            <div class="rl-range ${d.cls}" style="left:${left}%;width:${width}%"></div>
+            <div class="rl-median" style="left:${pos(L.p50)}%"></div>
+          </div>
+          <div class="rl-val">
+            <b>${L.p50}${isKorean ? '점' : ' pts'}</b>
+            <span>${L.p10}~${L.p90}</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    const axisHtml = ticks.map(v => `<span style="left:${pos(v)}%">${v}</span>`).join('');
+
+    // 치주물루 한 줄 요약: 현재 승점에서 각 라인 중앙값까지 필요한 추가 승점
+    let summary = '';
+    if (me) {
+      const need = d => Math.max(0, d.line.p50 - myPts);
+      const t = defs.find(d => d.rank === 1), sf = defs.find(d => d.rank === safeRank);
+      const parts = [];
+      if (t) parts.push(isKorean ? `우승 라인까지 +${need(t)}점` : `+${need(t)} to the title line`);
+      if (sf) parts.push(sf.line.p50 <= myPts
+        ? (isKorean ? '잔류 라인은 이미 넘음' : 'already above the safety line')
+        : (isKorean ? `잔류 라인까지 +${need(sf)}점` : `+${need(sf)} to the safety line`));
+      summary = `<div class="rl-summary">${isKorean ? '치주물루' : 'Chizumulu'} ${isKorean ? '현재 ' : 'now '}${myPts}${isKorean ? '점' : ' pts'} · ${parts.join(' · ')} <span class="rl-summary-note">${isKorean ? '(중앙값 기준)' : '(vs. median)'}</span></div>`;
+    }
+
+    host.innerHTML = `
+      <div class="rl-plot">
+        ${rowsHtml}
+        <div class="rl-axis"><div class="rl-axis-inner">${axisHtml}</div></div>
+        ${myLineHtml}
+      </div>
+      ${summary}`;
   }
 
   // ===== 순위별 확률표 (팀 × "N위 이내") =====
@@ -7832,8 +7918,18 @@
     leagueData.forEach(t => { totalGoals += (t.goalsFor || 0); totalGames += (t.played || 0); });
     const leagueAvgGpg = totalGames > 0 ? totalGoals / totalGames : 0;
 
+    // 팀별 득점자 목록(topScorersData는 data.js에서 이미 계산된 선수별 득점 순위)
+    const scorersByTeam = {};
+    if (typeof topScorersData !== 'undefined') {
+      topScorersData.forEach(p => { (scorersByTeam[p.teamEn] = scorersByTeam[p.teamEn] || []).push(p); });
+    }
+
     return leagueData.map(team => {
       const pts = (team.won * 3) + (team.drawn * 1);
+      const teamScorers = (scorersByTeam[team.nameEn] || []).slice().sort((a, b) => b.goals - a.goals);
+      const topScorer = teamScorers[0] || null;
+      const topScorerTied = topScorer ? teamScorers.filter(p => p.goals === topScorer.goals).length : 0;
+      const scorerShare = (topScorer && team.goalsFor > 0) ? Math.min(100, (topScorer.goals / team.goalsFor) * 100) : null;
       const denom = Math.pow(team.goalsFor, 1.072388) + Math.pow(team.goalsAgainst, 1.127248);
       const pythagPoints = (team.played > 0 && denom > 0)
         ? (Math.pow(team.goalsFor, 1.122777) / denom) * 2.499973 * team.played
@@ -7881,9 +7977,25 @@
         drawStreak: drawStreak,
         unbeatenStreak: unbeatenStreak,
         scoringStreak: scoringStreak,
-        concedingStreak: concedingStreak
+        concedingStreak: concedingStreak,
+        topScorer: topScorer,
+        topScorerTied: topScorerTied,
+        scorerShare: scorerShare
       };
     });
+  }
+
+  // 득점 의존도의 보조 문구: "헨더슨 칸이카 12골" / 공동 1위가 여러 명이면 "OOO 외 1명 · 4골"
+  function scorerDepSubText(team) {
+    const p = team.topScorer;
+    if (!p) return '';
+    const name = isKorean ? p.nameKo : p.nameEn;
+    if (team.topScorerTied > 1) {
+      return isKorean
+        ? `${name} 외 ${team.topScorerTied - 1}명 · ${p.goals}골`
+        : `${name} +${team.topScorerTied - 1} · ${p.goals} goals`;
+    }
+    return isKorean ? `${name} ${p.goals}골` : `${name} · ${p.goals} goals`;
   }
 
   // ===== 리그 기록 - 리더보드 값 포맷 (Stat Value Formatting) =====
@@ -7915,6 +8027,10 @@
       }
       const cls = team.defenseIndex > 105 ? 'stat-val-pos' : (team.defenseIndex < 95 ? 'stat-val-neg' : '');
       return { main: Math.round(team.defenseIndex) + '%', sub: null, mainClass: cls };
+    }
+    if (statType === 'scorerDep') {
+      if (team.scorerShare === null) return { main: '-', sub: null };
+      return { main: Math.round(team.scorerShare) + '%', sub: scorerDepSubText(team) };
     }
     if (statType === 'streakWin') return { main: team.winStreak, sub: null };
     if (statType === 'streakLoss') return { main: team.lossStreak, sub: null };
@@ -8047,6 +8163,7 @@
       else if (statType === 'pythag') currentValue = team.pythagPoints;
       else if (statType === 'attackIdx') currentValue = team.attackIndex;
       else if (statType === 'defenseIdx') currentValue = team.defenseIndex;
+      else if (statType === 'scorerDep') currentValue = team.scorerShare === null ? -1 : Math.round(team.scorerShare * 10) / 10;
       else if (statType === 'streakWin') currentValue = team.winStreak;
       else if (statType === 'streakLoss') currentValue = team.lossStreak;
       else if (statType === 'streakDraw') currentValue = team.drawStreak;
@@ -8152,6 +8269,16 @@
           valTd.style.color = team.defenseIndex > 105 ? 'var(--color-teal)' : (team.defenseIndex < 95 ? 'var(--color-red)' : 'var(--color-text-faint)');
         }
         tr.appendChild(valTd);
+      } else if (statType === 'scorerDep') {
+        const valTd1 = document.createElement('td');
+        valTd1.className = 'stat-val';
+        valTd1.textContent = team.scorerShare === null ? '-' : Math.round(team.scorerShare) + '%';
+        tr.appendChild(valTd1);
+        const valTd2 = document.createElement('td');
+        valTd2.className = 'stat-val';
+        valTd2.style.color = 'var(--color-text-faint)';
+        valTd2.textContent = team.topScorer ? scorerDepSubText(team) : '';
+        tr.appendChild(valTd2);
       } else if (statType === 'streakWin') {
         const valTd = document.createElement('td');
         valTd.className = 'stat-val';
@@ -8399,6 +8526,7 @@
     statsData.pythag = teams.slice().sort(function(a, b) { return (b.pythagPoints - a.pythagPoints) || teamMineFirst(a, b); });
     statsData.attackIdx = teams.slice().sort(function(a, b) { return (b.attackIndex - a.attackIndex) || teamMineFirst(a, b); });
     statsData.defenseIdx = teams.slice().sort(function(a, b) { return (b.defenseIndex - a.defenseIndex) || teamMineFirst(a, b); });
+    statsData.scorerDep = teams.slice().sort(function(a, b) { return ((b.scorerShare === null ? -1 : b.scorerShare) - (a.scorerShare === null ? -1 : a.scorerShare)) || teamMineFirst(a, b); });
     statsData.streakWin = teams.slice().sort(function(a, b) { return (b.winStreak - a.winStreak) || teamMineFirst(a, b); });
     statsData.streakLoss = teams.slice().sort(function(a, b) { return (b.lossStreak - a.lossStreak) || teamMineFirst(a, b); });
     statsData.streakDraw = teams.slice().sort(function(a, b) { return (b.drawStreak - a.drawStreak) || teamMineFirst(a, b); });
@@ -9622,6 +9750,11 @@
     defenseIdx: {
       titleKo: "수비 지수 (전체)", titleEn: "DEFENSE INDEX (Full List)",
       header1Ko: "수비 지수", header1En: "DEFENSE INDEX",
+    },
+    scorerDep: {
+      titleKo: "득점 의존도 (전체)", titleEn: "SCORER DEPENDENCE (Full List)",
+      header1Ko: "의존도", header1En: "SHARE",
+      header2Ko: "최다 득점자", header2En: "TOP SCORER",
     },
     streakWin: {
       titleKo: "연승 (전체)", titleEn: "WINNING STREAK (Full List)",

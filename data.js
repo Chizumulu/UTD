@@ -4459,6 +4459,8 @@ function runMonteCarloSimulation(iterations) {
   const bottom3Count = {};
   const finalPtsSum = {};
   const finalRankSum = {};
+  // 순위별 최종 승점 표본(인덱스 0 = 1위): '우승·잔류 라인 예상 승점'에 사용
+  const ptsAtRank = Array.from({ length: teamCount }, () => []);
 
   teams.forEach(t => {
     rankCounts[t.nameEn] = new Array(teamCount).fill(0);
@@ -4554,6 +4556,7 @@ function runMonteCarloSimulation(iterations) {
     standings.forEach((s, idx) => {
       const rank = idx + 1;
       rankCounts[s.nameEn][idx] += 1;
+      ptsAtRank[idx].push(s.pts);
       finalPtsSum[s.nameEn] += s.pts;
       finalRankSum[s.nameEn] += rank;
       if (rank === 1) champCount[s.nameEn] += 1;
@@ -4577,8 +4580,20 @@ function runMonteCarloSimulation(iterations) {
 
   results.sort((a, b) => b.championPct - a.championPct || a.avgFinalRank - b.avgFinalRank);
 
+  // 순위별 최종 승점 분포 요약: N위가 최종적으로 몇 점이었는지의 평균/중앙값/10~90% 구간
+  const rankLines = ptsAtRank.map((arr, idx) => {
+    const sorted = arr.slice().sort((a, b) => a - b);
+    const q = f => sorted.length ? sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(f * (sorted.length - 1))))] : 0;
+    return {
+      rank: idx + 1,
+      mean: sorted.length ? sorted.reduce((x, y) => x + y, 0) / sorted.length : 0,
+      p10: q(0.1), p50: q(0.5), p90: q(0.9)
+    };
+  });
+
   return {
     results,
+    rankLines,
     iterations: N,
     remainingFixtureCount: fixtures.length,
     correctionApplied: correction.active,

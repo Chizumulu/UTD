@@ -11157,3 +11157,33 @@
   .rpm-chip-heat { background: linear-gradient(90deg, rgba(10,86,184,0.05), rgba(10,86,184,0.5)); }
   :root[data-theme="dark"] .rpm-lock { color: #8fbdf2; background: rgba(111, 168, 224, 0.2); }
   :root[data-theme="dark"] .rpm-pct { background: rgba(111, 168, 224, calc(var(--rpm-a, 0) * 0.9)); }
+
+  /* ===== 우승·잔류 라인 예상 승점 (rankLines) ===== */
+  .rl-body { padding: 16px 16px 14px; }
+  .rl-plot { position: relative; }
+  .rl-row { display: grid; grid-template-columns: 108px 1fr 74px; align-items: center; column-gap: 10px; padding: 7px 0; }
+  .rl-label b { display: block; font-size: 13px; color: var(--color-text-darkest); }
+  .rl-label span { display: block; font-size: 11px; color: var(--color-text-faint); margin-top: 1px; }
+  .rl-track { position: relative; height: 22px; background: var(--color-bg-table-alt); border-radius: var(--radius-sm); }
+  .rl-range { position: absolute; top: 3px; bottom: 3px; border-radius: 6px; opacity: 0.85; }
+  .rl-range.rl-title { background: var(--color-green); }
+  .rl-range.rl-top3 { background: var(--color-gold-strong); }
+  .rl-range.rl-safe { background: var(--color-red-light); }
+  .rl-median { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: var(--color-text-darkest); border-radius: 2px; }
+  .rl-val { text-align: right; line-height: 1.25; }
+  .rl-val b { display: block; font-size: 14px; color: var(--color-text-darkest); font-variant-numeric: tabular-nums; }
+  .rl-val span { font-size: 11px; color: var(--color-text-faint); font-variant-numeric: tabular-nums; }
+  .rl-axis { display: grid; grid-template-columns: 108px 1fr 74px; column-gap: 10px; margin-top: 2px; }
+  .rl-axis-inner { position: relative; grid-column: 2; height: 16px; }
+  .rl-axis-inner span { position: absolute; transform: translateX(-50%); font-size: 10.5px; color: var(--color-text-faint); font-variant-numeric: tabular-nums; }
+  /* 현재 승점 세로선: 트랙 열(2번째 열) 안쪽에만 그리기 위해 같은 그리드 열 오프셋을 씁니다 */
+  .rl-me-line { position: absolute; top: 0; bottom: 18px; width: 0; border-left: 2px dashed var(--color-gold-strong); pointer-events: none; }
+  .rl-plot { --rl-label-w: 108px; --rl-val-w: 74px; --rl-gap: 10px; }
+    .rl-me-tag { position: absolute; top: -2px; left: 4px; font-size: 10.5px; font-weight: 800; color: var(--color-gold-strong); background: var(--color-surface); padding: 0 3px; white-space: nowrap; }
+  .rl-summary { margin-top: 10px; padding: 9px 12px; border-radius: var(--radius-sm); background: var(--color-bg-rank-highlight); color: var(--color-text-dark); font-size: 12.5px; font-weight: 700; }
+  .rl-summary-note { font-weight: 500; color: var(--color-text-faint); }
+  @media (max-width: 600px) {
+    .rl-row, .rl-axis { grid-template-columns: 78px 1fr 58px; column-gap: 8px; }
+    .rl-plot { --rl-label-w: 78px; --rl-val-w: 58px; --rl-gap: 8px; }
+    .rl-label span { display: none; }
+  }

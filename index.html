@@ -8,9 +8,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '009',
-    data: '009',
-    app: '009',
+    style: '001',
+    data: '001',
+    app: '001',
     predictWorker: '002',
     pathfinderEngine: '001',
     poster: '001'
@@ -806,6 +806,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span><span class="rpm-chip rpm-chip-out"></span><span class="lbl" data-en="Out: can no longer reach it" data-ko="불가: 도달 불가능">불가: 도달 불가능</span></span>
       <span><span class="rpm-chip rpm-chip-heat"></span><span class="lbl" data-en="Number = probability (%) — darker is likelier" data-ko="숫자: 확률(%) · 진할수록 높음">숫자: 확률(%) · 진할수록 높음</span></span>
     </div>
+  </div>
+  <div class="scatter-card rl-card" style="margin-top:20px;">
+    <div class="stats-title">
+      <span class="lbl" data-en="TITLE & SAFETY POINT LINES" data-ko="우승·잔류 라인 예상 승점">우승·잔류 라인 예상 승점</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'rankLinesInfo')">ⓘ</span>
+      <div class="info-tooltip" id="rankLinesInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-ko="시뮬레이션에서 시즌 종료 시 1위·3위·12위가 몇 점으로 끝났는지의 분포예요. 막대는 10~90% 구간(시뮬레이션의 80%가 이 안에 들어옴), 굵은 눈금은 중앙값입니다. 12위 승점이 곧 잔류 라인이에요(13~15위 강등). 금색 선은 치주물루의 현재 승점이에요." data-en="How many points the 1st, 3rd and 12th-placed teams finished with across the simulations. The bar spans the 10th–90th percentile (80% of runs land inside), the thick tick is the median. 12th place's total is the safety line (13th–15th are relegated). The gold line is Chizumulu's current points.">시뮬레이션에서 시즌 종료 시 1위·3위·12위가 몇 점으로 끝났는지의 분포예요. 막대는 10~90% 구간(시뮬레이션의 80%가 이 안에 들어옴), 굵은 눈금은 중앙값입니다. 12위 승점이 곧 잔류 라인이에요(13~15위 강등). 금색 선은 치주물루의 현재 승점이에요.</span>
+      </div>
+    </div>
+    <div class="rl-body" id="rankLinesBody"></div>
   </div>
   <section class="magic-number-stats-section" aria-live="polite">
     <div class="stats-title advanced">
