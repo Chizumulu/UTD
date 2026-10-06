@@ -274,8 +274,10 @@
     const scorersView = document.getElementById('scorersView');
     const predictView = document.getElementById('predictView');
     const venuesView = document.getElementById('venuesView');
+    const teamCompareView = document.getElementById('teamCompareView');
     const reportView = document.getElementById('reportView');
     const nextMatchStrip = document.getElementById('nextMatchStrip');
+    const nextMatchPreviewCardEl = document.getElementById('nextMatchPreviewCard');
     const rankBtn = document.getElementById('viewRankBtn');
     const leagueRankBtn = document.getElementById('viewLeagueRankBtn');
     const squadBtn = document.getElementById('viewSquadBtn');
@@ -284,6 +286,7 @@
     const scorersBtn = document.getElementById('viewScorersBtn');
     const predictBtn = document.getElementById('viewPredictBtn');
     const venuesBtn = document.getElementById('viewVenuesBtn');
+    const teamCompareBtn = document.getElementById('viewTeamCompareBtn');
     const reportBtn = document.getElementById('viewReportBtn');
 
     rankView.style.display = 'none';
@@ -294,8 +297,10 @@
     scorersView.style.display = 'none';
     predictView.style.display = 'none';
     if (venuesView) venuesView.style.display = 'none';
+    if (teamCompareView) teamCompareView.style.display = 'none';
     if (reportView) reportView.style.display = 'none';
     if (nextMatchStrip) nextMatchStrip.style.display = 'none';
+    if (nextMatchPreviewCardEl) nextMatchPreviewCardEl.style.display = 'none';
     rankBtn.classList.remove('active');
     if (leagueRankBtn) leagueRankBtn.classList.remove('active');
     squadBtn.classList.remove('active');
@@ -304,6 +309,7 @@
     scorersBtn.classList.remove('active');
     predictBtn.classList.remove('active');
     if (venuesBtn) venuesBtn.classList.remove('active');
+    if (teamCompareBtn) teamCompareBtn.classList.remove('active');
     if (reportBtn) reportBtn.classList.remove('active');
 
     if (view === 'squad') {
@@ -314,6 +320,7 @@
     } else if (view === 'rounds') {
       roundsView.style.display = '';
       roundsBtn.classList.add('active');
+      currentRoundHalf = null; // 다른 탭에서 돌아오면 현재 보던 라운드의 반기로 다시 맞춥니다.
       renderRoundsView();
       playViewEnterAnimation(roundsView);
     } else if (view === 'stats') {
@@ -337,6 +344,11 @@
       renderMagicNumberStats();
       renderAiTrackRecord();
       playViewEnterAnimation(predictView);
+    } else if (view === 'teamCompare') {
+      if (teamCompareView) teamCompareView.style.display = '';
+      if (teamCompareBtn) teamCompareBtn.classList.add('active');
+      renderTeamCompareView();
+      playViewEnterAnimation(teamCompareView);
     } else if (view === 'venues') {
       if (venuesView) venuesView.style.display = '';
       if (venuesBtn) venuesBtn.classList.add('active');
@@ -357,6 +369,7 @@
       rankView.style.display = '';
       rankBtn.classList.add('active');
       if (nextMatchStrip) nextMatchStrip.style.display = '';
+      if (nextMatchPreviewCardEl) nextMatchPreviewCardEl.style.display = '';
       renderMainMiniTable();
       playViewEnterAnimation(rankView);
     }
@@ -2510,6 +2523,303 @@
           </div>`;
       }).join('') || `<div class="home-match-empty lbl" data-en="No upcoming fixtures" data-ko="예정된 경기가 없습니다">${isKorean ? '예정된 경기가 없습니다' : 'No upcoming fixtures'}</div>`;
       animateEntranceIn(upcomingEl, '.home-match-item');
+    }
+  }
+
+  // ===== 메인: 다음 경기 미리보기 카드 =====
+  // 예상 라인업(직전 경기 선발 기준) · 키 플레이어(우리 팀 + 상대 경계 대상) ·
+  // 앞으로 5경기 체감 난이도(FDR) 막대를 한 카드로 묶어 메인 화면에 요약합니다.
+  // 새로 입력할 데이터는 없고, matchLineups / squadPlayerStats / topScorersData /
+  // computeKeyPlayerImpactCandidates() / computeFixtureDifficulty()에서 자동으로 계산됩니다.
+  // 부상·징계 데이터가 없어서 "예상 라인업"은 어디까지나 직전 경기 선발 + 최근 선발 빈도 참고용입니다.
+  function nmpFirstName(full) {
+    return String(full || '').trim().split(/\s+/)[0];
+  }
+
+  function nmpLookupPlayer(st) {
+    if (typeof st.statKey === 'string' && /^F\d+$/.test(st.statKey)) {
+      const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+      return former.find(p => p.number === parseInt(st.statKey.slice(1), 10)) || null;
+    }
+    return squadData.find(p => p.number === st.number) || null;
+  }
+
+  function nmpLineupHtml() {
+    if (typeof matchLineups === 'undefined') return '';
+    const keys = Object.keys(matchLineups)
+      .filter(k => matchLineups[k] && Array.isArray(matchLineups[k].starters) && matchLineups[k].starters.length)
+      .sort((x, y) => parseInt(x.replace('round', ''), 10) - parseInt(y.replace('round', ''), 10));
+    if (!keys.length) return '';
+
+    const lastKey = keys[keys.length - 1];
+    const last = matchLineups[lastKey];
+    const recentKeys = keys.slice(-5);
+    const keyOf = s => s.statKey || s.number;
+    const weekNum = parseInt(lastKey.replace('round', ''), 10);
+    const weekTxt = isKorean ? wkKo(weekNum) : wkEn(weekNum, 'WK', ' ');
+
+    const positions = last.starters.map(s => s.pos);
+    const canField = positions.every(p => PITCH_COORDS[p]) && new Set(positions).size === positions.length;
+
+    const nameOf = (st, sq) => nmpFirstName(isKorean
+      ? (st.nameKo || (sq && sq.nameKo))
+      : ((sq && sq.nameEn) || st.nameEn || st.nameKo));
+    const startsOf = (st) => recentKeys.filter(k => matchLineups[k].starters.some(s => keyOf(s) === keyOf(st))).length;
+    const showCnt = recentKeys.length >= 2;
+
+    let body;
+    if (canField) {
+      body = `<div class="nmp-pitch">${last.starters.map(st => {
+        const sq = nmpLookupPlayer(st);
+        const [x, y] = PITCH_COORDS[st.pos];
+        const cnt = showCnt ? `<span class="nmp-slot-cnt">${startsOf(st)}/${recentKeys.length}</span>` : '';
+        return `
+          <button type="button" class="nmp-slot lineup-squad-link" data-player-number="${keyOf(st)}" style="left:${x}%;top:${y}%">
+            <span class="nmp-slot-dot">${st.number != null ? st.number : ''}${st.captain ? '<i class="nmp-slot-cap">C</i>' : ''}</span>
+            <span class="nmp-slot-name">${nameOf(st, sq)}</span>
+            ${cnt}
+          </button>`;
+      }).join('')}</div>`;
+    } else {
+      body = `<div class="nmp-chips">${last.starters.map(st => {
+        const sq = nmpLookupPlayer(st);
+        return `<button type="button" class="nmp-chip lineup-squad-link" data-player-number="${keyOf(st)}">${st.pos} · ${nameOf(st, sq)}</button>`;
+      }).join('')}</div>`;
+    }
+
+    const note = isKorean
+      ? `숫자는 최근 ${recentKeys.length}경기 중 선발 횟수예요. 부상·징계는 반영되지 않아요.`
+      : `Numbers = starts in the last ${recentKeys.length} matches. Injuries and suspensions aren't factored in.`;
+    return `
+      <div class="nmp-sec">
+        <div class="nmp-sec-title">
+          <span>${isKorean ? '예상 라인업' : 'Predicted XI'}</span>
+          <span class="nmp-sec-sub">${last.formation || ''} · ${weekTxt} ${isKorean ? '선발 기준' : 'starters'}</span>
+        </div>
+        ${body}
+        <div class="nmp-note">${showCnt ? note : ''}</div>
+      </div>`;
+  }
+
+  function nmpPlayerCardHtml(opts) {
+    // opts: { attrs, photoSrc, name, tag, value, sub }
+    const photo = opts.photoSrc
+      ? `<img src="${opts.photoSrc}" alt="" onerror="this.remove()">`
+      : '';
+    return `
+      <button type="button" class="nmp-kp ${opts.cls || ''}" ${opts.attrs}>
+        <span class="nmp-kp-photo">${photo}</span>
+        <span class="nmp-kp-info">
+          <span class="nmp-kp-name">${opts.name}</span>
+          <span class="nmp-kp-tag">${opts.tag}</span>
+          ${opts.sub ? `<span class="nmp-kp-sub">${opts.sub}</span>` : ''}
+        </span>
+        <span class="nmp-kp-val">${opts.value}</span>
+      </button>`;
+  }
+
+  function nmpKeyPlayersHtml(nm) {
+    const pn = (p) => isKorean ? p.nameKo : (p.nameEn || p.nameKo);
+    const rows = squadData.filter(p => p.number != null)
+      .map(p => ({ p, s: squadPlayerStats[p.number] || {} }));
+    const best = (field) => rows.filter(r => (r.s[field] || 0) > 0)
+      .sort((x, y) => (y.s[field] - x.s[field]) || (x.p.number - y.p.number))[0];
+
+    const mine = [];
+    const g = best('goals');
+    if (g) mine.push(nmpPlayerCardHtml({
+      cls: 'lineup-squad-link', attrs: `data-player-number="${g.p.number}"`, photoSrc: g.p.photoSrc,
+      name: pn(g.p), tag: isKorean ? '팀 득점 1위' : 'Top scorer',
+      value: `${g.s.goals}<small>${isKorean ? '골' : ' G'}</small>`
+    }));
+    const as = best('assists');
+    if (as) mine.push(nmpPlayerCardHtml({
+      cls: 'lineup-squad-link', attrs: `data-player-number="${as.p.number}"`, photoSrc: as.p.photoSrc,
+      name: pn(as.p), tag: isKorean ? '팀 도움 1위' : 'Top assists',
+      value: `${as.s.assists}<small>${isKorean ? '도움' : ' A'}</small>`
+    }));
+    try {
+      const imp = (typeof computeKeyPlayerImpactCandidates === 'function') ? computeKeyPlayerImpactCandidates()[0] : null;
+      if (imp && imp.impactScore > 0) {
+        const w = Number(imp.impact.with.ptsPerGame).toFixed(1);
+        const wo = Number(imp.impact.without.ptsPerGame).toFixed(1);
+        mine.push(nmpPlayerCardHtml({
+          cls: 'lineup-squad-link', attrs: `data-player-number="${imp.number}"`, photoSrc: imp.photoSrc,
+          name: isKorean ? imp.nameKo : (imp.nameEn || imp.nameKo),
+          tag: isKorean ? '출전 영향력 1위' : 'Most impactful',
+          sub: isKorean ? `선발 ${w} · 결장 ${wo} 승점/경기` : `Starts ${w} · Absent ${wo} pts/gm`,
+          value: `+${imp.impactScore.toFixed(1)}`
+        }));
+      }
+    } catch (e) { /* 영향력 계산 실패 시 이 카드만 생략 */ }
+
+    let oppHtml = '';
+    if (nm && !nm.isBye) {
+      const oppScorers = (typeof topScorersData !== 'undefined' ? topScorersData : [])
+        .filter(p => p.teamEn === nm.oppEn)
+        .slice().sort((x, y) => y.goals - x.goals).slice(0, 2);
+      const cards = oppScorers.map(p => nmpPlayerCardHtml({
+        cls: 'nmp-kp-opp player-name-link', attrs: `data-player-key="${p.key}"`, photoSrc: p.photoSrc,
+        name: isKorean ? p.nameKo : p.nameEn, tag: isKorean ? '경계 대상' : 'Watch out',
+        value: `${p.goals}<small>${isKorean ? '골' : ' G'}</small>`
+      }));
+      const emptyTxt = isKorean ? '상대 득점 기록이 아직 없어요' : 'No scoring record for this opponent yet';
+      oppHtml = `
+        <div class="nmp-kp-group-title">${isKorean ? '상대 경계 대상' : 'Opponent to watch'}</div>
+        <div class="nmp-kp-list">${cards.join('') || `<div class="nmp-empty">${emptyTxt}</div>`}</div>`;
+    }
+
+    if (!mine.length && !oppHtml) return '';
+    return `
+      <div class="nmp-sec">
+        <div class="nmp-sec-title"><span>${isKorean ? '키 플레이어' : 'Key Players'}</span></div>
+        ${mine.length ? `<div class="nmp-kp-list">${mine.join('')}</div>` : ''}
+        ${oppHtml}
+      </div>`;
+  }
+
+  function nmpFdrHtml(t) {
+    if (typeof computeFixtureDifficulty !== 'function') return '';
+    const fx = computeFixtureDifficulty(t.nameEn, t.nameKo, 5);
+    if (!fx.length) return '';
+    const avg = fx.reduce((s, f) => s + f.score, 0) / fx.length;
+    const avgLevel = Math.max(1, Math.min(5, Math.round(avg)));
+    const avgTier = avgLevel <= 2 ? 'easy' : (avgLevel === 3 ? 'mid' : 'hard');
+
+    const rowsHtml = fx.map((f, i) => {
+      const wk = isKorean ? wkKo(f.week) : wkEn(f.week, 'WK', ' ');
+      const name = nmpFirstName(isKorean ? f.oppKo : f.oppEn);
+      const ha = f.isHome ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A');
+      return `
+        <div class="nmp-fdr-row${i === 0 ? ' is-next' : ''}">
+          <span class="nmp-fdr-wk">${wk}</span>
+          <span class="nmp-fdr-opp">
+            ${f.oppLogo ? `<img src="${f.oppLogo}" alt="">` : ''}
+            <span class="nmp-fdr-opp-name">${name}</span>
+            <span class="nmp-fdr-ha ${f.isHome ? 'home' : 'away'}">${ha}</span>
+          </span>
+          <span class="nmp-fdr-bar" title="${fdrTierLabel(f.tier)}"><i class="is-${f.tier}" style="width:${f.level * 20}%"></i></span>
+          <b class="nmp-fdr-num is-${f.tier}">${f.level}</b>
+        </div>`;
+    }).join('');
+
+    const summary = isKorean
+      ? `앞으로 ${fx.length}경기 평균 ${avg.toFixed(1)} · ${fdrTierLabel(avgTier)}`
+      : `Next ${fx.length}: avg ${avg.toFixed(1)} · ${fdrTierLabel(avgTier)}`;
+    const note = isKorean
+      ? '상대 순위·최근 폼·홈/원정으로 계산한 체감 난이도예요 (1 쉬움 ~ 5 어려움).'
+      : 'Perceived difficulty from opponent rank, form and venue (1 easy – 5 hard).';
+    return `
+      <div class="nmp-sec">
+        <div class="nmp-sec-title">
+          <span>${isKorean ? '남은 일정 난이도' : 'Upcoming Difficulty'}</span>
+          <span class="nmp-sec-sub nmp-fdr-avg is-${avgTier}">${summary}</span>
+        </div>
+        <div class="nmp-fdr">${rowsHtml}</div>
+        <div class="nmp-note">${note}</div>
+      </div>`;
+  }
+
+  // 접기/펼치기 상태: 기본은 접힘. 언어 전환 등으로 카드가 다시 그려져도, 새로고침해도 유지합니다.
+  let nmpOpenState = null;
+  function nmpIsOpen() {
+    if (nmpOpenState === null) {
+      try { nmpOpenState = localStorage.getItem('nmp-open') === '1'; } catch (e) { nmpOpenState = false; }
+    }
+    return nmpOpenState;
+  }
+  function nmpToggleText(open) {
+    return open ? (isKorean ? '접기' : 'Hide') : (isKorean ? '자세히 보기' : 'Details');
+  }
+  function toggleNextMatchPreview() {
+    const el = document.getElementById('nextMatchPreviewCard');
+    if (!el) return;
+    nmpOpenState = !nmpIsOpen();
+    try { localStorage.setItem('nmp-open', nmpOpenState ? '1' : '0'); } catch (e) {}
+    el.classList.toggle('is-open', nmpOpenState);
+    const tg = el.querySelector('.nmp-toggle');
+    if (tg) tg.setAttribute('aria-expanded', String(nmpOpenState));
+    const txt = el.querySelector('.nmp-toggle-txt');
+    if (txt) txt.textContent = nmpToggleText(nmpOpenState);
+  }
+  document.addEventListener('click', function(event) {
+    if (event.target.closest('#nextMatchPreviewCard .nmp-toggle')) toggleNextMatchPreview();
+  });
+  document.addEventListener('keydown', function(event) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const tg = event.target.closest && event.target.closest('#nextMatchPreviewCard .nmp-toggle');
+    if (tg && event.target === tg) { event.preventDefault(); toggleNextMatchPreview(); }
+  });
+
+  function renderNextMatchPreviewCard() {
+    const el = document.getElementById('nextMatchPreviewCard');
+    if (!el) return;
+    try {
+      const info = getMyRankedTeam();
+      if (!info) { el.innerHTML = ''; return; }
+      const t = info.team;
+      const nm = computeNextMatchPreview(t.nameEn, t.nameKo);
+      if (!nm) { el.innerHTML = ''; return; }   // 남은 예정 경기가 없으면 카드를 숨깁니다
+
+      const weekNum = parseInt(String(nm.roundKey).replace('round', ''), 10);
+      const weekTxt = isKorean ? wkKo(weekNum) : wkEn(weekNum, 'WK', ' ');
+
+      let headHtml;
+      if (nm.isBye) {
+        headHtml = `
+          <div class="nmp-head">
+            <span class="nmp-title"><span class="nmp-title-full">${isKorean ? '다음 경기 미리보기' : 'Next Match Preview'}</span><span class="nmp-title-short">${isKorean ? '다음경기' : 'Next'}</span></span>
+            <span class="nmp-opp">${weekTxt} · ${isKorean ? '휴식주' : 'Bye week'}</span>
+          </div>`;
+      } else {
+        const form = (typeof computeFormGuide === 'function') ? computeFormGuide(nm.oppEn, nm.oppKo) : null;
+        const dots = (form && form.recentForm ? form.recentForm : []).map(m => {
+          const lbl = m.result === 'W' ? (isKorean ? '승' : 'W') : (m.result === 'L' ? (isKorean ? '패' : 'L') : (isKorean ? '무' : 'D'));
+          return `<i class="nmp-form-dot is-${m.result}">${lbl}</i>`;
+        }).join('');
+        // D-day: 상단 다음경기 칸과 같은 방식(KST 달력 기준 날짜 차이). 모바일에서만 CSS로 노출합니다.
+        const kickoffMs = (typeof kickoffUTCMillis === 'function') ? kickoffUTCMillis(nm.kickoffDate, nm.kickoffTime) : null;
+        const daysLeft = kickoffMs
+          ? Math.max(0, Math.round((kstMidnightUTCMillis(kickoffMs) - kstMidnightUTCMillis(Date.now())) / 86400000))
+          : null;
+        const ddayTxt = daysLeft === null ? '' : (daysLeft === 0 ? 'D-DAY' : `D-${daysLeft}`);
+        const oppName = isKorean ? nm.oppKo : nm.oppEn;
+        const ha = nm.homeAway === 'H' ? (isKorean ? '홈' : 'HOME') : (isKorean ? '원정' : 'AWAY');
+        headHtml = `
+          <div class="nmp-head">
+            <span class="nmp-title"><span class="nmp-title-full">${isKorean ? '다음 경기 미리보기' : 'Next Match Preview'}</span><span class="nmp-title-short">${isKorean ? '다음경기' : 'Next'}</span></span>
+            <span class="nmp-opp">
+              ${nm.oppLogo ? `<img src="${nm.oppLogo}" alt="">` : ''}
+              <span class="nmp-opp-text"><span class="nmp-opp-wk">${weekTxt} · vs </span><span class="nmp-opp-full">${oppName}</span><span class="nmp-opp-short">${nmpFirstName(oppName)}</span></span>
+              <span class="nmp-ha ${nm.homeAway === 'H' ? 'home' : 'away'}">${ha}</span>
+              ${ddayTxt ? `<span class="nmp-dday">${ddayTxt}</span>` : ''}
+            </span>
+            ${dots ? `<span class="nmp-form"><span class="nmp-form-lbl">${isKorean ? '상대 최근' : 'Opp. form'}</span>${dots}</span>` : ''}
+          </div>`;
+      }
+
+      const lineup = nm.isBye ? '' : nmpLineupHtml();
+      const key = nm.isBye ? '' : nmpKeyPlayersHtml(nm);
+      const fdr = nmpFdrHtml(t);
+      if (!lineup && !key && !fdr) { el.innerHTML = ''; return; }
+
+      const right = key + fdr;
+      const open = nmpIsOpen();
+      el.classList.toggle('is-open', open);
+      el.innerHTML = `
+        <div class="nmp-toggle" role="button" tabindex="0" aria-expanded="${open}" aria-controls="nmpBody">
+          ${headHtml}
+          <span class="nmp-toggle-hint"><span class="nmp-toggle-txt">${nmpToggleText(open)}</span><svg class="nmp-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="nmp-body" id="nmpBody"><div class="nmp-body-inner">
+          <div class="nmp-grid${lineup && right ? '' : ' is-single'}">
+            ${lineup ? `<div class="nmp-col nmp-col-left">${lineup}</div>` : ''}
+            ${right ? `<div class="nmp-col nmp-col-right">${right}</div>` : ''}
+          </div>
+        </div></div>`;
+    } catch (e) {
+      console.warn('renderNextMatchPreviewCard failed', e);
+      el.innerHTML = '';
     }
   }
 
@@ -5923,6 +6233,72 @@
   function isMakeupPos(pos) { return (typeof isMakeupWeek === 'function') && isMakeupWeek(pos); }
   function roundKeyPos(key) { return parseInt(String(key).replace('round', ''), 10); }
 
+  // ===== 전반기 / 후반기 (로빈 라운드) =====
+  // 15개 팀 더블 라운드로빈(총 30라운드)을 한 바퀴씩 나눠서 보여줍니다.
+  //   전반기 = 정규 1~15주차 + 그 사이에 낀 연기경기주차
+  //   후반기 = 정규 16~30주차
+  // 연기경기주차는 regularWeekNumber()가 "직전 정규 주차 번호"를 돌려주기 때문에
+  // 자동으로 직전 정규 주차와 같은 반기로 묶입니다. (예: round16 → 15 → 전반기)
+  let currentRoundHalf = null; // 1 | 2 | null(=현재 라운드 기준으로 자동 결정)
+
+  function seasonHalfWeeks() {
+    return Math.floor(((typeof SEASON_TOTAL_ROUNDS === 'number') ? SEASON_TOTAL_ROUNDS : 30) / 2);
+  }
+  function roundHalfOfPos(pos) {
+    const regular = (typeof regularWeekNumber === 'function') ? regularWeekNumber(pos) : pos;
+    return regular <= seasonHalfWeeks() ? 1 : 2;
+  }
+  function roundHalfOfKey(key) { return roundHalfOfPos(roundKeyPos(key)); }
+
+  // 반기를 바꿨을 때 어떤 주차를 먼저 보여줄지: 지금 진행 중인 주차가 그 반기에 있으면 그걸,
+  // 아니면 전반기는 마지막 정규 주차, 후반기는 첫 주차.
+  function pickRoundKeyForHalf(half, keys) {
+    if (!keys.length) return null;
+    const def = defaultDisplayRoundKey();
+    if (keys.includes(def)) return def;
+    if (half === 1) {
+      const regular = keys.filter(k => !isMakeupPos(roundKeyPos(k)));
+      return regular.length ? regular[regular.length - 1] : keys[keys.length - 1];
+    }
+    return keys[0];
+  }
+
+  function selectRoundHalf(half) {
+    if (half === currentRoundHalf) return;
+    currentRoundHalf = half;
+    const keys = allRoundKeysIncludingScheduled().filter(k => roundHalfOfKey(k) === half);
+    if (keys.length) currentRoundKey = pickRoundKeyForHalf(half, keys);
+    renderRoundsView();
+  }
+
+  function renderRoundHalfBar(roundKeys) {
+    const bar = document.getElementById('roundHalfBar');
+    if (!bar) return;
+    const per = seasonHalfWeeks();
+    const halves = [
+      { id: 1, ko: '전반기', en: '1st Half', from: 1, to: per },
+      { id: 2, ko: '후반기', en: '2nd Half', from: per + 1, to: per * 2 }
+    ];
+    bar.innerHTML = '';
+    halves.forEach(h => {
+      const keys = roundKeys.filter(k => roundHalfOfKey(k) === h.id);
+      const hasMakeup = keys.some(k => isMakeupPos(roundKeyPos(k)));
+      const rangeKo = `${h.from}~${h.to}주차${hasMakeup ? ' + 연기경기주차' : ''}`;
+      const rangeEn = `Wk ${h.from}–${h.to}${hasMakeup ? ' + Makeup' : ''}`;
+      const tba = keys.length === 0;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', String(h.id === currentRoundHalf));
+      btn.className = 'round-half-btn' + (h.id === currentRoundHalf ? ' active' : '') + (tba ? ' is-tba' : '');
+      btn.innerHTML = `
+        <span class="rhb-name"><span class="lbl" data-en="${h.en}" data-ko="${h.ko}">${isKorean ? h.ko : h.en}</span>${tba ? `<span class="rhb-tba lbl" data-en="TBA" data-ko="발표 전">${isKorean ? '발표 전' : 'TBA'}</span>` : ''}</span>
+        <span class="rhb-range lbl" data-en="${rangeEn}" data-ko="${rangeKo}">${isKorean ? rangeKo : rangeEn}</span>`;
+      btn.onclick = () => selectRoundHalf(h.id);
+      bar.appendChild(btn);
+    });
+  }
+
   function sortedRoundKeys() {
     return Object.keys(roundsData).sort((a, b) => {
       const na = parseInt(a.replace('round', ''), 10);
@@ -6196,7 +6572,7 @@
     if (roundsData[key] || (scheduledRounds && scheduledRounds[key])) {
       currentRoundKey = key;
     }
-    showView('rounds');
+    showView('rounds'); // 반기는 showView → renderRoundsView에서 currentRoundKey 기준으로 다시 정해집니다.
     const listEl = document.getElementById('roundMatchList');
     if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -6209,10 +6585,44 @@
       currentRoundKey = defaultDisplayRoundKey();
     }
 
+    // 반기 결정: 명시적으로 고른 반기가 없으면 현재 라운드가 속한 반기로 맞춥니다.
+    if (currentRoundHalf === null) currentRoundHalf = currentRoundKey ? roundHalfOfKey(currentRoundKey) : 1;
+    const halfKeys = roundKeys.filter(k => roundHalfOfKey(k) === currentRoundHalf);
+    if (halfKeys.length && !halfKeys.includes(currentRoundKey)) {
+      currentRoundKey = pickRoundKeyForHalf(currentRoundHalf, halfKeys);
+    }
+    renderRoundHalfBar(roundKeys);
+
+    const shareBtn = document.getElementById('roundShareBtn');
+    const listElForEmpty = document.getElementById('roundMatchList');
+
+    // 아직 일정이 하나도 안 나온 반기(예: 후반기 발표 전)는 안내 문구만 보여줍니다.
+    if (!halfKeys.length) {
+      tabBar.innerHTML = '';
+      tabBar.style.display = 'none';
+      if (shareBtn) shareBtn.style.display = 'none';
+      const per = seasonHalfWeeks();
+      const fromWk = currentRoundHalf === 1 ? 1 : per + 1;
+      const toWk = currentRoundHalf === 1 ? per : per * 2;
+      const titleKo = `${currentRoundHalf === 1 ? '전반기' : '후반기'} 일정은 아직 발표되지 않았어요`;
+      const titleEn = `The ${currentRoundHalf === 1 ? '1st' : '2nd'} half fixtures haven't been announced yet`;
+      const subKo = `일정이 나오는 대로 ${fromWk}~${toWk}주차 경기가 여기에 표시돼요.`;
+      const subEn = `Weeks ${fromWk}–${toWk} will appear here once the schedule is out.`;
+      listElForEmpty.innerHTML = `
+        <div class="round-half-empty">
+          <div class="rhe-icon" aria-hidden="true">🗓️</div>
+          <div class="rhe-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>
+          <div class="rhe-sub lbl" data-en="${subEn}" data-ko="${subKo}">${isKorean ? subKo : subEn}</div>
+        </div>`;
+      return;
+    }
+    tabBar.style.display = '';
+    if (shareBtn) shareBtn.style.display = '';
+
     tabBar.innerHTML = '';
     let activeBtn = null;
-    roundKeys.forEach((key, idx) => {
-      const weekNum = idx + 1;
+    halfKeys.forEach(key => {
+      const weekNum = roundKeyPos(key);
       const btn = document.createElement('button');
       const isActive = key === currentRoundKey;
       btn.className = 'round-tab-btn' + (isActive ? ' active' : '');
@@ -11244,6 +11654,353 @@
     closeModalAnimated(document.getElementById('matchCompareModal'));
   }
 
+  // ===================================================================
+  // ===== 팀 비교 화면 (Team Compare View) =====
+  // 사이드바의 "팀 비교" 탭. 리그의 아무 두 팀(A/B)을 골라 시즌 득실, 홈/원정 성적,
+  // 최근 폼, 상대전적을 나란히 비교합니다. 새로 입력할 데이터는 없고
+  // getRankedTeams / computeHomeAwaySplit / computeFormGuide / computeTeamSeasonH2H /
+  // computeH2HHistory(모두 기존 함수)에서 자동으로 계산됩니다.
+  // 경기 전 "전적 비교" 모달(openMatchCompareModal)과 같은 mc-* 스타일/행 헬퍼
+  // (mcStatRow, mcFormDotsHtml, priorMeetingsSectionHtml)를 그대로 재사용합니다.
+  // ===================================================================
+  let teamCompareA = null;        // 팀 A nameEn
+  let teamCompareB = null;        // 팀 B nameEn
+  let teamCompareFixture = null;  // 두 팀의 예정된 맞대결(AI 예측 모달 열기용)
+
+  function tcDefaultTeams() {
+    const ranked = getRankedTeams('all');
+    const mine = ranked.find(t => isMyTeamName(t.nameEn, t.nameKo));
+    const a = mine ? mine.nameEn : (ranked[0] ? ranked[0].nameEn : null);
+    let b = null;
+    try {
+      const nm = (mine && typeof computeNextMatchPreview === 'function')
+        ? computeNextMatchPreview(mine.nameEn, mine.nameKo) : null;
+      if (nm && !nm.isBye && ranked.some(t => t.nameEn === nm.oppEn)) b = nm.oppEn;
+    } catch (e) { /* 다음 상대를 못 찾으면 아래 기본값 사용 */ }
+    if (!b) {
+      const other = ranked.find(t => t.nameEn !== a);
+      b = other ? other.nameEn : null;
+    }
+    return [a, b];
+  }
+
+  // 같은 팀을 양쪽에 고르면 반대편 팀과 자리를 바꿔줍니다(항상 서로 다른 두 팀 유지).
+  function onTeamCompareSelect(side, value) {
+    if (side === 'A') {
+      if (value === teamCompareB) teamCompareB = teamCompareA;
+      teamCompareA = value;
+    } else {
+      if (value === teamCompareA) teamCompareA = teamCompareB;
+      teamCompareB = value;
+    }
+    renderTeamCompareView();
+  }
+
+  function swapTeamCompare() {
+    const tmp = teamCompareA;
+    teamCompareA = teamCompareB;
+    teamCompareB = tmp;
+    renderTeamCompareView();
+  }
+
+  function openTeamCompareFixture() {
+    const f = teamCompareFixture;
+    if (!f) return;
+    openMatchCompareModal(f.homeEn, f.homeKo, f.awayEn, f.awayKo, f.roundKey);
+  }
+
+  function tcSnapshot(ranked, nameEn) {
+    const idx = ranked.findIndex(t => t.nameEn === nameEn);
+    const team = ranked[idx];
+    return {
+      team,
+      rank: idx + 1,
+      form: computeFormGuide(team.nameEn, team.nameKo),
+      split: computeHomeAwaySplit(team.nameEn, team.nameKo)
+    };
+  }
+
+  function tcShortName(t) {
+    return (isKorean ? t.nameKo : t.nameEn).split(' ')[0];
+  }
+
+  function tcSigned(n) {
+    return n > 0 ? `+${n}` : String(n);
+  }
+
+  function tcFormStats(form) {
+    const seq = form ? form.recentForm : [];
+    let pts = 0, gf = 0, ga = 0;
+    seq.forEach(m => {
+      pts += m.result === 'W' ? 3 : (m.result === 'D' ? 1 : 0);
+      gf += m.myGoals;
+      ga += m.oppGoals;
+    });
+    return { n: seq.length, pts, gd: gf - ga };
+  }
+
+  // 지금 이어지고 있는 연승 / 무패 / 연패 행진을 한 줄로 표시합니다(2경기 이상일 때만).
+  function tcStreakHtml(form) {
+    if (!form) return '<div class="tc-streak"></div>';
+    const seq = form.sequence || [];
+    let lossRun = 0;
+    for (let i = seq.length - 1; i >= 0 && seq[i].result === 'L'; i--) lossRun++;
+    let cls = '', txt = '';
+    if (form.currentWinStreak >= 2) {
+      cls = 'tc-streak-win';
+      txt = isKorean ? `${form.currentWinStreak}연승 중` : `${form.currentWinStreak}-game win streak`;
+    } else if (form.currentUnbeatenStreak >= 2) {
+      cls = 'tc-streak-win';
+      txt = isKorean ? `${form.currentUnbeatenStreak}경기 무패 중` : `Unbeaten in ${form.currentUnbeatenStreak}`;
+    } else if (lossRun >= 2) {
+      cls = 'tc-streak-loss';
+      txt = isKorean ? `${lossRun}연패 중` : `${lossRun}-game losing run`;
+    }
+    return `<div class="tc-streak ${cls}">${txt}</div>`;
+  }
+
+  // 홈(또는 원정) 한 쪽만 놓고 두 팀을 비교하는 행들. 경기수가 0이면 '-'로 표시합니다.
+  function tcSideRowsHtml(a, b) {
+    const per = (s, v) => s.played > 0 ? v.toFixed(2) : '-';
+    const gd = (s) => s.played > 0 ? tcSigned(s.gd) : '-';
+    return [
+      mcStatRow('Played', '경기', a.played, b.played, null),
+      mcStatRow('Record (W-D-L)', '전적(승-무-패)', `${a.won}-${a.drawn}-${a.lost}`, `${b.won}-${b.drawn}-${b.lost}`, null),
+      mcStatRow('Points / Game', '경기당 승점', per(a, a.ppg), per(b, b.ppg), true),
+      mcStatRow('Goals / Game', '경기당 득점', per(a, a.gpg), per(b, b.gpg), true),
+      mcStatRow('Conceded / Game', '경기당 실점', per(a, a.gapg), per(b, b.gapg), false),
+      mcStatRow('Goal Difference', '득실차', gd(a), gd(b), true)
+    ].join('');
+  }
+
+  // 두 팀이 아직 안 치른(또는 일정 미정인) 맞대결을 scheduledRounds에서 찾습니다.
+  function tcFindScheduledMeeting(aEn, bEn) {
+    const keys = allRoundKeysIncludingScheduled();
+    for (let i = 0; i < keys.length; i++) {
+      const list = (scheduledRounds && scheduledRounds[keys[i]]) || [];
+      const m = list.find(x => !x.byeKo && !x.byeEn
+        && typeof x.homeScore !== 'number'
+        && ((x.homeEn === aEn && x.awayEn === bEn) || (x.homeEn === bEn && x.awayEn === aEn)));
+      if (m) return { roundKey: keys[i], weekNum: roundKeyPos(keys[i]), match: m };
+    }
+    return null;
+  }
+
+  function tcSeasonH2HHtml(A, B) {
+    const a = A.team, b = B.team;
+    const h2h = computeTeamSeasonH2H(a.nameEn, a.nameKo, b.nameEn, b.nameKo);
+    const nm = (t) => escapeHtml(isKorean ? t.nameKo : t.nameEn);
+    let html = '';
+
+    if (h2h) {
+      const homeT = h2h.aIsHome ? a : b;
+      const awayT = h2h.aIsHome ? b : a;
+      const homeScore = h2h.aIsHome ? h2h.aScore : h2h.bScore;
+      const awayScore = h2h.aIsHome ? h2h.bScore : h2h.aScore;
+      const weekLbl = isKorean ? wkKo(h2h.weekNum) : wkEn(h2h.weekNum, 'Week', ' ');
+      let outcomeCls = 'tc-h2h-outcome-draw';
+      let outcomeTxt = isKorean ? '무승부' : 'Draw';
+      if (h2h.aScore !== h2h.bScore) {
+        const winner = h2h.aScore > h2h.bScore ? a : b;
+        outcomeCls = 'tc-h2h-outcome-win';
+        outcomeTxt = isKorean ? `${tcShortName(winner)} 승` : `${tcShortName(winner)} win`;
+      }
+      html += `
+        <div class="tc-h2h-match">
+          <span class="tc-h2h-tag">${isKorean ? '이번 시즌 맞대결' : 'This season'} · ${weekLbl}</span>
+          <span class="tc-h2h-score">${nm(homeT)} ${homeScore} : ${awayScore} ${nm(awayT)}</span>
+          <span class="tc-h2h-outcome ${outcomeCls}">${outcomeTxt}</span>
+        </div>`;
+    }
+
+    const sched = tcFindScheduledMeeting(a.nameEn, b.nameEn);
+    teamCompareFixture = null;
+    if (sched) {
+      const m = sched.match;
+      const weekLbl = isKorean ? wkKo(sched.weekNum) : wkEn(sched.weekNum, 'Week', ' ');
+      const homeT = m.homeEn === a.nameEn ? a : b;
+      const awayT = m.homeEn === a.nameEn ? b : a;
+      const kickoff = (m.kickoffDate && m.kickoffTime) ? formatKickoff(m) : '';
+      const status = m.postponed
+        ? (isKorean ? '연기 · 일정 미정' : 'Postponed · date TBC')
+        : (isKorean ? '예정 경기' : 'Upcoming fixture');
+      teamCompareFixture = { homeEn: homeT.nameEn, homeKo: homeT.nameKo, awayEn: awayT.nameEn, awayKo: awayT.nameKo, roundKey: sched.roundKey };
+      html += `
+        <div class="tc-h2h-match is-upcoming">
+          <span class="tc-h2h-tag">${status} · ${weekLbl}</span>
+          <span class="tc-h2h-score">${nm(homeT)} vs ${nm(awayT)}</span>
+          ${kickoff ? `<span class="tc-h2h-kickoff">${kickoff}</span>` : ''}
+          <button type="button" class="rmc-compare-btn" onclick="openTeamCompareFixture()">⚖️ ${isKorean ? '이 경기 AI 예측 보기' : 'See AI prediction'}</button>
+        </div>`;
+    }
+
+    if (!html) {
+      html = `<div class="tc-h2h-match tc-h2h-empty">${isKorean ? '이번 시즌 두 팀의 맞대결 기록이 아직 없어요' : 'No meeting between these two this season yet'}</div>`;
+    }
+    return html;
+  }
+
+  // 지난 시즌 기록까지 포함한 상대전적은 치주물루 경기 기록(computeH2HHistory)만 있으므로,
+  // 두 팀 중 한쪽이 치주물루일 때만 보여주고 나머지 매치업은 안내 문구를 띄웁니다.
+  function tcAllTimeHtml(A, B) {
+    const meA = isMyTeamName(A.team.nameEn, A.team.nameKo);
+    const meB = isMyTeamName(B.team.nameEn, B.team.nameKo);
+    if (!meA && !meB) {
+      return `<p class="tc-note">${isKorean
+        ? '지난 시즌까지 이어지는 역대 상대전적은 치주물루가 포함된 매치업에서만 볼 수 있어요.'
+        : 'All-time head-to-head is only tracked for matchups that include Chizumulu United.'}</p>`;
+    }
+    const opp = meA ? B.team : A.team;
+    const rec = (typeof computeH2HHistory === 'function')
+      ? computeH2HHistory().find(r => r.key === opp.nameEn) : null;
+    if (!rec || !rec.played) {
+      return `<p class="tc-note">${isKorean ? '치주물루와의 역대 상대전적 기록이 아직 없어요.' : 'No all-time record against Chizumulu yet.'}</p>`;
+    }
+
+    const myShort = isKorean ? '치주물루' : 'Chizumulu';
+    const oppShort = tcShortName(opp);
+    const list = rec.matches.map(m => {
+      const result = m.myGoals > m.oppGoals ? '치주물루 승'
+        : (m.myGoals < m.oppGoals ? `${opp.nameKo.split(' ')[0]} 승` : '무승부');
+      if (m.source === 'season') {
+        const wk = isKorean ? wkKo(m.weekNum) : wkEn(m.weekNum, 'Week', ' ');
+        const score = m.homeAway === 'H'
+          ? `${myShort} ${m.myGoals} : ${m.oppGoals} ${oppShort}`
+          : `${oppShort} ${m.oppGoals} : ${m.myGoals} ${myShort}`;
+        return { comp: `26/27 · ${wk}`, score, result };
+      }
+      return { comp: m.comp, score: m.scoreText, result };
+    });
+
+    const gdTxt = tcSigned(rec.goalDiff);
+    const noteTxt = isKorean
+      ? `※ 치주물루 기준 승·무·패 · 통산 득실 ${rec.goalsFor}득점 ${rec.goalsAgainst}실점 (${gdTxt})`
+      : `※ W/D/L from Chizumulu's side · all-time goals ${rec.goalsFor} for, ${rec.goalsAgainst} against (${gdTxt})`;
+    return priorMeetingsSectionHtml({ list }) + `<p class="tc-note">${noteTxt}</p>`;
+  }
+
+  function tcResultHtml(ranked, aEn, bEn) {
+    const A = tcSnapshot(ranked, aEn);
+    const B = tcSnapshot(ranked, bEn);
+    const a = A.team, b = B.team;
+    const rankTxt = (S) => `${isKorean ? `${S.rank}위` : `#${S.rank}`} · ${S.team.pts}${isKorean ? '점' : ' pts'}`;
+    const perGame = (t, v) => t.played > 0 ? (v / t.played).toFixed(2) : '-';
+
+    const teamCol = (S) => `
+      <div class="mc-team-col">
+        <img class="team-logo mc-team-logo" src="${getTeamLogo(S.team.nameEn)}" alt="${escapeHtml(S.team.nameEn)}">
+        <span class="mc-team-name">${escapeHtml(isKorean ? S.team.nameKo : S.team.nameEn)}</span>
+        <span class="mc-team-rank">${rankTxt(S)}</span>
+      </div>`;
+
+    const seasonRows = [
+      mcStatRow('Played', '경기', a.played, b.played, null),
+      mcStatRow('Points', '승점', a.pts, b.pts, true),
+      mcStatRow('Record (W-D-L)', '전적(승-무-패)', `${a.won}-${a.drawn}-${a.lost}`, `${b.won}-${b.drawn}-${b.lost}`, null),
+      mcStatRow('Goals For', '득점', a.goalsFor, b.goalsFor, true),
+      mcStatRow('Goals Against', '실점', a.goalsAgainst, b.goalsAgainst, false),
+      mcStatRow('Goal Difference', '득실차', tcSigned(a.gd), tcSigned(b.gd), true),
+      mcStatRow('Goals / Game', '경기당 득점', perGame(a, a.goalsFor), perGame(b, b.goalsFor), true),
+      mcStatRow('Conceded / Game', '경기당 실점', perGame(a, a.goalsAgainst), perGame(b, b.goalsAgainst), false),
+      mcStatRow('Clean Sheets', '클린시트', a.cleanSheets, b.cleanSheets, true),
+      mcStatRow('Failed to Score', '무득점 경기', a.failedToScore, b.failedToScore, false)
+    ].join('');
+
+    const fa = tcFormStats(A.form), fb = tcFormStats(B.form);
+    const dashIfNone = (fs, v) => fs.n > 0 ? v : '-';
+    const lw = (form) => form ? form.longestWinStreak.count : 0;
+    const formRows = [
+      mcStatRow('Last 5 Points', '최근 5경기 승점', dashIfNone(fa, fa.pts), dashIfNone(fb, fb.pts), true),
+      mcStatRow('Last 5 Goal Diff', '최근 5경기 득실', dashIfNone(fa, tcSigned(fa.gd)), dashIfNone(fb, tcSigned(fb.gd)), true),
+      mcStatRow('Longest Win Streak', '시즌 최다 연승', lw(A.form), lw(B.form), true)
+    ].join('');
+
+    const title = (en, ko) => `<div class="tc-card-title">${isKorean ? ko : en}</div>`;
+    const sub = (en, ko) => `<div class="mc-form-title">${isKorean ? ko : en}</div>`;
+
+    return `
+      <div class="tc-grid">
+        <section class="tc-card tc-card-wide tc-head-card">
+          <div class="mc-teams-row">
+            ${teamCol(A)}
+            <div class="mc-vs">VS</div>
+            ${teamCol(B)}
+          </div>
+        </section>
+
+        <section class="tc-card">
+          ${title('Season & Goals', '시즌 기록 · 득실')}
+          <div class="mc-stats-block tc-block">${seasonRows}</div>
+        </section>
+
+        <section class="tc-card">
+          ${title('Recent Form', '최근 폼')}
+          <div class="mc-form-row tc-form-row">
+            <div class="tc-form-col"><div class="mc-form-side">${mcFormDotsHtml(A.form)}</div>${tcStreakHtml(A.form)}</div>
+            <div class="tc-form-col"><div class="mc-form-side">${mcFormDotsHtml(B.form)}</div>${tcStreakHtml(B.form)}</div>
+          </div>
+          <div class="mc-stats-block tc-block">${formRows}</div>
+        </section>
+
+        <section class="tc-card tc-card-wide">
+          ${title('Home / Away', '홈 / 원정')}
+          <div class="tc-ha-grid">
+            <div>
+              ${sub('Home games', '홈 경기 성적')}
+              <div class="mc-stats-block tc-block">${tcSideRowsHtml(A.split.home, B.split.home)}</div>
+            </div>
+            <div>
+              ${sub('Away games', '원정 경기 성적')}
+              <div class="mc-stats-block tc-block">${tcSideRowsHtml(A.split.away, B.split.away)}</div>
+            </div>
+          </div>
+          <p class="tc-note">${isKorean
+            ? '각 팀의 홈 경기끼리, 원정 경기끼리 나란히 비교한 기록이에요.'
+            : "Each team's home record is compared with the other's home record, and away with away."}</p>
+        </section>
+
+        <section class="tc-card tc-card-wide tc-h2h-card">
+          ${title('Head-to-Head', '상대전적')}
+          ${tcSeasonH2HHtml(A, B)}
+          ${tcAllTimeHtml(A, B)}
+        </section>
+      </div>`;
+  }
+
+  function renderTeamCompareView() {
+    const body = document.getElementById('teamCompareBody');
+    const selA = document.getElementById('tcSelectA');
+    const selB = document.getElementById('tcSelectB');
+    if (!body || !selA || !selB) return;
+
+    const ranked = getRankedTeams('all');
+    const exists = (en) => ranked.some(t => t.nameEn === en);
+    if (!exists(teamCompareA) || !exists(teamCompareB) || teamCompareA === teamCompareB) {
+      const d = tcDefaultTeams();
+      teamCompareA = d[0];
+      teamCompareB = d[1];
+    }
+    if (!exists(teamCompareA) || !exists(teamCompareB)) { body.innerHTML = ''; return; }
+
+    const optionsHtml = (selected) => ranked.map((t, i) => {
+      const label = isKorean ? `${i + 1}위 · ${t.nameKo}` : `#${i + 1} · ${t.nameEn}`;
+      return `<option value="${escapeHtml(t.nameEn)}"${t.nameEn === selected ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+    }).join('');
+    selA.innerHTML = optionsHtml(teamCompareA);
+    selB.innerHTML = optionsHtml(teamCompareB);
+
+    const swapBtn = document.getElementById('tcSwapBtn');
+    if (swapBtn) {
+      const t = isKorean ? '두 팀 자리 바꾸기' : 'Swap teams';
+      swapBtn.title = t;
+      swapBtn.setAttribute('aria-label', t);
+    }
+
+    body.innerHTML = tcResultHtml(ranked, teamCompareA, teamCompareB);
+    attachImageFallback();
+    animateEntranceIn(body, '.tc-card', { stagger: 40 });
+  }
+
 
   // ===== 날짜 / 시즌 정보 유틸 (Date & Season Utils) =====
   function getLocalToday() {
@@ -11335,6 +12092,7 @@
     renderMainMiniTable();
     renderNextMatchStrip();
     renderHomeMatchCards();
+    renderNextMatchPreviewCard();
     renderLeagueLiveTicker(leagueLiveRenderedCache);
     
     if (currentView === 'stats') {
@@ -11357,6 +12115,8 @@
       renderRoundsView();
     } else if (currentView === 'report') {
       renderRoundResultReport();
+    } else if (currentView === 'teamCompare') {
+      renderTeamCompareView();
     } else if (currentView === 'venues') {
       renderVenuesView();
       const venueModal = document.getElementById('venueMapModal');
@@ -11685,6 +12445,7 @@
     renderMainMiniTable();
     renderNextMatchStrip();
     renderHomeMatchCards();
+    renderNextMatchPreviewCard();
     initSpotlightCards();
     startLeagueLiveTicker();
 

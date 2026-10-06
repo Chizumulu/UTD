@@ -1306,6 +1306,14 @@ const matchDetails = {
 // roundKey(scheduledRounds 기준)를 키로 미리 적어두면 됩니다. 라운드가 실제로 끝나면
 // 이 항목은 지우고 matchLineups[roundKey].recentHistory로 옮겨주세요.
 const upcomingMatchHistory = {
+  round14: {
+    recentHistory: [
+      { comp: "2025 FDH 뱅크컵 1라운드", score: "치주물루 2 : 1 친테체", result: "치주물루 승" },
+      { comp: "2024 NRFA 심소 프리미어 리그(8월 11일)", score: "친테체 1 : 0 치주물루", result: "친테체 승" },
+      { comp: "2024 NRFA 심소 프리미어 리그(5월 17일)", score: "치주물루 3 : 2 친테체", result: "치주물루 승" }
+    ],
+    historySummary: "최근 3경기 전적 2승 1패로 우세"
+  },
   round11: {
     recentHistory: [
       { comp: "2025 카스텔 챌린지컵 4라운드", score: "치주물루 1 : 2 칠룸바", result: "칠룸바 승" },
@@ -1653,7 +1661,7 @@ const leagueData = [
   },
   {
     nameKo: "친테체 유나이티드 FC", nameEn: "Chintheche United FC", logoSrc: "친테체.webp",
-    venue: { nameKo: "친테체 그라운드", nameEn: "Chintheche Ground", lat: -11.82971083972567, lng: 34.1693308131396 }
+    venue: { nameKo: "치와자 그라운드", nameEn: "Chiwaza Ground", lat: -11.827010974792174, lng: 34.16078991372552 }
   },
   {
     nameKo: "칠룸바 배럭스 FC", nameEn: "Chilumba Barracks FC", logoSrc: "칠룸바.webp",
