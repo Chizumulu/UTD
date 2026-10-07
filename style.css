@@ -963,7 +963,8 @@
   #squadView,
   #roundsView,
   #statsView,
-  #predictView {
+  #predictView,
+  #teamCompareView {
     width: 100%;
     min-width: 0;
   }
@@ -3278,6 +3279,9 @@
   .points-hist-dot.dimmed { opacity: 0.08; }
   .points-hist-line.highlighted { stroke-width: 4.2; }
   .points-hist-dot { transition: opacity 0.2s; }
+  .points-pace-chip { cursor: pointer; }
+  .points-pace-chip:focus { outline: none; }
+  .points-pace-chip:focus-visible rect { stroke-width: 2.4; }
   .team-points-trend-card {
     margin-top: 14px;
     padding: 12px 10px 6px;
@@ -11931,6 +11935,7 @@ body.season-archive .side-week-badge,
 body.season-archive .side-live-badge { display: none !important; }
 
 .archive-hero {
+  display: flex; align-items: center; gap: 16px;
   margin-bottom: 14px;
   padding: 14px 16px;
   border-radius: var(--radius-lg, 16px);
@@ -12055,3 +12060,172 @@ body.season-archive #viewToggleWrap > :not(.archive-nav-btn) { display: none !im
   box-shadow: 0 4px 12px rgba(var(--color-navy-rgb), 0.3);
 }
 .archive-club-cur-btn:hover { box-shadow: 0 6px 16px rgba(var(--color-navy-rgb), 0.4); }
+
+/* 25/26 화면 상단 카드: 왼쪽 협회(NRFA) 로고 */
+.archive-hero-logo { width: 64px; height: 64px; flex: none; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(var(--color-black-rgb), 0.2)); }
+.archive-hero-text { min-width: 0; flex: 1 1 auto; }
+@media (max-width: 480px) { .archive-hero { gap: 12px; } .archive-hero-logo { width: 48px; height: 48px; } }
+
+
+/* ===== 25/26 구단정보: 26/27 '구단 정보'와 같은 레이아웃 (팀 전환 바 · 헤더 · 퀵스탯 · 카드) ===== */
+.archive-switch-logo { display: inline-flex; flex-shrink: 0; }
+.ti-switch-noimg, .archive-grid-noimg {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--color-bg-table-alt); color: var(--color-brand-text);
+  font-size: 12px; font-weight: 800;
+}
+.archive-grid-noimg { width: 30px; height: 30px; font-size: 13px; }
+.archive-club-header-noimg {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(var(--color-white-rgb), 0.14); color: var(--color-cream);
+  border: 1.5px solid rgba(var(--color-gold-rgb), 0.7);
+  font-size: 22px; font-weight: 800;
+}
+.archive-club-header .squad-header-text h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.archive-club-body > .ti-section { margin-bottom: 18px; }
+.archive-club-body > .team-points-trend-details { margin-top: 0; margin-bottom: 18px; }
+.archive-club-body .ti-record-card { margin-bottom: 0; }
+.archive-club-cur-cell { grid-column: 1 / -1; }
+.archive-club-cur-wrap { display: none; }
+.archive-club-split-card .archive-club-split-scroll { overflow-x: auto; }
+.team-points-trend-details .team-points-trend-card > .archive-trend-inner { min-height: 0; overflow: hidden; }
+.prevseason-chart-ref { stroke: var(--color-text-muted); stroke-width: 1.6; stroke-dasharray: 5 4; fill: none; opacity: 0.75; stroke-linejoin: round; }
+.archive-trend-legend {
+  display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center;
+  padding: 4px 8px 8px; font-size: 11.5px; font-weight: 700; color: var(--color-text-muted);
+}
+.archive-trend-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.archive-legend-line { display: inline-block; width: 18px; height: 0; border-top: 2.4px solid var(--color-teal); }
+.archive-legend-ref { border-top: 2px dashed var(--color-text-muted); }
+
+
+/* ===== 25/26 메인 탭 ===== */
+.archive-main-stats { margin-bottom: 18px; }
+#archiveMainPane .ti-section-title { margin-top: 4px; }
+.archive-hl-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+  margin-bottom: 20px;
+}
+@media (max-width: 720px) { .archive-hl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+@media (max-width: 380px) { .archive-hl-grid { grid-template-columns: 1fr; } }
+.archive-hl-card {
+  display: flex; flex-direction: column; gap: 10px; align-items: stretch; text-align: left;
+  border: none; border-left: 3px solid transparent; cursor: pointer; font: inherit;
+  padding: 14px 14px 13px; min-width: 0;
+}
+.archive-hl-card:hover { transform: translateY(-2px); border-left-color: var(--color-teal); }
+.archive-hl-title {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.3px; color: var(--color-teal-dark);
+}
+.archive-hl-body { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.archive-hl-logo { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
+.archive-hl-noimg {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--color-bg-table-alt); color: var(--color-brand-text); font-size: 15px; font-weight: 800;
+}
+.archive-hl-text { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.archive-hl-name {
+  font-size: 12.5px; font-weight: 700; color: var(--color-text-secondary); line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.archive-hl-val { font-size: 17px; font-weight: 800; color: var(--color-text-darkest); font-family: var(--font-num); }
+.archive-mini-noimg {
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  width: 24px; height: 24px; margin-right: 8px; border-radius: 50%;
+  background: var(--color-bg-table-alt); color: var(--color-brand-text); font-size: 11px; font-weight: 800;
+}
+@media (max-width: 600px) { .archive-mini-noimg { width: 20px; height: 20px; margin-right: 6px; font-size: 10px; } }
+#archiveMiniTable .archive-tag { margin-left: 6px; }
+
+
+/* ===== 우승·잔류 라인: 작년(25/26) 기준 마커 ===== */
+.rl-prev-mark { position: absolute; top: -3px; bottom: -3px; width: 0; margin-left: -1px; border-left: 2px solid var(--color-brand-text); z-index: 2; pointer-events: auto; }
+.rl-prev-mark::before { content: ''; position: absolute; top: -2px; left: -4px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-brand-text); }
+.rl-val .rl-prev-val { display: block; font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--color-brand-text); font-variant-numeric: tabular-nums; margin-top: 1px; }
+.rl-legend { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; margin-top: 10px; font-size: 11.5px; font-weight: 600; color: var(--color-text-muted); }
+.rl-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.rl-legend-mark { display: inline-block; width: 0; height: 12px; border-left: 2px solid var(--color-brand-text); }
+.rl-legend-diff { font-variant-numeric: tabular-nums; }
+
+/* ===== 작년 대비 변화 줄 (25/26 최종 순위 카드 아래) ===== */
+.ti-prev-delta {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+}
+.ti-prev-delta-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-text-darkest);
+  margin-bottom: 8px;
+}
+.ti-prev-delta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.ti-prev-delta-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ti-prev-delta-label { font-size: 11px; font-weight: 700; opacity: 0.7; }
+.ti-prev-delta-vals { font-size: 13px; font-variant-numeric: tabular-nums; }
+.ti-prev-delta-chg { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ti-prev-delta-chg.up { color: var(--color-teal); }
+.ti-prev-delta-chg.down { color: var(--color-red-text); }
+.ti-prev-delta-chg.flat { opacity: 0.6; }
+
+.stat-board-empty { padding: 18px 14px; text-align: center; font-size: 13px; opacity: 0.7; }
+
+/* ===== 산점도: 직전 시즌과 비교 ===== */
+.scatter-compare-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 8px 0 4px; }
+.scatter-compare-btn {
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 999px;
+  color: var(--color-text-darkest);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.scatter-compare-btn.active { background: #8a94a6; border-color: #8a94a6; color: #fff; }
+.scatter-compare-btn:focus-visible { outline: 2px solid #8a94a6; outline-offset: 2px; }
+.scatter-compare-note { font-size: 11.5px; opacity: 0.75; flex: 1 1 220px; }
+.scatter-prev-label { font-size: 9.5px; font-weight: 700; opacity: 0.85; }
+
+/* ===== 작년 운 vs 올해 변화 카드 ===== */
+.luck-body { padding: 4px 14px 14px; }
+.luck-summary { font-size: 13px; font-weight: 700; margin: 6px 0 10px; }
+.luck-table-wrap { overflow-x: auto; }
+.luck-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.luck-table th { font-size: 10.5px; font-weight: 700; opacity: 0.7; text-align: right; padding: 6px 8px; white-space: nowrap; }
+.luck-table th:first-child, .luck-table td.luck-team { text-align: left; }
+.luck-table td { text-align: right; padding: 7px 8px; border-top: 1px solid var(--color-border-light); font-weight: 600; }
+.luck-table td.luck-team { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.luck-table tr.my-team td { background: rgba(var(--color-navy-rgb), 0.06); }
+.luck-note { font-size: 11.5px; opacity: 0.7; margin-top: 10px; }
+
+/* ===== 두 시즌 리그 비교 카드 ===== */
+.sc-body { padding: 4px 14px 14px; }
+.sc-verdict { font-size: 14px; font-weight: 800; margin: 6px 0 12px; line-height: 1.45; }
+.sc-grid { display: grid; gap: 0; font-variant-numeric: tabular-nums; }
+.sc-head, .sc-row { display: grid; grid-template-columns: minmax(96px, 1.5fr) 1fr 1fr 1.2fr; gap: 8px; align-items: center; }
+.sc-head { font-size: 11px; font-weight: 800; opacity: 0.7; padding: 4px 0; text-align: right; }
+.sc-head span:first-child { text-align: left; }
+.sc-row { padding: 9px 0; border-top: 1px solid var(--color-border-light); }
+.sc-label { font-size: 12.5px; font-weight: 700; }
+.sc-val, .sc-chg { text-align: right; font-size: 14px; font-weight: 700; display: flex; flex-direction: column; align-items: flex-end; }
+.sc-val-now { font-weight: 800; color: var(--color-text-darkest); }
+.sc-val small, .sc-chg small { font-size: 10.5px; font-weight: 600; opacity: 0.6; }
+.sc-note { font-size: 11.5px; opacity: 0.7; margin-top: 10px; line-height: 1.5; }
+
+/* 팀 비교 화면: PC에서 다른 화면(순위표 등)과 좌우 끝선을 맞추도록 전체 폭 사용 */
+#teamCompareView .predict-intro,
+#teamCompareView .tc-picker,
+#teamCompareView #teamCompareBody { width: 100%; box-sizing: border-box; }
+#teamCompareView .tc-grid { width: 100%; }

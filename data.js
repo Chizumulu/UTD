@@ -1563,7 +1563,7 @@ const roundsData = {
 function computeStandingsHistory() {
   const state = {};
   leagueData.forEach(t => {
-    state[t.nameEn] = { pts: 0, gf: 0, ga: 0 };
+    state[t.nameEn] = { pts: 0, gf: 0, ga: 0, pl: 0 };
   });
 
   const roundKeys = Object.keys(roundsData).sort((a, b) => {
@@ -1572,7 +1572,7 @@ function computeStandingsHistory() {
     return na - nb;
   });
 
-  const history = []; // [{ week, ranks: { nameEn: rank }, points: { nameEn: pts } }]
+  const history = []; // [{ week, ranks: { nameEn: rank }, points: { nameEn: pts }, played: { nameEn: 경기수 } }]
 
   function applyMatches(matches) {
     matches.forEach(m => {
@@ -1583,6 +1583,8 @@ function computeStandingsHistory() {
       const away = state[m.awayEn];
       if (!home || !away) return;
 
+      home.pl += 1;
+      away.pl += 1;
       home.gf += m.homeScore;
       home.ga += m.awayScore;
       away.gf += m.awayScore;
@@ -1613,7 +1615,10 @@ function computeStandingsHistory() {
     const points = {};
     standings.forEach(s => { points[s.nameEn] = s.pts; });
 
-    history.push({ week, ranks, points });
+    const played = {};
+    leagueData.forEach(t => { played[t.nameEn] = state[t.nameEn].pl; });
+
+    history.push({ week, ranks, points, played });
   }
 
   roundKeys.forEach((roundKey, idx) => {

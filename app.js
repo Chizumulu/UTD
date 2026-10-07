@@ -53,7 +53,16 @@
       infoKo: '가장 최근 패배 이후 이어지고 있는 무패(승 또는 무) 경기 수예요. 연승과 연무를 합쳐서 팀의 안정적인 컨디션을 한눈에 보여줍니다.',
       infoEn: 'Consecutive matches without a loss (win or draw) since the most recent defeat. Combines winning and drawing streaks to show a team\'s overall run of form.' },
     { id: 'streakScoring', labelKo: '연속 득점', labelEn: 'Scoring Streak', unitKo: '많은 순', unitEn: 'Highest first' },
-    { id: 'streakConceding', labelKo: '연속 실점', labelEn: 'Conceding Streak', unitKo: '많은 순', unitEn: 'Highest first' }
+    { id: 'streakConceding', labelKo: '연속 실점', labelEn: 'Conceding Streak', unitKo: '많은 순', unitEn: 'Highest first' },
+    { id: 'volatility', labelKo: '기복 지수', labelEn: 'Volatility', unitKo: '기복 큰 순', unitEn: 'Most volatile first', tier: 'advanced',
+      infoKo: '경기별 승점(승 3·무 1·패 0)의 표준편차예요. 숫자가 클수록 이겼다 졌다를 반복하는 \'롤러코스터\' 팀, 작을수록 결과가 꾸준한 팀이에요. 리그 안에서 상위 3분의 1은 롤러코스터, 하위 3분의 1은 꾸준으로 표시합니다. 작년 값은 한 경기씩 결과가 확인되는 주차만 써서 계산하니 참고용으로 봐주세요. 올해는 최소 5경기를 치른 팀만 포함됩니다.',
+      infoEn: 'The standard deviation of points per game (win 3, draw 1, loss 0). A higher number means a roller-coaster team that swings between results; a lower number means steadier results. The top third of the league is tagged Roller-coaster and the bottom third Steady. Last season\'s value only uses weeks where a single match result can be identified, so treat it as a rough guide. Teams need at least 5 games this season.' },
+    { id: 'ppgUp', labelKo: '작년보다 좋아진 팀', labelEn: 'Most Improved', unitKo: '경기당 승점 증가 순', unitEn: 'Biggest PPG gain', tier: 'bonus',
+      infoKo: '작년(25/26) 최종 경기당 승점과 올해 현재 경기당 승점을 비교해, 올랐으면 가장 많이 오른 팀부터 보여줘요. 작년 기록이 있는 팀만 대상이고, 올해는 시즌이 진행 중이라 경기가 쌓이면 값이 바뀔 수 있어요.',
+      infoEn: 'Compares last season\'s (25/26) final points per game with this season\'s current PPG and lists teams that improved, biggest gain first. Only teams with a 25/26 record are included, and values will move as this season progresses.' },
+    { id: 'ppgDown', labelKo: '작년보다 떨어진 팀', labelEn: 'Biggest Decline', unitKo: '경기당 승점 감소 순', unitEn: 'Biggest PPG drop', tier: 'bonus',
+      infoKo: '작년(25/26) 최종 경기당 승점과 올해 현재 경기당 승점을 비교해, 내려갔으면 가장 많이 내려간 팀부터 보여줘요. 작년 기록이 있는 팀만 대상이고, 올해는 시즌이 진행 중이라 경기가 쌓이면 값이 바뀔 수 있어요.',
+      infoEn: 'Compares last season\'s (25/26) final points per game with this season\'s current PPG and lists teams that declined, biggest drop first. Only teams with a 25/26 record are included, and values will move as this season progresses.' }
   ];
   let currentStatCategory = 'goalsFor';
   let statBoardExpanded = false;
@@ -552,8 +561,28 @@
     const me = ranked.find(t => t.nameEn === 'Chizumulu United FC');
     const myPts = me ? me.pts : null;
 
+    // 작년(25/26) 같은 '역할'의 순위 승점을 올해 경기 수로 환산합니다.
+    //  - 작년은 16팀·팀당 30경기, 올해는 teamCount팀·팀당 (teamCount-1)*2경기라 그대로 비교하면 안 됩니다.
+    //  - 잔류 라인은 순위 번호가 아니라 '마지막 잔류 순위'로 맞춥니다(작년은 14~16위 강등 → 13위).
+    const prevInfo = (function() {
+      if (typeof ARCHIVE_2526 === 'undefined' || !ARCHIVE_2526.weeks || !ARCHIVE_2526.weeks.length) return null;
+      const finalRows = ARCHIVE_2526.weeks[ARCHIVE_2526.weeks.length - 1].rows;
+      const prevSafeRank = finalRows.length - ((ARCHIVE_2526.relegated || []).length || 3);
+      const thisGames = (teamCount - 1) * 2;
+      const map = {};
+      defs.forEach(d => {
+        const role = d.rank === safeRank ? prevSafeRank : d.rank;
+        const row = finalRows.find(r => r.pos === role);
+        if (!row || !row.p) return;
+        const scaled = row.pts / row.p * thisGames;
+        map[d.rank] = { raw: row.pts, games: row.p, scaled: Math.round(scaled * 10) / 10, role };
+      });
+      return Object.keys(map).length ? map : null;
+    })();
+
     let lo = Math.min.apply(null, defs.map(d => d.line.p10));
     let hi = Math.max.apply(null, defs.map(d => d.line.p90));
+    if (prevInfo) Object.keys(prevInfo).forEach(k => { lo = Math.min(lo, prevInfo[k].scaled); hi = Math.max(hi, prevInfo[k].scaled); });
     if (myPts !== null) lo = Math.min(lo, myPts);
     lo = Math.max(0, Math.floor(lo / 10) * 10 - 10);
     hi = Math.ceil(hi / 10) * 10 + 10;
@@ -571,6 +600,9 @@
     const rowsHtml = defs.map(d => {
       const L = d.line;
       const left = pos(L.p10), width = Math.max(1.2, pos(L.p90) - pos(L.p10));
+      const pv = prevInfo && prevInfo[d.rank];
+      const prevMark = pv ? `<div class="rl-prev-mark" style="left:${pos(pv.scaled)}%" title="${isKorean ? `작년 ${pv.role}위 ${pv.raw}점(${pv.games}경기) → ${pv.scaled}점 환산` : `Last season #${pv.role}: ${pv.raw} pts (${pv.games} games) → ${pv.scaled} scaled`}"></div>` : '';
+      const prevVal = pv ? `<em class="rl-prev-val">${isKorean ? '작년 ' : 'LY '}${pv.scaled}</em>` : '';
       return `
         <div class="rl-row">
           <div class="rl-label">
@@ -580,10 +612,12 @@
           <div class="rl-track">
             <div class="rl-range ${d.cls}" style="left:${left}%;width:${width}%"></div>
             <div class="rl-median" style="left:${pos(L.p50)}%"></div>
+            ${prevMark}
           </div>
           <div class="rl-val">
             <b>${L.p50}${isKorean ? '점' : ' pts'}</b>
             <span>${L.p10}~${L.p90}</span>
+            ${prevVal}
           </div>
         </div>`;
     }).join('');
@@ -603,12 +637,29 @@
       summary = `<div class="rl-summary">${isKorean ? '치주물루' : 'Chizumulu'} ${isKorean ? '현재 ' : 'now '}${myPts}${isKorean ? '점' : ' pts'} · ${parts.join(' · ')} <span class="rl-summary-note">${isKorean ? '(중앙값 기준)' : '(vs. median)'}</span></div>`;
     }
 
+    // 작년 기준선 범례 + 작년(환산) 대비 올해 중앙값 차이 (+ 면 올해 라인이 더 높음)
+    let prevLegend = '';
+    if (prevInfo) {
+      const thisGames = (teamCount - 1) * 2;
+      const diffs = defs.filter(d => prevInfo[d.rank]).map(d => {
+        const diff = Math.round((d.line.p50 - prevInfo[d.rank].scaled) * 10) / 10;
+        const sign = diff > 0 ? '+' : '';
+        return `${isKorean ? d.ko.replace(' 라인', '') : d.en.replace(' line', '')} ${sign}${diff}`;
+      });
+      prevLegend = `
+        <div class="rl-legend">
+          <span class="rl-legend-item"><i class="rl-legend-mark"></i>${isKorean ? `작년(25/26) 같은 순위 승점 · ${thisGames}경기 기준 환산` : `Last season (25/26), same line · scaled to ${thisGames} games`}</span>
+          <span class="rl-legend-diff">${isKorean ? '올해 중앙값 − 작년' : 'This yr median − last yr'}: ${diffs.join(' · ')}</span>
+        </div>`;
+    }
+
     host.innerHTML = `
       <div class="rl-plot">
         ${rowsHtml}
         <div class="rl-axis"><div class="rl-axis-inner">${axisHtml}</div></div>
         ${myLineHtml}
       </div>
+      ${prevLegend}
       ${summary}`;
   }
 
@@ -3681,7 +3732,50 @@
   // ===== 지난 시즌 최종 순위 카드 (t.prevSeasonFinal 이 있는 팀만 표시) =====
   // leagueData 의 각 팀 항목에 prevSeasonFinal: { season, rank, played, gd, pts }
   // 을 넣어두면 자동으로 노출됩니다. 없는 팀(그 시즌에 없던 팀 등)은 그냥 빈 문자열을 반환합니다.
-  function buildPrevSeasonCardHtml(t) {
+  // 올해(진행 중) 대비 작년 최종 기록의 증감 줄: 순위, 경기당 승점·득점·실점.
+  // 작년 득/실점은 25/26 아카이브 최종 행(f, a)에서 가져오며, 기록이 없으면 해당 칸만 뺍니다.
+  function buildPrevSeasonDeltaHtml(t, rank, p) {
+    if (!t.played || !p || !p.played) return '';
+    const arch = archiveNameForTeam(t);
+    const finalWeek = arch ? ARCHIVE_2526.weeks[ARCHIVE_2526.weeks.length - 1] : null;
+    const row = finalWeek ? finalWeek.rows.find(r => r.team === arch) : null;
+    const fmt = n => n.toFixed(2);
+    const items = [];
+    const pushDelta = (ko, en, prev, cur, lowerIsBetter) => {
+      const d = cur - prev;
+      const flat = Math.abs(d) < 0.005;
+      const good = lowerIsBetter ? d < 0 : d > 0;
+      const cls = flat ? 'flat' : (good ? 'up' : 'down');
+      const arrow = flat ? '–' : (d > 0 ? '▲' : '▼');
+      items.push({ ko, en, prev: fmt(prev), cur: fmt(cur), cls, delta: flat ? '0.00' : `${arrow} ${fmt(Math.abs(d))}` });
+    };
+    if (rank) {
+      const d = p.rank - rank; // 양수 = 순위 상승
+      const cls = d === 0 ? 'flat' : (d > 0 ? 'up' : 'down');
+      items.push({ ko: '순위', en: 'RANK', prev: `${p.rank}${isKorean ? '위' : ''}`, cur: `${rank}${isKorean ? '위' : ''}`, cls, delta: d === 0 ? '–' : `${d > 0 ? '▲' : '▼'} ${Math.abs(d)}` });
+    }
+    pushDelta('경기당 승점', 'PTS / GAME', p.pts / p.played, t.pts / t.played, false);
+    if (row && row.p > 0) {
+      pushDelta('경기당 득점', 'GOALS / GAME', row.f / row.p, t.goalsFor / t.played, false);
+      pushDelta('경기당 실점', 'CONCEDED / GAME', row.a / row.p, t.goalsAgainst / t.played, true);
+    }
+    const titleKo = '작년 대비 변화 (올해 진행 중)';
+    const titleEn = 'Change vs Last Season (in progress)';
+    return `
+        <div class="ti-prev-delta" role="group" aria-label="${isKorean ? titleKo : titleEn}">
+          <div class="ti-prev-delta-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>
+          <div class="ti-prev-delta-grid">
+            ${items.map(i => `
+              <div class="ti-prev-delta-item">
+                <span class="ti-prev-delta-label lbl" data-en="${i.en}" data-ko="${i.ko}">${isKorean ? i.ko : i.en}</span>
+                <span class="ti-prev-delta-vals">${i.prev} → <b>${i.cur}</b></span>
+                <span class="ti-prev-delta-chg ${i.cls}">${i.delta}</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+  }
+
+  function buildPrevSeasonCardHtml(t, rank) {
     const p = t && t.prevSeasonFinal;
     if (!p) return '';
     const gdClass = p.gd > 0 ? 'gd-pos' : (p.gd < 0 ? 'gd-neg' : 'gd-zero');
@@ -3718,6 +3812,7 @@
             ${btnHtml}
           </div>
         </div>
+        ${buildPrevSeasonDeltaHtml(t, rank, p)}
       </div>
     `;
   }
@@ -3727,7 +3822,7 @@
     if (!el) return;
     const info = getMyRankedTeam();
     if (!info) { el.innerHTML = ''; return; }
-    el.innerHTML = buildRecordCardHtml(info.team, info.rank, info.total) + buildPrevSeasonCardHtml(info.team);
+    el.innerHTML = buildRecordCardHtml(info.team, info.rank, info.total) + buildPrevSeasonCardHtml(info.team, info.rank);
   }
 
   // 상대전적(H2H) 탭 렌더링 — h2hHistory(data.js에서 roundsData + matchLineups의
@@ -5034,13 +5129,13 @@
   // .ti-reveal 클래스를 부여하고 IntersectionObserver로 관찰합니다.
   // prefers-reduced-motion이면 아무 것도 하지 않고 그냥 보이게 둡니다(CSS에서 처리).
   let teamInfoRevealObserver = null;
-  function setupTeamInfoRevealObserver() {
+  function setupTeamInfoRevealObserver(rootEl) {
     if (teamInfoRevealObserver) {
       teamInfoRevealObserver.disconnect();
       teamInfoRevealObserver = null;
     }
     const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const root = document.getElementById('squadView');
+    const root = rootEl || document.getElementById('squadView');
     if (!root) return;
     const targets = root.querySelectorAll(
       '.ti-card, .ti-scorer-card, .ti-award-card-item, .ti-gk-card-item, .squad-card, .ti-section-title, .ti-section-title-row, ' +
@@ -7579,7 +7674,7 @@
     archiveMode = !!on;
     document.body.classList.toggle('season-archive', archiveMode);
   }
-  let archiveTab = 'weekly';          // 'weekly' | 'clubs'
+  let archiveTab = 'main';            // 'main' | 'weekly' | 'clubs'
   let archiveClubTeam = null;         // 구단정보 탭에서 보고 있는 팀 (25/26 아카이브 기준 이름)
   let archiveReturnToTeamInfo = false; // 구단 정보 화면의 "직전시즌 기록 보기"로 들어온 경우, 나갈 때 그 화면으로 복귀
 
@@ -7597,7 +7692,7 @@
     archiveClubTeam = (o.team && rows.some(r => r.team === o.team)) ? o.team : (rows[0] && rows[0].team) || null;
     setArchiveMode(true);
     renderArchive();
-    setArchiveTab(o.tab === 'clubs' ? 'clubs' : 'weekly');
+    setArchiveTab(o.tab === 'clubs' ? 'clubs' : (o.tab === 'weekly' ? 'weekly' : 'main'));
     playViewEnterAnimation(document.getElementById('archiveView'));
     window.scrollTo(0, 0);
   }
@@ -7608,18 +7703,23 @@
     window.scrollTo(0, 0);
   }
   function setArchiveTab(tab) {
-    archiveTab = tab === 'clubs' ? 'clubs' : 'weekly';
-    const weeklyPane = document.getElementById('archiveWeeklyPane');
-    const clubsPane = document.getElementById('archiveClubsPane');
-    if (weeklyPane) weeklyPane.style.display = archiveTab === 'weekly' ? '' : 'none';
-    if (clubsPane) clubsPane.style.display = archiveTab === 'clubs' ? '' : 'none';
-    [['archiveNavWeekly', 'weekly'], ['archiveNavClubs', 'clubs']].forEach(([id, key]) => {
+    archiveTab = (tab === 'clubs' || tab === 'weekly') ? tab : 'main';
+    const panes = { main: 'archiveMainPane', weekly: 'archiveWeeklyPane', clubs: 'archiveClubsPane' };
+    Object.keys(panes).forEach(k => {
+      const el = document.getElementById(panes[k]);
+      if (el) el.style.display = archiveTab === k ? '' : 'none';
+    });
+    [['archiveNavMain', 'main'], ['archiveNavWeekly', 'weekly'], ['archiveNavClubs', 'clubs']].forEach(([id, key]) => {
       const btn = document.getElementById(id);
       if (!btn) return;
       btn.classList.toggle('active', archiveTab === key);
     });
+    const heroEl = document.getElementById('archiveHero');
+    if (heroEl) heroEl.style.display = archiveTab === 'main' ? '' : 'none';
+    if (archiveTab === 'main') renderArchiveMain();
     if (archiveTab === 'clubs') renderArchiveClubs();
     refreshScrollFadeHints();
+    if (archiveTab !== 'clubs') window.scrollTo(0, 0);
   }
   function setArchiveClub(idx) {
     const rows = archiveFinalRows();
@@ -7630,9 +7730,9 @@
   }
   function stepArchiveClub(delta) {
     const rows = archiveFinalRows();
+    if (!rows.length) return;
     const cur = Math.max(0, rows.findIndex(r => r.team === archiveClubTeam));
-    const next = Math.min(rows.length - 1, Math.max(0, cur + delta));
-    if (next !== cur) setArchiveClub(next);
+    setArchiveClub((cur + delta + rows.length) % rows.length); // 26/27 화면처럼 처음↔끝으로 이어집니다
   }
   function setArchiveWeek(idx) {
     archiveWeekIdx = parseInt(idx, 10);
@@ -7644,7 +7744,179 @@
     const next = Math.min(weeks.length - 1, Math.max(0, cur + delta));
     if (next !== cur) setArchiveWeek(next);
   }
-  // ===== 25/26 '구단정보' 탭 =====
+  // ===== 25/26 '메인' 탭 (26/27 메인 화면의 구성: 요약 바 → 하이라이트 → 간략 순위표 → 우승 경쟁) =====
+  function goToArchiveTeam(idx) {
+    const rows = archiveFinalRows();
+    const r = rows[parseInt(idx, 10)];
+    if (!r) return;
+    archiveClubTeam = r.team;
+    setArchiveTab('clubs');
+    window.scrollTo(0, 0);
+  }
+
+  function renderArchiveMain() {
+    const rows = archiveFinalRows();
+    const weeks = archiveWeeks();
+    if (!rows.length) return;
+    const lbl = (ko, en) => `<span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`;
+    const idxOf = team => rows.findIndex(r => r.team === team);
+    const gdClass = v => v > 0 ? 'gd-pos' : (v < 0 ? 'gd-neg' : 'gd-zero');
+
+    // --- 요약 바 ---
+    let games = 0, goals = 0, draws = 0;
+    rows.forEach(r => { games += r.p; goals += r.f; draws += r.d; });
+    const matches = Math.round(games / 2);
+    const drawMatches = Math.round(draws / 2);
+    const stats = [
+      { ko: '참가 팀', en: 'TEAMS', value: rows.length },
+      { ko: '총 경기', en: 'MATCHES', value: matches },
+      { ko: '총 득점', en: 'GOALS', value: goals, hl: true },
+      { ko: '경기당 득점', en: 'GOALS/GAME', value: matches ? (goals / matches).toFixed(2) : '-' },
+      { ko: '무승부', en: 'DRAWS', value: drawMatches },
+      { ko: '무승부 비율', en: 'DRAW %', value: matches ? Math.round(drawMatches / matches * 100) + '%' : '-' }
+    ];
+    const statsEl = document.getElementById('archiveMainStats');
+    if (statsEl) {
+      statsEl.innerHTML = stats.map(s => `
+        <div class="ti-stat${s.hl ? ' ti-stat-highlight' : ''}">
+          <span class="ti-stat-value">${s.value}</span>
+          <span class="ti-stat-label">${lbl(s.ko, s.en)}</span>
+        </div>`).join('');
+      animateStatValues(statsEl);
+    }
+
+    // --- 하이라이트 카드 (누르면 해당 팀 구단정보로 이동) ---
+    const pick = (key, dir) => rows.reduce((b, r) => {
+      if (!b) return r;
+      return (dir === 'max' ? r[key] > b[key] : r[key] < b[key]) ? r : b;
+    }, null);
+    const hl = [
+      { ko: '최다 득점', en: 'MOST GOALS', r: pick('f', 'max'), val: r => `${r.f}${isKorean ? '골' : ' goals'}` },
+      { ko: '최소 실점', en: 'BEST DEFENSE', r: pick('a', 'min'), val: r => `${r.a}${isKorean ? '실점' : ' conceded'}` },
+      { ko: '최다 승', en: 'MOST WINS', r: pick('w', 'max'), val: r => `${r.w}${isKorean ? '승' : ' wins'}` },
+      { ko: '최고 득실차', en: 'BEST GOAL DIFF', r: pick('gd', 'max'), val: r => `${r.gd > 0 ? '+' : ''}${r.gd}` },
+      { ko: '최다 무승부', en: 'MOST DRAWS', r: pick('d', 'max'), val: r => `${r.d}${isKorean ? '무' : ' draws'}` },
+      { ko: '최소 패', en: 'FEWEST LOSSES', r: pick('l', 'min'), val: r => `${r.l}${isKorean ? '패' : ' losses'}` }
+    ];
+    const hlEl = document.getElementById('archiveHighlights');
+    if (hlEl) {
+      hlEl.innerHTML = hl.map(c => `
+        <button type="button" class="ti-card archive-hl-card" onclick="goToArchiveTeam(${idxOf(c.r.team)})">
+          <span class="archive-hl-title">${lbl(c.ko, c.en)}</span>
+          <span class="archive-hl-body">
+            ${archiveLogoHtml(c.r.team, 'archive-hl-logo', 'archive-hl-noimg')}
+            <span class="archive-hl-text">
+              <span class="archive-hl-name">${archiveDisplayName(c.r.team)}</span>
+              <span class="archive-hl-val">${c.val(c.r)}</span>
+            </span>
+          </span>
+        </button>`).join('');
+    }
+
+    // --- 간략 최종 순위표 ---
+    const tbody = document.getElementById('archiveMiniBody');
+    if (tbody) {
+      const total = rows.length;
+      const relegated = ARCHIVE_2526.relegated || [];
+      tbody.innerHTML = rows.map((r, i) => {
+        let cls = '';
+        if (r.pos === 1) cls += 'rank-1 promo ';
+        else if (r.pos === 2) cls += 'rank-2 ';
+        else if (r.pos === 3) cls += 'rank-3 ';
+        else if (r.pos >= total - 2) cls += 'releg ';
+        const full = archiveDisplayName(r.team);
+        const shortEn = r.team.split(' ')[0];
+        const ko = archiveKoName(r.team);
+        const shortKo = ko ? ko.split(' ')[0] : shortEn;
+        let tag = '';
+        if (r.team === ARCHIVE_2526.champion) tag = '<span class="archive-tag archive-tag-c">C</span>';
+        else if (relegated.includes(r.team)) tag = '<span class="archive-tag archive-tag-r">R</span>';
+        return `
+          <tr class="${cls.trim()}">
+            <td class="rank-cell">${r.pos}</td>
+            <td class="team team-clickable" onclick="goToArchiveTeam(${i})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToArchiveTeam(${i})}">
+              ${archiveLogoHtml(r.team, 'team-logo', 'archive-mini-noimg')}
+              <span class="lbl team-name-full" data-en="${r.team}" data-ko="${ko || r.team}">${full}</span>
+              <span class="lbl team-name-short" data-en="${shortEn}" data-ko="${shortKo}">${isKorean ? shortKo : shortEn}</span>${tag}
+            </td>
+            <td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td>
+            <td class="${gdClass(r.gd)}">${r.gd}</td><td class="pts">${r.pts}</td>
+          </tr>`;
+      }).join('');
+      attachImageFallback();
+      animateEntranceIn(tbody, 'tr', { stagger: 20 });
+    }
+
+    // --- 우승 경쟁: 최종 상위 3팀의 주차별 누적 승점 ---
+    const svg = document.getElementById('archiveRaceSvg');
+    const legend = document.getElementById('archiveRaceLegend');
+    if (svg && weeks.length) {
+      const top = rows.slice(0, 3);
+      const colors = ['#cc9c4d', '#0A9696', '#6b7bd6'];
+      const seriesList = top.map(t => weeks.map(w => (w.rows.find(x => x.team === t.team) || {}).pts));
+      const maxPts = Math.max(...seriesList.flat().filter(v => typeof v === 'number'));
+      const yMax = Math.max(10, Math.ceil(maxPts / 10) * 10);
+      const W = 700, H = 300, pL = 38, pR = 16, pT = 16, pB = 30;
+      const n = weeks.length;
+      const xAt = i => pL + (n <= 1 ? 0 : (W - pL - pR) * i / (n - 1));
+      const yAt = v => pT + (H - pT - pB) * (1 - v / yMax);
+      const yStep = yMax > 60 ? 20 : 10;
+      const yTicks = []; for (let v = 0; v <= yMax; v += yStep) yTicks.push(v);
+      const halfIdx = weeks.findIndex(w => w.key === 18);
+      const halfLabel = isKorean ? '전반기 종료' : 'Half-time';
+      const lines = seriesList.map((ser, k) => {
+        const pts = ser.map((v, i) => typeof v === 'number' ? `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}` : '').filter(Boolean).join(' ');
+        const last = ser[ser.length - 1];
+        return `<polyline points="${pts}" fill="none" stroke="${colors[k]}" stroke-width="${k === 0 ? 2.8 : 2}" stroke-linejoin="round" stroke-linecap="round"/>` +
+          `<circle cx="${xAt(n - 1).toFixed(1)}" cy="${yAt(last).toFixed(1)}" r="4" fill="${colors[k]}" stroke="var(--color-surface)" stroke-width="2"/>`;
+      }).reverse().join(''); // 1위 선이 맨 위에 그려지도록
+      svg.innerHTML = `
+        ${yTicks.map(v => `<line x1="${pL}" x2="${W - pR}" y1="${yAt(v).toFixed(1)}" y2="${yAt(v).toFixed(1)}" class="prevseason-chart-grid"/><text x="${pL - 8}" y="${(yAt(v) + 3.5).toFixed(1)}" text-anchor="end" class="prevseason-chart-tick">${v}</text>`).join('')}
+        ${halfIdx > 0 ? `<line x1="${xAt(halfIdx).toFixed(1)}" x2="${xAt(halfIdx).toFixed(1)}" y1="${pT}" y2="${H - pB}" class="prevseason-chart-half"/><text x="${xAt(halfIdx).toFixed(1)}" y="${H - 10}" text-anchor="middle" class="prevseason-chart-tick">${halfLabel}</text>` : ''}
+        ${lines}
+        <text x="${pL}" y="${H - 10}" class="prevseason-chart-tick">${isKorean ? '시즌 초' : 'Start'}</text>
+        <text x="${W - pR}" y="${H - 10}" text-anchor="end" class="prevseason-chart-tick">${isKorean ? '시즌 말' : 'End'}</text>`;
+      if (legend) {
+        legend.innerHTML = top.map((t, k) => `<span><i class="archive-legend-line" style="border-top-color:${colors[k]}"></i>${t.pos}${isKorean ? '위' : '.'} ${archiveDisplayName(t.team)}</span>`).join('');
+      }
+    }
+  }
+
+  // ===== 25/26 '구단정보' 탭 (26/27 구단 정보 화면과 같은 디자인) =====
+  function archiveCurrentTeam(arch) {
+    const aliasMap = (typeof ARCHIVE_ALIAS_MAP !== 'undefined') ? ARCHIVE_ALIAS_MAP : {};
+    return leagueData.find(t => t.nameEn === (aliasMap[arch] || arch)) || null;
+  }
+  // 올해 리그에 없어서 leagueData에서 로고를 못 찾는 25/26 팀의 로고 파일 (파일명 그대로 적습니다)
+  const ARCHIVE_LOGO_SRC = {
+    'Embangweni United FC': './엠방웨니.jpg'
+  };
+  function archiveMappedLogoSrc(arch) {
+    return ARCHIVE_LOGO_SRC[arch] ? encodeURI(ARCHIVE_LOGO_SRC[arch]) : null;
+  }
+  function archiveLogoHtml(arch, imgCls, noimgCls) {
+    const current = archiveCurrentTeam(arch);
+    if (current) return `<img class="${imgCls}" src="${current.logoSrc}" data-en-name="${current.nameEn}" alt="${arch}">`;
+    const mapped = archiveMappedLogoSrc(arch);
+    if (mapped) return `<img class="${imgCls}" src="${mapped}" data-en-name="${arch}" alt="${arch}">`;
+    const ko = archiveKoName(arch);
+    return `<span class="${noimgCls}">${(ko || arch).charAt(0)}</span>`;
+  }
+  function archiveDisplayName(arch) {
+    return (isKorean && archiveKoName(arch)) || arch;
+  }
+  function renderArchiveTeamSwitcher(rows, idx) {
+    const r = rows[idx];
+    if (!r) return;
+    const logoEl = document.getElementById('archiveSwitchLogo');
+    const nameEl = document.getElementById('archiveSwitchName');
+    const rankEl = document.getElementById('archiveSwitchRank');
+    if (logoEl) logoEl.innerHTML = archiveLogoHtml(r.team, 'ti-switch-logo', 'ti-switch-noimg');
+    if (nameEl) nameEl.textContent = archiveDisplayName(r.team);
+    if (rankEl) rankEl.textContent = isKorean ? `${r.pos} / ${rows.length}위` : `#${r.pos} of ${rows.length}`;
+  }
+
+  // 26/27 '구단 정보'와 같은 구성: 헤더 → 퀵스탯 바 → 기록 카드 → 전·후반기 → 순위 변화 → 누적 승점
   function buildArchiveClubHtml(arch) {
     const weeks = archiveWeeks();
     const series = weeks.map(w => {
@@ -7653,159 +7925,270 @@
     }).filter(Boolean);
     if (!series.length) return '';
 
-    const aliasMap = (typeof ARCHIVE_ALIAS_MAP !== 'undefined') ? ARCHIVE_ALIAS_MAP : {};
-    const current = leagueData.find(t => t.nameEn === (aliasMap[arch] || arch));
+    const current = archiveCurrentTeam(arch);
     const season = ARCHIVE_2526.season;
     const lbl = (ko, en) => `<span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`;
     const rankTxt = n => isKorean ? `${n}위` : `${n}`;
 
+    const finalRows = weeks[weeks.length - 1].rows;
     const fin = series[series.length - 1].row;
-    const total = weeks[weeks.length - 1].rows.length;
+    const total = finalRows.length;
     const best = series.reduce((b, x) => (x.row.pos < b.row.pos ? x : b), series[0]);
     const worst = series.reduce((b, x) => (x.row.pos > b.row.pos ? x : b), series[0]);
     const halfItem = series.find(x => x.week.key === 18);
     const half = halfItem ? halfItem.row : null;
     const gdClass = v => v > 0 ? 'gd-pos' : (v < 0 ? 'gd-neg' : 'gd-zero');
 
-    // 헤더: 25/26 당시 팀명 + (개명했다면) 현재 팀명
     const koName = archiveKoName(arch);
-    const thenName = `<span class="lbl" data-en="${arch}" data-ko="${koName || arch}">${isKorean ? (koName || arch) : arch}</span>`;
-    const renamed = current && current.nameEn !== arch;
-    const subHtml = renamed
-      ? `<div class="prevseason-head-sub">${lbl(`현재 팀명: ${current.nameKo}`, `Now: ${current.nameEn}`)}</div>`
-      : '';
-    const logo = current
-      ? `<img class="team-logo" src="${current.logoSrc}" data-en-name="${current.nameEn}" alt="${arch}">`
-      : `<span class="archive-club-noimg">${(koName || arch).charAt(0)}</span>`;
     const isChamp = arch === ARCHIVE_2526.champion;
     const isReleg = (ARCHIVE_2526.relegated || []).includes(arch);
-    const badge = isChamp
+    const renamed = current && current.nameEn !== arch;
+
+    // ---------- 헤더 (26/27 팀 헤더와 동일한 .team-info-header) ----------
+    const resultKo = isChamp ? '우승' : (isReleg ? '강등' : '잔류');
+    const resultEn = isChamp ? 'Champion' : (isReleg ? 'Relegated' : 'Stayed up');
+    const resultBadge = isChamp
       ? `<span class="prevseason-badge prevseason-badge-c">${lbl('우승', 'Champion')}</span>`
       : (isReleg ? `<span class="prevseason-badge prevseason-badge-r">${lbl('강등', 'Relegated')}</span>` : '');
-
-    const items = [
-      ['경기', 'PLAYED', fin.p], ['승', 'W', fin.w], ['무', 'D', fin.d], ['패', 'L', fin.l],
-      ['득점', 'GF', fin.f], ['실점', 'GA', fin.a],
-      ['득실차', 'GOAL DIFF', `<span class="${gdClass(fin.gd)}">${fin.gd}</span>`],
-      ['승점', 'PTS', `<span class="pts">${fin.pts}</span>`]
+    const people = [
+      `<span class="team-info-person"><span class="tip-label">${lbl('최종 결과', 'Result')}</span><span class="tip-value">${lbl(resultKo, resultEn)}</span></span>`
     ];
+    if (renamed) {
+      people.push(`<span class="team-info-person"><span class="tip-label">${lbl('현재 팀명', 'Now')}</span><span class="tip-value">${lbl(current.nameKo, current.nameEn)}</span></span>`);
+    }
+    const headerHtml = `
+      <div class="squad-header team-info-header archive-club-header">
+        ${archiveLogoHtml(arch, 'squad-header-logo', 'archive-club-header-noimg')}
+        <div class="squad-header-text">
+          <h2><span class="lbl" data-en="${arch}" data-ko="${koName || arch}">${isKorean ? (koName || arch) : arch}</span> ${resultBadge}</h2>
+          <span class="squad-header-sub">${season} ${lbl('시즌 · 음벨와 노던 리전 풋볼 리그', "Season · M'mbelwa Northern Region Football League")}</span>
+          <div class="team-info-people">${people.join('')}</div>
+        </div>
+      </div>`;
 
-    // 올해(26/27) 리그에도 있는 팀만 "26/27 시즌 보기" 버튼을 보여줍니다. (개명 팀은 현재 팀 페이지로 연결)
+    // ---------- 퀵스탯 바 ----------
+    const quick = [
+      { ko: '순위', en: 'RANK', value: fin.pos + (isKorean ? '위' : ''), hl: true },
+      { ko: '승점', en: 'PTS', value: fin.pts },
+      { ko: '경기', en: 'PLAYED', value: fin.p },
+      { ko: '승', en: 'W', value: fin.w },
+      { ko: '무', en: 'D', value: fin.d },
+      { ko: '패', en: 'L', value: fin.l }
+    ];
+    const quickHtml = `<div class="team-info-quickstats team-info-quickstats-bar">${quick.map(s => `
+      <div class="ti-stat${s.hl ? ' ti-stat-highlight' : ''}">
+        <span class="ti-stat-value">${s.value}</span>
+        <span class="ti-stat-label">${lbl(s.ko, s.en)}</span>
+      </div>`).join('')}</div>`;
+
+    // ---------- 기록 카드 ----------
+    const per = v => (fin.p ? (v / fin.p).toFixed(2) : '-');
+    let lgGoals = 0, lgGames = 0;
+    finalRows.forEach(r => { lgGoals += r.f; lgGames += r.p; });
+    const lgAvg = lgGames > 0 ? lgGoals / lgGames : 0;
+    const attackIdx = (fin.p > 0 && lgAvg > 0) ? Math.round(((fin.f / fin.p) / lgAvg) * 100) : null;
+    const defensePerfect = fin.p > 0 && fin.a === 0;
+    const defenseIdx = (fin.p > 0 && lgAvg > 0 && !defensePerfect) ? Math.round((lgAvg / (fin.a / fin.p)) * 100) : null;
+    const attackVal = attackIdx !== null ? `<span class="${indexClass(attackIdx)}">${attackIdx}%</span>` : '-';
+    const defenseVal = defensePerfect ? `<span class="idx-good">${isKorean ? '무실점' : 'CS'}</span>`
+      : (defenseIdx !== null ? `<span class="${indexClass(defenseIdx)}">${defenseIdx}%</span>` : '-');
+    const winPct = fin.p ? Math.round((fin.w / fin.p) * 100) + '%' : '-';
+    const rows = [
+      ['승점', 'PTS', `<span class="pts">${fin.pts}</span>`],
+      ['경기', 'PLAYED', fin.p],
+      ['승-무-패', 'W-D-L', `${fin.w}-${fin.d}-${fin.l}`],
+      ['승률', 'WIN RATE', winPct],
+      ['득점', 'GOALS FOR', fin.f],
+      ['실점', 'GOALS AGAINST', fin.a],
+      ['득실차', 'GOAL DIFF', `<span class="${gdClass(fin.gd)}">${fin.gd}</span>`],
+      ['경기당 승점', 'POINTS / GAME', per(fin.pts)],
+      ['경기당 득점', 'GOALS / GAME', per(fin.f)],
+      ['경기당 실점', 'CONCEDED / GAME', per(fin.a)],
+      ['공격 지수', 'ATTACK INDEX', attackVal],
+      ['수비 지수', 'DEFENSE INDEX', defenseVal]
+    ];
+    const hasIdx = attackIdx !== null || defenseIdx !== null || defensePerfect;
     const curBtnKo = '26/27 시즌 보기';
     const curBtnEn = 'View 26/27 Season';
     const curBtnHtml = current
-      ? `<div class="archive-club-cur-wrap"><button type="button" class="ti-prevseason-btn archive-club-cur-btn" data-cur-team="${current.nameEn}"><span class="lbl" data-en="${curBtnEn}" data-ko="${curBtnKo}">${isKorean ? curBtnKo : curBtnEn}</span><span class="ti-prevseason-arrow" aria-hidden="true">›</span></button></div>`
+      ? `<div class="ti-prevseason-cell archive-club-cur-cell"><button type="button" class="ti-prevseason-btn archive-club-cur-btn" data-cur-team="${current.nameEn}"><span class="lbl" data-en="${curBtnEn}" data-ko="${curBtnKo}">${isKorean ? curBtnKo : curBtnEn}</span><span class="ti-prevseason-arrow" aria-hidden="true">›</span></button></div>`
       : '';
+    const recordHtml = `
+      <div class="ti-section">
+        <div class="ti-section-title">${lbl('구단 기록', 'Record')}</div>
+        <div class="ti-record-card">
+          <div class="ti-record-rank">
+            <span class="ti-record-rank-num">${fin.pos}</span>
+            <span class="ti-record-rank-label">${lbl(`위 (총 ${total}팀)`, `of ${total} teams`)}</span>
+          </div>
+          <div class="ti-record-grid">
+            ${rows.map(r => `
+              <div class="ti-record-item">
+                <span class="ti-record-item-label">${lbl(r[0], r[1])}</span>
+                <span class="ti-record-item-value">${r[2]}</span>
+              </div>`).join('')}
+            ${curBtnHtml}
+          </div>
+          ${hasIdx ? `<div class="ti-record-index-note">${lbl('공격/수비 지수 — 100%가 리그 평균, 높을수록 강함', 'Attack/Defense Index — 100% is the league average; higher is stronger')}</div>` : ''}
+        </div>
+      </div>`;
 
-    const per = v => (fin.p ? (v / fin.p).toFixed(2) : '-');
-    const tiles = [
-      ['경기당 승점', 'Pts / Game', per(fin.pts)],
-      ['경기당 득점', 'Goals / Game', per(fin.f)],
-      ['경기당 실점', 'Conceded / Game', per(fin.a)]
-    ];
-
-    // 전반기 / 후반기 (전반기 종료 시점 스냅샷 기준, 후반기 = 최종 - 전반기)
+    // ---------- 전반기 · 후반기 ----------
     let splitHtml = '';
     if (half && half !== fin) {
       const sh = { p: fin.p - half.p, w: fin.w - half.w, d: fin.d - half.d, l: fin.l - half.l, f: fin.f - half.f, a: fin.a - half.a, pts: fin.pts - half.pts };
       const row = (labelHtml, r) => `<tr><th scope="row">${labelHtml}</th><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.f}</td><td>${r.a}</td><td class="pts">${r.pts}</td></tr>`;
+      const ord = n => ['th','st','nd','rd'][(n % 10 < 4 && (n % 100 < 11 || n % 100 > 13)) ? n % 10 : 0];
       splitHtml = `
-        <div class="prevseason-trend archive-club-split">
-          <div class="prevseason-trend-title">${lbl('전반기 · 후반기', '1st Half · 2nd Half')}</div>
-          <div class="archive-club-split-scroll">
-            <table class="archive-split-table">
-              <thead><tr><th></th><th>${lbl('경기', 'P')}</th><th>${lbl('승', 'W')}</th><th>${lbl('무', 'D')}</th><th>${lbl('패', 'L')}</th><th>${lbl('득', 'GF')}</th><th>${lbl('실', 'GA')}</th><th>${lbl('승점', 'PTS')}</th></tr></thead>
-              <tbody>
-                ${row(`${lbl('전반기', '1st half')}<small>${lbl(`종료 시 ${half.pos}위`, `${half.pos}${['th','st','nd','rd'][(half.pos % 10 < 4 && (half.pos % 100 < 11 || half.pos % 100 > 13)) ? half.pos % 10 : 0]} at break`)}</small>`, half)}
-                ${row(`${lbl('후반기', '2nd half')}<small>${lbl(`최종 ${fin.pos}위`, `Final ${fin.pos}`)}</small>`, sh)}
-              </tbody>
-            </table>
+        <div class="ti-section">
+          <div class="ti-section-title">${lbl('전반기 · 후반기', '1st Half · 2nd Half')}</div>
+          <div class="ti-card archive-club-split-card">
+            <div class="archive-club-split-scroll">
+              <table class="archive-split-table">
+                <thead><tr><th></th><th>${lbl('경기', 'P')}</th><th>${lbl('승', 'W')}</th><th>${lbl('무', 'D')}</th><th>${lbl('패', 'L')}</th><th>${lbl('득', 'GF')}</th><th>${lbl('실', 'GA')}</th><th>${lbl('승점', 'PTS')}</th></tr></thead>
+                <tbody>
+                  ${row(`${lbl('전반기', '1st half')}<small>${lbl(`종료 시 ${half.pos}위`, `${half.pos}${ord(half.pos)} at break`)}</small>`, half)}
+                  ${row(`${lbl('후반기', '2nd half')}<small>${lbl(`최종 ${fin.pos}위`, `Final ${fin.pos}`)}</small>`, sh)}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>`;
     }
 
-    // 주차별 순위 변화 그래프 (1위가 위쪽, 점선은 전반기 종료 시점)
+    // ---------- 주차별 순위 변화 ----------
     const W = 420, H = 150, padL = 26, padR = 10, padT = 12, padB = 22;
     const n = series.length;
     const xAt = i => padL + (n <= 1 ? 0 : (W - padL - padR) * i / (n - 1));
     const yAt = pos => padT + (H - padT - padB) * (pos - 1) / Math.max(1, total - 1);
-    const pts = series.map((x, i) => `${xAt(i).toFixed(1)},${yAt(x.row.pos).toFixed(1)}`).join(' ');
+    const linePts = series.map((x, i) => `${xAt(i).toFixed(1)},${yAt(x.row.pos).toFixed(1)}`).join(' ');
     const zoneY = yAt(total - 2) - 3;
     const lastX = xAt(n - 1), lastY = yAt(fin.pos);
-    const ticks = [1, Math.ceil(total / 2), total].filter((v, i, a) => a.indexOf(v) === i);
+    const ticks = [1, Math.ceil(total / 2), total].filter((v, i, arr) => arr.indexOf(v) === i);
     const halfIdx = series.findIndex(x => x.week.key === 18);
+    const halfLabel = isKorean ? '전반기 종료' : 'Half-time';
     const halfMark = halfIdx > 0
-      ? `<line x1="${xAt(halfIdx).toFixed(1)}" x2="${xAt(halfIdx).toFixed(1)}" y1="${padT}" y2="${H - padB}" class="prevseason-chart-half"/><text x="${xAt(halfIdx).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="prevseason-chart-tick">${isKorean ? '전반기 종료' : 'Half-time'}</text>`
+      ? `<line x1="${xAt(halfIdx).toFixed(1)}" x2="${xAt(halfIdx).toFixed(1)}" y1="${padT}" y2="${H - padB}" class="prevseason-chart-half"/><text x="${xAt(halfIdx).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="prevseason-chart-tick">${halfLabel}</text>`
       : '';
-    const chart = `
+    const rankChart = `
       <svg class="prevseason-chart" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${isKorean ? '주차별 순위 변화' : 'Rank by week'}">
         <rect x="${padL}" y="${zoneY.toFixed(1)}" width="${W - padL - padR}" height="${(H - padB - zoneY + 3).toFixed(1)}" class="prevseason-chart-zone"/>
         ${ticks.map(v => `<line x1="${padL}" x2="${W - padR}" y1="${yAt(v).toFixed(1)}" y2="${yAt(v).toFixed(1)}" class="prevseason-chart-grid"/><text x="${padL - 6}" y="${(yAt(v) + 3.5).toFixed(1)}" text-anchor="end" class="prevseason-chart-tick">${v}</text>`).join('')}
         ${halfMark}
-        <polyline points="${pts}" class="prevseason-chart-line" fill="none"/>
+        <polyline points="${linePts}" class="prevseason-chart-line" fill="none"/>
         <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4.5" class="prevseason-chart-dot"/>
         <text x="${padL}" y="${H - 6}" class="prevseason-chart-tick">${isKorean ? '시즌 초' : 'Start'}</text>
         <text x="${W - padR}" y="${H - 6}" text-anchor="end" class="prevseason-chart-tick">${isKorean ? '시즌 말' : 'End'}</text>
       </svg>`;
-
-    return `
-      <div class="prevseason-head">
-        ${logo}
-        <div class="prevseason-head-text">
-          <div class="prevseason-head-name">${thenName}${badge}</div>
-          <div class="prevseason-head-sub">${season} ${lbl('시즌 · NRFA 리그 원', 'Season · NRFA League One')}</div>
-          ${subHtml}
+    const rankHtml = `
+      <div class="ti-section">
+        <div class="ti-section-title">${lbl('주차별 순위 변화', 'Rank by Week')}</div>
+        <div class="ti-card">
+          ${rankChart}
+          <div class="prevseason-trend-meta">
+            <span>${lbl('최고 순위', 'Best')} <b>${rankTxt(best.row.pos)}</b> <small>(${archiveWeekLabel(best.week)})</small></span>
+            <span>${lbl('최저 순위', 'Lowest')} <b>${rankTxt(worst.row.pos)}</b> <small>(${archiveWeekLabel(worst.week)})</small></span>
+          </div>
         </div>
-      </div>
-      <div class="archive-club-cols">
-      <div class="archive-club-col">
-      <div class="ti-record-card prevseason-record-card">
-        <div class="ti-record-rank">
-          <span class="ti-record-rank-num">${fin.pos}</span>
-          <span class="ti-record-rank-label">${lbl('최종 순위', 'Final Rank')}</span>
-        </div>
-        <div class="ti-record-grid">
-          ${items.map(it => `
-            <div class="ti-record-item">
-              <span class="ti-record-item-label">${lbl(it[0], it[1])}</span>
-              <span class="ti-record-item-value">${it[2]}</span>
-            </div>`).join('')}
-        </div>
-      </div>
-      <div class="archive-club-tiles">
-        ${tiles.map(t => `<div class="archive-club-tile"><b>${t[2]}</b><span>${lbl(t[0], t[1])}</span></div>`).join('')}
-      </div>
-      ${curBtnHtml}
-      </div>
-      <div class="archive-club-col">
-      ${splitHtml}
-      <div class="prevseason-trend">
-        <div class="prevseason-trend-title">${lbl('주차별 순위 변화', 'Rank by Week')}</div>
-        ${chart}
-        <div class="prevseason-trend-meta">
-          <span>${lbl('최고 순위', 'Best')} <b>${rankTxt(best.row.pos)}</b> <small>(${archiveWeekLabel(best.week)})</small></span>
-          <span>${lbl('최저 순위', 'Lowest')} <b>${rankTxt(worst.row.pos)}</b> <small>(${archiveWeekLabel(worst.week)})</small></span>
-        </div>
-      </div>
-      </div>
       </div>`;
+
+    // ---------- 라운드별 누적 승점 (26/27처럼 접고 펼치기, 우승팀 점선과 비교) ----------
+    const champSeries = isChamp ? null : weeks.map(w => w.rows.find(x => x.team === ARCHIVE_2526.champion) || null);
+    const maxPts = Math.max(fin.pts, ...(champSeries ? champSeries.filter(Boolean).map(r => r.pts) : [0]));
+    const yMax = Math.max(10, Math.ceil(maxPts / 10) * 10);
+    const PW = 700, PH = 300, pL = 38, pR = 16, pT = 16, pB = 30;
+    const pxAt = i => pL + (n <= 1 ? 0 : (PW - pL - pR) * i / (n - 1));
+    const pyAt = v => pT + (PH - pT - pB) * (1 - v / yMax);
+    const yStep = yMax > 60 ? 20 : 10;
+    const yTicks = []; for (let v = 0; v <= yMax; v += yStep) yTicks.push(v);
+    const ptsLine = series.map((x, i) => `${pxAt(i).toFixed(1)},${pyAt(x.row.pts).toFixed(1)}`).join(' ');
+    const refLine = champSeries
+      ? `<polyline points="${weeks.map((w, i) => champSeries[i] ? `${pxAt(i).toFixed(1)},${pyAt(champSeries[i].pts).toFixed(1)}` : '').filter(Boolean).join(' ')}" class="prevseason-chart-ref"/>`
+      : '';
+    const pHalfMark = halfIdx > 0
+      ? `<line x1="${pxAt(halfIdx).toFixed(1)}" x2="${pxAt(halfIdx).toFixed(1)}" y1="${pT}" y2="${PH - pB}" class="prevseason-chart-half"/><text x="${pxAt(halfIdx).toFixed(1)}" y="${PH - 10}" text-anchor="middle" class="prevseason-chart-tick">${halfLabel}</text>`
+      : '';
+    const ptsChart = `
+      <svg viewBox="0 0 ${PW} ${PH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${isKorean ? '라운드별 누적 승점' : 'Cumulative points by round'}">
+        ${yTicks.map(v => `<line x1="${pL}" x2="${PW - pR}" y1="${pyAt(v).toFixed(1)}" y2="${pyAt(v).toFixed(1)}" class="prevseason-chart-grid"/><text x="${pL - 8}" y="${(pyAt(v) + 3.5).toFixed(1)}" text-anchor="end" class="prevseason-chart-tick">${v}</text>`).join('')}
+        ${pHalfMark}
+        ${refLine}
+        <polyline points="${ptsLine}" class="prevseason-chart-line" fill="none"/>
+        <circle cx="${pxAt(n - 1).toFixed(1)}" cy="${pyAt(fin.pts).toFixed(1)}" r="4.5" class="prevseason-chart-dot"/>
+        <text x="${pL}" y="${PH - 10}" class="prevseason-chart-tick">${isKorean ? '시즌 초' : 'Start'}</text>
+        <text x="${PW - pR}" y="${PH - 10}" text-anchor="end" class="prevseason-chart-tick">${isKorean ? '시즌 말' : 'End'}</text>
+      </svg>`;
+    const champName = archiveDisplayName(ARCHIVE_2526.champion);
+    const legendHtml = `
+      <div class="archive-trend-legend">
+        <span><i class="archive-legend-line"></i>${archiveDisplayName(arch)}</span>
+        ${champSeries ? `<span><i class="archive-legend-line archive-legend-ref"></i>${champName} ${lbl('(우승)', '(Champion)')}</span>` : ''}
+      </div>`;
+    const pointsHtml = `
+      <details class="team-points-trend-details ti-section team-points-trend-section">
+        <summary class="team-points-trend-summary">${lbl('라운드별 누적 승점', 'Cumulative Points by Round')}</summary>
+        <div class="team-points-trend-card"><div class="archive-trend-inner">${ptsChart}${legendHtml}</div></div>
+      </details>`;
+
+    return headerHtml + quickHtml + recordHtml + splitHtml + rankHtml + pointsHtml;
   }
 
   function renderArchiveClubs() {
-    const sel = document.getElementById('archiveClubSelect');
     const body = document.getElementById('archiveClubBody');
     const rows = archiveFinalRows();
-    if (!sel || !body || !rows.length) return;
+    if (!body || !rows.length) return;
     if (!archiveClubTeam || !rows.some(r => r.team === archiveClubTeam)) archiveClubTeam = rows[0].team;
     const idx = rows.findIndex(r => r.team === archiveClubTeam);
-    sel.innerHTML = rows.map((r, i) => {
-      const nm = (isKorean && archiveKoName(r.team)) || r.team;
-      return `<option value="${i}"${i === idx ? ' selected' : ''}>${r.pos}${isKorean ? '위' : '.'} ${nm}</option>`;
-    }).join('');
-    document.getElementById('archiveClubPrevBtn').disabled = idx === 0;
-    document.getElementById('archiveClubNextBtn').disabled = idx === rows.length - 1;
+    renderArchiveTeamSwitcher(rows, idx);
     body.innerHTML = buildArchiveClubHtml(archiveClubTeam);
+
+    // 올해 리그에도 있는 팀은 26/27 팀 페이지와 같은 팀 컬러 헤더를 씁니다.
+    const cur = archiveCurrentTeam(archiveClubTeam);
+    const headerEl = body.querySelector('.archive-club-header');
+    if (headerEl && cur && TEAM_ACCENT_COLORS[cur.nameEn]) {
+      headerEl.style.background = headerGradientFromColor(TEAM_ACCENT_COLORS[cur.nameEn]);
+    }
+    animateStatValues(body.querySelector('.team-info-quickstats-bar'));
+    setupTeamInfoRevealObserver(body);
     attachImageFallback();
+    if (archiveMode) {
+      const grid = document.getElementById('archiveTeamModal');
+      if (grid && grid.style.display === 'flex') renderArchiveTeamGrid();
+    }
+  }
+
+  // ===== 25/26 팀 바로가기 모달 (26/27 '팀 바로가기'와 동일한 구성) =====
+  function renderArchiveTeamGrid() {
+    const grid = document.getElementById('archiveTeamGrid');
+    if (!grid) return;
+    const rows = archiveFinalRows();
+    grid.innerHTML = rows.map((r, i) => {
+      const isCur = r.team === archiveClubTeam;
+      const tag = r.team === ARCHIVE_2526.champion ? (isKorean ? ' 🏆' : ' 🏆')
+        : ((ARCHIVE_2526.relegated || []).includes(r.team) ? (isKorean ? ' (강등)' : ' (R)') : '');
+      const rk = isKorean ? `${r.pos}위 · ${r.pts}점` : `#${r.pos} · ${r.pts} pts`;
+      return `
+        <button type="button" class="other-team-grid-item${isCur ? ' other-team-grid-item-current' : ''}" onclick="jumpToArchiveTeam(${i})">
+          ${archiveLogoHtml(r.team, 'other-team-grid-logo', 'archive-grid-noimg')}
+          <span class="other-team-grid-info">
+            <span class="other-team-grid-name">${archiveDisplayName(r.team)}${tag}</span>
+            <span class="other-team-grid-rank">${rk}</span>
+          </span>
+        </button>`;
+    }).join('');
+    attachImageFallback();
+  }
+  function openArchiveTeamModal() {
+    renderArchiveTeamGrid();
+    showModalAnimated(document.getElementById('archiveTeamModal'));
+  }
+  function closeArchiveTeamModal() {
+    closeModalAnimated(document.getElementById('archiveTeamModal'));
+  }
+  function jumpToArchiveTeam(idx) {
+    closeArchiveTeamModal();
+    setArchiveClub(idx);
+    window.scrollTo(0, 0);
   }
 
   function renderArchive() {
@@ -7839,7 +8222,9 @@
       const current = leagueData.find(t => t.nameEn === (aliasMap[r.team] || r.team));
       const sameName = current && current.nameEn === r.team;
       const koName = archiveKoName(r.team);
-      const logo = current ? `<img class="team-logo" src="${current.logoSrc}" data-en-name="${current.nameEn}" alt="${r.team}">` : '';
+      const mappedSrc = archiveMappedLogoSrc(r.team);
+      const logo = current ? `<img class="team-logo" src="${current.logoSrc}" data-en-name="${current.nameEn}" alt="${r.team}">`
+        : (mappedSrc ? `<img class="team-logo" src="${mappedSrc}" data-en-name="${r.team}" alt="${r.team}">` : '');
       const nameHtml = koName
         ? `<span class="lbl archive-name" data-en="${r.team}" data-ko="${koName}">${isKorean ? koName : r.team}</span>`
         : `<span class="archive-name">${r.team}</span>`;
@@ -8726,6 +9111,49 @@
   }
 
   // ===== 리그 기록 통계 (League Records / Stats) =====
+  // ===== 피타고리안 기대 승점 (올해/작년 공통) =====
+  function pythagPointsFor(gf, ga, played) {
+    const denom = Math.pow(gf, 1.072388) + Math.pow(ga, 1.127248);
+    return (played > 0 && denom > 0)
+      ? (Math.pow(gf, 1.122777) / denom) * 2.499973 * played
+      : 0;
+  }
+
+  // ===== 작년(25/26) 팀 최종 행 / 경기별 승점 =====
+  function prevSeasonFinalRow(nameEn) {
+    const lt = leagueData.find(x => x.nameEn === nameEn);
+    const arch = lt ? archiveNameForTeam(lt) : null;
+    if (!arch) return null;
+    const finalWeek = ARCHIVE_2526.weeks[ARCHIVE_2526.weeks.length - 1];
+    return finalWeek.rows.find(r => r.team === arch) || null;
+  }
+  // 작년 아카이브는 주차별 누적치뿐이라, 경기 수가 정확히 1 늘어난 주차의 승점 증가량만
+  // "한 경기 결과(0·1·3점)"로 인정합니다. (한 주에 2경기 이상이면 개별 결과를 알 수 없어 제외)
+  function prevSeasonGamePoints(nameEn) {
+    const lt = leagueData.find(x => x.nameEn === nameEn);
+    const arch = lt ? archiveNameForTeam(lt) : null;
+    if (!arch) return null;
+    const out = [];
+    let lastP = 0, lastPts = 0;
+    ARCHIVE_2526.weeks.forEach(w => {
+      const row = w.rows.find(r => r.team === arch);
+      if (!row) return;
+      if (row.p === lastP + 1) {
+        const inc = row.pts - lastPts;
+        if (inc === 0 || inc === 1 || inc === 3) out.push(inc);
+      }
+      lastP = row.p; lastPts = row.pts;
+    });
+    return out;
+  }
+  function stdevOf(arr) {
+    if (!arr || arr.length < 2) return null;
+    const m = arr.reduce((s, v) => s + v, 0) / arr.length;
+    return Math.sqrt(arr.reduce((s, v) => s + (v - m) * (v - m), 0) / arr.length);
+  }
+  const VOLATILITY_MIN_GAMES_NOW = 5;
+  const VOLATILITY_MIN_GAMES_PREV = 15;
+
   function collectTeamStats() {
     const matchLog = buildTeamMatchLog();
 
@@ -8746,10 +9174,7 @@
       const topScorer = teamScorers[0] || null;
       const topScorerTied = topScorer ? teamScorers.filter(p => p.goals === topScorer.goals).length : 0;
       const scorerShare = (topScorer && team.goalsFor > 0) ? Math.min(100, (topScorer.goals / team.goalsFor) * 100) : null;
-      const denom = Math.pow(team.goalsFor, 1.072388) + Math.pow(team.goalsAgainst, 1.127248);
-      const pythagPoints = (team.played > 0 && denom > 0)
-        ? (Math.pow(team.goalsFor, 1.122777) / denom) * 2.499973 * team.played
-        : 0;
+      const pythagPoints = pythagPointsFor(team.goalsFor, team.goalsAgainst, team.played);
 
       const matches = matchLog[team.nameEn] || [];
       const winStreak = trailingStreak(matches, m => m.result === 'W');
@@ -8848,6 +9273,22 @@
       if (team.scorerShare === null) return { main: '-', sub: null };
       return { main: Math.round(team.scorerShare) + '%', sub: scorerDepSubText(team) };
     }
+    if (statType === 'volatility') {
+      const tagCls = team.volTag === 'high' ? 'stat-val-neg' : (team.volTag === 'low' ? 'stat-val-pos' : '');
+      const tagTxt = team.volTag === 'high' ? (isKorean ? '롤러코스터' : 'Roller-coaster') : (team.volTag === 'low' ? (isKorean ? '꾸준' : 'Steady') : (isKorean ? '보통' : 'Average'));
+      let sub = tagTxt;
+      if (team.volPrev !== null && team.volPrev !== undefined) {
+        const d = team.volNow - team.volPrev;
+        const arrow = Math.abs(d) < 0.005 ? '–' : (d > 0 ? '▲' : '▼');
+        sub += (isKorean ? ' · 작년 ' : ' · last ') + team.volPrev.toFixed(2) + ' ' + arrow;
+      }
+      return { main: team.volNow.toFixed(2), mainClass: tagCls, sub: sub };
+    }
+    if (statType === 'ppgUp' || statType === 'ppgDown') {
+      const d = team.ppgDelta;
+      const cls = d > 0 ? 'stat-val-pos' : (d < 0 ? 'stat-val-neg' : '');
+      return { main: (d > 0 ? '+' : '') + d.toFixed(2), mainClass: cls, sub: team.prevPpg.toFixed(2) + ' → ' + team.ppg.toFixed(2) };
+    }
     if (statType === 'streakWin') return { main: team.winStreak, sub: null };
     if (statType === 'streakLoss') return { main: team.lossStreak, sub: null };
     if (statType === 'streakDraw') return { main: team.drawStreak, sub: null };
@@ -8909,6 +9350,13 @@
         moreBtn.setAttribute('data-en', statBoardExpanded ? collapseEn : expandEn);
         moreBtn.textContent = isKorean ? (statBoardExpanded ? collapseKo : expandKo) : (statBoardExpanded ? collapseEn : expandEn);
       }
+    }
+
+    if (!teams.length) {
+      const emptyKo = '표시할 팀이 없어요 (작년 기록이 있는 팀 중 해당하는 팀이 아직 없어요)';
+      const emptyEn = 'No teams to show yet (no team with a last-season record qualifies)';
+      rowsHost.innerHTML = `<div class="stat-board-empty">${isKorean ? emptyKo : emptyEn}</div>`;
+      return;
     }
 
     rowsHost.innerHTML = teams.map((team, idx) => {
@@ -9350,12 +9798,222 @@
     statsData.streakScoring = teams.slice().sort(function(a, b) { return (b.scoringStreak - a.scoringStreak) || teamMineFirst(a, b); });
     statsData.streakConceding = teams.slice().sort(function(a, b) { return (b.concedingStreak - a.concedingStreak) || teamMineFirst(a, b); });
 
+    // 기복 지수: 올해 경기별 승점 표준편차 (작년은 확인 가능한 주차만으로 비교용 계산)
+    const volTeams = teams.map(function(t) {
+      const pts = (t.matchHistory || []).map(function(m) { return m.gf > m.ga ? 3 : (m.gf === m.ga ? 1 : 0); });
+      if (pts.length < VOLATILITY_MIN_GAMES_NOW) return null;
+      const prevPts = prevSeasonGamePoints(t.nameEn);
+      const volPrev = (prevPts && prevPts.length >= VOLATILITY_MIN_GAMES_PREV) ? stdevOf(prevPts) : null;
+      return Object.assign({}, t, { volNow: stdevOf(pts), volPrev: volPrev, volTag: 'mid' });
+    }).filter(Boolean);
+    const volSorted = volTeams.slice().sort(function(a, b) { return b.volNow - a.volNow; });
+    const volThird = Math.max(1, Math.floor(volSorted.length / 3));
+    volSorted.forEach(function(t, i) {
+      if (i < volThird) t.volTag = 'high';
+      else if (i >= volSorted.length - volThird) t.volTag = 'low';
+    });
+    statsData.volatility = volSorted.sort(function(a, b) { return (b.volNow - a.volNow) || teamMineFirst(a, b); });
+
+    // 작년(25/26) 대비 경기당 승점 변화: prevSeasonFinal 이 있고 올해 경기가 있는 팀만 대상
+    const withDelta = teams.map(function(t) {
+      const lt = leagueData.find(function(x) { return x.nameEn === t.nameEn; });
+      const p = lt && lt.prevSeasonFinal;
+      if (!p || !p.played || !t.played) return null;
+      const prevPpg = p.pts / p.played;
+      return Object.assign({}, t, { prevPpg: prevPpg, ppgDelta: t.ppg - prevPpg });
+    }).filter(Boolean);
+    statsData.ppgUp = withDelta.filter(function(t) { return t.ppgDelta > 0.005; })
+      .sort(function(a, b) { return (b.ppgDelta - a.ppgDelta) || teamMineFirst(a, b); });
+    statsData.ppgDown = withDelta.filter(function(t) { return t.ppgDelta < -0.005; })
+      .sort(function(a, b) { return (a.ppgDelta - b.ppgDelta) || teamMineFirst(a, b); });
+
     renderSeasonFactSummary();
+    renderSeasonCompareCard();
     renderStatCatNav();
     renderStatBoard();
     renderMagicNumberStats();
 
     renderScatterPlot(teams);
+    renderLuckChangeCard(teams);
+  }
+
+  // ===== 두 시즌 리그 환경 비교 카드 (25/26 vs 26/27) =====
+  // 경기당 득점 = 한 경기에서 양 팀이 넣은 골의 합. 작년은 팀별 주차 누적표(득점 f, 무 d, 경기 p)로 역산합니다.
+  //   경기 수 = Σp ÷ 2, 총 득점 = Σf, 무승부 경기 비율 = Σd ÷ Σp
+  function leagueEnvFromRows(rows) {
+    const sumP = rows.reduce((s, r) => s + r.p, 0);
+    if (!sumP) return null;
+    const sumF = rows.reduce((s, r) => s + r.f, 0);
+    const sumD = rows.reduce((s, r) => s + r.d, 0);
+    return { goalsPerMatch: sumF / (sumP / 2), drawPct: (sumD / sumP) * 100, meanP: sumP / rows.length };
+  }
+
+  function renderSeasonCompareCard() {
+    const host = document.getElementById('seasonCompareCard');
+    if (!host) return;
+    host.innerHTML = '';
+    if (typeof ARCHIVE_2526 === 'undefined' || !ARCHIVE_2526.weeks || !ARCHIVE_2526.weeks.length) return;
+    if (typeof computeSeasonFactSummary !== 'function') return;
+    const now = computeSeasonFactSummary();
+    if (!now.totalMatches) return;
+
+    const prevWeeks = ARCHIVE_2526.weeks;
+    const prevFinalRows = prevWeeks[prevWeeks.length - 1].rows;
+    const prevFull = leagueEnvFromRows(prevFinalRows);
+    if (!prevFull) return;
+
+    // 올해 평균 경기 수와 가장 가까운 작년 주차 = "작년 같은 시점"
+    const teamCount = leagueData.length;
+    const nowMeanP = (now.totalMatches * 2) / teamCount;
+    let best = null;
+    prevWeeks.forEach(w => {
+      const env = leagueEnvFromRows(w.rows);
+      if (!env) return;
+      const gap = Math.abs(env.meanP - nowMeanP);
+      if (!best || gap < best.gap) best = { gap: gap, env: env };
+    });
+    const prevSame = best ? best.env : prevFull;
+
+    const nowGoals = now.avgGoalsPerGame;
+    const nowDraw = now.drawPct;
+    const seasonRounds = (typeof SEASON_TOTAL_ROUNDS === 'number') ? SEASON_TOTAL_ROUNDS : 30;
+    // 팀 수가 홀수면 라운드마다 한 팀이 쉬므로, 팀당 경기 수 = 라운드 수 × (팀 수 ÷ 2 내림 × 2) ÷ 팀 수
+    const nowGamesPerTeam = Math.round(seasonRounds * Math.floor(teamCount / 2) * 2 / teamCount);
+    const prevGamesPerTeam = Math.max.apply(null, prevFinalRows.map(r => r.p));
+    const prevTeamCount = prevFinalRows.length;
+
+    const d = nowGoals - prevSame.goalsPerMatch;
+    let verdictKo, verdictEn;
+    if (Math.abs(d) < 0.15) {
+      verdictKo = `올해는 경기당 ${nowGoals.toFixed(2)}골로, 작년 같은 시점(${prevSame.goalsPerMatch.toFixed(2)}골)과 비슷한 수준이에요.`;
+      verdictEn = `Goals per match are ${nowGoals.toFixed(2)} this season, about the same as last season at this point (${prevSame.goalsPerMatch.toFixed(2)}).`;
+    } else if (d > 0) {
+      verdictKo = `네, 올해는 골이 더 많이 나와요. 경기당 ${nowGoals.toFixed(2)}골로 작년 같은 시점(${prevSame.goalsPerMatch.toFixed(2)}골)보다 ${d.toFixed(2)}골 많아요.`;
+      verdictEn = `Yes, more goals this season: ${nowGoals.toFixed(2)} per match, ${d.toFixed(2)} more than last season at this point (${prevSame.goalsPerMatch.toFixed(2)}).`;
+    } else {
+      verdictKo = `아니요, 올해는 골이 더 적게 나와요. 경기당 ${nowGoals.toFixed(2)}골로 작년 같은 시점(${prevSame.goalsPerMatch.toFixed(2)}골)보다 ${Math.abs(d).toFixed(2)}골 적어요.`;
+      verdictEn = `No, fewer goals this season: ${nowGoals.toFixed(2)} per match, ${Math.abs(d).toFixed(2)} fewer than last season at this point (${prevSame.goalsPerMatch.toFixed(2)}).`;
+    }
+
+    const chg = function(v, digits, unitKo, unitEn, higherIsUp) {
+      if (Math.abs(v) < Math.pow(10, -digits) / 2) return { txt: '–', cls: '' };
+      const arrow = v > 0 ? '▲' : '▼';
+      return { txt: arrow + ' ' + Math.abs(v).toFixed(digits) + (isKorean ? unitKo : unitEn), cls: '' };
+    };
+    const rows = [
+      { ko: '경기당 득점 (양 팀 합계)', en: 'GOALS PER MATCH (both teams)',
+        prev: prevFull.goalsPerMatch.toFixed(2), prevSub: (isKorean ? '같은 시점 ' : 'same point ') + prevSame.goalsPerMatch.toFixed(2),
+        cur: nowGoals.toFixed(2), chg: chg(d, 2, '', '') , chgSub: isKorean ? '작년 같은 시점 대비' : 'vs same point' },
+      { ko: '무승부 비율', en: 'DRAW RATE',
+        prev: Math.round(prevFull.drawPct) + '%', prevSub: (isKorean ? '같은 시점 ' : 'same point ') + Math.round(prevSame.drawPct) + '%',
+        cur: Math.round(nowDraw) + '%', chg: chg(nowDraw - prevSame.drawPct, 0, '%p', 'pp'), chgSub: isKorean ? '작년 같은 시점 대비' : 'vs same point' },
+      { ko: '팀당 경기 수 (시즌 전체)', en: 'GAMES PER TEAM (full season)',
+        prev: String(prevGamesPerTeam), prevSub: '',
+        cur: String(nowGamesPerTeam), chg: chg(nowGamesPerTeam - prevGamesPerTeam, 0, '경기', ' games'), chgSub: isKorean ? '올해는 현재 진행 중' : 'in progress' },
+      { ko: '참가 팀 수', en: 'TEAMS',
+        prev: String(prevTeamCount), prevSub: '',
+        cur: String(teamCount), chg: chg(teamCount - prevTeamCount, 0, '팀', ''), chgSub: '' }
+    ];
+
+    const titleKo = '두 시즌 리그 비교 (25/26 vs 26/27)', titleEn = 'Season Comparison (25/26 vs 26/27)';
+    const noteKo = `올해는 시즌 진행 중(팀당 평균 ${nowMeanP.toFixed(1)}경기)이라, 작년 전체 시즌이 아니라 \'같은 시점\'과 비교한 값을 기준으로 판단했어요. 팀 수가 홀수(15팀)인 올해는 라운드마다 한 팀이 쉬어서 팀당 경기 수가 줄어요.`;
+    const noteEn = `This season is still in progress (avg ${nowMeanP.toFixed(1)} games per team), so the verdict compares against last season at the same point rather than its full-season average. With an odd number of teams (15), one team rests each round, which reduces games per team.`;
+
+    host.innerHTML = `
+      <div class="scatter-card season-compare-card">
+        <div class="stats-title"><span class="lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</span></div>
+        <div class="sc-body">
+          <div class="sc-verdict lbl" data-en="${verdictEn}" data-ko="${verdictKo}">${isKorean ? verdictKo : verdictEn}</div>
+          <div class="sc-grid" role="table">
+            <div class="sc-head" role="row"><span></span><span>25/26</span><span>26/27</span><span class="lbl" data-en="CHANGE" data-ko="변화">${isKorean ? '변화' : 'CHANGE'}</span></div>
+            ${rows.map(function(r) { return `
+            <div class="sc-row" role="row">
+              <span class="sc-label lbl" data-en="${r.en}" data-ko="${r.ko}">${isKorean ? r.ko : r.en}</span>
+              <span class="sc-val">${r.prev}${r.prevSub ? `<small>${r.prevSub}</small>` : ''}</span>
+              <span class="sc-val sc-val-now">${r.cur}</span>
+              <span class="sc-chg">${r.chg.txt}${r.chgSub ? `<small>${r.chgSub}</small>` : ''}</span>
+            </div>`; }).join('')}
+          </div>
+          <div class="sc-note lbl" data-en="${noteEn}" data-ko="${noteKo}">${isKorean ? noteKo : noteEn}</div>
+        </div>
+      </div>`;
+  }
+
+  // ===== 작년 운 vs 올해 변화 카드 =====
+  // 운 = 실제 승점 - 피타고리안 기대 승점 (경기당으로 환산). 양수면 득실에 비해 승점을 많이 챙긴 팀.
+  function renderLuckChangeCard(teams) {
+    const host = document.getElementById('luckChangeCard');
+    if (!host) return;
+    const rows = [];
+    teams.forEach(function(t) {
+      const row = prevSeasonFinalRow(t.nameEn);
+      if (!row || !row.p || !t.played) return;
+      const prevLuck = (row.pts - pythagPointsFor(row.f, row.a, row.p)) / row.p;
+      const nowLuck = t.pythagDiff / t.played;
+      const ppgDelta = t.ppg - row.pts / row.p;
+      rows.push({ t: t, prevLuck: prevLuck, nowLuck: nowLuck, ppgDelta: ppgDelta });
+    });
+    if (rows.length < 3) { host.innerHTML = ''; return; }
+    rows.sort(function(a, b) { return b.prevLuck - a.prevLuck; });
+
+    // 상관계수(피어슨): 작년 운 vs 올해 경기당 승점 변화
+    const n = rows.length;
+    const mx = rows.reduce(function(s, r) { return s + r.prevLuck; }, 0) / n;
+    const my = rows.reduce(function(s, r) { return s + r.ppgDelta; }, 0) / n;
+    let sxy = 0, sxx = 0, syy = 0;
+    rows.forEach(function(r) { sxy += (r.prevLuck - mx) * (r.ppgDelta - my); sxx += (r.prevLuck - mx) * (r.prevLuck - mx); syy += (r.ppgDelta - my) * (r.ppgDelta - my); });
+    const corr = (sxx > 0 && syy > 0) ? sxy / Math.sqrt(sxx * syy) : 0;
+
+    let summaryKo, summaryEn;
+    if (corr <= -0.3) {
+      summaryKo = '작년에 운이 좋았던 팀일수록 올해 경기당 승점이 떨어지는 경향이 보여요.';
+      summaryEn = 'Teams that were luckier last season tend to be dropping in points per game this season.';
+    } else if (corr >= 0.3) {
+      summaryKo = '작년 운과 올해 변화가 같은 방향이에요. 운이 좋았던 팀이 오히려 올해도 오르고 있어요.';
+      summaryEn = 'Last season\'s luck and this season\'s change move in the same direction; lucky teams are still rising.';
+    } else {
+      summaryKo = '작년 운과 올해 변화 사이에 뚜렷한 관계는 아직 보이지 않아요.';
+      summaryEn = 'No clear relationship yet between last season\'s luck and this season\'s change.';
+    }
+    const corrTxt = (corr > 0 ? '+' : '') + corr.toFixed(2);
+    const fmt = function(v) { return (v > 0 ? '+' : '') + v.toFixed(2); };
+    const cls = function(v) { return v > 0.005 ? 'stat-val-pos' : (v < -0.005 ? 'stat-val-neg' : ''); };
+    const titleKo = '작년 운 vs 올해 변화', titleEn = 'Last Season Luck vs This Season';
+    const noteKo = '운 = (실제 승점 − 피타고리안 기대 승점) ÷ 경기 수. 양수면 득실에 비해 승점을 많이 챙긴 팀이에요. 작년 기록이 있는 ' + n + '팀 기준이라 참고용이에요.';
+    const noteEn = 'Luck = (actual points − Pythagorean expected points) ÷ games. Positive means the team collected more points than its goal record suggests. Based on the ' + n + ' teams with a 25/26 record, so treat it as a rough guide.';
+
+    host.innerHTML = `
+      <div class="scatter-card luck-card">
+        <div class="stats-title"><span class="lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</span></div>
+        <div class="luck-body">
+          <div class="luck-summary lbl" data-en="${summaryEn} (r = ${corrTxt})" data-ko="${summaryKo} (상관 r = ${corrTxt})">${isKorean ? summaryKo + ' (상관 r = ' + corrTxt + ')' : summaryEn + ' (r = ' + corrTxt + ')'}</div>
+          <div class="luck-table-wrap">
+            <table class="luck-table">
+              <thead><tr>
+                <th class="lbl" data-en="TEAM" data-ko="팀">${isKorean ? '팀' : 'TEAM'}</th>
+                <th class="lbl" data-en="LAST SEASON LUCK /G" data-ko="작년 운 /경기">${isKorean ? '작년 운 /경기' : 'LAST SEASON LUCK /G'}</th>
+                <th class="lbl" data-en="PPG CHANGE" data-ko="경기당 승점 변화">${isKorean ? '경기당 승점 변화' : 'PPG CHANGE'}</th>
+                <th class="lbl" data-en="THIS SEASON LUCK /G" data-ko="올해 운 /경기">${isKorean ? '올해 운 /경기' : 'THIS SEASON LUCK /G'}</th>
+              </tr></thead>
+              <tbody>
+                ${rows.map(function(r) {
+                  const name = isKorean ? r.t.nameKo : r.t.nameEn;
+                  const mine = r.t.nameEn === 'Chizumulu United FC' ? ' class="my-team"' : '';
+                  const logo = r.t.logoSrc ? `<img class="team-logo team-logo-sm" src="${r.t.logoSrc}" alt="${name}">` : '';
+                  return `<tr${mine}>
+                    <td class="luck-team">${logo}<span>${name}</span></td>
+                    <td class="${cls(r.prevLuck)}">${fmt(r.prevLuck)}</td>
+                    <td class="${cls(r.ppgDelta)}">${r.ppgDelta > 0.005 ? '▲ ' : (r.ppgDelta < -0.005 ? '▼ ' : '')}${fmt(r.ppgDelta)}</td>
+                    <td class="${cls(r.nowLuck)}">${fmt(r.nowLuck)}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="luck-note lbl" data-en="${noteEn}" data-ko="${noteKo}">${isKorean ? noteKo : noteEn}</div>
+        </div>
+      </div>`;
+    attachImageFallback();
   }
 
 
@@ -9387,6 +10045,25 @@
     scatterHighlightIdx = (scatterHighlightIdx === idx) ? null : idx;
     if (scatterTeamsCache) renderScatterPlot(scatterTeamsCache);
   }
+  // ===== 직전 시즌(25/26)과 비교: 작년 최종 경기당 득점/실점 위치 =====
+  let scatterCompareOn = false;
+  function prevSeasonScatterPos(team) {
+    const lt = leagueData.find(x => x.nameEn === team.nameEn);
+    const arch = lt ? archiveNameForTeam(lt) : null;
+    if (!arch) return null;
+    const finalWeek = ARCHIVE_2526.weeks[ARCHIVE_2526.weeks.length - 1];
+    const row = finalWeek.rows.find(r => r.team === arch);
+    if (!row || !row.p) return null;
+    return { gf: row.f / row.p, ga: row.a / row.p };
+  }
+  function toggleScatterCompare() {
+    scatterCompareOn = !scatterCompareOn;
+    const btn = document.getElementById('scatterCompareBtn');
+    const note = document.getElementById('scatterCompareNote');
+    if (btn) { btn.classList.toggle('active', scatterCompareOn); btn.setAttribute('aria-pressed', scatterCompareOn ? 'true' : 'false'); }
+    if (note) note.style.display = scatterCompareOn ? '' : 'none';
+    if (scatterTeamsCache) renderScatterPlot(scatterTeamsCache);
+  }
   function computeTeamTrailStats(team) {
     const log = team.matchHistory || [];
     if (log.length < 2) return [];
@@ -9412,8 +10089,14 @@
     const plotW = W - margin.left - margin.right;
     const plotH = H - margin.top - margin.bottom;
 
-    const maxGF = Math.max.apply(null, teams.map(t => t.goalsForPerGame).concat([0.5]));
-    const maxGA = Math.max.apply(null, teams.map(t => t.goalsAgainstPerGame).concat([0.5]));
+    // 직전 시즌과 비교가 켜져 있으면, 작년 위치도 축 범위에 포함시킵니다.
+    const prevPosByTeam = {};
+    if (scatterCompareOn) {
+      teams.forEach(t => { const pp = prevSeasonScatterPos(t); if (pp) prevPosByTeam[t.nameEn] = pp; });
+    }
+    const prevList = Object.keys(prevPosByTeam).map(k => prevPosByTeam[k]);
+    const maxGF = Math.max.apply(null, teams.map(t => t.goalsForPerGame).concat(prevList.map(pp => pp.gf)).concat([0.5]));
+    const maxGA = Math.max.apply(null, teams.map(t => t.goalsAgainstPerGame).concat(prevList.map(pp => pp.ga)).concat([0.5]));
     const domainY = Math.ceil(maxGF * 1.2 * 5) / 5;
     const domainX = Math.ceil(maxGA * 1.2 * 5) / 5;
 
@@ -9607,6 +10290,45 @@
         }));
       });
     });
+
+    // ===== 시즌 간 이동: 작년 최종 위치(흐린 점) → 올해 현재 위치(화살표) =====
+    // 로고 마커보다 아래에 깔리도록 궤적 그룹 다음, 마커 이전에 그립니다.
+    if (scatterCompareOn) {
+      const cmpGroup = svgEl('g', { class: 'scatter-compare-group' });
+      svg.appendChild(cmpGroup);
+      points.forEach(p => {
+        const pp = prevPosByTeam[p.team.nameEn];
+        if (!pp) return;
+        const isSelected = scatterHighlightIdx === p.idx;
+        const isDimmed = scatterHighlightIdx !== null && !isSelected;
+        const mul = isDimmed ? 0.25 : 1;
+        const px = xPos(pp.ga), py = yPos(pp.gf);
+        const dx = p.cx - px, dy = p.cy - py;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const g = svgEl('g', { opacity: mul });
+        const name = isKorean ? p.team.nameKo : p.team.nameEn;
+        const tip = svgEl('title', {});
+        tip.textContent = isKorean
+          ? `${name} — 작년 득점 ${pp.gf.toFixed(2)} / 실점 ${pp.ga.toFixed(2)} → 올해 득점 ${p.team.goalsForPerGame.toFixed(2)} / 실점 ${p.team.goalsAgainstPerGame.toFixed(2)}`
+          : `${name} — last season GF ${pp.gf.toFixed(2)} / GA ${pp.ga.toFixed(2)} → now GF ${p.team.goalsForPerGame.toFixed(2)} / GA ${p.team.goalsAgainstPerGame.toFixed(2)}`;
+        g.appendChild(tip);
+        if (dist > p.r + 8) {
+          const ux = dx / dist, uy = dy / dist;
+          const ex = p.cx - ux * (p.r + 3), ey = p.cy - uy * (p.r + 3);
+          const sx = px + ux * 6, sy = py + uy * 6;
+          g.appendChild(svgEl('line', { x1: sx.toFixed(1), y1: sy.toFixed(1), x2: ex.toFixed(1), y2: ey.toFixed(1), stroke: p.trailColor, 'stroke-width': isSelected ? 2.6 : 1.8, 'stroke-dasharray': '5,3', 'stroke-linecap': 'round', opacity: 0.75 }));
+          const hl = 8, hw = 4.5; // 화살촉 길이/폭
+          const bx = ex - ux * hl, by = ey - uy * hl;
+          g.appendChild(svgEl('polygon', { points: `${ex.toFixed(1)},${ey.toFixed(1)} ${(bx - uy * hw).toFixed(1)},${(by + ux * hw).toFixed(1)} ${(bx + uy * hw).toFixed(1)},${(by - ux * hw).toFixed(1)}`, fill: p.trailColor, opacity: 0.85 }));
+        }
+        g.appendChild(svgEl('circle', { cx: px.toFixed(1), cy: py.toFixed(1), r: 6, fill: p.trailColor, 'fill-opacity': 0.22, stroke: p.trailColor, 'stroke-width': 1.4, 'stroke-dasharray': '2,2' }));
+        const shortName = (isKorean ? p.team.nameKo : p.team.nameEn).split(' ')[0];
+        const lbl = svgEl('text', { x: (px + 9).toFixed(1), y: (py + 3).toFixed(1), class: 'scatter-prev-label', fill: p.trailColor });
+        lbl.textContent = shortName + ' 25/26';
+        g.appendChild(lbl);
+        cmpGroup.appendChild(g);
+      });
+    }
 
     // 강조된 팀의 마커를 맨 나중에 그려서 다른 마커 위로 올라오게 합니다.
     const markerOrder = scatterHighlightIdx === null
@@ -10287,6 +11009,26 @@
     return team.nameEn === 'Chizumulu United FC' ? '#0454e0' : RANK_HIST_COLORS[colorIndex % RANK_HIST_COLORS.length];
   }
 
+  // ===== 작년(25/26) 같은 경기 수 시점 승점 페이스 =====
+  // 25/26 아카이브는 '주차'마다 팀별 경기 수가 달라서(휴식 주간 등) 주차 번호로 맞추면 어긋납니다.
+  // 그래서 "N경기를 치른 시점의 누적 승점"으로 올해와 맞춥니다. 기록이 없는 팀은 null.
+  let pacePrevEnabled = true;
+  function buildPrevSeasonPaceSeries(team, history) {
+    const arch = archiveNameForTeam(team);
+    if (!arch || !history.length) return null;
+    const ptsAtGames = { 0: 0 };
+    ARCHIVE_2526.weeks.forEach(w => {
+      const row = w.rows.find(r => r.team === arch);
+      if (row && ptsAtGames[row.p] === undefined) ptsAtGames[row.p] = row.pts;
+    });
+    const series = history.map(h => {
+      const games = h.played ? h.played[team.nameEn] : undefined;
+      const prev = games === undefined ? undefined : ptsAtGames[games];
+      return { games: games, pts: prev === undefined ? null : prev };
+    });
+    return series.some(s => s.pts !== null) ? series : null;
+  }
+
   function renderPointsHistorySvg(svg, teams, legendEl) {
     if (!svg) return;
     svg.innerHTML = '';
@@ -10295,13 +11037,16 @@
     if (!history.length || !teams.length) return;
 
     const compact = teams.length === 1;
+    const paceSeries = compact ? buildPrevSeasonPaceSeries(teams[0], history) : null;
+    const showPace = !!paceSeries && pacePrevEnabled;
     const W = compact ? 700 : 820;
     const H = compact ? 300 : 410;
     const margin = { top: 24, right: 22, bottom: 42, left: 46 };
     const plotW = W - margin.left - margin.right;
     const plotH = H - margin.top - margin.bottom;
     const rawMax = Math.max.apply(null, teams.flatMap(team => history.map(h => (h.points && h.points[team.nameEn]) || 0)));
-    const maxPts = Math.max(3, Math.ceil(rawMax / 3) * 3);
+    const paceMax = showPace ? Math.max.apply(null, paceSeries.map(s => s.pts || 0)) : 0;
+    const maxPts = Math.max(3, Math.ceil(Math.max(rawMax, paceMax) / 3) * 3);
     const xPos = index => history.length > 1 ? margin.left + (index / (history.length - 1)) * plotW : margin.left + plotW / 2;
     const yPos = points => margin.top + plotH - (points / maxPts) * plotH;
     const ct = chartTheme();
@@ -10327,6 +11072,37 @@
     const yTitle = svgEl('text', { x: 13, y: margin.top + plotH / 2, 'text-anchor': 'middle', class: 'rank-hist-axis-label', transform: `rotate(-90 13 ${margin.top + plotH / 2})` });
     yTitle.textContent = isKorean ? '누적 승점 →' : 'Points →';
     svg.appendChild(yTitle);
+
+    // ===== 작년 같은 경기 수 시점 점선 (기록이 있는 팀만, 칩으로 켜고 끔) =====
+    if (paceSeries) {
+      const chipLabel = isKorean ? '작년 페이스 비교' : 'Last season pace';
+      const chipW = isKorean ? 118 : 124;
+      const chip = svgEl('g', { class: 'points-pace-chip', transform: `translate(${W - margin.right - chipW}, 3)`, role: 'button', tabindex: 0, 'aria-pressed': showPace ? 'true' : 'false' });
+      chip.appendChild(svgEl('rect', { width: chipW, height: 18, rx: 9, fill: showPace ? '#8a94a6' : 'none', stroke: '#8a94a6', 'stroke-width': 1.2 }));
+      chip.appendChild(svgEl('line', { x1: 9, y1: 9, x2: 21, y2: 9, stroke: showPace ? '#fff' : '#8a94a6', 'stroke-width': 2, 'stroke-dasharray': '3,2' }));
+      const chipText = svgEl('text', { x: 27, y: 13, class: 'rank-hist-week-label', fill: showPace ? '#fff' : '#8a94a6', style: 'font-weight:700' });
+      chipText.textContent = chipLabel;
+      chip.appendChild(chipText);
+      const toggle = () => { pacePrevEnabled = !pacePrevEnabled; renderPointsHistorySvg(svg, teams, legendEl); };
+      chip.addEventListener('click', toggle);
+      chip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+      svg.appendChild(chip);
+    }
+    if (showPace) {
+      const paceCoords = paceSeries.map((s, index) => ({ x: xPos(index), y: s.pts === null ? null : yPos(s.pts), s, index })).filter(c => c.y !== null);
+      svg.appendChild(svgEl('path', { d: straightPath(paceCoords), stroke: '#8a94a6', fill: 'none', 'stroke-width': 2.2, 'stroke-dasharray': '6,4', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'points-pace-line' }));
+      paceCoords.forEach(c => {
+        const thisPts = (history[c.index].points && history[c.index].points[teams[0].nameEn]) || 0;
+        const diff = thisPts - c.s.pts;
+        const dot = svgEl('circle', { cx: c.x, cy: c.y, r: 2.8, fill: '#8a94a6', class: 'points-pace-dot' });
+        const title = svgEl('title', {});
+        title.textContent = isKorean
+          ? `작년 ${c.s.games}경기 시점: ${c.s.pts}점 (올해 ${diff >= 0 ? '+' : ''}${diff}점)`
+          : `Last season after ${c.s.games} games: ${c.s.pts} pts (this season ${diff >= 0 ? '+' : ''}${diff})`;
+        dot.appendChild(title);
+        svg.appendChild(dot);
+      });
+    }
 
     let colorIndex = 0;
     const lines = teams.map(team => {
@@ -11215,7 +11991,7 @@
     const scorersHtml = buildTeamScorerCardsHtml(t.nameEn, t.nameKo);
     const nextMatchHtml = nextMatchOpponentHtml(t, rank);
     const pastResultsHtml = buildTeamPastResultsHtml(t.nameEn, t.nameKo);
-    const prevSeasonHtml = buildPrevSeasonCardHtml(t);
+    const prevSeasonHtml = buildPrevSeasonCardHtml(t, rank);
 
     const bodyEl = document.getElementById('otherTeamFullBody');
     if (bodyEl) {
@@ -11410,7 +12186,8 @@
     { id: 'statModal', close: () => closeModal() },
     { id: 'venueMapModal', close: () => closeVenueMapModal() },
     { id: 'postponedMatchesModal', close: () => closePostponedMatchesModal() },
-    { id: 'otherTeamModal', close: () => closeOtherTeamModal() }
+    { id: 'otherTeamModal', close: () => closeOtherTeamModal() },
+    { id: 'archiveTeamModal', close: () => closeArchiveTeamModal() }
   ];
 
   document.addEventListener('keydown', function(event) {
@@ -12723,7 +13500,7 @@
     { const frm = document.getElementById('fullRecordModal'); if (frm && frm.style.display !== 'none') renderFullRecordModal(); }
     
     renderLeagueTable();
-    if (archiveMode) { renderArchive(); renderArchiveClubs(); }
+    if (archiveMode) { renderArchive(); if (archiveTab === 'main') renderArchiveMain(); else if (archiveTab === 'clubs') renderArchiveClubs(); }
     renderMainMiniTable();
     renderNextMatchStrip();
     renderHomeMatchCards();

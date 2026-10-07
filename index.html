@@ -8,10 +8,10 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '002',
-    data: '002',
-    app: '002',
-    archive: '002',
+    style: '005',
+    data: '005',
+    app: '005',
+    archive: '005',
     predictWorker: '002',
     pathfinderEngine: '001',
     poster: '001'
@@ -184,6 +184,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <div class="scroll-fade-wrap" id="viewToggleFade">
   <nav class="view-toggle-wrap" id="viewToggleWrap">
+    <button type="button" class="view-toggle-btn archive-nav-btn lbl" id="archiveNavMain" data-en="MAIN" data-ko="메인" onclick="setArchiveTab('main')">
+      <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 9.5V19C6 19.552 6.448 20 7 20H17C17.552 20 18 19.552 18 19V9.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="lbl" data-en="MAIN" data-ko="메인">메인</span>
+    </button>
     <button type="button" class="view-toggle-btn archive-nav-btn lbl" id="archiveNavWeekly" data-en="WEEKLY STANDINGS" data-ko="주별순위" onclick="setArchiveTab('weekly')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
       <span class="lbl" data-en="WEEKLY STANDINGS" data-ko="주별순위">주별순위</span>
@@ -307,10 +311,41 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="llt-scroller" id="leagueLiveTickerScroller"></div>
 </div>
 <div id="archiveView" aria-live="polite">
-  <div class="archive-hero">
-    <div class="archive-hero-season lbl" data-en="25/26 Season · NRFA League One" data-ko="25/26 시즌 · NRFA 리그 원">25/26 시즌 · NRFA 리그 원</div>
-    <div class="archive-hero-line"><span class="archive-hero-k lbl" data-en="Champion" data-ko="우승">우승</span><span class="archive-hero-v" id="archiveChampion"></span></div>
-    <div class="archive-hero-line"><span class="archive-hero-k lbl" data-en="Relegated" data-ko="강등">강등</span><span class="archive-hero-v" id="archiveRelegated"></span></div>
+  <div class="archive-hero" id="archiveHero">
+    <img class="archive-hero-logo" src="./ddds.webp" alt="NRFA">
+    <div class="archive-hero-text">
+      <div class="archive-hero-season lbl" data-en="25/26 Season · M'mbelwa Northern Region Football League" data-ko="25/26 시즌 · 음벨와 노던 리전 풋볼 리그">25/26 시즌 · 음벨와 노던 리전 풋볼 리그</div>
+      <div class="archive-hero-line"><span class="archive-hero-k lbl" data-en="Champion" data-ko="우승">우승</span><span class="archive-hero-v" id="archiveChampion"></span></div>
+      <div class="archive-hero-line"><span class="archive-hero-k lbl" data-en="Relegated" data-ko="강등">강등</span><span class="archive-hero-v" id="archiveRelegated"></span></div>
+    </div>
+  </div>
+  <div id="archiveMainPane" style="display:none">
+    <div class="team-info-quickstats team-info-quickstats-bar archive-main-stats" id="archiveMainStats"></div>
+    <div class="ti-section-title lbl" data-en="Season Highlights" data-ko="시즌 하이라이트">시즌 하이라이트</div>
+    <div class="archive-hl-grid" id="archiveHighlights"></div>
+    <div class="ti-section-title lbl" data-en="Final Standings" data-ko="최종 순위">최종 순위</div>
+    <div class="content-row">
+      <div class="mini-rank-wrap" id="archiveMiniRankWrap">
+        <table id="archiveMiniTable" class="mini-rank-table">
+          <thead>
+            <tr>
+              <th class="lbl" data-en="RANK" data-ko="순위">순위</th><th class="lbl" data-en="TEAMS" data-ko="팀">팀</th><th class="lbl" data-en="P" data-ko="경기">경기</th><th class="lbl" data-en="W" data-ko="승">승</th><th class="lbl" data-en="D" data-ko="무">무</th><th class="lbl" data-en="L" data-ko="패">패</th><th class="lbl" data-en="GD" data-ko="득실차">득실차</th><th class="lbl" data-en="PTS" data-ko="승점">승점</th>
+            </tr>
+          </thead>
+          <tbody id="archiveMiniBody"></tbody>
+        </table>
+        <div class="mini-rank-more-wrap">
+          <button type="button" class="mini-rank-more-btn lbl" data-en="View weekly standings" data-ko="주별 순위 자세히 보기" onclick="setArchiveTab('weekly')">주별 순위 자세히 보기</button>
+        </div>
+      </div>
+    </div>
+    <div class="scatter-card archive-race-card" style="margin-top:20px;">
+      <div class="stats-title">
+        <span class="lbl" data-en="TITLE RACE (TOP 3 · CUMULATIVE POINTS)" data-ko="우승 경쟁 (상위 3팀 누적 승점)">우승 경쟁 (상위 3팀 누적 승점)</span>
+      </div>
+      <div class="scatter-body"><svg id="archiveRaceSvg" viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="archive-trend-legend" id="archiveRaceLegend"></div>
+    </div>
   </div>
   <div id="archiveWeeklyPane">
   <div class="content-row">
@@ -341,10 +376,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
   </div>
   <div id="archiveClubsPane" style="display:none">
-    <div class="archive-week-bar">
-      <button type="button" class="archive-week-nav" id="archiveClubPrevBtn" onclick="stepArchiveClub(-1)" aria-label="Previous team">‹</button>
-      <select id="archiveClubSelect" class="archive-week-select" onchange="setArchiveClub(this.value)" aria-label="Team"></select>
-      <button type="button" class="archive-week-nav" id="archiveClubNextBtn" onclick="stepArchiveClub(1)" aria-label="Next team">›</button>
+    <div class="ti-team-switcher">
+      <button type="button" class="ti-switch-arrow" id="archiveClubPrevBtn" onclick="stepArchiveClub(-1)" aria-label="Previous team">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 5L8 12L15 19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button type="button" class="ti-switch-current" id="archiveSwitchCurrentBtn" onclick="openArchiveTeamModal()">
+        <span class="archive-switch-logo" id="archiveSwitchLogo"></span>
+        <span class="ti-switch-text">
+          <span class="ti-switch-rank" id="archiveSwitchRank"></span>
+          <span class="ti-switch-name" id="archiveSwitchName"></span>
+        </span>
+      </button>
+      <button type="button" class="ti-switch-arrow" id="archiveClubNextBtn" onclick="stepArchiveClub(1)" aria-label="Next team">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
     <div class="archive-club-body" id="archiveClubBody"></div>
   </div>
@@ -755,10 +800,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="lbl" data-ko="X축은 경기당 실점(오른쪽일수록 적음), Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줍니다: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하). 흐린 점과 옅은 선은 이전 라운드까지의 위치 변화(궤적)를 팀마다 다른 색으로 보여줍니다. 팀 로고를 클릭하면 그 팀의 궤적만 크게 강조되고, 다시 클릭하면 해제돼요." data-en="X-axis is goals conceded per game (fewer toward the right), Y-axis is goals scored per game. Teams are split into four zones based on the league average: Strong (above average at both ends), Attacking (scores a lot but concedes a lot too), Defensive (low scoring, low conceding), and Weak (below average at both ends). The faded dots and trail line, shown in a distinct color per team, show how each team's position has moved round by round. Click a team's logo to highlight just that team's trail — click again to clear it.">X축은 경기당 실점(오른쪽일수록 적음), Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줍니다: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하). 흐린 점과 옅은 선은 이전 라운드까지의 위치 변화(궤적)를 팀마다 다른 색으로 보여줍니다. 팀 로고를 클릭하면 그 팀의 궤적만 크게 강조되고, 다시 클릭하면 해제돼요.</span>
     </div>
   </div>
+  <div class="scatter-compare-bar">
+    <button type="button" id="scatterCompareBtn" class="scatter-compare-btn" aria-pressed="false" onclick="toggleScatterCompare()">
+      <span class="lbl" data-en="Compare with last season" data-ko="직전 시즌과 비교하기">직전 시즌과 비교하기</span>
+    </button>
+    <span id="scatterCompareNote" class="scatter-compare-note lbl" style="display:none;" data-en="Faded dot = last season's final position (25/26); arrow = move to this season's current position. Teams without a 25/26 record are not shown." data-ko="흐린 점은 작년(25/26) 최종 위치, 화살표는 올해 현재 위치로의 이동이에요. 작년 기록이 없는 팀은 표시되지 않아요.">흐린 점은 작년(25/26) 최종 위치, 화살표는 올해 현재 위치로의 이동이에요. 작년 기록이 없는 팀은 표시되지 않아요.</span>
+  </div>
   <div class="scatter-body">
     <svg id="scatterSvg" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg"></svg>
   </div>
 </div>
+<div id="luckChangeCard"></div>
+<div id="seasonCompareCard"></div>
 </div>
 <div class="content-row" id="scorersView" style="display:none;">
 <div class="scroll-fade-wrap" id="scorersTableFade">
@@ -880,7 +933,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="lbl" data-en="TITLE & SAFETY POINT LINES" data-ko="우승·잔류 라인 예상 승점">우승·잔류 라인 예상 승점</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'rankLinesInfo')">ⓘ</span>
       <div class="info-tooltip" id="rankLinesInfo" onclick="event.stopPropagation()">
-        <span class="lbl" data-ko="시뮬레이션에서 시즌 종료 시 1위·3위·12위가 몇 점으로 끝났는지의 분포예요. 막대는 10~90% 구간(시뮬레이션의 80%가 이 안에 들어옴), 굵은 눈금은 중앙값입니다. 12위 승점이 곧 잔류 라인이에요(13~15위 강등). 금색 선은 치주물루의 현재 승점이에요." data-en="How many points the 1st, 3rd and 12th-placed teams finished with across the simulations. The bar spans the 10th–90th percentile (80% of runs land inside), the thick tick is the median. 12th place's total is the safety line (13th–15th are relegated). The gold line is Chizumulu's current points.">시뮬레이션에서 시즌 종료 시 1위·3위·12위가 몇 점으로 끝났는지의 분포예요. 막대는 10~90% 구간(시뮬레이션의 80%가 이 안에 들어옴), 굵은 눈금은 중앙값입니다. 12위 승점이 곧 잔류 라인이에요(13~15위 강등). 금색 선은 치주물루의 현재 승점이에요.</span>
+        <span class="lbl" data-ko="시뮬레이션에서 시즌 종료 시 1위·3위·12위가 몇 점으로 끝났는지의 분포예요. 막대는 10~90% 구간(시뮬레이션의 80%가 이 안에 들어옴), 굵은 눈금은 중앙값입니다. 12위 승점이 곧 잔류 라인이에요(13~15위 강등). 금색 선은 치주물루의 현재 승점이에요. 파란 세로 표시는 작년(25/26) 같은 역할 순위의 최종 승점을 올해 경기 수에 맞춰 환산한 값이에요." data-en="How many points the 1st, 3rd and 12th-placed teams finished with across the simulations. The bar spans the 10th–90th percentile (80% of runs land inside), the thick tick is the median. 12th place's total is the safety line (13th–15th are relegated). The gold line is Chizumulu's current points. The blue tick marks last season's (25/26) points for the same line, scaled to this season's number of games.">시뮬레이션에서 시즌 종료 시 1위·3위·12위가 몇 점으로 끝났는지의 분포예요. 막대는 10~90% 구간(시뮬레이션의 80%가 이 안에 들어옴), 굵은 눈금은 중앙값입니다. 12위 승점이 곧 잔류 라인이에요(13~15위 강등). 금색 선은 치주물루의 현재 승점이에요. 파란 세로 표시는 작년(25/26) 같은 역할 순위의 최종 승점을 올해 경기 수에 맞춰 환산한 값이에요.</span>
       </div>
     </div>
     <div class="rl-body" id="rankLinesBody"></div>
@@ -1211,6 +1264,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="modal-body other-team-modal-body">
       <p class="other-team-list-hint lbl" data-en="26/27 Season · NRFA League One standings" data-ko="26/27 시즌 · NRFA 리그 원 순위">26/27 시즌 · NRFA 리그 원 순위</p>
       <div id="otherTeamGrid" class="other-team-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div id="archiveTeamModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content other-team-modal-content">
+    <div class="modal-header">
+      <h2 class="lbl" data-en="Jump to Team" data-ko="팀 바로가기">팀 바로가기</h2>
+      <button class="close-btn" onclick="closeArchiveTeamModal()">&times;</button>
+    </div>
+    <div class="modal-body other-team-modal-body">
+      <p class="other-team-list-hint lbl" data-en="25/26 Season · Final standings" data-ko="25/26 시즌 · 최종 순위">25/26 시즌 · 최종 순위</p>
+      <div id="archiveTeamGrid" class="other-team-grid"></div>
     </div>
   </div>
 </div>
