@@ -10022,6 +10022,7 @@
     width: 44px;
     height: 44px;
   }
+  .side-season-row { margin-top: 0; }
   .side-week-badge {
     display: flex;
     flex-direction: column;
@@ -11704,3 +11705,302 @@
     margin-top: -20px;
   }
 }
+
+
+/* ===== 경기 카드: 팀 이름/로고 링크 + 완료 경기 모달 보조 스타일 ===== */
+.rmc-team[data-team-link],
+.round-bye-card[data-team-link] {
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .rmc-team[data-team-link]:hover .lbl,
+  .round-bye-card[data-team-link]:hover .lbl {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+.rmc-team[data-team-link]:focus-visible,
+.round-bye-card[data-team-link]:focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.mc-vs.mc-vs-score {
+  font-size: 20px;
+  color: var(--color-brand-text);
+  letter-spacing: 0.5px;
+}
+.mc-played-note {
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+  margin: 0 0 2px;
+}
+
+
+/* ===== 전적 비교 모달: "이 경기와 관련된 것" 블록 + 맞대결 목록 ===== */
+.mc-h2h-list { display: flex; flex-direction: column; gap: 6px; }
+button.mc-h2h-row {
+  width: 100%;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+@media (hover: hover) {
+  button.mc-h2h-row:hover { background: var(--color-border-light); }
+}
+.mc-h2h-row.is-current {
+  box-shadow: inset 0 0 0 1.5px var(--color-teal);
+}
+.mc-h2h-here {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-teal);
+  color: var(--color-white);
+  font-size: 10px;
+  font-weight: 800;
+}
+.mc-related {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-light);
+}
+.mc-rel-group { margin-bottom: 12px; }
+.mc-rel-group:last-child { margin-bottom: 0; }
+.mc-rel-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+.mc-rel-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.mc-rel-team {
+  flex: 0 0 64px;
+  padding-top: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-brand-text);
+}
+.mc-rel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.mc-rel-chip {
+  background: var(--color-bg-stripe);
+  color: var(--color-brand-text);
+  border: 1px solid var(--color-border-light);
+  border-radius: 14px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+@media (hover: hover) {
+  .mc-rel-chip:hover {
+    background: var(--color-teal);
+    color: var(--color-white);
+    border-color: var(--color-teal);
+  }
+}
+.mc-rel-chip:focus-visible {
+  background: var(--color-teal);
+  color: var(--color-white);
+  border-color: var(--color-teal);
+}
+.mc-rel-empty {
+  padding-top: 5px;
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+}
+
+
+/* ===== 3단계: 다크모드 · 터치 · 모바일 보정 ===== */
+/* 다크모드: 공통 포커스 규칙(:where)이 teal-light 를 쓰므로 새 요소도 같은 색으로 맞춥니다. */
+:root[data-theme="dark"] .rmc-team[data-team-link]:focus-visible,
+:root[data-theme="dark"] .round-bye-card[data-team-link]:focus-visible {
+  outline-color: var(--color-teal-light);
+}
+/* "이 경기" 배지: 라이트는 진한 teal 위 흰 글씨, 다크는 밝은 teal 위 어두운 글씨로 대비 확보 */
+.mc-h2h-here {
+  background: var(--color-teal-dark);
+}
+:root[data-theme="dark"] .mc-h2h-here {
+  background: var(--color-teal-dark);
+  color: #0e1f1f;
+}
+:root[data-theme="dark"] .mc-h2h-row.is-current {
+  box-shadow: inset 0 0 0 1.5px var(--color-teal-dark);
+}
+
+/* 터치 기기: hover 가 없어 팀 이름이 눌린다는 단서가 없으므로 옅은 점선 밑줄로 알려줍니다. */
+@media (hover: none) {
+  .rmc-team[data-team-link] .lbl,
+  .round-bye-card[data-team-link] .lbl {
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-thickness: 1px;
+    text-decoration-color: var(--color-text-faint);
+    text-underline-offset: 3px;
+  }
+}
+
+/* 모바일: 칩 터치 영역 확대(최소 약 34px) + 좁은 폭에서 라벨을 칩 위로 쌓기 */
+@media (max-width: 720px) {
+  .mc-rel-chip {
+    min-height: 34px;
+    padding: 7px 12px;
+  }
+  button.mc-h2h-row {
+    min-height: 44px;
+  }
+}
+@media (max-width: 420px) {
+  .mc-rel-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mc-rel-team {
+    flex: none;
+    padding-top: 0;
+  }
+  .mc-vs.mc-vs-score {
+    font-size: 17px;
+  }
+}
+
+/* ===== 사이드바 시즌 행 + 이전 시즌(25/26) 전용 화면 ===== */
+.side-season-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  margin: -6px 4px 14px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.14);
+}
+.side-season-seg {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: rgba(238,242,251,.72);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+button.side-season-seg:hover { background: rgba(255,255,255,.14); color: #fff; }
+/* 지금 보고 있는 시즌: 골드 톤으로 강조 (클릭 불가) */
+.side-season-active {
+  cursor: default;
+  color: var(--color-gold-light);
+  background: rgba(var(--color-gold-rgb), .2);
+  box-shadow: inset 0 0 0 1px rgba(var(--color-gold-rgb), .45);
+}
+/* 현재 시즌: [‹ 이전 시즌][26/27 시즌] / 이전 시즌 화면: [25/26 시즌][26/27 시즌 ›] */
+.side-season-back, .side-season-arch { display: none; }
+body.season-archive .side-season-prev, body.season-archive .side-season-cur { display: none; }
+body.season-archive .side-season-back, body.season-archive .side-season-arch { display: flex; }
+
+#archiveView { display: none; }
+body.season-archive #archiveView { display: block; }
+/* 이전 시즌 화면에서는 올해 화면(다음 경기·라이브·순위 등)을 모두 숨기고, 모달만 그대로 둡니다. */
+body.season-archive .container > *:not(#archiveView):not(.modal-overlay) { display: none !important; }
+body.season-archive #viewToggleFade,
+body.season-archive .side-foot,
+body.season-archive .side-week-badge,
+body.season-archive .side-live-badge { display: none !important; }
+
+.archive-hero {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg, 16px);
+  background: var(--color-surface);
+  box-shadow: 0 2px 10px rgba(var(--color-navy-rgb),0.1);
+}
+.archive-hero-season { font-size: 15px; font-weight: 800; color: var(--color-brand-text); margin-bottom: 8px; }
+.archive-hero-line { display: flex; gap: 10px; align-items: baseline; font-size: 13px; line-height: 1.6; }
+.archive-hero-k { flex: 0 0 auto; min-width: 34px; font-weight: 800; color: var(--color-text-toggle); }
+.archive-hero-v { font-weight: 700; color: var(--color-brand-text); }
+.archive-body { display: block; }
+.archive-week-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.archive-week-select {
+  flex: 1 1 auto; min-width: 0; max-width: 280px; padding: 8px 12px;
+  border-radius: var(--radius-pill); border: 1px solid rgba(var(--color-navy-rgb),0.15);
+  background: var(--color-surface); color: var(--color-brand-text);
+  font-size: 12.5px; font-weight: 700;
+}
+.archive-week-nav {
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%; border: none;
+  background: var(--color-surface); color: var(--color-brand-text);
+  box-shadow: 0 2px 8px rgba(var(--color-navy-rgb),0.12);
+  font-size: 18px; line-height: 1; cursor: pointer;
+}
+.archive-week-nav:disabled { opacity: 0.35; cursor: default; }
+#archiveTable { width: 100%; }
+#archiveTable .archive-name { font-weight: 700; }
+.archive-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px;
+  font-size: 10.5px; font-weight: 800; color: var(--color-white); vertical-align: middle;
+}
+.archive-tag-c { background: var(--color-green); }
+.archive-tag-r { background: var(--color-red); }
+
+/* ===== 구단 정보 "직전시즌 기록 보기" 버튼 + 팝업 ===== */
+.ti-prevseason-wrap { display: flex; justify-content: flex-end; margin: -6px 2px 8px; }
+.ti-prevseason-btn {
+  background: none;
+  border: 1px solid var(--color-border-light);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-teal-dark);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ti-prevseason-btn:hover { background: var(--color-bg-btn-hover); border-color: var(--color-teal); }
+.ti-prevseason-btn:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; }
+
+.prevseason-modal-content { max-width: 480px; }
+.prevseason-body { padding: 14px 16px 18px; }
+.prevseason-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.prevseason-head .team-logo { width: 44px; height: 44px; object-fit: contain; flex: none; }
+.prevseason-head-name { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 16px; font-weight: 800; color: var(--color-text-darkest); }
+.prevseason-head-sub { margin-top: 2px; font-size: 11.5px; font-weight: 600; color: var(--color-text-muted); }
+.prevseason-badge { padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #fff; }
+.prevseason-badge-c { background: var(--color-gold-strong); }
+.prevseason-badge-r { background: var(--color-red); }
+.prevseason-record-card { box-shadow: none; border: 1px solid var(--color-border-light); padding: 16px; gap: 16px; margin-bottom: 14px; }
+.prevseason-record-card .ti-record-grid { min-width: 200px; gap: 10px 18px; }
+.prevseason-trend { border: 1px solid var(--color-border-light); border-radius: var(--radius-lg); padding: 12px 14px; background: var(--color-surface); }
+.prevseason-trend-title { font-size: 12.5px; font-weight: 800; color: var(--color-text-muted); margin-bottom: 6px; }
+.prevseason-chart { width: 100%; height: auto; display: block; }
+.prevseason-chart-zone { fill: rgba(var(--color-red-rgb), 0.08); }
+.prevseason-chart-grid { stroke: var(--color-border-light); stroke-width: 1; }
+.prevseason-chart-tick { fill: var(--color-text-muted); font-size: 10px; font-weight: 600; }
+.prevseason-chart-line { stroke: var(--color-teal); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.prevseason-chart-dot { fill: var(--color-gold-strong); stroke: var(--color-surface); stroke-width: 2; }
+.prevseason-trend-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
+.prevseason-trend-meta b { color: var(--color-text-darkest); font-weight: 800; }
+.prevseason-trend-meta small { font-size: 11px; }

@@ -4380,6 +4380,43 @@ function computeTeamSeasonH2H(nameEnA, nameKoA, nameEnB, nameKoB) {
 }
 
 
+// 두 팀의 이번 시즌 맞대결을 "전부" 라운드 순서대로 돌려줍니다(1·2차전, 예정 경기 포함).
+// computeTeamSeasonH2H 는 끝난 첫 경기 하나만 돌려주기 때문에, 후반기 재대결까지 보여주려고 따로 만들었습니다.
+// - 라운드에 roundsData 가 있으면 그것을, 없으면 scheduledRounds 를 씁니다(computeTeamSeasonH2H 와 동일).
+// - 다른 주차로 옮겨간 경기(movedToWeek)는 옮겨간 쪽 주차에 다시 나오므로 중복을 피하려고 건너뜁니다.
+function computeTeamSeasonMeetings(nameEnA, nameKoA, nameEnB, nameKoB) {
+  const keys = Array.from(new Set([
+    ...Object.keys(roundsData || {}),
+    ...Object.keys(scheduledRounds || {})
+  ])).sort((a, b) => parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10));
+
+  const isA = (en, ko) => en === nameEnA || ko === nameKoA;
+  const isB = (en, ko) => en === nameEnB || ko === nameKoB;
+  const out = [];
+
+  keys.forEach(roundKey => {
+    const matches = (roundsData && roundsData[roundKey]) || (scheduledRounds && scheduledRounds[roundKey]) || [];
+    matches.forEach(m => {
+      if (m.byeKo || m.byeEn) return;
+      if (m.movedToWeek) return;
+      const pair = (isA(m.homeEn, m.homeKo) && isB(m.awayEn, m.awayKo))
+        || (isB(m.homeEn, m.homeKo) && isA(m.awayEn, m.awayKo));
+      if (!pair) return;
+      out.push({
+        roundKey,
+        weekNum: parseInt(roundKey.replace('round', ''), 10),
+        homeEn: m.homeEn, homeKo: m.homeKo, awayEn: m.awayEn, awayKo: m.awayKo,
+        homeScore: m.homeScore, awayScore: m.awayScore,
+        played: typeof m.homeScore === 'number' && typeof m.awayScore === 'number',
+        postponed: !!m.postponed,
+        kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime
+      });
+    });
+  });
+  return out;
+}
+
+
 // ===== 상세보기(경기 상세) 모달의 "최근 상대 전적" 자동 생성 =====
 // matchLineups[roundKey]에 recentHistory를 수동으로 채워두지 않아도, 이번 경기 결과(방금
 // 라운드 데이터에 채운 스코어)와 upcomingMatchHistory[roundKey]에 미리 적어둔 과거 시즌

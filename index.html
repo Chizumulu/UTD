@@ -8,9 +8,10 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '055',
-    data: '065',
-    app: '055',
+    style: '001',
+    data: '001',
+    app: '001',
+    archive: '001',
     predictWorker: '002',
     pathfinderEngine: '001',
     poster: '001'
@@ -154,13 +155,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <img class="club-logo" src="./dd.svg" data-en-name="Chizumulu United FC" alt="Chizumulu United FC">
     <div class="side-crest-text">
       <h1 class="lbl" data-ko="<span class=&quot;sponsor-line&quot;>치웨미 인베스트먼트</span><span class=&quot;main-line&quot;>NRFA 리그 원</span>" data-en="<span class=&quot;sponsor-line&quot;>CHIWEMI INVESTMENT</span><span class=&quot;main-line&quot;>NRFA LEAGUE ONE</span>"><span class="sponsor-line">치웨미 인베스트먼트</span><span class="main-line">NRFA 리그 원</span></h1>
-      <span class="fan-badge lbl" data-ko="26/27 시즌" data-en="26/27 Season">26/27 시즌</span>
       <span class="side-live-badge lbl" id="sideLiveBadge" data-en="<span class=&quot;side-live-dot&quot;></span>LIVE" data-ko="<span class=&quot;side-live-dot&quot;></span>LIVE"><span class="side-live-dot"></span>LIVE</span>
     </div>
     <div class="side-week-badge" id="sideWeekBadge">
       <span class="side-week-badge-num" id="weekBadgeNum">5</span>
       <span class="side-week-badge-lbl lbl" data-en="WK" data-ko="주차">주차</span>
     </div>
+  </div>
+
+
+  <div class="side-season-row" id="sideSeasonRow" role="group" aria-label="Season">
+    <button type="button" class="side-season-seg side-season-prev lbl" data-ko="‹ 이전 시즌" data-en="‹ Prev season" title="25/26 시즌 보기" onclick="openSeasonArchive()">‹ 이전 시즌</button>
+    <span class="side-season-seg side-season-active side-season-arch lbl" data-ko="25/26 시즌" data-en="25/26 Season">25/26 시즌</span>
+    <span class="side-season-seg side-season-active side-season-cur lbl" data-ko="26/27 시즌" data-en="26/27 Season">26/27 시즌</span>
+    <button type="button" class="side-season-seg side-season-back lbl" data-ko="26/27 시즌 ›" data-en="26/27 Season ›" onclick="exitSeasonArchive()">26/27 시즌 ›</button>
   </div>
 
   <div class="side-foot">
@@ -289,6 +297,39 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <span class="llt-title lbl" data-en="Live Now · NRFA League One" data-ko="지금 진행 중 · NRFA 리그 원">지금 진행 중 · NRFA 리그 원</span>
   </div>
   <div class="llt-scroller" id="leagueLiveTickerScroller"></div>
+</div>
+<div id="archiveView" aria-live="polite">
+  <div class="archive-hero">
+    <div class="archive-hero-season lbl" data-en="25/26 Season · NRFA League One" data-ko="25/26 시즌 · NRFA 리그 원">25/26 시즌 · NRFA 리그 원</div>
+    <div class="archive-hero-line"><span class="archive-hero-k lbl" data-en="Champion" data-ko="우승">우승</span><span class="archive-hero-v" id="archiveChampion"></span></div>
+    <div class="archive-hero-line"><span class="archive-hero-k lbl" data-en="Relegated" data-ko="강등">강등</span><span class="archive-hero-v" id="archiveRelegated"></span></div>
+  </div>
+  <div class="content-row">
+  <div class="scroll-fade-wrap" id="archiveTableFade">
+  <div class="table-wrap" id="archiveTableScroller">
+<div class="archive-body" id="archiveWrap">
+  <div class="archive-week-bar">
+    <button type="button" class="archive-week-nav" id="archivePrevBtn" onclick="stepArchiveWeek(-1)" aria-label="Previous week">‹</button>
+    <select id="archiveWeekSelect" class="archive-week-select" onchange="setArchiveWeek(this.value)" aria-label="Week"></select>
+    <button type="button" class="archive-week-nav" id="archiveNextBtn" onclick="stepArchiveWeek(1)" aria-label="Next week">›</button>
+  </div>
+  <table id="archiveTable">
+    <thead>
+      <tr>
+        <th class="lbl" data-en="RANK" data-ko="순위">순위</th><th class="lbl" data-en="CHG" data-ko="변동">변동</th><th class="lbl" data-en="TEAMS" data-ko="팀">팀</th><th class="lbl" data-en="P" data-ko="경기">경기</th><th class="lbl" data-en="W" data-ko="승">승</th><th class="lbl" data-en="D" data-ko="무">무</th><th class="lbl" data-en="L" data-ko="패">패</th><th class="lbl" data-en="F" data-ko="득점">득점</th><th class="lbl" data-en="A" data-ko="실점">실점</th><th class="lbl" data-en="GD" data-ko="득실차">득실차</th><th class="lbl" data-en="PTS" data-ko="승점">승점</th>
+      </tr>
+    </thead>
+    <tbody id="archiveTableBody"></tbody>
+  </table>
+  <div class="rank-form-note" id="archiveNote" style="display:none"></div>
+  <div class="legend">
+    <span><span class="dot dot-promo"></span><span class="lbl" data-en="1st: Champion (C)" data-ko="1위: 우승 (C)">1위: 우승 (C)</span></span>
+    <span><span class="dot dot-gd-neg"></span><span class="lbl" data-en="14th–16th: Relegated (R)" data-ko="14~16위: 강등 (R)">14~16위: 강등 (R)</span></span>
+  </div>
+</div>
+  </div>
+  </div>
+  </div>
 </div>
 <div id="rankView">
 <div class="home-matches-row">
@@ -476,9 +517,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="content-row">
 <div class="scroll-fade-wrap" id="rankTableFade">
 <div class="table-wrap" id="rankTableScroller">
-<div class="table-card-head">
-  <h2 class="lbl" data-en="" data-ko=""></h2>
-</div>
 <div class="rank-filter-wrap">
   <button class="rank-filter-btn active lbl" data-filter="all" data-en="ALL" data-ko="전체" onclick="setRankFilter('all')">전체</button>
   <button class="rank-filter-btn lbl" data-filter="home" data-en="HOME" data-ko="홈" onclick="setRankFilter('home')">홈</button>
@@ -996,6 +1034,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 
+<div id="prevSeasonModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content prevseason-modal-content" role="dialog" aria-modal="true" aria-labelledby="prevSeasonTitle">
+    <div class="modal-header">
+      <h2 id="prevSeasonTitle"></h2>
+      <button class="close-btn" type="button" onclick="closePrevSeasonModal()" aria-label="닫기">&times;</button>
+    </div>
+    <div class="modal-body prevseason-body" id="prevSeasonBody"></div>
+  </div>
+</div>
+
 <div id="statModal" class="modal-overlay" style="display: none;">
   <div class="modal-content">
     <div class="modal-header">
@@ -1239,6 +1287,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.write('<script src="pathfinder-engine.js?v=' + window.ASSET_VERSIONS.pathfinderEngine + '"><\/script>');
   document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
   document.write('<script src="poster.js?v=' + window.ASSET_VERSIONS.poster + '"><\/script>');
+  document.write('<script src="archive-2526.js?v=' + window.ASSET_VERSIONS.archive + '"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
 </script>
 </body>
