@@ -11926,7 +11926,6 @@ body.season-archive .side-season-back, body.season-archive .side-season-arch { d
 body.season-archive #archiveView { display: block; }
 /* 이전 시즌 화면에서는 올해 화면(다음 경기·라이브·순위 등)을 모두 숨기고, 모달만 그대로 둡니다. */
 body.season-archive .container > *:not(#archiveView):not(.modal-overlay) { display: none !important; }
-body.season-archive #viewToggleFade,
 body.season-archive .side-foot,
 body.season-archive .side-week-badge,
 body.season-archive .side-live-badge { display: none !important; }
@@ -11966,24 +11965,26 @@ body.season-archive .side-live-badge { display: none !important; }
 .archive-tag-c { background: var(--color-green); }
 .archive-tag-r { background: var(--color-red); }
 
-/* ===== 구단 정보 "직전시즌 기록 보기" 버튼 + 팝업 ===== */
-.ti-prevseason-wrap { display: flex; justify-content: flex-end; margin: -6px 2px 8px; }
+/* ===== 구단 정보 "직전시즌 기록 보기" 버튼 + 25/26 구단정보 탭 ===== */
+/* 기록 표(2열 그리드)의 빈 칸에 들어가는 큰 버튼 */
+.ti-prevseason-cell { display: flex; align-items: stretch; min-width: 0; }
 .ti-prevseason-btn {
-  background: none;
-  border: 1px solid var(--color-border-light);
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--color-teal-dark);
+  flex: 1 1 auto;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 8px 14px;
+  border: none; border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--color-teal-dark) 0%, var(--color-teal) 100%);
+  color: var(--color-white);
+  font-size: 14px; font-weight: 800; line-height: 1.25; text-align: center;
+  box-shadow: 0 4px 12px rgba(var(--color-teal-rgb), 0.28);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
 }
-.ti-prevseason-btn:hover { background: var(--color-bg-btn-hover); border-color: var(--color-teal); }
-.ti-prevseason-btn:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; }
+.ti-prevseason-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(var(--color-teal-rgb), 0.38); filter: brightness(1.05); }
+.ti-prevseason-btn:active { transform: translateY(0); }
+.ti-prevseason-btn:focus-visible { outline: 2px solid var(--color-navy); outline-offset: 2px; }
+.ti-prevseason-arrow { font-size: 20px; line-height: 1; font-weight: 700; }
 
-.prevseason-modal-content { max-width: 480px; }
-.prevseason-body { padding: 14px 16px 18px; }
 .prevseason-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .prevseason-head .team-logo { width: 44px; height: 44px; object-fit: contain; flex: none; }
 .prevseason-head-name { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 16px; font-weight: 800; color: var(--color-text-darkest); }
@@ -12004,3 +12005,53 @@ body.season-archive .side-live-badge { display: none !important; }
 .prevseason-trend-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
 .prevseason-trend-meta b { color: var(--color-text-darkest); font-weight: 800; }
 .prevseason-trend-meta small { font-size: 11px; }
+
+/* ===== 25/26 화면: 구단정보 탭 내용 ===== */
+.archive-club-noimg {
+  width: 44px; height: 44px; flex: none; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--color-bg-table-alt); color: var(--color-brand-text); font-weight: 800;
+}
+.archive-club-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.archive-club-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 6px;
+  border: 1px solid var(--color-border-light); border-radius: var(--radius-lg); background: var(--color-surface);
+}
+.archive-club-tile b { font-size: 18px; font-weight: 800; color: var(--color-text-darkest); font-family: var(--font-num); }
+.archive-club-tile span { font-size: 11px; font-weight: 700; color: var(--color-text-muted); text-align: center; }
+.archive-club-split { margin-bottom: 14px; }
+.archive-club-split-scroll { overflow-x: auto; }
+.archive-split-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.archive-split-table th, .archive-split-table td { padding: 7px 6px; text-align: center; border-bottom: 1px solid var(--color-border-light); }
+.archive-split-table thead th { font-size: 11px; font-weight: 700; color: var(--color-text-muted); }
+.archive-split-table tbody th { text-align: left; font-weight: 800; color: var(--color-text-darkest); white-space: nowrap; }
+.archive-split-table tbody th small { display: block; font-size: 10.5px; font-weight: 600; color: var(--color-text-muted); }
+.archive-split-table tbody tr:last-child th, .archive-split-table tbody tr:last-child td { border-bottom: 0; }
+.prevseason-trend + .prevseason-trend { margin-top: 14px; }
+.prevseason-chart-half { stroke: var(--color-text-muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
+
+/* 25/26 화면이 flex 컨테이너 안에서 내용 폭만큼 쪼그라들지 않도록 다른 화면(#squadView 등)처럼 전체 폭 사용 */
+#archiveView { width: 100%; min-width: 0; }
+.archive-club-body { width: 100%; }
+.archive-club-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+.archive-club-col { min-width: 0; }
+.archive-club-col > :last-child { margin-bottom: 0; }
+/* PC: 왼쪽(기록 카드 + 경기당 지표) / 오른쪽(전·후반기 + 순위 그래프) 2단 */
+@media (min-width: 820px) {
+  .archive-club-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 0 18px; align-items: start; }
+  .archive-club-body .prevseason-head { margin-bottom: 16px; }
+  .archive-club-body .prevseason-record-card { padding: 20px; }
+  .archive-club-body .ti-record-rank { min-width: 96px; }
+}
+
+/* ===== 25/26 화면의 사이드 메뉴: 평소엔 숨기고, 25/26 화면에서는 이 두 버튼만 보이게 교체 ===== */
+body:not(.season-archive) .archive-nav-btn { display: none !important; }
+body.season-archive #viewToggleWrap > :not(.archive-nav-btn) { display: none !important; }
+
+/* 25/26 구단정보 → 26/27 시즌 보기 버튼 (네이비 톤으로 "올해"를 구분) */
+.archive-club-cur-wrap { display: flex; margin-top: 14px; }
+.archive-club-cur-btn {
+  background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
+  box-shadow: 0 4px 12px rgba(var(--color-navy-rgb), 0.3);
+}
+.archive-club-cur-btn:hover { box-shadow: 0 6px 16px rgba(var(--color-navy-rgb), 0.4); }

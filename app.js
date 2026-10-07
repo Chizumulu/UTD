@@ -3651,6 +3651,33 @@
     `;
   }
 
+  // ===== 직전 시즌(25/26) 기록 보기: 25/26 화면의 '구단정보' 탭으로 이동 =====
+  // 올해 팀(leagueData)에 대응하는 25/26 아카이브 팀 이름을 찾습니다. (개명 팀은 ARCHIVE_ALIAS_MAP 으로 연결)
+  function archiveNameForTeam(t) {
+    if (!t || typeof ARCHIVE_2526 === 'undefined' || !ARCHIVE_2526.weeks) return null;
+    const aliasMap = (typeof ARCHIVE_ALIAS_MAP !== 'undefined') ? ARCHIVE_ALIAS_MAP : {};
+    const finalWeek = ARCHIVE_2526.weeks[ARCHIVE_2526.weeks.length - 1];
+    if (!finalWeek) return null;
+    const hit = finalWeek.rows.find(r => (aliasMap[r.team] || r.team) === t.nameEn);
+    return hit ? hit.team : null;
+  }
+
+  document.addEventListener('click', function(event) {
+    const cur = event.target.closest('[data-cur-team]');
+    if (cur) {
+      archiveReturnToTeamInfo = false;
+      currentTeamInfoKey = cur.dataset.curTeam;
+      showView('squad'); // 맨 앞에서 25/26 모드를 끄고, 구단 정보 화면에서 이 팀을 보여줍니다
+      window.scrollTo(0, 0);
+      return;
+    }
+    const btn = event.target.closest('.ti-prevseason-btn');
+    if (!btn || !btn.dataset.prevseasonTeam) return;
+    const t = leagueData.find(x => x.nameEn === btn.dataset.prevseasonTeam);
+    const arch = archiveNameForTeam(t);
+    if (arch) openSeasonArchive({ tab: 'clubs', team: arch, fromTeamInfo: true });
+  });
+
   // ===== 지난 시즌 최종 순위 카드 (t.prevSeasonFinal 이 있는 팀만 표시) =====
   // leagueData 의 각 팀 항목에 prevSeasonFinal: { season, rank, played, gd, pts }
   // 을 넣어두면 자동으로 노출됩니다. 없는 팀(그 시즌에 없던 팀 등)은 그냥 빈 문자열을 반환합니다.
@@ -3665,6 +3692,14 @@
     ];
     const titleKo = `${p.season} 시즌 최종 순위`;
     const titleEn = `${p.season} Final Standing`;
+    // 25/26 아카이브에도 기록이 있는 팀(= 두 시즌 모두 기록이 있는 팀)만 "직전시즌 기록 보기" 버튼을 보여줍니다.
+    const hasArchive = !!archiveNameForTeam(t);
+    const btnKo = '직전시즌 기록 보기';
+    const btnEn = 'View Last Season';
+    // 기록 표의 빈 4번째 칸(오른쪽 아래)에 큰 버튼으로 넣습니다.
+    const btnHtml = hasArchive
+      ? `<div class="ti-prevseason-cell"><button type="button" class="ti-prevseason-btn" data-prevseason-team="${t.nameEn}"><span class="lbl" data-en="${btnEn}" data-ko="${btnKo}">${isKorean ? btnKo : btnEn}</span><span class="ti-prevseason-arrow" aria-hidden="true">›</span></button></div>`
+      : '';
     return `
       <div class="ti-section">
         <div class="ti-section-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>
@@ -3680,6 +3715,7 @@
                 <span class="ti-record-item-value">${r.value}</span>
               </div>
             `).join('')}
+            ${btnHtml}
           </div>
         </div>
       </div>
@@ -7543,17 +7579,60 @@
     archiveMode = !!on;
     document.body.classList.toggle('season-archive', archiveMode);
   }
-  function openSeasonArchive() {
+  let archiveTab = 'weekly';          // 'weekly' | 'clubs'
+  let archiveClubTeam = null;         // 구단정보 탭에서 보고 있는 팀 (25/26 아카이브 기준 이름)
+  let archiveReturnToTeamInfo = false; // 구단 정보 화면의 "직전시즌 기록 보기"로 들어온 경우, 나갈 때 그 화면으로 복귀
+
+  function archiveFinalRows() {
+    const weeks = archiveWeeks();
+    return weeks.length ? weeks[weeks.length - 1].rows : [];
+  }
+  // opts: { tab: 'weekly'|'clubs', team: 25/26 팀명, fromTeamInfo: boolean }
+  function openSeasonArchive(opts) {
     if (!archiveWeeks().length) return;
+    const o = (opts && typeof opts === 'object' && !opts.target) ? opts : {};
     archiveWeekIdx = null;
+    archiveReturnToTeamInfo = !!o.fromTeamInfo;
+    const rows = archiveFinalRows();
+    archiveClubTeam = (o.team && rows.some(r => r.team === o.team)) ? o.team : (rows[0] && rows[0].team) || null;
     setArchiveMode(true);
     renderArchive();
+    setArchiveTab(o.tab === 'clubs' ? 'clubs' : 'weekly');
     playViewEnterAnimation(document.getElementById('archiveView'));
     window.scrollTo(0, 0);
   }
   function exitSeasonArchive() {
-    showView('rank'); // showView 맨 앞에서 setArchiveMode(false) 처리
+    const back = archiveReturnToTeamInfo;
+    archiveReturnToTeamInfo = false;
+    showView(back ? 'squad' : 'rank'); // showView 맨 앞에서 setArchiveMode(false) 처리
     window.scrollTo(0, 0);
+  }
+  function setArchiveTab(tab) {
+    archiveTab = tab === 'clubs' ? 'clubs' : 'weekly';
+    const weeklyPane = document.getElementById('archiveWeeklyPane');
+    const clubsPane = document.getElementById('archiveClubsPane');
+    if (weeklyPane) weeklyPane.style.display = archiveTab === 'weekly' ? '' : 'none';
+    if (clubsPane) clubsPane.style.display = archiveTab === 'clubs' ? '' : 'none';
+    [['archiveNavWeekly', 'weekly'], ['archiveNavClubs', 'clubs']].forEach(([id, key]) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.classList.toggle('active', archiveTab === key);
+    });
+    if (archiveTab === 'clubs') renderArchiveClubs();
+    refreshScrollFadeHints();
+  }
+  function setArchiveClub(idx) {
+    const rows = archiveFinalRows();
+    const r = rows[parseInt(idx, 10)];
+    if (!r) return;
+    archiveClubTeam = r.team;
+    renderArchiveClubs();
+  }
+  function stepArchiveClub(delta) {
+    const rows = archiveFinalRows();
+    const cur = Math.max(0, rows.findIndex(r => r.team === archiveClubTeam));
+    const next = Math.min(rows.length - 1, Math.max(0, cur + delta));
+    if (next !== cur) setArchiveClub(next);
   }
   function setArchiveWeek(idx) {
     archiveWeekIdx = parseInt(idx, 10);
@@ -7565,6 +7644,170 @@
     const next = Math.min(weeks.length - 1, Math.max(0, cur + delta));
     if (next !== cur) setArchiveWeek(next);
   }
+  // ===== 25/26 '구단정보' 탭 =====
+  function buildArchiveClubHtml(arch) {
+    const weeks = archiveWeeks();
+    const series = weeks.map(w => {
+      const r = w.rows.find(x => x.team === arch);
+      return r ? { week: w, row: r } : null;
+    }).filter(Boolean);
+    if (!series.length) return '';
+
+    const aliasMap = (typeof ARCHIVE_ALIAS_MAP !== 'undefined') ? ARCHIVE_ALIAS_MAP : {};
+    const current = leagueData.find(t => t.nameEn === (aliasMap[arch] || arch));
+    const season = ARCHIVE_2526.season;
+    const lbl = (ko, en) => `<span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`;
+    const rankTxt = n => isKorean ? `${n}위` : `${n}`;
+
+    const fin = series[series.length - 1].row;
+    const total = weeks[weeks.length - 1].rows.length;
+    const best = series.reduce((b, x) => (x.row.pos < b.row.pos ? x : b), series[0]);
+    const worst = series.reduce((b, x) => (x.row.pos > b.row.pos ? x : b), series[0]);
+    const halfItem = series.find(x => x.week.key === 18);
+    const half = halfItem ? halfItem.row : null;
+    const gdClass = v => v > 0 ? 'gd-pos' : (v < 0 ? 'gd-neg' : 'gd-zero');
+
+    // 헤더: 25/26 당시 팀명 + (개명했다면) 현재 팀명
+    const koName = archiveKoName(arch);
+    const thenName = `<span class="lbl" data-en="${arch}" data-ko="${koName || arch}">${isKorean ? (koName || arch) : arch}</span>`;
+    const renamed = current && current.nameEn !== arch;
+    const subHtml = renamed
+      ? `<div class="prevseason-head-sub">${lbl(`현재 팀명: ${current.nameKo}`, `Now: ${current.nameEn}`)}</div>`
+      : '';
+    const logo = current
+      ? `<img class="team-logo" src="${current.logoSrc}" data-en-name="${current.nameEn}" alt="${arch}">`
+      : `<span class="archive-club-noimg">${(koName || arch).charAt(0)}</span>`;
+    const isChamp = arch === ARCHIVE_2526.champion;
+    const isReleg = (ARCHIVE_2526.relegated || []).includes(arch);
+    const badge = isChamp
+      ? `<span class="prevseason-badge prevseason-badge-c">${lbl('우승', 'Champion')}</span>`
+      : (isReleg ? `<span class="prevseason-badge prevseason-badge-r">${lbl('강등', 'Relegated')}</span>` : '');
+
+    const items = [
+      ['경기', 'PLAYED', fin.p], ['승', 'W', fin.w], ['무', 'D', fin.d], ['패', 'L', fin.l],
+      ['득점', 'GF', fin.f], ['실점', 'GA', fin.a],
+      ['득실차', 'GOAL DIFF', `<span class="${gdClass(fin.gd)}">${fin.gd}</span>`],
+      ['승점', 'PTS', `<span class="pts">${fin.pts}</span>`]
+    ];
+
+    // 올해(26/27) 리그에도 있는 팀만 "26/27 시즌 보기" 버튼을 보여줍니다. (개명 팀은 현재 팀 페이지로 연결)
+    const curBtnKo = '26/27 시즌 보기';
+    const curBtnEn = 'View 26/27 Season';
+    const curBtnHtml = current
+      ? `<div class="archive-club-cur-wrap"><button type="button" class="ti-prevseason-btn archive-club-cur-btn" data-cur-team="${current.nameEn}"><span class="lbl" data-en="${curBtnEn}" data-ko="${curBtnKo}">${isKorean ? curBtnKo : curBtnEn}</span><span class="ti-prevseason-arrow" aria-hidden="true">›</span></button></div>`
+      : '';
+
+    const per = v => (fin.p ? (v / fin.p).toFixed(2) : '-');
+    const tiles = [
+      ['경기당 승점', 'Pts / Game', per(fin.pts)],
+      ['경기당 득점', 'Goals / Game', per(fin.f)],
+      ['경기당 실점', 'Conceded / Game', per(fin.a)]
+    ];
+
+    // 전반기 / 후반기 (전반기 종료 시점 스냅샷 기준, 후반기 = 최종 - 전반기)
+    let splitHtml = '';
+    if (half && half !== fin) {
+      const sh = { p: fin.p - half.p, w: fin.w - half.w, d: fin.d - half.d, l: fin.l - half.l, f: fin.f - half.f, a: fin.a - half.a, pts: fin.pts - half.pts };
+      const row = (labelHtml, r) => `<tr><th scope="row">${labelHtml}</th><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.f}</td><td>${r.a}</td><td class="pts">${r.pts}</td></tr>`;
+      splitHtml = `
+        <div class="prevseason-trend archive-club-split">
+          <div class="prevseason-trend-title">${lbl('전반기 · 후반기', '1st Half · 2nd Half')}</div>
+          <div class="archive-club-split-scroll">
+            <table class="archive-split-table">
+              <thead><tr><th></th><th>${lbl('경기', 'P')}</th><th>${lbl('승', 'W')}</th><th>${lbl('무', 'D')}</th><th>${lbl('패', 'L')}</th><th>${lbl('득', 'GF')}</th><th>${lbl('실', 'GA')}</th><th>${lbl('승점', 'PTS')}</th></tr></thead>
+              <tbody>
+                ${row(`${lbl('전반기', '1st half')}<small>${lbl(`종료 시 ${half.pos}위`, `${half.pos}${['th','st','nd','rd'][(half.pos % 10 < 4 && (half.pos % 100 < 11 || half.pos % 100 > 13)) ? half.pos % 10 : 0]} at break`)}</small>`, half)}
+                ${row(`${lbl('후반기', '2nd half')}<small>${lbl(`최종 ${fin.pos}위`, `Final ${fin.pos}`)}</small>`, sh)}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+
+    // 주차별 순위 변화 그래프 (1위가 위쪽, 점선은 전반기 종료 시점)
+    const W = 420, H = 150, padL = 26, padR = 10, padT = 12, padB = 22;
+    const n = series.length;
+    const xAt = i => padL + (n <= 1 ? 0 : (W - padL - padR) * i / (n - 1));
+    const yAt = pos => padT + (H - padT - padB) * (pos - 1) / Math.max(1, total - 1);
+    const pts = series.map((x, i) => `${xAt(i).toFixed(1)},${yAt(x.row.pos).toFixed(1)}`).join(' ');
+    const zoneY = yAt(total - 2) - 3;
+    const lastX = xAt(n - 1), lastY = yAt(fin.pos);
+    const ticks = [1, Math.ceil(total / 2), total].filter((v, i, a) => a.indexOf(v) === i);
+    const halfIdx = series.findIndex(x => x.week.key === 18);
+    const halfMark = halfIdx > 0
+      ? `<line x1="${xAt(halfIdx).toFixed(1)}" x2="${xAt(halfIdx).toFixed(1)}" y1="${padT}" y2="${H - padB}" class="prevseason-chart-half"/><text x="${xAt(halfIdx).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="prevseason-chart-tick">${isKorean ? '전반기 종료' : 'Half-time'}</text>`
+      : '';
+    const chart = `
+      <svg class="prevseason-chart" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${isKorean ? '주차별 순위 변화' : 'Rank by week'}">
+        <rect x="${padL}" y="${zoneY.toFixed(1)}" width="${W - padL - padR}" height="${(H - padB - zoneY + 3).toFixed(1)}" class="prevseason-chart-zone"/>
+        ${ticks.map(v => `<line x1="${padL}" x2="${W - padR}" y1="${yAt(v).toFixed(1)}" y2="${yAt(v).toFixed(1)}" class="prevseason-chart-grid"/><text x="${padL - 6}" y="${(yAt(v) + 3.5).toFixed(1)}" text-anchor="end" class="prevseason-chart-tick">${v}</text>`).join('')}
+        ${halfMark}
+        <polyline points="${pts}" class="prevseason-chart-line" fill="none"/>
+        <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4.5" class="prevseason-chart-dot"/>
+        <text x="${padL}" y="${H - 6}" class="prevseason-chart-tick">${isKorean ? '시즌 초' : 'Start'}</text>
+        <text x="${W - padR}" y="${H - 6}" text-anchor="end" class="prevseason-chart-tick">${isKorean ? '시즌 말' : 'End'}</text>
+      </svg>`;
+
+    return `
+      <div class="prevseason-head">
+        ${logo}
+        <div class="prevseason-head-text">
+          <div class="prevseason-head-name">${thenName}${badge}</div>
+          <div class="prevseason-head-sub">${season} ${lbl('시즌 · NRFA 리그 원', 'Season · NRFA League One')}</div>
+          ${subHtml}
+        </div>
+      </div>
+      <div class="archive-club-cols">
+      <div class="archive-club-col">
+      <div class="ti-record-card prevseason-record-card">
+        <div class="ti-record-rank">
+          <span class="ti-record-rank-num">${fin.pos}</span>
+          <span class="ti-record-rank-label">${lbl('최종 순위', 'Final Rank')}</span>
+        </div>
+        <div class="ti-record-grid">
+          ${items.map(it => `
+            <div class="ti-record-item">
+              <span class="ti-record-item-label">${lbl(it[0], it[1])}</span>
+              <span class="ti-record-item-value">${it[2]}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="archive-club-tiles">
+        ${tiles.map(t => `<div class="archive-club-tile"><b>${t[2]}</b><span>${lbl(t[0], t[1])}</span></div>`).join('')}
+      </div>
+      ${curBtnHtml}
+      </div>
+      <div class="archive-club-col">
+      ${splitHtml}
+      <div class="prevseason-trend">
+        <div class="prevseason-trend-title">${lbl('주차별 순위 변화', 'Rank by Week')}</div>
+        ${chart}
+        <div class="prevseason-trend-meta">
+          <span>${lbl('최고 순위', 'Best')} <b>${rankTxt(best.row.pos)}</b> <small>(${archiveWeekLabel(best.week)})</small></span>
+          <span>${lbl('최저 순위', 'Lowest')} <b>${rankTxt(worst.row.pos)}</b> <small>(${archiveWeekLabel(worst.week)})</small></span>
+        </div>
+      </div>
+      </div>
+      </div>`;
+  }
+
+  function renderArchiveClubs() {
+    const sel = document.getElementById('archiveClubSelect');
+    const body = document.getElementById('archiveClubBody');
+    const rows = archiveFinalRows();
+    if (!sel || !body || !rows.length) return;
+    if (!archiveClubTeam || !rows.some(r => r.team === archiveClubTeam)) archiveClubTeam = rows[0].team;
+    const idx = rows.findIndex(r => r.team === archiveClubTeam);
+    sel.innerHTML = rows.map((r, i) => {
+      const nm = (isKorean && archiveKoName(r.team)) || r.team;
+      return `<option value="${i}"${i === idx ? ' selected' : ''}>${r.pos}${isKorean ? '위' : '.'} ${nm}</option>`;
+    }).join('');
+    document.getElementById('archiveClubPrevBtn').disabled = idx === 0;
+    document.getElementById('archiveClubNextBtn').disabled = idx === rows.length - 1;
+    body.innerHTML = buildArchiveClubHtml(archiveClubTeam);
+    attachImageFallback();
+  }
+
   function renderArchive() {
     const weeks = archiveWeeks();
     const sel = document.getElementById('archiveWeekSelect');
@@ -12480,7 +12723,7 @@
     { const frm = document.getElementById('fullRecordModal'); if (frm && frm.style.display !== 'none') renderFullRecordModal(); }
     
     renderLeagueTable();
-    if (archiveMode) renderArchive();
+    if (archiveMode) { renderArchive(); renderArchiveClubs(); }
     renderMainMiniTable();
     renderNextMatchStrip();
     renderHomeMatchCards();

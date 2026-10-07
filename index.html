@@ -8,10 +8,10 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '001',
-    data: '001',
-    app: '001',
-    archive: '001',
+    style: '002',
+    data: '002',
+    app: '002',
+    archive: '002',
     predictWorker: '002',
     pathfinderEngine: '001',
     poster: '001'
@@ -184,6 +184,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <div class="scroll-fade-wrap" id="viewToggleFade">
   <nav class="view-toggle-wrap" id="viewToggleWrap">
+    <button type="button" class="view-toggle-btn archive-nav-btn lbl" id="archiveNavWeekly" data-en="WEEKLY STANDINGS" data-ko="주별순위" onclick="setArchiveTab('weekly')">
+      <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+      <span class="lbl" data-en="WEEKLY STANDINGS" data-ko="주별순위">주별순위</span>
+    </button>
+    <button type="button" class="view-toggle-btn archive-nav-btn lbl" id="archiveNavClubs" data-en="CLUB INFO" data-ko="구단정보" onclick="setArchiveTab('clubs')">
+      <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.7"/><path d="M4.5 20c1.3-4 4-6 7.5-6s6.2 2 7.5 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <span class="lbl" data-en="CLUB INFO" data-ko="구단정보">구단정보</span>
+    </button>
     <button class="view-toggle-btn active lbl" id="viewRankBtn" data-en="MAIN" data-ko="메인" onclick="showView('rank')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 9.5V19C6 19.552 6.448 20 7 20H17C17.552 20 18 19.552 18 19V9.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span class="lbl" data-en="MAIN" data-ko="메인">메인</span>
@@ -304,6 +312,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="archive-hero-line"><span class="archive-hero-k lbl" data-en="Champion" data-ko="우승">우승</span><span class="archive-hero-v" id="archiveChampion"></span></div>
     <div class="archive-hero-line"><span class="archive-hero-k lbl" data-en="Relegated" data-ko="강등">강등</span><span class="archive-hero-v" id="archiveRelegated"></span></div>
   </div>
+  <div id="archiveWeeklyPane">
   <div class="content-row">
   <div class="scroll-fade-wrap" id="archiveTableFade">
   <div class="table-wrap" id="archiveTableScroller">
@@ -329,6 +338,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
   </div>
   </div>
+  </div>
+  </div>
+  <div id="archiveClubsPane" style="display:none">
+    <div class="archive-week-bar">
+      <button type="button" class="archive-week-nav" id="archiveClubPrevBtn" onclick="stepArchiveClub(-1)" aria-label="Previous team">‹</button>
+      <select id="archiveClubSelect" class="archive-week-select" onchange="setArchiveClub(this.value)" aria-label="Team"></select>
+      <button type="button" class="archive-week-nav" id="archiveClubNextBtn" onclick="stepArchiveClub(1)" aria-label="Next team">›</button>
+    </div>
+    <div class="archive-club-body" id="archiveClubBody"></div>
   </div>
 </div>
 <div id="rankView">
@@ -1031,16 +1049,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="close-btn" type="button" onclick="closeFullRecordModal()" aria-label="닫기">&times;</button>
     </div>
     <div class="modal-body fullrec-modal-body" id="fullRecordBody"></div>
-  </div>
-</div>
-
-<div id="prevSeasonModal" class="modal-overlay" style="display: none;">
-  <div class="modal-content prevseason-modal-content" role="dialog" aria-modal="true" aria-labelledby="prevSeasonTitle">
-    <div class="modal-header">
-      <h2 id="prevSeasonTitle"></h2>
-      <button class="close-btn" type="button" onclick="closePrevSeasonModal()" aria-label="닫기">&times;</button>
-    </div>
-    <div class="modal-body prevseason-body" id="prevSeasonBody"></div>
   </div>
 </div>
 

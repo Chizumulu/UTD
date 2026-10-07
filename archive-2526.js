@@ -6650,7 +6650,7 @@ const ARCHIVE_NAME_KO = {
   "Embangweni United FC": "엠방웨니 유나이티드 FC",
   "Ekwendeni Hardnockers FC": "에크웬데니 하드녹커스 FC",
   "Ekwaiweni Tafika AS": "에크와이웨니 타피카 AS",
-  "Sporting FC": "스포팅 FC",
+  "Sporting FC": "스포르팅 FC",
   "Chirambo FC": "치람보 FC",
   "Chisapa FC": "치사파 FC"
 };
