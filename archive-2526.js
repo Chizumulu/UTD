@@ -6654,3 +6654,602 @@ const ARCHIVE_NAME_KO = {
   "Chirambo FC": "치람보 FC",
   "Chisapa FC": "치사파 FC"
 };
+
+
+// ===== 치주물루 25/26 경기 결과 (txt 기준, 25주차 치바비전은 아카이브에 맞춰 0:2 패로 정정) =====
+// 점수는 치주물루 기준(us:them). 연기된 경기는 치른 날짜 기준 한 번만 넣었습니다. forfeit=몰수승(2:0 처리).
+ARCHIVE_2526.chizumuluMatches = [
+ {
+  "md": 1,
+  "date": "2025-06-22",
+  "ha": "A",
+  "venue": "라이플리 그라운드",
+  "opp": "Raiply FC",
+  "us": 1,
+  "them": 5,
+  "res": "L",
+  "scorers": [
+   {
+    "n": "다니엘 스쿠카",
+    "m": "14'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 16
+ },
+ {
+  "md": 2,
+  "date": "2025-06-27",
+  "ha": "H",
+  "venue": null,
+  "opp": "Ekwendeni Hardnockers FC",
+  "us": 1,
+  "them": 0,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "다니엘 스쿠카",
+    "m": "24'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 9
+ },
+ {
+  "md": 3,
+  "date": "2025-07-12",
+  "ha": "A",
+  "venue": "치바비 그라운드",
+  "opp": "Lube Masters FC",
+  "us": 2,
+  "them": 3,
+  "res": "L",
+  "scorers": [
+   {
+    "n": "보이드 세기",
+    "m": "0'"
+   },
+   {
+    "n": "치파소 음칼리",
+    "m": "32'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 13
+ },
+ {
+  "md": 5,
+  "date": "2025-07-29",
+  "ha": "H",
+  "venue": null,
+  "opp": "Chisapa FC",
+  "us": 2,
+  "them": 0,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "보이드 세기",
+    "m": "62'"
+   },
+   {
+    "n": "아모스 피리",
+    "m": "85'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 9
+ },
+ {
+  "md": 7,
+  "date": "2025-08-10",
+  "ha": "A",
+  "venue": "치람보 커뮤니티 그라운드",
+  "opp": "Chirambo FC",
+  "us": 1,
+  "them": 2,
+  "res": "L",
+  "scorers": [
+   {
+    "n": "해리 바튼",
+    "m": "15'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 12
+ },
+ {
+  "md": 6,
+  "date": "2025-08-13",
+  "ha": "A",
+  "venue": "에우티니 CDSS 그라운드",
+  "opp": "Euthin Kuseli Veterans FC",
+  "us": 0,
+  "them": 1,
+  "res": "L",
+  "scorers": [],
+  "forfeit": false,
+  "rank": 14
+ },
+ {
+  "md": 8,
+  "date": "2025-08-22",
+  "ha": "H",
+  "venue": null,
+  "opp": "Chihame All Stars",
+  "us": 2,
+  "them": 0,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "요탐 카통고",
+    "m": "11'"
+   },
+   {
+    "n": "프란시스 피리",
+    "m": "72'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 10
+ },
+ {
+  "md": 9,
+  "date": "2025-09-03",
+  "ha": "A",
+  "venue": "음주주 국립고 경기장",
+  "opp": "Sporting FC",
+  "us": 1,
+  "them": 3,
+  "res": "L",
+  "scorers": [
+   {
+    "n": "티모시 카타파",
+    "m": "63'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 12
+ },
+ {
+  "md": 11,
+  "date": "2025-09-21",
+  "ha": "A",
+  "venue": "에크웬데니 커뮤니티",
+  "opp": "Ekwendeni United FC",
+  "us": 2,
+  "them": 2,
+  "res": "D",
+  "scorers": [
+   {
+    "n": "해리 바튼",
+    "m": "44'"
+   },
+   {
+    "n": "티모시 카타파",
+    "m": "87'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 14
+ },
+ {
+  "md": 12,
+  "date": "2025-09-21",
+  "ha": "A",
+  "venue": "루지 그라운드",
+  "opp": "Chipolopolo Boys FC",
+  "us": 4,
+  "them": 4,
+  "res": "D",
+  "scorers": [
+   {
+    "n": "티모시 카타파",
+    "m": "4'"
+   },
+   {
+    "n": "조던 칠와",
+    "m": "34'"
+   },
+   {
+    "n": "티모시 카타파",
+    "m": "67'"
+   },
+   {
+    "n": "벤자민 니렌다",
+    "m": "85'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 14
+ },
+ {
+  "md": 13,
+  "date": "2025-10-03",
+  "ha": "H",
+  "venue": null,
+  "opp": "Simbowe Stars FC",
+  "us": 2,
+  "them": 1,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "찰스 데야",
+    "m": "88'"
+   },
+   {
+    "n": "찰스 데야",
+    "m": "90+10'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 11
+ },
+ {
+  "md": 14,
+  "date": "2025-10-10",
+  "ha": "H",
+  "venue": null,
+  "opp": "Chibavi Real Stars FC",
+  "us": 2,
+  "them": 2,
+  "res": "D",
+  "scorers": [
+   {
+    "n": "찰스 데야",
+    "m": "3'"
+   },
+   {
+    "n": "티모시 카타파",
+    "m": "90'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 11
+ },
+ {
+  "md": 15,
+  "date": "2025-10-17",
+  "ha": "H",
+  "venue": null,
+  "opp": "Embangweni United FC",
+  "us": 2,
+  "them": 1,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "벤자민 니렌다",
+    "m": "12'"
+   },
+   {
+    "n": "알란 음롱골라",
+    "m": "23'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 10
+ },
+ {
+  "md": 15,
+  "date": "2025-10-19",
+  "ha": "A",
+  "venue": "좀브웨 초등학교 경기장",
+  "opp": "Ekwaiweni Tafika AS",
+  "us": 1,
+  "them": 4,
+  "res": "L",
+  "scorers": [
+   {
+    "n": null,
+    "m": null
+   }
+  ],
+  "forfeit": false,
+  "rank": null
+ },
+ {
+  "md": 16,
+  "date": "2025-10-28",
+  "ha": "H",
+  "venue": null,
+  "opp": "M'mbelwa Warriors FC",
+  "us": 2,
+  "them": 3,
+  "res": "L",
+  "scorers": [
+   {
+    "n": "다니엘 스쿠카",
+    "m": "12'"
+   },
+   {
+    "n": "벤자민 니렌다",
+    "m": "52'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 11
+ },
+ {
+  "md": 19,
+  "date": "2025-12-14",
+  "ha": "A",
+  "venue": "치반자 그라운드",
+  "opp": "M'mbelwa Warriors FC",
+  "us": 1,
+  "them": 4,
+  "res": "L",
+  "scorers": [
+   {
+    "n": "찰스 데야",
+    "m": "5'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 13
+ },
+ {
+  "md": 20,
+  "date": "2025-12-17",
+  "ha": "A",
+  "venue": "룬다 그라운드",
+  "opp": "Chisapa FC",
+  "us": 1,
+  "them": 0,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "해리 바튼",
+    "m": "44'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 12
+ },
+ {
+  "md": 21,
+  "date": "2025-12-30",
+  "ha": "H",
+  "venue": null,
+  "opp": "Chirambo FC",
+  "us": 2,
+  "them": 0,
+  "res": "W",
+  "scorers": [],
+  "forfeit": true,
+  "rank": 11
+ },
+ {
+  "md": 23,
+  "date": "2026-01-04",
+  "ha": "A",
+  "venue": "마강가 그라운드",
+  "opp": "Chihame All Stars",
+  "us": 1,
+  "them": 2,
+  "res": "L",
+  "scorers": [
+   {
+    "n": "스티브 피리",
+    "m": "64'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 11
+ },
+ {
+  "md": 24,
+  "date": "2025-12-30",
+  "ha": "H",
+  "venue": null,
+  "opp": "Euthin Kuseli Veterans FC",
+  "us": 2,
+  "them": 0,
+  "res": "W",
+  "scorers": [],
+  "forfeit": true,
+  "rank": 11
+ },
+ {
+  "md": 25,
+  "date": "2026-01-25",
+  "ha": "A",
+  "venue": "치바비 그라운드",
+  "opp": "Chibavi Real Stars FC",
+  "us": 0,
+  "them": 2,
+  "res": "L",
+  "scorers": [],
+  "forfeit": false,
+  "rank": 13
+ },
+ {
+  "md": 26,
+  "date": "2026-02-03",
+  "ha": "H",
+  "venue": null,
+  "opp": "Ekwendeni United FC",
+  "us": 5,
+  "them": 1,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "티모시 카타파",
+    "m": "31'"
+   },
+   {
+    "n": "해리 바튼",
+    "m": "53'"
+   },
+   {
+    "n": "티모시 카타파",
+    "m": "54'"
+   },
+   {
+    "n": "벤자민 니렌다",
+    "m": "60'"
+   },
+   {
+    "n": "벤자민 니렌다",
+    "m": "71'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 11
+ },
+ {
+  "md": 27,
+  "date": "2026-02-08",
+  "ha": "A",
+  "venue": "망캄비라 그라운드",
+  "opp": "Simbowe Stars FC",
+  "us": 2,
+  "them": 4,
+  "res": "L",
+  "scorers": [
+   {
+    "n": "디킨스 니렌다",
+    "m": "1'"
+   },
+   {
+    "n": "티모시 카타파",
+    "m": "15'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 12
+ },
+ {
+  "md": 28,
+  "date": "2026-02-11",
+  "ha": "A",
+  "venue": "라우든 그라운드",
+  "opp": "Embangweni United FC",
+  "us": 0,
+  "them": 6,
+  "res": "L",
+  "scorers": [],
+  "forfeit": false,
+  "rank": 12
+ },
+ {
+  "md": 28,
+  "date": "2026-02-13",
+  "ha": "H",
+  "venue": null,
+  "opp": "Raiply FC",
+  "us": 2,
+  "them": 0,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "티모시 카타파",
+    "m": "75'"
+   },
+   {
+    "n": "티모시 카타파",
+    "m": "76'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 10
+ },
+ {
+  "md": 29,
+  "date": "2026-02-17",
+  "ha": "H",
+  "venue": null,
+  "opp": "Ekwaiweni Tafika AS",
+  "us": 2,
+  "them": 0,
+  "res": "W",
+  "scorers": [],
+  "forfeit": true,
+  "rank": 9
+ },
+ {
+  "md": 29,
+  "date": "2026-02-20",
+  "ha": "H",
+  "venue": null,
+  "opp": "Sporting FC",
+  "us": 2,
+  "them": 0,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "티모시 카타파",
+    "m": "30'"
+   },
+   {
+    "n": "벤자민 니렌다",
+    "m": "80'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 8
+ },
+ {
+  "md": 29,
+  "date": "2026-02-24",
+  "ha": "H",
+  "venue": null,
+  "opp": "Chipolopolo Boys FC",
+  "us": 2,
+  "them": 0,
+  "res": "W",
+  "scorers": [],
+  "forfeit": true,
+  "rank": 7
+ },
+ {
+  "md": 30,
+  "date": "2026-02-27",
+  "ha": "H",
+  "venue": null,
+  "opp": "Lube Masters FC",
+  "us": 4,
+  "them": 1,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "벤자민 니렌다",
+    "m": "2'"
+   },
+   {
+    "n": "찰스 데야",
+    "m": "8'"
+   },
+   {
+    "n": "티모시 카타파",
+    "m": "45'"
+   },
+   {
+    "n": "티모시 카타파",
+    "m": "88'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 7
+ },
+ {
+  "md": 30,
+  "date": "2026-03-01",
+  "ha": "A",
+  "venue": "은가지 그라운드",
+  "opp": "Ekwendeni Hardnockers FC",
+  "us": 2,
+  "them": 0,
+  "res": "W",
+  "scorers": [
+   {
+    "n": "벤자민 니렌다",
+    "m": "72'"
+   },
+   {
+    "n": "찰스 데야",
+    "m": "80'"
+   }
+  ],
+  "forfeit": false,
+  "rank": 6
+ }
+];

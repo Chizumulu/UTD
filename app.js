@@ -8130,7 +8130,84 @@
         <div class="team-points-trend-card"><div class="archive-trend-inner">${ptsChart}${legendHtml}</div></div>
       </details>`;
 
-    return headerHtml + quickHtml + recordHtml + splitHtml + rankHtml + pointsHtml;
+    return headerHtml + quickHtml + recordHtml + splitHtml + rankHtml + pointsHtml + buildArchiveScorersHtml(arch) + buildArchiveMatchesHtml(arch);
+  }
+
+  // 작년 득점자(한글명) → 올해 치주물루 명단(squadData/formerSquadData)에서 같은 이름의 선수 찾기 (사진·영문명용)
+  function archivePlayerByKo(nameKo) {
+    if (!nameKo) return null;
+    const pools = [(typeof squadData !== 'undefined' ? squadData : []), (typeof formerSquadData !== 'undefined' ? formerSquadData : [])];
+    for (const pool of pools) {
+      const hit = pool.find(p => p.nameKo === nameKo || (p.aliasesKo || []).includes(nameKo));
+      if (hit) return hit;
+    }
+    return null;
+  }
+  function archivePlayerName(nameKo) {
+    const p = archivePlayerByKo(nameKo);
+    return isKorean ? nameKo : ((p && p.nameEn) || nameKo);
+  }
+
+  // ===== 치주물루 25/26 득점자 순위 (chizumuluMatches 의 scorers 를 합산) =====
+  function buildArchiveScorersHtml(arch) {
+    const ms = (typeof ARCHIVE_2526 !== 'undefined') ? ARCHIVE_2526.chizumuluMatches : null;
+    if (arch !== 'Chizumulu United FC' || !ms || !ms.length) return '';
+    const lbl = (ko, en) => `<span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`;
+    const tally = new Map();
+    ms.forEach(m => (m.scorers || []).forEach(g => { if (g.n) tally.set(g.n, (tally.get(g.n) || 0) + 1); }));
+    const list = Array.from(tally, ([n, goals]) => ({ n, goals })).sort((a, b) => b.goals - a.goals || a.n.localeCompare(b.n, 'ko'));
+    if (!list.length) return '';
+    const named = list.reduce((s, x) => s + x.goals, 0);
+    const total = ms.reduce((s, m) => s + m.us, 0);
+    const rest = total - named;
+    const top = list[0].goals;
+    let prevGoals = null, prevRank = 0;
+    const rowsHtml = list.map((x, i) => {
+      const rank = x.goals === prevGoals ? prevRank : i + 1;
+      prevGoals = x.goals; prevRank = rank;
+      return `<li class="archive-scorer-row">
+        <span class="archive-scorer-rank">${rank}</span>
+        <span class="archive-scorer-photo">${(archivePlayerByKo(x.n) || {}).photoSrc ? `<img src="${archivePlayerByKo(x.n).photoSrc}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
+        <span class="archive-scorer-name">${archivePlayerName(x.n)}${archivePlayerByKo(x.n) && archivePlayerByKo(x.n).number != null ? `<small>#${archivePlayerByKo(x.n).number}</small>` : ''}</span>
+        <span class="archive-scorer-bar"><i style="width:${(x.goals / top * 100).toFixed(0)}%"></i></span>
+        <b class="archive-scorer-goals">${x.goals}</b>
+      </li>`;
+    }).join('');
+    const note = rest > 0
+      ? `<div class="archive-scorer-note">${lbl(`득점자가 기록된 ${named}골 기준 · 몰수승·득점자 미확인 ${rest}골 제외 (팀 총 ${total}골)`, `Based on ${named} goals with a recorded scorer · ${rest} goals (forfeit wins / unknown scorer) excluded (team total ${total})`)}</div>`
+      : '';
+    return `
+      <details class="team-points-trend-details ti-section archive-scorers-section" open>
+        <summary class="team-points-trend-summary">${lbl('득점자 순위', 'Top Scorers')}</summary>
+        <div class="ti-card"><ul class="archive-scorer-list">${rowsHtml}</ul>${note}</div>
+      </details>`;
+  }
+
+  // ===== 치주물루 25/26 경기 결과 (ARCHIVE_2526.chizumuluMatches 가 있고 치주물루 구단정보일 때만) =====
+  function buildArchiveMatchesHtml(arch) {
+    const ms = (typeof ARCHIVE_2526 !== 'undefined') ? ARCHIVE_2526.chizumuluMatches : null;
+    if (arch !== 'Chizumulu United FC' || !ms || !ms.length) return '';
+    const lbl = (ko, en) => `<span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`;
+    const resKo = { W: '승', D: '무', L: '패' }, resEn = { W: 'W', D: 'D', L: 'L' };
+    const w = ms.filter(m => m.res === 'W').length, d = ms.filter(m => m.res === 'D').length, l = ms.filter(m => m.res === 'L').length;
+    const rowsHtml = ms.map(m => {
+      const opp = archiveDisplayName(m.opp);
+      const haKo = m.ha === 'H' ? '홈' : '원정', haEn = m.ha === 'H' ? 'H' : 'A';
+      const date = (m.date || '').slice(2).replace(/-/g, '.');
+      const goals = (m.scorers || []).map(g => g.n ? `${archivePlayerName(g.n)} ${g.m}` : lbl('득점자 미확인', 'Scorer unknown')).join(', ');
+      const sub = [m.venue ? m.venue : '', ''].filter(Boolean).join(' · ');
+      return `<li class="archive-match-row">
+        <span class="archive-match-date">${date}</span>
+        <span class="archive-match-ha archive-match-ha-${m.ha}">${lbl(haKo, haEn)}</span>
+        <span class="archive-match-main"><b class="archive-match-opp">${opp}</b>${sub ? `<small>${sub}</small>` : ''}${goals ? `<small class="archive-match-goals">⚽ ${goals}</small>` : ''}</span>
+        <span class="archive-match-score"><b>${m.us} - ${m.them}</b><i class="archive-match-res archive-match-res-${m.res}">${m.forfeit ? lbl('몰수승', 'Forfeit W') : lbl(resKo[m.res], resEn[m.res])}</i></span>
+      </li>`;
+    }).join('');
+    return `
+      <details class="team-points-trend-details ti-section archive-matches-section" open>
+        <summary class="team-points-trend-summary">${lbl('경기 결과', 'Match Results')} <small>${lbl(`${w}승 ${d}무 ${l}패`, `${w}W ${d}D ${l}L`)}</small></summary>
+        <div class="ti-card"><ul class="archive-match-list">${rowsHtml}</ul></div>
+      </details>`;
   }
 
   function renderArchiveClubs() {
@@ -14037,3 +14114,148 @@
       if (!e.relatedTarget || !activeCard.contains(e.relatedTarget)) clearActive();
     }, { passive: true });
   }
+
+  // ===== 화면별 URL (해시 라우팅 / Deep Link) =====
+  // 화면·팀·라운드·탭 상태를 주소창의 #/... 로 반영하고, 반대로 #/... 로 들어오면 그 화면을 복원합니다.
+  //   #/                       메인            #/league                 리그 순위
+  //   #/rounds  #/rounds/5     리그 일정(5주차) #/stats  #/scorers      리그 기록 / 득점 순위
+  //   #/predict                리그 예측        #/compare/<팀A>/<팀B>    팀 비교
+  //   #/venues  #/report       구단 위치 / 리포트
+  //   #/club/<팀>  #/club/<팀>/squad|honors|results|predict   구단 정보(우리 팀은 탭까지)
+  //   #/archive  #/archive/weekly|clubs                       25/26 시즌 아카이브
+  // <팀>은 영문 팀명을 소문자-하이픈으로 바꾼 값입니다. 예) chizumulu-united-fc
+  // 기존 함수(showView 등)는 고치지 않고 래핑만 하므로, 앞으로 화면이 추가돼도
+  // VIEW_PATH에 한 줄만 넣으면 됩니다. 공유 버튼(shareContent)은 location.href를 쓰므로
+  // 별도 수정 없이 "지금 보는 화면"의 링크가 공유됩니다. ?lang=en 같은 쿼리는 그대로 유지됩니다.
+  (function initHashRouter() {
+    if (!window.history || !history.pushState) return;
+
+    const VIEW_PATH = {
+      rank: '', leagueRank: 'league', rounds: 'rounds', stats: 'stats', scorers: 'scorers',
+      predict: 'predict', teamCompare: 'compare', squad: 'club', venues: 'venues', report: 'report'
+    };
+    const PATH_VIEW = {};
+    Object.keys(VIEW_PATH).forEach(v => { if (VIEW_PATH[v]) PATH_VIEW[VIEW_PATH[v]] = v; });
+
+    const slugify = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const normHash = h => String(h || '').replace(/^#\/?/, '').replace(/\/+$/, '');
+    const findTeamBySlug = slug => getRankedTeams('all').find(t => slugify(t.nameEn) === slug) || null;
+
+    let applying = false;   // 라우트를 적용하는 중에는 주소를 다시 쓰지 않습니다
+    let scheduled = false;
+    let lastHash = normHash(location.hash);
+
+    // 현재 화면 상태 → 해시 문자열(# 제외)
+    function buildHash() {
+      if (archiveMode) {
+        return 'archive' + (archiveTab === 'weekly' || archiveTab === 'clubs' ? '/' + archiveTab : '');
+      }
+      const head = VIEW_PATH[currentView];
+      if (head === undefined || head === '') return '';
+      if (head === 'rounds') {
+        const n = currentRoundKey ? parseInt(String(currentRoundKey).replace('round', ''), 10) : NaN;
+        return 'rounds' + (isNaN(n) ? '' : '/' + n);
+      }
+      if (head === 'compare') {
+        return (teamCompareA && teamCompareB) ? `compare/${slugify(teamCompareA)}/${slugify(teamCompareB)}` : 'compare';
+      }
+      if (head === 'club') {
+        let h = 'club/' + slugify(currentTeamInfoKey);
+        const mineEl = document.getElementById('myTeamInfoView');
+        const isMine = mineEl && mineEl.style.display !== 'none';
+        if (isMine && currentTeamInfoTab && currentTeamInfoTab !== 'overview') h += '/' + currentTeamInfoTab;
+        return h;
+      }
+      return head;
+    }
+
+    // 구단 정보 안에서 탭만 바뀐 경우는 뒤로가기 기록을 쌓지 않고 덮어씁니다.
+    function sameBase(a, b) {
+      const pa = a.split('/'), pb = b.split('/');
+      return pa[0] === 'club' && pb[0] === 'club' && pa[1] === pb[1];
+    }
+
+    function writeUrl(hash, replace) {
+      const url = location.pathname + location.search + (hash ? '#/' + hash : '');
+      try { history[replace ? 'replaceState' : 'pushState'](null, '', url); } catch (e) { return; }
+      lastHash = hash;
+    }
+
+    function sync() {
+      scheduled = false;
+      if (applying) return;
+      const h = buildHash();
+      if (h === normHash(location.hash)) { lastHash = h; return; }
+      writeUrl(h, sameBase(h, normHash(location.hash)));
+    }
+    // 한 번의 화면 전환 동안 여러 함수가 연달아 호출돼도(showView → renderRoundsView 등)
+    // 최종 상태 기준으로 한 번만 기록하도록 마이크로태스크로 모읍니다.
+    function schedule() {
+      if (scheduled || applying) return;
+      scheduled = true;
+      Promise.resolve().then(sync);
+    }
+
+    // 해시 → 화면 상태
+    function applyRoute() {
+      const parts = normHash(location.hash).split('/').filter(Boolean).map(p => { try { return decodeURIComponent(p); } catch (e) { return p; } });
+      const head = parts[0] || '';
+      applying = true;
+      try {
+        if (head === 'archive') {
+          const tab = (parts[1] === 'weekly' || parts[1] === 'clubs') ? parts[1] : 'main';
+          if (archiveMode) setArchiveTab(tab);
+          else openSeasonArchive({ tab });
+          if (!archiveMode) showView('rank'); // 아카이브 데이터가 없으면 메인으로
+        } else if (head === 'rounds') {
+          const key = 'round' + parseInt(parts[1], 10);
+          if (roundsData[key] || (typeof scheduledRounds !== 'undefined' && scheduledRounds && scheduledRounds[key])) currentRoundKey = key;
+          showView('rounds');
+        } else if (head === 'compare') {
+          const a = findTeamBySlug(parts[1]), b = findTeamBySlug(parts[2]);
+          if (a && b && a.nameEn !== b.nameEn) { teamCompareA = a.nameEn; teamCompareB = b.nameEn; }
+          showView('teamCompare');
+        } else if (head === 'club') {
+          const team = findTeamBySlug(parts[1]);
+          if (team) currentTeamInfoKey = team.nameEn;
+          const tab = parts[2];
+          currentTeamInfoTab = TEAM_INFO_TABS.indexOf(tab) !== -1 ? tab : 'overview';
+          showView('squad');
+          applyTeamInfoTab(currentTeamInfoTab);
+        } else {
+          showView(PATH_VIEW[head] || 'rank');
+        }
+      } finally {
+        applying = false;
+      }
+      // 주소가 잘못됐거나 번호가 생략된 경우(예: #/rounds, #/club/없는팀)를 실제 화면 기준으로 정리
+      const canon = buildHash();
+      if (canon !== normHash(location.hash)) writeUrl(canon, true); else lastHash = canon;
+    }
+
+    // 기존 함수 래핑: 원본을 먼저 실행한 뒤 주소 동기화를 예약합니다.
+    ['showView', 'showTeamInfoForKey', 'applyTeamInfoTab', 'renderRoundsView',
+     'renderTeamCompareView', 'setArchiveTab', 'openSeasonArchive'].forEach(name => {
+      const orig = window[name];
+      if (typeof orig !== 'function') return;
+      window[name] = function () {
+        const r = orig.apply(this, arguments);
+        schedule();
+        return r;
+      };
+    });
+
+    function onNav() {
+      if (normHash(location.hash) === lastHash) return; // popstate + hashchange 중복 방지
+      applyRoute();
+      window.scrollTo(0, 0);
+    }
+    window.addEventListener('popstate', onNav);
+    window.addEventListener('hashchange', onNav);
+
+    // 첫 진입: 기존 초기화(DOMContentLoaded)가 끝난 뒤, 해시가 있으면 그 화면을 복원합니다.
+    document.addEventListener('DOMContentLoaded', function () {
+      lastHash = '\u0000'; // 첫 적용은 항상 실행
+      if (normHash(location.hash)) applyRoute(); else lastHash = '';
+    });
+  })();

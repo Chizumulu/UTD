@@ -1328,8 +1328,8 @@ const upcomingMatchHistory = {
 const scheduledRounds = {
   round14: [
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-11", kickoffTime: "14:30" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-10-10", kickoffTime: "14:30" },
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-10-10", kickoffTime: "14:30" },
+    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-10-10", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "AUSTINE NGOMA, HENDERSON KANYIKA", scorersAway: "NORMAN NDLOVU" },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-10-10", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "GLYN MSOWOYA, FOSTER SICHALI", scorersAway: "없음" },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-10-11", kickoffTime: "14:30" },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-10-11", kickoffTime: "14:30" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-10-11", kickoffTime: "14:30" },
@@ -2538,7 +2538,9 @@ const nameAliases = {
   "JOMO PHIRI": "JOMOLE PHIRI",
   "HEBERT CHIRAMBO": "HERBERT CHIRAMBO",
   "SAMAN NYIRENDA": "SAMANI NYIRENDA",
-  "FORTUNE CHILAMBO": "FORTUNE CHIRAMBO"
+  "FORTUNE CHILAMBO": "FORTUNE CHIRAMBO",
+  // 2026-10-11: 같은 마푸 선수의 철자 차이 통일
+  "NORMAN NDHLOVU": "NORMAN NDLOVU"
 };
 
 // 우리 선수단(squadData)의 aliasesEn(영문 별칭)을 위 nameAliases 에 자동으로 합칩니다.
@@ -2668,6 +2670,8 @@ const playerDirectory = {
   "MLEZA NYIRONGO": { nameKo: "믈레자 니롱고", nameEn: "Mleza Nyirongo" },
   "ANDREW KAMANGA": { nameKo: "앤드류 카망가", nameEn: "Andrew Kamanga" },
   "NORMAN NDLOVU": { nameKo: "노먼 은들로부", nameEn: "Norman Ndlovu" },
+  "GLYN MSOWOYA": { nameKo: "글린 음소워야", nameEn: "Glyn Msowoya" },
+  "FOSTER SICHALI": { nameKo: "포스터 시찰리", nameEn: "Foster Sichali" },
   "ELIAS BOTTOMAN": { nameKo: "엘리아스 보토만", nameEn: "Elias Bottoman" },
   "JACK GAMA": { nameKo: "잭 가마", nameEn: "Jack Gama" },
   "RHEMA MAKAMO": { nameKo: "레마 마카모", nameEn: "Rhema Makamo" },
