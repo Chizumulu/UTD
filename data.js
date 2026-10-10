@@ -3183,6 +3183,7 @@ function computePlayerGoalTimelines() {
       timelines[key].push({
         roundKey: ctx.roundKey,
         weekNum: ctx.weekNum,
+        movedFromWeek: ctx.movedFromWeek || null,
         goals,
         isPk,
         teamEn: ctx.teamEn,
@@ -3223,14 +3224,14 @@ function computePlayerGoalTimelines() {
       const awayTeam = findTeamByNameEn(m.awayEn);
 
       addEntry(d.scorersHome, {
-        roundKey, weekNum,
+        roundKey, weekNum, movedFromWeek: m.movedFromWeek || null,
         teamEn: m.homeEn, teamKo: m.homeKo,
         oppEn: m.awayEn, oppKo: m.awayKo,
         oppLogo: awayTeam ? awayTeam.logoSrc : '',
         homeAway: 'H', homeScore: m.homeScore, awayScore: m.awayScore
       });
       addEntry(d.scorersAway, {
-        roundKey, weekNum,
+        roundKey, weekNum, movedFromWeek: m.movedFromWeek || null,
         teamEn: m.awayEn, teamKo: m.awayKo,
         oppEn: m.homeEn, oppKo: m.homeKo,
         oppLogo: homeTeam ? homeTeam.logoSrc : '',
@@ -3260,14 +3261,14 @@ function computePlayerGoalTimelines() {
         const awayTeam = findTeamByNameEn(m.awayEn);
 
         addEntry(m.scorersHome, {
-          roundKey, weekNum,
+          roundKey, weekNum, movedFromWeek: m.movedFromWeek || null,
           teamEn: m.homeEn, teamKo: m.homeKo,
           oppEn: m.awayEn, oppKo: m.awayKo,
           oppLogo: awayTeam ? awayTeam.logoSrc : '',
           homeAway: 'H', homeScore: m.homeScore, awayScore: m.awayScore
         });
         addEntry(m.scorersAway, {
-          roundKey, weekNum,
+          roundKey, weekNum, movedFromWeek: m.movedFromWeek || null,
           teamEn: m.awayEn, teamKo: m.awayKo,
           oppEn: m.homeEn, oppKo: m.homeKo,
           oppLogo: homeTeam ? homeTeam.logoSrc : '',

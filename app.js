@@ -4282,6 +4282,46 @@
     } catch (e) { return ''; }
   }
 
+  // 같은 골이 게시물마다 다르게 적혀 중복 집계되는 문제를 막기 위한 정리 함수입니다.
+  // 예) "36' | GOAL! Glyn Msowoya" 게시물(분 있음) + "Week 13 Results (Glyn Msowoya, Foster Sichali)"
+  // 결과 요약 게시물(분 없음, 한 이벤트에 선수 여러 명) → 예전에는 팀|분|선수 키가 달라서 같은 골이
+  // 2번 세어졌고, 그 결과 스코어가 2:0 → 3:0으로 잘못 올라갔습니다.
+  //  - 분이 있는 골이 이미 있는 (팀, 선수)는 분 없는 요약 항목에서 제외합니다.
+  //  - 분 없는 요약 이벤트에 선수가 여러 명이면 선수별 골로 풀어서 처리합니다(players[0]만 보던 문제 해결).
+  function normalizeLeagueGoalEvents(events) {
+    const hasMinute = (ev) => /\d/.test(String(ev.minuteText || ''));
+    const teamKey = (ev) => {
+      const resolved = resolveLeagueTeamNameEn({ name: ev.team });
+      return (resolved || String(ev.team || '').trim()).toLowerCase();
+    };
+    const nameKey = (p) => String((p && p.name) || '').trim().toLowerCase();
+
+    // 분이 확인된 골의 (팀|선수) 집합
+    const minutedScorers = new Set();
+    for (const ev of events) {
+      if (!ev || ev.type !== 'goal' || !hasMinute(ev)) continue;
+      const n = nameKey(ev.players && ev.players[0]);
+      if (n) minutedScorers.add(teamKey(ev) + '|' + n);
+    }
+
+    const out = [];
+    const seenMinuteless = new Set();
+    for (const ev of events) {
+      if (!ev) continue;
+      if (ev.type !== 'goal' || hasMinute(ev)) { out.push(ev); continue; }
+      const players = (Array.isArray(ev.players) && ev.players.length) ? ev.players : [null];
+      for (const p of players) {
+        const n = nameKey(p);
+        const key = teamKey(ev) + '|' + n;
+        if (n && minutedScorers.has(key)) continue;   // 분 있는 골과 같은 골 → 버림
+        if (seenMinuteless.has(key)) continue;         // 분 없는 골끼리도 중복 제거
+        seenMinuteless.add(key);
+        out.push(p ? Object.assign({}, ev, { players: [p] }) : ev);
+      }
+    }
+    return out;
+  }
+
   async function fetchLeagueStructuredRecentMatches() {
     const res = await fetch(CHIZUMULU_API_BASE + '/v1/structured?limit=' + CHIZUMULU_STRUCTURED_LIMIT);
     if (!res.ok) {
@@ -4360,7 +4400,7 @@
     return Array.from(latestByPair.values()).map(entry => {
       const pairKey = leagueTeamPairKey(entry.homeNameEn, entry.awayNameEn);
       const goalMap = goalsByPair.get(pairKey);
-      const mergedEvents = goalMap ? Array.from(goalMap.values()) : [];
+      const mergedEvents = normalizeLeagueGoalEvents(goalMap ? Array.from(goalMap.values()) : []);
       // match 자체(스코어/상태 등)는 최신 게시물 것을 그대로 쓰되, events만 누적된
       // 목록으로 교체합니다.
       const mergedMatch = Object.assign({}, entry.match, { events: mergedEvents });
@@ -4536,7 +4576,9 @@
       // 먼저 올라오는 경우). 득점자가 실제로 몇 명 확인됐는지가 더 신뢰할 수 있는 정보이므로,
       // 확인된 골 수가 스코어보다 많으면 화면에 보여줄 스코어를 그만큼 끌어올립니다.
       let updatedScore = m.score;
-      if (goals.length && m.score) {
+      // 종료(full_time/ended)된 경기는 공식 최종 스코어가 확정된 것이므로 골 수로 덮어쓰지 않습니다.
+      const isFinal = m.status === 'full_time' || m.ended === true;
+      if (!isFinal && goals.length && m.score) {
         const homeGoalsCount = goals.filter(g => g.isHome).length;
         const awayGoalsCount = goals.length - homeGoalsCount;
         const curHome = m.score.home != null ? m.score.home : 0;
@@ -11525,6 +11567,7 @@
       row.innerHTML = `
         <div class="timeline-round">
           <span class="timeline-round-label">${weekLabel}</span>
+          ${entry.movedFromWeek ? `<span class="timeline-moved-tag">${isKorean ? `${wkKo(entry.movedFromWeek)} 경기` : `Wk ${entry.movedFromWeek} match`}</span>` : ''}
         </div>
         <div class="timeline-match">
           <span class="ha-badge ${haClass}">${entry.homeAway}</span>

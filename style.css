@@ -12260,3 +12260,5 @@ body.season-archive #viewToggleWrap > :not(.archive-nav-btn) { display: none !im
 .archive-scorer-photo { position: relative; width: 30px; height: 30px; border-radius: 50%; background: rgba(128,128,128,.2); overflow: hidden; display: block; }
 .archive-scorer-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
 .archive-scorer-name small { margin-left: 5px; font-weight: 500; opacity: .55; font-size: 11px; }
+
+.timeline-moved-tag { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 600; opacity: .6; white-space: nowrap; }
