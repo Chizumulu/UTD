@@ -4296,7 +4296,6 @@
     };
     const nameKey = (p) => String((p && p.name) || '').trim().toLowerCase();
 
-    // 분이 확인된 골의 (팀|선수) 집합
     const minutedScorers = new Set();
     for (const ev of events) {
       if (!ev || ev.type !== 'goal' || !hasMinute(ev)) continue;
@@ -4313,8 +4312,8 @@
       for (const p of players) {
         const n = nameKey(p);
         const key = teamKey(ev) + '|' + n;
-        if (n && minutedScorers.has(key)) continue;   // 분 있는 골과 같은 골 → 버림
-        if (seenMinuteless.has(key)) continue;         // 분 없는 골끼리도 중복 제거
+        if (n && minutedScorers.has(key)) continue;
+        if (seenMinuteless.has(key)) continue;
         seenMinuteless.add(key);
         out.push(p ? Object.assign({}, ev, { players: [p] }) : ev);
       }
@@ -7931,7 +7930,12 @@
   }
   // 올해 리그에 없어서 leagueData에서 로고를 못 찾는 25/26 팀의 로고 파일 (파일명 그대로 적습니다)
   const ARCHIVE_LOGO_SRC = {
-    'Embangweni United FC': './엠방웨니.jpg'
+    'Embangweni United FC': './엠방웨니.jpg',
+    'Ekwendeni Hardnockers FC': './하드노커즈.png',
+    'Ekwaiweni Tafika AS': './에크와이웨니.png',
+    'Chirambo FC': './치람보.png',
+    'Chisapa FC': './치사파.png',
+    'Sporting FC': './스포르팅.png'
   };
   function archiveMappedLogoSrc(arch) {
     return ARCHIVE_LOGO_SRC[arch] ? encodeURI(ARCHIVE_LOGO_SRC[arch]) : null;
