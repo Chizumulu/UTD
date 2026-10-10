@@ -4558,7 +4558,7 @@
         return parseInt(mm[1], 10) + (mm[2] ? parseInt(mm[2], 10) / 100 : 0);
       };
 
-      const goals = rawEvents
+      const goalsRaw = rawEvents
         .filter(ev => ev && ev.type === 'goal')
         .map(ev => {
           const scoringTeamNameEn = resolveLeagueTeamNameEn({ name: ev.team });
@@ -4569,6 +4569,37 @@
           };
         })
         .sort((a, b) => parseMinuteForSort(a.minuteText) - parseMinuteForSort(b.minuteText));
+
+      // 결과 요약 게시물(분 없음)은 양 팀 득점자를 한 줄로 나열하는데, 파서가 전부 한 팀 골로
+      // 기록하는 경우가 있습니다(예: 치바비 2-1 마푸 → 마푸의 Norman이 치바비 골로 들어감).
+      // 그래서 분 없는 골은 아래 두 단계로 걸러냅니다.
+      //  1) 반대편 팀에 같은 선수(철자 차이 허용: Ndlovu/Ndhlovu)의 골이 이미 있으면 버립니다.
+      //  2) 종료된 경기에서 한 팀의 골 수가 최종 스코어보다 많으면, 초과분은 분 없는 골부터 뒤에서 버립니다.
+      const goals = (function reconcileGoals(list) {
+        const hasMin = g => /\d/.test(String(g.minuteText || ''));
+        const norm = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '').replace(/h/g, '');
+        let out = list.filter(g => {
+          if (hasMin(g)) return true;
+          const key = norm(g.scorer);
+          if (!key) return true;
+          return !list.some(o => o !== g && o.isHome !== g.isHome && norm(o.scorer) === key);
+        });
+        const final = m.status === 'full_time' || m.ended === true;
+        if (final && m.score) {
+          [true, false].forEach(side => {
+            const limit = side ? m.score.home : m.score.away;
+            if (limit == null) return;
+            let sideGoals = out.filter(g => g.isHome === side);
+            for (let i = sideGoals.length - 1; i >= 0 && sideGoals.length > limit; i--) {
+              if (!hasMin(sideGoals[i])) {
+                out = out.filter(g => g !== sideGoals[i]);
+                sideGoals = out.filter(g => g.isHome === side);
+              }
+            }
+          });
+        }
+        return out;
+      })(goalsRaw);
 
       // /v1/live의 스코어 필드와 /v1/structured에서 누적한 득점자 수가 서로 다른 소스라서
       // 순간적으로 어긋날 수 있습니다(예: 소셜 실황 게시물이 공식 라이브 스코어 갱신보다
