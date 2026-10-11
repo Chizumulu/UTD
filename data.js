@@ -4936,7 +4936,38 @@ function buildAiPredictionNarrative(params) {
 //            개막 라운드를 제외한 통계
 //   summaryAll: 개막 라운드까지 포함한 전체 통계(참고용)
 // ============================================================
+// ===== computeAiPredictionTrackRecord 메모이즈 =====
+// 라운드 전체를 처음부터 다시 재생하는 비용이 큰 함수라서(predictSingleMatch가 호출될 때마다 돌았음),
+// "스코어가 입력된 경기"가 같은 동안에는 한 번 계산한 결과를 그대로 돌려줍니다.
+// 캐시 키: 스코어가 채워진 경기 수 + 그 경기들의 총 득점(roundsData + scheduledRounds).
+// 새 경기 결과가 들어오면 키가 바뀌어 자동으로 다시 계산합니다.
+// 호출부는 돌려받은 객체를 수정하지 말고 읽기만 해야 합니다(같은 객체가 공유됩니다).
+let _trackRecordCache = null;
+let _trackRecordCacheKey = null;
+function _trackRecordDataKey() {
+  let n = 0, goals = 0;
+  [roundsData, scheduledRounds].forEach(src => {
+    Object.keys(src || {}).forEach(k => {
+      (src[k] || []).forEach(m => {
+        if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') {
+          n += 1;
+          goals += m.homeScore * 7 + m.awayScore;
+        }
+      });
+    });
+  });
+  return n + ':' + goals;
+}
 function computeAiPredictionTrackRecord() {
+  const key = _trackRecordDataKey();
+  if (_trackRecordCache === null || _trackRecordCacheKey !== key) {
+    _trackRecordCache = _computeAiPredictionTrackRecordUncached();
+    _trackRecordCacheKey = key;
+  }
+  return _trackRecordCache;
+}
+
+function _computeAiPredictionTrackRecordUncached() {
   // 팀별 홈/원정 성적을 따로 누적합니다(전체 합산 state는 leagueAvgGoals 계산에만 씁니다).
   const state = {};
   const teamNames = leagueData.map(t => t.nameEn);

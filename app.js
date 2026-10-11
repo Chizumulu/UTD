@@ -470,11 +470,16 @@
     return predictWorker;
   }
 
-  function runMonteCarloSimulationAsync(iterations) {
+  // 워커에 작업 하나를 맡기고 결과를 Promise로 돌려줍니다.
+  // payload: 워커로 보낼 내용({ iterations } 또는 { type: 'titleHistory', iterations }),
+  // fallbackFn: 워커를 쓸 수 없을 때 메인 스레드에서 같은 계산을 하는 함수.
+  function requestPredictWorker(payload, fallbackFn) {
     const worker = getPredictWorker();
     if (!worker) {
       // 폴백: 워커를 쓸 수 없는 환경에서는 예전처럼 메인 스레드에서 바로 계산합니다.
-      return Promise.resolve(runMonteCarloSimulation(iterations));
+      return new Promise((resolve, reject) => {
+        try { resolve(fallbackFn()); } catch (err) { reject(err); }
+      });
     }
     const requestId = ++predictWorkerRequestSeq;
     return new Promise((resolve, reject) => {
@@ -495,15 +500,23 @@
       function handleError() {
         cleanup();
         try {
-          resolve(runMonteCarloSimulation(iterations));
+          resolve(fallbackFn());
         } catch (err) {
           reject(err);
         }
       }
       worker.addEventListener('message', handleMessage);
       worker.addEventListener('error', handleError);
-      worker.postMessage({ requestId, iterations });
+      worker.postMessage(Object.assign({ requestId }, payload));
     });
+  }
+
+  function runMonteCarloSimulationAsync(iterations) {
+    return requestPredictWorker({ iterations }, () => runMonteCarloSimulation(iterations));
+  }
+
+  function computeTitleProbabilityHistoryAsync(iterations) {
+    return requestPredictWorker({ type: 'titleHistory', iterations }, () => computeTitleProbabilityHistory(iterations));
   }
 
   function renderPredictions(forceRerun) {
@@ -967,7 +980,7 @@
 
       return `
         <tr class="${r.lowConfidence ? 'ai-track-row-lowconf' : ''}">
-          <td class="ai-track-week">${r.weekNum}</td>
+          <td class="ai-track-week" title="${isKorean ? wkKo(r.weekNum) : wkEn(r.weekNum, 'Week', ' ')}">${isMakeupPos(r.weekNum) ? (isKorean ? '연기' : 'MU') : regularWkNum(r.weekNum)}</td>
           <td class="ai-track-match">${homeShort} vs ${awayShort}${lowConfTag}</td>
           <td class="ai-track-pick">${wdlLabel[r.predictedResult]} · ${r.predictedHomeGoals}-${r.predictedAwayGoals}</td>
           <td class="ai-track-actual">${wdlLabel[r.actualResult]} · ${r.homeScore}-${r.awayScore}</td>
@@ -1893,11 +1906,13 @@
     const matches = buildRoundMatches(pred.roundKey).filter(m => !m.isBye &&
       m.homeEn !== REPORT_TEAM_EN && m.awayEn !== REPORT_TEAM_EN);
 
+    // 승점(pts)은 getRankedTeams가 계산해서 돌려주는 값에만 들어 있으므로 거기서 찾습니다.
+    const rankedAll = getRankedTeams('all');
     for (const rival of rivalInfos) {
       const match = matches.find(m => m.homeEn === rival.nameEn || m.awayEn === rival.nameEn);
       if (match) {
-        const rivalTeam = reportTeamByNameEn(rival.nameEn);
-        const myTeam = reportTeamByNameEn(REPORT_TEAM_EN);
+        const rivalTeam = rankedAll.find(t => t.nameEn === rival.nameEn) || null;
+        const myTeam = rankedAll.find(t => t.nameEn === REPORT_TEAM_EN) || null;
         const gap = rivalTeam && myTeam ? Math.abs((rivalTeam.pts || 0) - (myTeam.pts || 0)) : null;
         return { match, isAbove: rival.isAbove, rivalNameKo: rivalTeam ? rivalTeam.nameKo : rival.nameEn, rivalNameEn: rival.nameEn, gap };
       }
@@ -2270,6 +2285,9 @@
           <button class="nms-action-btn" onclick="downloadNextMatchICS()" aria-label="Add to calendar" title="${isKorean ? '캘린더에 추가' : 'Add to calendar'}">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21M7 3V5M17 3V5M6.2 5H17.8C19 5 20 6 20 7.2V18.8C20 20 19 21 17.8 21H6.2C5 21 4 20 4 18.8V7.2C4 6 5 5 6.2 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
           </button>
+          <button class="nms-action-btn" onclick="downloadRemainingFixturesICS()" aria-label="Download all remaining fixtures" title="${isKorean ? '남은 경기 전체 캘린더 받기' : 'All remaining fixtures (.ics)'}">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21M7 3V5M17 3V5M6.2 5H17.8C19 5 20 6 20 7.2V18.8C20 20 19 21 17.8 21H6.2C5 21 4 20 4 18.8V7.2C4 6 5 5 6.2 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 13H16M8 17H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </button>
           <button class="nms-action-btn" onclick="shareNextMatch()" aria-label="Share" title="${isKorean ? '공유하기' : 'Share'}">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="18" cy="5" r="2.4" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="19" r="2.4" stroke="currentColor" stroke-width="1.6"/></svg>
           </button>
@@ -2372,56 +2390,120 @@
   }
 
   function icsEscape(str) {
-    return String(str).replace(/([,;])/g, '\\$1');
+    return String(str).replace(/\\/g, '\\\\').replace(/([,;])/g, '\\$1').replace(/\r?\n/g, '\\n');
   }
 
-  function downloadNextMatchICS() {
-    const info = getMyRankedTeam();
-    if (!info || !info.team.nextMatch || info.team.nextMatch.isBye) return;
-    const nm = info.team.nextMatch;
-    const startMs = kickoffUTCMillis(nm.kickoffDate, nm.kickoffTime);
-    if (!startMs) {
-      showShareToast(isKorean ? '경기 일정을 아직 알 수 없어요' : 'Kickoff time not confirmed yet');
-      return;
+  // RFC 5545: 한 줄은 75옥텟을 넘기면 안 되므로, 넘으면 CRLF + 공백으로 접어줍니다(한글은 UTF-8 3바이트).
+  function foldICSLine(line) {
+    const enc = new TextEncoder();
+    let out = '', cur = '', bytes = 0, limit = 75;
+    for (const ch of line) {
+      const b = enc.encode(ch).length;
+      if (bytes + b > limit) { out += cur + '\r\n '; cur = ''; bytes = 1; limit = 75; }
+      cur += ch; bytes += b;
     }
+    return out + cur;
+  }
+
+  // 경기 한 건 → VEVENT 줄 배열. UID를 \"홈팀-vs-원정팀\"으로만 만들기 때문에
+  // 킥오프 날짜/시간이 바뀐 뒤 같은 파일을 다시 가져오면 중복 생성 대신 기존 일정이 갱신됩니다.
+  // m: { homeEn, homeKo, awayEn, awayKo, kickoffDate, kickoffTime }, roundPos: 구장 이력 판단용 라운드 순서(선택)
+  function buildMatchVEvent(m, roundPos) {
+    const startMs = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+    if (!startMs) return null;
     const endMs = startMs + 2 * 60 * 60 * 1000; // 경기 시간 2시간으로 가정
-    const oppName = isKorean ? nm.oppKo : nm.oppEn;
-    const haTxt = nm.homeAway === 'H' ? (isKorean ? '홈' : 'Home') : (isKorean ? '원정' : 'Away');
+    const iAmHome = isMyTeamName(m.homeEn, m.homeKo);
+    const oppName = iAmHome ? (isKorean ? m.awayKo : m.awayEn) : (isKorean ? m.homeKo : m.homeEn);
+    const haTxt = iAmHome ? (isKorean ? '홈' : 'Home') : (isKorean ? '원정' : 'Away');
     const summary = isKorean
       ? `[NRFA] 치주물루 유나이티드 FC vs ${oppName} (${haTxt})`
       : `[NRFA] Chizumulu United FC vs ${oppName} (${haTxt})`;
     const description = isKorean
       ? '치주물루 유나이티드 FC 팬사이트에서 등록한 일정입니다.'
       : 'Added from the Chizumulu United FC fan site.';
-    const uid = `chizumulu-${nm.kickoffDate}-${nm.kickoffTime}-${nm.oppEn}`.replace(/\s+/g, '').toLowerCase();
-
-    const ics = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Chizumulu United FC Fan Site//NRFA//KO',
-      'CALSCALE:GREGORIAN',
+    const uid = `chizumulu-${m.homeEn}-vs-${m.awayEn}`.replace(/\s+/g, '').toLowerCase();
+    const venue = getTeamVenue(m.homeEn, roundPos);
+    const lines = [
       'BEGIN:VEVENT',
       `UID:${uid}@chizumulu.github.io`,
       `DTSTAMP:${toICSDate(Date.now())}`,
+      `SEQUENCE:${Math.floor(Date.now() / 1000)}`,
       `DTSTART:${toICSDate(startMs)}`,
       `DTEND:${toICSDate(endMs)}`,
       `SUMMARY:${icsEscape(summary)}`,
-      `DESCRIPTION:${icsEscape(description)}`,
-      `URL:${window.location.href}`,
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].join('\r\n');
+      `DESCRIPTION:${icsEscape(description)}`
+    ];
+    if (venue) lines.push(`LOCATION:${icsEscape(isKorean ? venue.nameKo : venue.nameEn)}`);
+    lines.push(`URL:${window.location.href}`, 'END:VEVENT');
+    return lines;
+  }
 
+  function saveICSFile(eventLines, filename, calName) {
+    const head = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Chizumulu United FC Fan Site//NRFA//KO',
+      'CALSCALE:GREGORIAN'
+    ];
+    if (calName) head.push(`X-WR-CALNAME:${icsEscape(calName)}`);
+    const ics = head.concat(eventLines, ['END:VCALENDAR']).map(foldICSLine).join('\r\n') + '\r\n';
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'chizumulu-next-match.ics';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  function downloadNextMatchICS() {
+    const info = getMyRankedTeam();
+    if (!info || !info.team.nextMatch || info.team.nextMatch.isBye) return;
+    const nm = info.team.nextMatch;
+    const iAmHome = nm.homeAway === 'H';
+    const ev = buildMatchVEvent({
+      homeEn: iAmHome ? 'Chizumulu United FC' : nm.oppEn, homeKo: iAmHome ? '치주물루 유나이티드 FC' : nm.oppKo,
+      awayEn: iAmHome ? nm.oppEn : 'Chizumulu United FC', awayKo: iAmHome ? nm.oppKo : '치주물루 유나이티드 FC',
+      kickoffDate: nm.kickoffDate, kickoffTime: nm.kickoffTime
+    });
+    if (!ev) {
+      showShareToast(isKorean ? '경기 일정을 아직 알 수 없어요' : 'Kickoff time not confirmed yet');
+      return;
+    }
+    saveICSFile(ev, 'chizumulu-next-match.ics');
     showShareToast(isKorean ? '캘린더 파일을 내려받았어요' : 'Calendar file downloaded');
+  }
+
+  // 남은 경기 전체(.ics 한 파일). scheduledRounds에서 아직 스코어가 없고 연기되지 않은 우리 경기를
+  // 킥오프 날짜·시간이 있는 것만 모읍니다. 일정이 바뀌면 이 버튼으로 다시 받아 가져오면 됩니다.
+  function downloadRemainingFixturesICS() {
+    const byRoundNum = (a, b) => parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
+    const keys = Object.keys(scheduledRounds || {}).filter(k => !roundsData[k]).sort(byRoundNum);
+    const events = [];
+    let undated = 0;
+    keys.forEach(k => {
+      const pos = parseInt(k.replace('round', ''), 10);
+      (scheduledRounds[k] || []).forEach(m => {
+        if (m.byeKo || m.byeEn || !m.homeEn || !m.awayEn) return;
+        if (!isMyTeamName(m.homeEn, m.homeKo) && !isMyTeamName(m.awayEn, m.awayKo)) return;
+        if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
+        if (m.postponed) return;
+        const ev = buildMatchVEvent(m, pos);
+        if (ev) events.push(ev); else undated++;
+      });
+    });
+    if (!events.length) {
+      showShareToast(isKorean ? '캘린더에 담을 확정 일정이 아직 없어요' : 'No confirmed upcoming fixtures yet');
+      return;
+    }
+    saveICSFile([].concat.apply([], events), 'chizumulu-remaining-fixtures.ics',
+      isKorean ? '치주물루 유나이티드 FC 남은 경기' : 'Chizumulu United FC Remaining Fixtures');
+    const tail = undated
+      ? (isKorean ? ` (일정 미정 ${undated}경기 제외)` : ` (${undated} TBD excluded)`)
+      : '';
+    showShareToast((isKorean ? `남은 경기 ${events.length}건을 내려받았어요` : `Downloaded ${events.length} fixtures`) + tail);
   }
 
 
@@ -3989,6 +4071,12 @@
   const LEAGUE_LIVE_POLL_MS = 60 * 1000; // 기본 갱신 주기(1분)
   const LEAGUE_LIVE_POLL_MAX_MS = 5 * 60 * 1000; // 429(요청 과다) 응답이 계속되면 최대 5분까지 늦춤
   let leagueLivePollTimer = null;
+  // 라이브 폴링은 "킥오프 5분 전 ~ 킥오프 4시간 후" 창 안에서만 돌립니다(창 밖에서는 API를 부르지 않음).
+  // 킥오프 시각은 data.js의 roundsData/scheduledRounds에 적힌 kickoffDate/kickoffTime(말라위 시간)을 씁니다.
+  const LEAGUE_LIVE_WINDOW_BEFORE_MS = 5 * 60 * 1000;
+  const LEAGUE_LIVE_WINDOW_AFTER_MS = 4 * 60 * 60 * 1000;
+  const LEAGUE_LIVE_SLEEP_MAX_MS = 60 * 60 * 1000; // 창 밖에서 다음 창을 기다릴 때 한 번에 최대 1시간만 잠듭니다.
+  let leagueKickoffTimesCache = null;
   let leagueLiveMatchesCache = [];
   // renderLeagueLiveTicker에 마지막으로 실제 전달된 목록(= combinedMatches: 진짜 라이브 +
   // 아직 "종료" 확인 전인 stale 경기 + FULL TIME 후 몇 시간 유지되는 ended 경기까지 합친 것).
@@ -4791,7 +4879,61 @@
       : (isKorean ? '전체 보기' : 'Show all');
   }
 
-  async function refreshLeagueLiveTicker() {
+  // 리그 전체 경기의 킥오프 시각(ms) 목록. 데이터는 페이지 로드 후 바뀌지 않으므로 한 번만 만듭니다.
+  function getLeagueKickoffTimes() {
+    if (leagueKickoffTimesCache) return leagueKickoffTimesCache;
+    const times = [];
+    [roundsData, scheduledRounds].forEach(src => {
+      Object.keys(src || {}).forEach(k => {
+        (src[k] || []).forEach(m => {
+          if (!m || m.byeKo || m.byeEn) return;
+          const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+          if (ms) times.push(ms);
+        });
+      });
+    });
+    leagueKickoffTimesCache = times.sort((a, b) => a - b);
+    return leagueKickoffTimesCache;
+  }
+
+  // 지금이 폴링 창 안인지, 아니라면 다음 창은 언제 시작하는지 계산합니다.
+  function getLeaguePollWindowState(now) {
+    let inWindow = false;
+    let nextStartMs = null;
+    getLeagueKickoffTimes().forEach(k => {
+      const start = k - LEAGUE_LIVE_WINDOW_BEFORE_MS;
+      const end = k + LEAGUE_LIVE_WINDOW_AFTER_MS;
+      if (now >= start && now <= end) inWindow = true;
+      else if (start > now && (nextStartMs === null || start < nextStartMs)) nextStartMs = start;
+    });
+    return { inWindow, nextStartMs };
+  }
+
+  // 다음 폴링을 예약합니다. 창 안이면 기존처럼 지터를 섞은 주기로, 창 밖이면 다음 창 시작 시점(최대 1시간 뒤)에
+  // 다시 확인합니다. 앞으로 남은 창이 하나도 없으면 타이머를 걸지 않습니다.
+  function scheduleNextLeagueLivePoll() {
+    const now = Date.now();
+    const st = getLeaguePollWindowState(now);
+    if (st.inWindow) {
+      // 여러 방문자가 정확히 같은 간격으로 요청을 보내면 서버(또는 앞단 보호 계층)의
+      // 패턴 기반 차단을 유발하기 쉬우므로, 매번 ±15% 정도 무작위 오차(지터)를 더합니다.
+      const jitter = leagueLivePollDelay * (0.85 + Math.random() * 0.3);
+      leagueLivePollTimer = setTimeout(refreshLeagueLiveTicker, jitter);
+    } else if (st.nextStartMs !== null) {
+      // 모든 방문자가 킥오프 5분 전 정각에 한꺼번에 몰리지 않도록 0~30초 무작위로 퍼뜨립니다.
+      const wait = Math.min(st.nextStartMs - now, LEAGUE_LIVE_SLEEP_MAX_MS) + Math.random() * 30000;
+      leagueLivePollTimer = setTimeout(refreshLeagueLiveTicker, wait);
+    } else {
+      leagueLivePollTimer = null;
+    }
+  }
+
+  // force: 페이지를 연 직후 첫 호출처럼 창과 상관없이 한 번은 불러서 현재 상태를 그려야 할 때 true.
+  async function refreshLeagueLiveTicker(force) {
+    if (force !== true && !getLeaguePollWindowState(Date.now()).inWindow) {
+      scheduleNextLeagueLivePoll();
+      return;
+    }
     // 안쪽에서 무슨 일이 나든(특히 renderLeagueLiveTicker처럼 이전엔 보호되지 않았던 부분)
     // 폴링 루프 자체는 절대 멈추면 안 되므로, 다음 예약(setTimeout)을 finally에 둬서
     // 예외가 나도 항상 실행되게 합니다. 그렇지 않으면 한 번의 예외로 setTimeout 체인이
@@ -4833,17 +4975,14 @@
         console.error('renderLeagueLiveTicker 실패:', e);
       }
     } finally {
-      // 여러 방문자가 정확히 같은 간격으로 요청을 보내면 서버(또는 앞단 보호 계층)의
-      // 패턴 기반 차단을 유발하기 쉬우므로, 매번 ±15% 정도 무작위 오차(지터)를 더합니다.
-      const jitter = leagueLivePollDelay * (0.85 + Math.random() * 0.3);
-      leagueLivePollTimer = setTimeout(refreshLeagueLiveTicker, jitter);
+      scheduleNextLeagueLivePoll();
     }
   }
 
   function startLeagueLiveTicker() {
     if (leagueLivePollTimer) clearTimeout(leagueLivePollTimer);
     leagueLivePollDelay = LEAGUE_LIVE_POLL_MS;
-    refreshLeagueLiveTicker();
+    refreshLeagueLiveTicker(true); // 첫 호출은 창 밖이어도 한 번 불러서 현재 상태(종료 카드 등)를 그립니다.
   }
 
   // teamYoutubeChannel(data.js)에 설정된 채널의 "최신 업로드 영상"을 YouTube Data API v3로
@@ -6531,6 +6670,13 @@
     return `${prefix || 'Week'}${sep === undefined ? ' ' : sep}${pos}`;
   }
   function isMakeupPos(pos) { return (typeof isMakeupWeek === 'function') && isMakeupWeek(pos); }
+  // 차트 X축처럼 자리가 좁은 곳용 짧은 주차 표기입니다. 순서(pos)를 그대로 찍지 않고
+  // 정규 주차 번호로 바꿔서 다른 화면의 "N주차"와 맞춥니다. 연기경기주차는 "연기"/"MU".
+  function regularWkNum(pos) { return (typeof regularWeekNumber === 'function') ? regularWeekNumber(pos) : pos; }
+  function wkAxis(pos) {
+    if (isMakeupPos(pos)) return isKorean ? '연기' : 'MU';
+    return isKorean ? `${regularWkNum(pos)}주` : `W${regularWkNum(pos)}`;
+  }
   function roundKeyPos(key) { return parseInt(String(key).replace('round', ''), 10); }
 
   // ===== 전반기 / 후반기 (로빈 라운드) =====
@@ -7689,11 +7835,11 @@
       ? leagueData
       : (filter === 'form' ? computeFormStandings(5) : computeLocationStandings(filter));
 
-    const processedData = baseData.map(team => {
-      team.pts = (team.won * 3) + (team.drawn * 1);
-      team.gd = team.goalsFor - team.goalsAgainst;
-      return team;
-    });
+    // 원본(leagueData 등)에 pts/gd를 써넣지 않도록 복사본에 계산해서 담습니다.
+    const processedData = baseData.map(team => Object.assign({}, team, {
+      pts: (team.won * 3) + (team.drawn * 1),
+      gd: team.goalsFor - team.goalsAgainst
+    }));
 
     processedData.sort((a, b) => {
       if (b.pts !== a.pts) return b.pts - a.pts;
@@ -10984,7 +11130,7 @@
       const x = xPos(w);
       svg.appendChild(svgEl('line', { x1: x, y1: margin.top, x2: x, y2: margin.top + plotH, stroke: ct.gridLine, 'stroke-width': 1, 'stroke-dasharray': '3,4' }));
       const t = svgEl('text', { x: x, y: margin.top + plotH + 20, 'text-anchor': 'middle', class: 'rank-hist-week-label' });
-      t.textContent = isKorean ? `${w}주` : `W${w}`;
+      t.textContent = wkAxis(w);
       svg.appendChild(t);
     }
 
@@ -11341,7 +11487,7 @@
       const x = xPos(index);
       svg.appendChild(svgEl('line', { x1: x, y1: margin.top, x2: x, y2: margin.top + plotH, stroke: ct.gridLine, 'stroke-width': 1, 'stroke-dasharray': '3,4' }));
       const label = svgEl('text', { x, y: margin.top + plotH + 20, 'text-anchor': 'middle', class: 'rank-hist-week-label' });
-      label.textContent = isKorean ? `${h.week}주` : `W${h.week}`;
+      label.textContent = wkAxis(h.week);
       svg.appendChild(label);
     });
     svg.appendChild(svgEl('rect', { x: margin.left, y: margin.top, width: plotW, height: plotH, rx: 10, fill: 'none', stroke: ct.gridBorder, 'stroke-width': 1.5 }));
@@ -11445,14 +11591,27 @@
   // 시즌을 끝까지 재시뮬레이션) 한 번 계산한 결과를 캐싱해뒀다가 재사용합니다.
   // roundsData는 페이지 로드 후 바뀌지 않는 정적 데이터라, 캐시 무효화 로직 없이
   // "최초 1회만 계산"해도 항상 최신 상태입니다.
+  // 계산은 predict-worker.js(Web Worker)에서 하므로, 결과가 오기 전(cache === null)에는
+  // 차트 자리에 "계산 중..."만 보여주고, 도착하면 차트를 다시 그립니다.
   let titleProbHistoryCache = null;
-  function getTitleProbabilityHistory() {
-    if (titleProbHistoryCache === null) {
-      titleProbHistoryCache = (typeof computeTitleProbabilityHistory === 'function')
-        ? computeTitleProbabilityHistory(600)
-        : [];
+  let titleProbHistoryPromise = null; // 계산 중인 요청(중복 요청 방지)
+  function ensureTitleProbabilityHistory() {
+    if (titleProbHistoryCache !== null) return Promise.resolve(titleProbHistoryCache);
+    if (typeof computeTitleProbabilityHistory !== 'function') {
+      titleProbHistoryCache = [];
+      return Promise.resolve(titleProbHistoryCache);
     }
-    return titleProbHistoryCache;
+    if (!titleProbHistoryPromise) {
+      titleProbHistoryPromise = computeTitleProbabilityHistoryAsync(600)
+        .then(h => { titleProbHistoryCache = h || []; return titleProbHistoryCache; })
+        .catch(err => {
+          console.error('우승확률 추이 계산 중 오류:', err);
+          titleProbHistoryCache = []; // 실패해도 무한 재시도하지 않고 차트만 비워둡니다.
+          return titleProbHistoryCache;
+        })
+        .then(h => { titleProbHistoryPromise = null; return h; });
+    }
+    return titleProbHistoryPromise;
   }
 
   function titleProbColor(nameEn, colorIndex) {
@@ -11466,7 +11625,14 @@
     svg.innerHTML = '';
     if (legendEl) legendEl.innerHTML = '';
 
-    let history = getTitleProbabilityHistory();
+    let history = titleProbHistoryCache;
+    if (history === null) {
+      const loading = svgEl('text', { x: 410, y: 205, 'text-anchor': 'middle', class: 'rank-hist-axis-label' });
+      loading.textContent = isKorean ? '계산 중...' : 'Calculating...';
+      svg.appendChild(loading);
+      ensureTitleProbabilityHistory().then(() => renderTitleProbabilityHistoryChart());
+      return;
+    }
     if (!history.length) return;
 
     // 가장 최근 주차(마지막 점)는 예측 탭의 정식 몬테카를로 결과와 같은 값으로 맞춥니다.
@@ -11528,7 +11694,7 @@
       const x = xPos(index);
       svg.appendChild(svgEl('line', { x1: x, y1: margin.top, x2: x, y2: margin.top + plotH, stroke: ct.gridLine, 'stroke-width': 1, 'stroke-dasharray': '3,4' }));
       const label = svgEl('text', { x, y: margin.top + plotH + 20, 'text-anchor': 'middle', class: 'rank-hist-week-label' });
-      label.textContent = isKorean ? `${h.round}주` : `W${h.round}`;
+      label.textContent = wkAxis(h.round);
       svg.appendChild(label);
     });
     svg.appendChild(svgEl('rect', { x: margin.left, y: margin.top, width: plotW, height: plotH, rx: 10, fill: 'none', stroke: ct.gridBorder, 'stroke-width': 1.5 }));

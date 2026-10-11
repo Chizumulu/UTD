@@ -19,10 +19,16 @@ const DATA_VERSION = (function() {
 })();
 importScripts('data.js?v=' + DATA_VERSION);
 
+// 메시지 종류(type):
+//   (없음)         → 리그 예측표용 몬테카를로 시뮬레이션 runMonteCarloSimulation(iterations)
+//   'titleHistory' → 우승확률 추이 차트용 computeTitleProbabilityHistory(iterations)
+//                    (라운드마다 시즌을 다시 시뮬레이션해서 무거우므로 메인 스레드 대신 여기서 계산)
 self.onmessage = function (e) {
-  const { requestId, iterations } = e.data || {};
+  const { requestId, iterations, type } = e.data || {};
   try {
-    const result = runMonteCarloSimulation(iterations);
+    const result = (type === 'titleHistory')
+      ? computeTitleProbabilityHistory(iterations)
+      : runMonteCarloSimulation(iterations);
     self.postMessage({ requestId, result });
   } catch (err) {
     self.postMessage({ requestId, error: (err && err.message) || String(err) });
