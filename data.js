@@ -400,6 +400,30 @@ const matchLineups = {
     ],
     subsUnused: [4, 8, 10, 11, 25, 77, 80, 88]
   }
+  // ===== 14주차 @ 친테체 유나이티드 FC (2026-10-11 원정, 0 : 0 무) 선발 라인업 =====
+  // 라인업 이미지 기준입니다. 주장(마지막 주장 만토 카망가가 벤치)은 부주장 알란 음롱골라로 두었으니 다르면 고쳐주세요.
+  // 교체 출전 정보는 이미지에 없어서 적지 않았습니다.
+  // 대기 명단은 4, 8, 9, 10, 15, 25, 88번이며, 교체 투입 여부는 확인되면 subsIn으로 옮겨주세요.
+  , round14: {
+    formation: "4-2-3-1",
+    opponentKo: "친테체 유나이티드 FC",
+    result: "0 : 0 무",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
+      { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
+      { pos: "CAM", number: 7, nameKo: "디킨스 니렌다" },
+      { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
+      { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
+      { pos: "RCM", number: 98, nameKo: "스티브 피리" },
+      { pos: "LB", number: 5, nameKo: "라반 롱웨" },
+      { pos: "LCB", number: 13, nameKo: "조셉 반다" },
+      { pos: "RCB", number: 3, nameKo: "알란 음롱골라", captain: true },
+      { pos: "RB", number: 66, nameKo: "조던 칠와" },
+      { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
+    ],
+    subsIn: [],
+    subsUnused: [4, 8, 9, 10, 15, 25, 88]
+  }
 };
 
 const squadData = [
@@ -1330,10 +1354,10 @@ const scheduledRounds = {
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-11", kickoffTime: "14:30" },
     { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-10-10", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "AUSTINE NGOMA, HENDERSON KANYIKA", scorersAway: "NORMAN NDLOVU" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-10-10", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "GLYN MSOWOYA, FOSTER SICHALI", scorersAway: "없음" },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-10-11", kickoffTime: "14:30" },
-    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-10-11", kickoffTime: "14:30" },
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-10-11", kickoffTime: "14:30" },
-    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-10-11", kickoffTime: "14:30" },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-10-11", kickoffTime: "14:30", homeScore: 4, awayScore: 1, scorersHome: "LOTTIE BANDA, MLEZA NYIRONGO, TAWONGA CHIHANA (2골)", scorersAway: "LEMA MAKATO" },
+    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-10-11", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "THURASON SHABA, JONATHAN PHIRI", scorersAway: "WATIPA NYIRENDA" },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-10-11", kickoffTime: "14:30", homeScore: 3, awayScore: 0, scorersHome: "ZIKANI KASAMBALA (2골), MIKE LUHANGA", scorersAway: "없음" },
+    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-10-11", kickoffTime: "14:30", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
     { byeKo: "젠다 유나이티드 FC", byeEn: "Jenda United FC" }
   ],
   round15: [
@@ -2620,6 +2644,9 @@ const playerDirectory = {
   "LUKE JERE": { nameKo: "루크 제레", nameEn: "Luke Jere" },
   "JASTON MOYO": { nameKo: "재스톤 모요", nameEn: "Jaston Moyo" },
   "JONATHAN PHIRI": { nameKo: "조나단 피리", nameEn: "Jonathan Phiri" },
+  "LEMA MAKATO": { nameKo: "레마 마카토", nameEn: "Lema Makato" },
+  "LOTTIE BANDA": { nameKo: "로티 반다", nameEn: "Lottie Banda" },
+  "TAWONGA CHIHANA": { nameKo: "타웡가 치하나", nameEn: "Tawonga Chihana" },
   "WYSON NYIRENDA": { nameKo: "와이슨 니렌다", nameEn: "Wyson Nyirenda" },
   "CHISOMO MYGHA": { nameKo: "치소모 미그하", nameEn: "Chisomo Mygha" },
   "CHIKONDI NYIRENDA": { nameKo: "치콘디 니렌다", nameEn: "Chikondi Nyirenda" },

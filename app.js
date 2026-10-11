@@ -4387,7 +4387,16 @@
         return isKorean ? `${num}분` : `${num}'`;
       };
       const goals = Array.isArray(m.goals) ? m.goals : [];
-      const goalRowHtml = (g) => `<div class="llt-goal-row">⚽ ${escapeHtml(formatGoalMinute(g.minuteText))} ${escapeHtml(g.scorer || '')}</div>`;
+      // 득점자 이름: 한국어 모드에서는 playerDirectory의 한글 표기를 쓰고, 없으면 원문 그대로 보여줍니다.
+      const localizeScorerName = (name) => {
+        const raw = String(name || '').trim();
+        if (!raw) return raw;
+        let key = raw.toUpperCase();
+        if (typeof nameAliases !== 'undefined' && nameAliases[key]) key = nameAliases[key];
+        const info = (typeof playerDirectory !== 'undefined') ? playerDirectory[key] : null;
+        return info ? (isKorean ? info.nameKo : info.nameEn) : raw;
+      };
+      const goalRowHtml = (g) => `<div class="llt-goal-row">⚽ ${escapeHtml(formatGoalMinute(g.minuteText))} ${escapeHtml(localizeScorerName(g.scorer))}</div>`;
       const homeGoalsHtml = goals.filter(g => g.isHome).map(goalRowHtml).join('');
       const awayGoalsHtml = goals.filter(g => !g.isHome).map(goalRowHtml).join('');
       const goalsSectionHtml = goals.length
