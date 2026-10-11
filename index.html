@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<script>
+  // 페이지 렌더링 전에 저장된 테마(또는 시스템 설정)를 즉시 적용해 깜빡임(FOUC)을 방지합니다.
+  // (CDN 스크립트 로딩보다 먼저 실행되도록 <head> 맨 위에 둡니다.)
+  (function() {
+    try {
+      const saved = localStorage.getItem('nrfa-theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = saved || (prefersDark ? 'dark' : 'light');
+      if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    } catch (e) {}
+  })();
+</script>
+
 <!-- ===== 배포 버전 (Asset Versions) — 캐시 무효화용 단일 기준점 ===== -->
 <!-- 파일을 새로 올려서 브라우저 캐시를 무효화하고 싶을 때, 그 파일에 해당하는 값만
      여기서 올리면 됩니다. style.css/data.js/app.js는 서로 다른 시점에 따로 버전을
@@ -8,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '001',
-    data: '001',
-    app: '002',
+    style: '010',
+    data: '010',
+    app: '010',
     archive: '001',
     predictWorker: '001',
     pathfinderEngine: '001',
@@ -26,7 +39,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <!-- End Google Tag Manager -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#033990">
+<meta name="theme-color" content="#033990" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12141d" media="(prefers-color-scheme: dark)">
 <meta name="google-site-verification" content="ioECsbzVwqxDJY8T1TJjL2QPqJ0AwIo9J3_HtC1OZME">
 <meta name="naver-site-verification" content="fa665b7ccd571b0210bc154ea11d6a96580d6e8e" />
 
@@ -105,17 +119,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <!-- 스켈레톤→실데이터 전환 등 UI 애니메이션용 (전역 window.anime 객체로 노출) -->
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/lib/anime.iife.min.js"></script>
-<script>
-  // 페이지 렌더링 전에 저장된 테마(또는 시스템 설정)를 즉시 적용해 깜빡임(FOUC)을 방지합니다.
-  (function() {
-    try {
-      const saved = localStorage.getItem('nrfa-theme');
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const theme = saved || (prefersDark ? 'dark' : 'light');
-      if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-    } catch (e) {}
-  })();
-</script>
 
 <!-- OneSignal Web Push: 경기 킥오프 알림 -->
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
@@ -255,7 +258,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <svg class="lang-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M3 12H21M12 3C14.5 5.5 15.5 8.5 15.5 12C15.5 15.5 14.5 18.5 12 21C9.5 18.5 8.5 15.5 8.5 12C8.5 8.5 9.5 5.5 12 3Z" stroke="currentColor" stroke-width="1.4"/></svg>
       <span id="langBtnText">View in English</span>
     </button>
-    <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeBtn" title="다크 모드 전환" aria-label="Toggle dark mode">
+    <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeBtn" title="다크 모드 전환" aria-label="다크 모드" aria-pressed="false">
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.5 14.5C19.3 15 18 15.3 16.6 15.1C12.9 14.6 10.1 11.4 10.1 7.5C10.1 6.1 10.4 4.8 11 3.6C6.9 4.4 3.8 8 3.8 12.4C3.8 17.3 7.8 21.3 12.7 21.3C16.6 21.3 19.9 18.8 21 15.3C20.8 15.1 20.6 14.8 20.5 14.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity="0.15"/></svg>
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity="0.15"/><path d="M12 2.5V4.5M12 19.5V21.5M4.5 12H2.5M21.5 12H19.5M5.6 5.6L7 7M17 17L18.4 18.4M18.4 5.6L17 7M7 17L5.6 18.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       <span class="lbl" data-ko="다크 모드" data-en="Dark Mode">다크 모드</span>
@@ -580,11 +583,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="content-row">
 <div class="scroll-fade-wrap" id="rankTableFade">
 <div class="table-wrap" id="rankTableScroller">
+<div class="rank-filter-bar">
 <div class="rank-filter-wrap">
   <button class="rank-filter-btn active lbl" data-filter="all" data-en="ALL" data-ko="전체" onclick="setRankFilter('all')">전체</button>
   <button class="rank-filter-btn lbl" data-filter="home" data-en="HOME" data-ko="홈" onclick="setRankFilter('home')">홈</button>
   <button class="rank-filter-btn lbl" data-filter="away" data-en="AWAY" data-ko="원정" onclick="setRankFilter('away')">원정</button>
   <button class="rank-filter-btn lbl" data-filter="form" data-en="FORM 5" data-ko="최근5" onclick="setRankFilter('form')">최근5</button>
+</div>
+<div class="rank-filter-actions">
   <button class="share-btn lbl" data-en="Share" data-ko="공유하기" onclick="shareRankTable()" aria-label="Share standings" title="순위표 공유">
     <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>
     <span class="lbl" data-en="Share" data-ko="공유">공유</span>
@@ -593,6 +599,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <svg class="export-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17V18C4 19.657 5.343 21 7 21H17C18.657 21 20 19.657 20 18V17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span class="lbl" data-en="Save as Image" data-ko="이미지로 저장">이미지로 저장</span>
   </button>
+</div>
 </div>
 <div class="rank-form-note lbl" id="rankFormNote" style="display:none" data-en="Form table — standings based on each team's last 5 matches only." data-ko="최근 5경기 폼 순위표 — 시즌 누적이 아닌 각 팀의 최근 5경기 결과만으로 매긴 순위입니다.">최근 5경기 폼 순위표 — 시즌 누적이 아닌 각 팀의 최근 5경기 결과만으로 매긴 순위입니다.</div>
 <table id="mainTable">
@@ -965,6 +972,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="lbl" data-en="For every match already played, we recompute what the Poisson model would have predicted using only the data available before that match, then compare it with the actual score. Opening-week matches (no prior data for either side) are shown but excluded from the accuracy stats." data-ko="이미 끝난 모든 경기에 대해, 그 경기가 열리기 전까지의 데이터만 가지고 포아송 모델이 뭐라고 예측했을지 재계산한 뒤 실제 스코어와 비교합니다. 두 팀 다 이전 경기 기록이 없는 개막 라운드는 표에는 나오지만 적중률 통계에서는 제외해요.">이미 끝난 모든 경기에 대해, 그 경기가 열리기 전까지의 데이터만 가지고 포아송 모델이 뭐라고 예측했을지 재계산한 뒤 실제 스코어와 비교합니다. 두 팀 다 이전 경기 기록이 없는 개막 라운드는 표에는 나오지만 적중률 통계에서는 제외해요.</span>
       </div>
     </div>
+    <details class="ai-track-details" id="aiTrackDetails" ontoggle="if(this.open){window.dispatchEvent(new Event('resize'));}">
+      <summary class="ai-track-details-summary">
+        <span class="lbl ai-track-details-open" data-en="Show details" data-ko="자세히 보기">자세히 보기</span>
+        <span class="lbl ai-track-details-close" data-en="Hide details" data-ko="접기">접기</span>
+        <svg class="ai-track-details-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </summary>
     <p class="ai-track-note lbl" data-en="Recalculated automatically every time a new round's results are added — no manual logging needed." data-ko="새 라운드 결과가 추가될 때마다 자동으로 다시 계산돼요. 따로 기록할 필요 없어요.">새 라운드 결과가 추가될 때마다 자동으로 다시 계산돼요. 따로 기록할 필요 없어요.</p>
     <div class="ai-track-summary" id="aiTrackSummary"></div>
 
@@ -1041,6 +1054,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </table>
       </div>
     </div>
+    </details>
   </section>
 </div>
 

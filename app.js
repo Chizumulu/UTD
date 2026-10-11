@@ -65,6 +65,18 @@
       infoEn: 'Compares last season\'s (25/26) final points per game with this season\'s current PPG and lists teams that declined, biggest drop first. Only teams with a 25/26 record are included, and values will move as this season progresses.' }
   ];
   let currentStatCategory = 'goalsFor';
+  // 카테고리 17개+를 한 줄로 늘어놓지 않고 공격·수비·폼·심화 4그룹으로 묶어 보여줍니다.
+  // (예전의 심화/추천 태그는 그룹 이름으로 대체되어 더 이상 표시하지 않습니다.)
+  const STAT_GROUPS = [
+    { id: 'attack',  labelKo: '공격', labelEn: 'Attack',   cats: ['goalsFor', 'fts', 'attackIdx', 'scorerDep', 'streakScoring'] },
+    { id: 'defense', labelKo: '수비', labelEn: 'Defense',  cats: ['goalsAgainst', 'cs', 'defenseIdx', 'streakConceding'] },
+    { id: 'form',    labelKo: '폼',   labelEn: 'Form',     cats: ['streakWin', 'streakUnbeaten', 'streakDraw', 'streakLoss'] },
+    { id: 'advanced', labelKo: '심화', labelEn: 'Advanced', cats: ['ppg', 'pythag', 'volatility', 'ppgUp', 'ppgDown'] }
+  ];
+  const statGroupLastCat = {};   // 그룹별로 마지막에 보던 카테고리 기억
+  function statGroupOf(catId) {
+    return STAT_GROUPS.find(g => g.cats.indexOf(catId) !== -1) || STAT_GROUPS[0];
+  }
   let statBoardExpanded = false;
   let currentPlayerModalKey = null;
   let currentSquadPlayerModalNumber = null;
@@ -100,26 +112,35 @@
     };
   }
 
+  const THEME_META_COLORS = { light: '#033990', dark: '#12141d' };
+  const THEME_MQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  function getSavedTheme() {
+    try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; }
+  }
+
   function applyTheme(theme) {
     if (theme === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
     } else {
       document.documentElement.removeAttribute('data-theme');
     }
+    // 모바일 주소창/PWA 상단바 색도 테마를 따라가도록 (index.html에는 라이트/다크 meta가 둘 다 있어 전부 갱신)
+    const metaColor = THEME_META_COLORS[theme === 'dark' ? 'dark' : 'light'];
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute('content', metaColor));
     const themeBtn = document.getElementById('themeBtn');
     if (themeBtn) {
       themeBtn.title = theme === 'dark'
         ? (isKorean ? '라이트 모드로 전환' : 'Switch to light mode')
         : (isKorean ? '다크 모드로 전환' : 'Switch to dark mode');
+      // 보이는 라벨("다크 모드"/"Dark Mode")과 같은 이름 + 눌림 상태로 스크린리더에 전달
+      themeBtn.setAttribute('aria-label', isKorean ? '다크 모드' : 'Dark mode');
+      themeBtn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
     }
   }
 
-  function toggleTheme() {
-    const next = isDarkTheme() ? 'light' : 'dark';
-    applyTheme(next);
-    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
-
-    // 하드코딩된 SVG 차트 색상은 테마 변경 시 다시 그려야 반영됩니다.
+  // 하드코딩된 SVG 차트 색상은 테마 변경 시 다시 그려야 반영됩니다.
+  function refreshThemeDependentViews() {
     if (currentView === 'stats') {
       buildStatsTables();
       if (currentModalType) openModal(currentModalType);
@@ -127,6 +148,30 @@
       renderRankHistoryChart();
       renderAiTrackRecord();
     }
+  }
+
+  function toggleTheme() {
+    const next = isDarkTheme() ? 'light' : 'dark';
+    applyTheme(next);
+    try {
+      // 고른 테마가 OS 설정과 같으면 저장값을 지워 "시스템 설정 따르기"로 되돌립니다.
+      // (OS와 다른 테마를 고른 경우에만 그 선택을 기억합니다.)
+      const systemTheme = THEME_MQ && THEME_MQ.matches ? 'dark' : 'light';
+      if (THEME_MQ && next === systemTheme) localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, next);
+    } catch (e) {}
+    refreshThemeDependentViews();
+  }
+
+  // 저장된 선택이 없을 때는 OS 다크모드 전환을 실시간으로 따라갑니다.
+  if (THEME_MQ) {
+    const onSystemThemeChange = (e) => {
+      if (getSavedTheme()) return;
+      applyTheme(e.matches ? 'dark' : 'light');
+      try { refreshThemeDependentViews(); } catch (err) {}
+    };
+    if (THEME_MQ.addEventListener) THEME_MQ.addEventListener('change', onSystemThemeChange);
+    else if (THEME_MQ.addListener) THEME_MQ.addListener(onSystemThemeChange);
   }
 
   // ===== PWA: "앱으로 저장"(홈 화면에 추가) 버튼 =====
@@ -2134,7 +2179,7 @@
 
   // ===== 다음 경기 미니 스트립 (메뉴 바 ~ 순위표 사이) =====
 
-  function renderNextMatchStrip() {
+  function renderNextMatchStripInner() {
     const el = document.getElementById('nextMatchStrip');
     if (!el) return;
     el.removeAttribute('aria-busy');
@@ -2208,7 +2253,7 @@
     const rightTeamHtml = t.nextMatch.homeAway === 'H' ? oppTeamHtml : myTeamHtml;
 
     el.innerHTML = `
-      <div class="nmh-eyebrow lbl" data-en="Next · ${weekLbl}" data-ko="다음경기 · ${weekLbl}">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</div>
+      <div class="nmh-eyebrow"><span class="lbl" data-en="Next · ${weekLbl}" data-ko="다음경기 · ${weekLbl}">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</span>${ddayTxt ? `<span class="nmh-eyebrow-dday">${ddayTxt}</span>` : ''}</div>
       <div class="nmh-top">
         ${leftTeamHtml}
         <div class="nmh-center">
@@ -2803,7 +2848,53 @@
     if (tg && event.target === tg) { event.preventDefault(); toggleNextMatchPreview(); }
   });
 
+  // ===== 모바일(≤720px): "다음 경기 미리보기"를 위쪽 다음 경기 카드 안의 접이식 영역으로 합침 =====
+  // 같은 경기 정보(상대·홈/원정·D-day)가 두 번 나오던 것을 없애기 위해, 모바일에서는
+  // #nextMatchPreviewCard를 #nextMatchStrip 안쪽으로 옮기고(.nmp-merged), 데스크톱에서는 원래 자리로 되돌립니다.
+  // 렌더 함수가 strip.innerHTML을 통째로 갈아엎기 때문에, 그 전에 카드를 밖으로 빼놓고 렌더 후 다시 넣습니다.
+  const NMP_MOBILE_MQ = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
+  function nmpMoveCardHome(card, strip) {
+    const ticker = document.getElementById('leagueLiveTicker');
+    if (ticker && ticker.parentNode) { ticker.parentNode.insertBefore(card, ticker); return; }
+    const liveBar = document.getElementById('nextMatchLiveBar');
+    if (liveBar && liveBar.parentNode) liveBar.parentNode.insertBefore(card, liveBar.nextSibling);
+    else if (strip && strip.parentNode) strip.parentNode.insertBefore(card, strip.nextSibling);
+  }
+  function nmpDetachCard() {
+    const strip = document.getElementById('nextMatchStrip');
+    const card = document.getElementById('nextMatchPreviewCard');
+    if (strip && card && card.parentNode === strip) nmpMoveCardHome(card, strip);
+  }
+  function nmpPlaceCard() {
+    const strip = document.getElementById('nextMatchStrip');
+    const card = document.getElementById('nextMatchPreviewCard');
+    if (!strip || !card) return;
+    const wantMerged = !!(NMP_MOBILE_MQ && NMP_MOBILE_MQ.matches);
+    const stripHasContent = Array.prototype.some.call(strip.children, c => c !== card);
+    if (wantMerged && stripHasContent) {
+      if (card.parentNode !== strip) strip.appendChild(card);
+      card.classList.add('nmp-merged');
+      strip.classList.add('nms-merged');
+    } else {
+      if (card.parentNode === strip) nmpMoveCardHome(card, strip);
+      card.classList.remove('nmp-merged');
+      strip.classList.remove('nms-merged');
+    }
+  }
+  if (NMP_MOBILE_MQ) {
+    if (NMP_MOBILE_MQ.addEventListener) NMP_MOBILE_MQ.addEventListener('change', nmpPlaceCard);
+    else if (NMP_MOBILE_MQ.addListener) NMP_MOBILE_MQ.addListener(nmpPlaceCard);
+  }
+
+  function renderNextMatchStrip() {
+    nmpDetachCard();
+    try { renderNextMatchStripInner(); } finally { nmpPlaceCard(); }
+  }
   function renderNextMatchPreviewCard() {
+    try { renderNextMatchPreviewCardInner(); } finally { nmpPlaceCard(); }
+  }
+
+  function renderNextMatchPreviewCardInner() {
     const el = document.getElementById('nextMatchPreviewCard');
     if (!el) return;
     try {
@@ -5018,15 +5109,20 @@
         const m = teamMatch;
         const homeName = isKorean ? m.homeKo : m.homeEn;
         const awayName = isKorean ? m.awayKo : m.awayEn;
+        const hLogo = getTeamLogo(m.homeEn);
+        const aLogo = getTeamLogo(m.awayEn);
         html += `
-          <div class="round-match-card round-match-scheduled${m.postponed && !m.movedToWeek ? ' rmc-postponed-card' : ''}">
-            <span class="ti-result-week lbl" data-en="${wkEn(weekNum, 'Week', ' ')}" data-ko="${wkKo(weekNum)}">${weekLabel}</span>
-            ${m.movedToWeek
-              ? `<button type="button" class="rmc-pending-badge rmc-moved-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`
-              : `<span class="rmc-pending-badge${m.postponed ? ' rmc-postponed-badge' : ''} lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
-            <div class="rmc-teams">
-              <div class="rmc-team rmc-home"${teamLinkAttrs(m.homeEn)}><span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span></div>
-              <div class="rmc-team rmc-away"${teamLinkAttrs(m.awayEn)}><span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span></div>
+          <div class="round-match-card round-match-scheduled ti-sched-card${m.postponed && !m.movedToWeek ? ' rmc-postponed-card' : ''}">
+            <div class="ti-sched-head">
+              <span class="ti-result-week lbl" data-en="${wkEn(weekNum, 'Week', ' ')}" data-ko="${wkKo(weekNum)}">${weekLabel}</span>
+              ${m.movedToWeek
+                ? `<button type="button" class="rmc-pending-badge rmc-moved-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`
+                : `<span class="rmc-pending-badge${m.postponed ? ' rmc-postponed-badge' : ''} lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
+            </div>
+            <div class="ti-sched-teams">
+              <div class="rmc-team rmc-home"${teamLinkAttrs(m.homeEn)}>${hLogo ? `<img class="team-logo-sm" src="${hLogo}" alt="${m.homeEn}">` : ''}<span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span></div>
+              <span class="ti-sched-vs" aria-hidden="true">VS</span>
+              <div class="rmc-team rmc-away"${teamLinkAttrs(m.awayEn)}><span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span>${aLogo ? `<img class="team-logo-sm" src="${aLogo}" alt="${m.awayEn}">` : ''}</div>
             </div>
           </div>`;
         return;
@@ -8463,6 +8559,14 @@
     return { remainingGames, title, safety };
   }
 
+  // 표 셀용: PC는 "N점 남음", 모바일은 "N점"으로 짧게 (CSS가 .mn-full / .mn-short 를 전환)
+  function magicNumberCellHtml(entry) {
+    if (entry.number === 0) return isKorean ? '확정' : 'CLINCHED';
+    const full = magicNumberText(entry);
+    const short = isKorean ? `${entry.number}점` : `${entry.number} pts`;
+    return `<span class="mn-full">${full}</span><span class="mn-short">${short}</span>`;
+  }
+
   function magicNumberText(entry) {
     return entry.number === 0 ? (isKorean ? '확정' : 'CLINCHED') : (isKorean ? `${entry.number}점 남음` : `${entry.number} PTS LEFT`);
   }
@@ -8495,7 +8599,10 @@
     if (!context) { tbody.innerHTML = ''; return; }
     tbody.innerHTML = ranked.map((team, index) => {
       const numbers = getTeamMagicNumbers(team, ranked, context);
-      return `<tr><td>${index + 1}</td><td class="magic-number-stats-team"><img class="team-logo team-logo-sm" src="${team.logoSrc}" alt="">${isKorean ? team.nameKo : team.nameEn}</td><td>${numbers.remainingGames}</td><td class="magic-number-title-value">${magicNumberText(numbers.title)}</td><td class="magic-number-safety-value">${magicNumberText(numbers.safety)}</td></tr>`;
+      const fullName = isKorean ? team.nameKo : team.nameEn;
+      const shortName = fullName.split(' ')[0];
+      const isMine = team.nameEn === 'Chizumulu United FC';
+      return `<tr${isMine ? ' class="my-team"' : ''}><td>${index + 1}</td><td class="magic-number-stats-team"><img class="team-logo team-logo-sm" src="${team.logoSrc}" alt=""><span class="mn-name-full">${fullName}</span><span class="mn-name-short">${shortName}</span></td><td>${numbers.remainingGames}</td><td class="magic-number-title-value">${magicNumberCellHtml(numbers.title)}</td><td class="magic-number-safety-value">${magicNumberCellHtml(numbers.safety)}</td></tr>`;
     }).join('');
     attachImageFallback();
     refreshScrollFadeHints();
@@ -9456,14 +9563,29 @@
   function renderStatCatNav() {
     const nav = document.getElementById('statCatNav');
     if (!nav) return;
-    nav.innerHTML = STAT_CATEGORIES.map(cat => {
-      const label = isKorean ? cat.labelKo : cat.labelEn;
-      const tagKo = cat.tier === 'advanced' ? '심화' : (cat.tier === 'bonus' ? '추천' : null);
-      const tagEn = cat.tier === 'advanced' ? 'ADV' : (cat.tier === 'bonus' ? 'BONUS' : null);
-      const tag = cat.tier ? `<span class="cat-tag">${isKorean ? tagKo : tagEn}</span>` : '';
-      const activeCls = cat.id === currentStatCategory ? ' active' : '';
-      return `<div class="stat-cat-pill${activeCls}" data-cat="${cat.id}" onclick="selectStatCategory('${cat.id}')">${label}${tag}</div>`;
+    const group = statGroupOf(currentStatCategory);
+    const groupTabs = STAT_GROUPS.map(g => {
+      const activeCls = g.id === group.id ? ' active' : '';
+      return `<button type="button" class="stat-group-tab${activeCls}" data-group="${g.id}" aria-pressed="${g.id === group.id}" onclick="selectStatGroup('${g.id}')">${isKorean ? g.labelKo : g.labelEn}</button>`;
     }).join('');
+    const pills = group.cats.map(id => {
+      const cat = STAT_CATEGORIES.find(c => c.id === id);
+      if (!cat) return '';
+      const label = isKorean ? cat.labelKo : cat.labelEn;
+      const activeCls = cat.id === currentStatCategory ? ' active' : '';
+      return `<div class="stat-cat-pill${activeCls}" data-cat="${cat.id}" onclick="selectStatCategory('${cat.id}')">${label}</div>`;
+    }).join('');
+    nav.innerHTML = `<div class="stat-group-tabs" role="group">${groupTabs}</div><div class="stat-cat-pills">${pills}</div>`;
+  }
+
+  function selectStatGroup(groupId) {
+    const g = STAT_GROUPS.find(x => x.id === groupId);
+    if (!g) return;
+    statGroupLastCat[statGroupOf(currentStatCategory).id] = currentStatCategory;
+    currentStatCategory = statGroupLastCat[g.id] || g.cats[0];
+    statBoardExpanded = false;
+    renderStatCatNav();
+    renderStatBoard();
   }
 
   // ===== 리그 기록 - 리더보드 카드 렌더 (Stat Board) =====
@@ -9812,7 +9934,7 @@
       const crest = team.logoSrc ? `<img src="${team.logoSrc}" alt="${name}">` : '';
       return `
         <div class="sfs-team-highlight-box">
-          <div class="sfs-team-highlight-team">${crest}<span>${name}</span></div>
+          <div class="sfs-team-highlight-team">${crest}<span class="sfs-th-name"><span class="sfs-th-full">${name}</span><span class="sfs-th-short">${name.split(' ')[0]}</span></span></div>
           <div class="sfs-team-highlight-val">${val}</div>
           <div class="sfs-team-highlight-lbl lbl" data-en="${lblEn}" data-ko="${lblKo}">${isKorean ? lblKo : lblEn}</div>
         </div>`;
@@ -10155,7 +10277,7 @@
                   const mine = r.t.nameEn === 'Chizumulu United FC' ? ' class="my-team"' : '';
                   const logo = r.t.logoSrc ? `<img class="team-logo team-logo-sm" src="${r.t.logoSrc}" alt="${name}">` : '';
                   return `<tr${mine}>
-                    <td class="luck-team">${logo}<span>${name}</span></td>
+                    <td class="luck-team">${logo}<span><span class="stat-name-full">${name}</span><span class="stat-name-short">${name.split(' ')[0]}</span></span></td>
                     <td class="${cls(r.prevLuck)}">${fmt(r.prevLuck)}</td>
                     <td class="${cls(r.ppgDelta)}">${r.ppgDelta > 0.005 ? '▲ ' : (r.ppgDelta < -0.005 ? '▼ ' : '')}${fmt(r.ppgDelta)}</td>
                     <td class="${cls(r.nowLuck)}">${fmt(r.nowLuck)}</td>
@@ -10239,7 +10361,7 @@
     svg.innerHTML = '';
 
     const W = 700, H = 520;
-    const margin = { top: 26, right: 26, bottom: 56, left: 56 };
+    const margin = { top: 16, right: 26, bottom: 56, left: 56 };
     const plotW = W - margin.left - margin.right;
     const plotH = H - margin.top - margin.bottom;
 
