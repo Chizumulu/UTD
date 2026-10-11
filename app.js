@@ -4529,6 +4529,43 @@
     return out;
   }
 
+  // ===== 복수 득점자(멀티골) 처리 =====
+  // 원문은 "Tawonga Chihana×2", "Name x2", "Name (2 goals)", "Name (2)"처럼 한 선수의
+  // 여러 골을 한 번만 적습니다. AI 파서는 이 배수를 버리고 선수를 1명으로만 내려주므로,
+  // 원문 텍스트에서 배수를 직접 읽어 선수에 count로 붙이고, 화면에서는 count만큼 골을 풀어 보여줍니다.
+  function leagueScorerNameKey(name) {
+    return String(name || '').toLowerCase().replace(/[×x]\s*\d+\s*$/i, '').replace(/[^a-z가-힣]/g, '').replace(/h/g, '');
+  }
+  function parseLeagueScorerCounts(item) {
+    const counts = new Map();
+    let text = String((item && item.latestObservation && item.latestObservation.text) || '');
+    if (!text) return counts;
+    text = text
+      .replace(/\(\s*(\d+)\s*(?:goals?|골)\s*\)/gi, '×$1')
+      .replace(/([A-Za-z.'’])\s*\(\s*(\d)\s*\)/g, '$1×$2');
+    for (const token of text.split(/[,\n()]/)) {
+      const mm = token.trim().match(/^(.*?[A-Za-z.'’])\s*(?:×\s*(\d+)|\s[xX]\s*(\d+)|[xX]\s*(\d+))\s*$/);
+      if (!mm) continue;
+      const n = parseInt(mm[2] || mm[3] || mm[4], 10);
+      const key = leagueScorerNameKey(mm[1]);
+      if (key && n >= 2 && n <= 9) counts.set(key, Math.max(counts.get(key) || 0, n));
+    }
+    return counts;
+  }
+  function applyLeagueScorerCounts(ev, counts) {
+    if (!ev || ev.type !== 'goal' || !Array.isArray(ev.players) || !ev.players.length) return ev;
+    let changed = false;
+    const players = ev.players.map(p => {
+      if (!p) return p;
+      const inlineMul = String(p.name || '').match(/[×xX]\s*(\d+)\s*$/);
+      const cleanName = String(p.name || '').replace(/\s*[×xX]\s*\d+\s*$/, '').trim();
+      const n = Math.max(inlineMul ? parseInt(inlineMul[1], 10) : 1, counts.get(leagueScorerNameKey(cleanName)) || 1);
+      if (n > 1 || cleanName !== p.name) { changed = true; return Object.assign({}, p, { name: cleanName, count: n }); }
+      return p;
+    });
+    return changed ? Object.assign({}, ev, { players }) : ev;
+  }
+
   // AI 파서가 "GOAL UPDATE"(진행 중 스코어 알림) 게시물을 결과(result)/full_time으로
   // 잘못 분류하는 경우가 있습니다(같은 원문이 모델에 따라 live 또는 full_time으로 나옴).
   // 원문에 종료를 뜻하는 표현(FULL TIME / FT / FINAL / RESULT)이 없고 "GOAL UPDATE"나
@@ -4571,6 +4608,7 @@
       const ts = (item && item.sourceTimestamp) ? Date.parse(item.sourceTimestamp) : 0;
       // 한 게시물이 여러 경기를 묶어 알리는 경우(결과 모음 등)는 어느 경기 중계인지 알 수 없으므로
       // 경기가 정확히 1개인 live_update만 진행 피드로 씁니다.
+      const scorerCounts = parseLeagueScorerCounts(item);
       const isSingleLiveUpdate = rawMatches.length === 1 && item.structured && item.structured.postType === 'live_update';
       for (const rawM of rawMatches) {
         const m = sanitizeLeagueMatchStatus(rawM, item);
@@ -4603,7 +4641,8 @@
         const rawEvents = Array.isArray(m.events) ? m.events : [];
         let goalMap = goalsByPair.get(pairKey);
         if (!goalMap) { goalMap = new Map(); goalsByPair.set(pairKey, goalMap); }
-        for (const ev of rawEvents) {
+        for (const evRaw of rawEvents) {
+          const ev = applyLeagueScorerCounts(evRaw, scorerCounts);
           if (!ev) continue;
           const scorerName = (ev.players && ev.players[0] && ev.players[0].name) || '';
           // 골은 기존 키 그대로(득점 목록 동작 불변). 골이 아닌 이벤트(경고/퇴장/교체 등)는
@@ -4614,7 +4653,10 @@
             const descKey = String(ev.description || ev.text || ev.detail || ev.note || '').trim().toLowerCase();
             dedupeKey = `evt|${String(ev.type || '').toLowerCase()}|${dedupeKey}|${allNames}|${descKey}`;
           }
-          if (!goalMap.has(dedupeKey)) goalMap.set(dedupeKey, ev);
+          const prevEv = goalMap.get(dedupeKey);
+          const evCount = (ev.players && ev.players[0] && ev.players[0].count) || 1;
+          const prevCount = (prevEv && prevEv.players && prevEv.players[0] && prevEv.players[0].count) || 1;
+          if (!prevEv || evCount > prevCount) goalMap.set(dedupeKey, ev);
         }
       }
     }
@@ -4792,13 +4834,16 @@
 
       const goalsRaw = rawEvents
         .filter(ev => ev && ev.type === 'goal')
-        .map(ev => {
+        .flatMap(ev => {
           const scoringTeamNameEn = resolveLeagueTeamNameEn({ name: ev.team });
-          return {
+          const base = {
             minuteText: ev.minuteText || '',
             scorer: (ev.players && ev.players[0] && ev.players[0].name) || '',
             isHome: !!(scoringTeamNameEn && homeNameEn && scoringTeamNameEn === homeNameEn)
           };
+          // 분 없는 요약 골에 "×2" 같은 배수가 있으면 그 수만큼 골을 풀어서 보여줍니다.
+          const n = Math.max(1, Math.min(9, (ev.players && ev.players[0] && ev.players[0].count) || 1));
+          return Array.from({ length: n }, () => Object.assign({}, base));
         })
         .sort((a, b) => parseMinuteForSort(a.minuteText) - parseMinuteForSort(b.minuteText));
 
