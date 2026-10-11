@@ -4198,6 +4198,33 @@
     return 'active';
   }
 
+  // 킥오프 후 이 시간(90분)이 지나기 전에는 FULL TIME(종료)을 인정하지 않습니다.
+  // 지난 맞대결(1차전) 게시물이나 잘못된 API 상태값이 오늘 경기를 "종료"로 보이게 하는 것을 막습니다.
+  const LEAGUE_MIN_FULL_TIME_MS = 90 * 60 * 1000;
+  function isLeagueFullTimeTooEarly(homeNameEn, awayNameEn, nowMs) {
+    if (!homeNameEn || !awayNameEn) return false;
+    const now = (typeof nowMs === 'number') ? nowMs : Date.now();
+    const pairKey = leagueTeamPairKey(homeNameEn, awayNameEn);
+    let latestStarted = null;
+    for (const source of [
+      (typeof scheduledRounds !== 'undefined') ? scheduledRounds : null,
+      (typeof roundsData !== 'undefined') ? roundsData : null
+    ]) {
+      if (!source) continue;
+      for (const roundKey in source) {
+        const round = source[roundKey];
+        if (!Array.isArray(round)) continue;
+        for (const m of round) {
+          if (!m.homeEn || !m.awayEn || m.postponed) continue;
+          if (leagueTeamPairKey(m.homeEn, m.awayEn) !== pairKey) continue;
+          const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+          if (ms && ms <= now && (latestStarted === null || ms > latestStarted)) latestStarted = ms;
+        }
+      }
+    }
+    return latestStarted !== null && now < latestStarted + LEAGUE_MIN_FULL_TIME_MS;
+  }
+
   // 'before'/'expired'가 아니면(=active 또는 판단 불가) 창에 보여도 되는 경기입니다.
   function isLeagueLiveWindowOpen(windowState) {
     return windowState !== 'before' && windowState !== 'expired';
@@ -4232,10 +4259,12 @@
 
   function dedupeLeagueMatchesByPair(matches) {
     const bestByPair = new Map();
-    for (const m of (matches || [])) {
+    for (let m of (matches || [])) {
       const h = resolveLeagueTeamNameEn(m.homeTeam);
       const a = resolveLeagueTeamNameEn(m.awayTeam);
       if (!h || !a) continue;
+      // 킥오프 후 90분 전의 full_time은 잘못된 값 → 진행 중으로 간주
+      if (m.status === 'full_time' && isLeagueFullTimeTooEarly(h, a)) m = Object.assign({}, m, { status: 'live' });
       const pairKey = leagueTeamPairKey(h, a);
       const prev = bestByPair.get(pairKey);
       if (!prev) { bestByPair.set(pairKey, m); continue; }
@@ -4500,6 +4529,20 @@
     return out;
   }
 
+  // AI 파서가 "GOAL UPDATE"(진행 중 스코어 알림) 게시물을 결과(result)/full_time으로
+  // 잘못 분류하는 경우가 있습니다(같은 원문이 모델에 따라 live 또는 full_time으로 나옴).
+  // 원문에 종료를 뜻하는 표현(FULL TIME / FT / FINAL / RESULT)이 없고 "GOAL UPDATE"나
+  // "LIVE"/"HALF TIME" 같은 진행 표현만 있으면 full_time을 진행 중(live)으로 되돌립니다.
+  function sanitizeLeagueMatchStatus(m, item) {
+    if (!m || m.status !== 'full_time') return m;
+    const text = String((item && item.latestObservation && item.latestObservation.text) || '');
+    if (!text) return m;
+    const hasFinalWord = /full\s*-?\s*time|\bFT\b|final\s+(score|result|whistle)|\bresults?\b|match\s+ended|ended\b/i.test(text);
+    const hasProgressWord = /goal\s*update|live\s*update|half\s*-?\s*time|\bHT\b|second\s+half|1st\s+half|2nd\s+half/i.test(text);
+    if (!hasFinalWord && hasProgressWord) return Object.assign({}, m, { status: 'live' });
+    return m;
+  }
+
   async function fetchLeagueStructuredRecentMatches() {
     const res = await fetch(CHIZUMULU_API_BASE + '/v1/structured?limit=' + CHIZUMULU_STRUCTURED_LIMIT);
     if (!res.ok) {
@@ -4529,7 +4572,8 @@
       // 한 게시물이 여러 경기를 묶어 알리는 경우(결과 모음 등)는 어느 경기 중계인지 알 수 없으므로
       // 경기가 정확히 1개인 live_update만 진행 피드로 씁니다.
       const isSingleLiveUpdate = rawMatches.length === 1 && item.structured && item.structured.postType === 'live_update';
-      for (const m of rawMatches) {
+      for (const rawM of rawMatches) {
+        const m = sanitizeLeagueMatchStatus(rawM, item);
         const homeNameEn = resolveLeagueTeamNameEn({ name: m.homeTeam });
         const awayNameEn = resolveLeagueTeamNameEn({ name: m.awayTeam });
         if (!homeNameEn || !awayNameEn) continue; // 우리 리그 15개 팀끼리의 경기만 대상으로 합니다.
@@ -4630,6 +4674,8 @@
       // 수 있으므로, 킥오프 시각을 모르면 끝없이 떠 있게 될 수 있어 아예 심지 않습니다.
       // (진행 중인 경기는 기존과 같이 킥오프를 몰라도 심습니다.)
       if (isFullTime && windowState === 'unknown') continue;
+      // 킥오프 후 90분 전의 full_time은 지난 맞대결 게시물일 가능성이 높아 심지 않습니다.
+      if (isFullTime && isLeagueFullTimeTooEarly(entry.homeNameEn, entry.awayNameEn, now)) continue;
 
       leagueLiveLastKnownByPair.set(pairKey, {
         ts: now,
@@ -4699,6 +4745,13 @@
       } else if (!isFullTime) {
         const structuredEntry = structuredByPairKey.get(pairKey);
         isFullTime = !!(structuredEntry && structuredEntry.match.status === 'full_time');
+      }
+
+      // 킥오프 후 90분 전에는 종료를 인정하지 않고 진행 중(최근 소식)으로 유지합니다.
+      if (isFullTime && isLeagueFullTimeTooEarly(homeNameEn, awayNameEn)) {
+        isFullTime = false;
+        if (cached.match.status === 'full_time') cached.match = Object.assign({}, cached.match, { status: 'live' });
+        if (detail && detail.status === 'full_time') detail = Object.assign({}, detail, { status: 'live' });
       }
 
       // FULL TIME이 확인돼도 바로 내리지 않습니다 — 킥오프 후 4시간까지는(이 루프 맨 위의
