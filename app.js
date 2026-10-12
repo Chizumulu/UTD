@@ -3655,21 +3655,56 @@
     attachImageFallback();
   }
 
-  // 등번호로 선수 정보를 찾아 얼굴 사진이 들어간 수상 카드 마크업을 반환
+  // ===== 선수 사진 2종 공통 헬퍼 =====
+  // 선수 사진은 두 종류로 나뉘어 있고, 자리 크기에 맞게 골라 씁니다.
+  //  · 세로형(상반신 누끼, 배경 투명): "번호L.png" → 카드처럼 크고 세로로 긴 자리 (playerCardHtml)
+  //  · 얼굴형(배경 포함 크롭):          photoSrc("no번호.png") → 원형 썸네일·칩·표 같은 작은 자리
+  // 카드는 세로형을 먼저 찾고, 없으면 얼굴형으로 자동 대체합니다.
+  // number 는 우리 팀 선수일 때만 넘기세요(다른 팀은 번호가 겹쳐 엉뚱한 사진이 나올 수 있음).
+  window.pcardPhotoNext = function (img) {
+    const rest = (img.dataset.rest || '').split('|').filter(Boolean);
+    if (!rest.length) { img.remove(); return; }
+    img.src = rest.shift();
+    img.dataset.rest = rest.join('|');
+  };
+  window.pcardPhotoLoaded = function (img) {
+    // 세로형(누끼)이면 is-cutout: 카드 배경 위에 몸 전체가 보이도록 contain, 얼굴형은 cover
+    img.classList.toggle('is-cutout', /(^|\/)\d+L\.(png|webp|jpg)$/i.test(img.getAttribute('src') || ''));
+  };
+  function playerCardPhotoHtml(number, faceSrc, alt) {
+    const c = [];
+    if (number !== undefined && number !== null) ['png', 'webp', 'jpg'].forEach(ext => c.push(`${number}L.${ext}`));
+    if (faceSrc) c.push(faceSrc);
+    if (!c.length) return `<div class="pcard-photo pcard-photo-empty">${number != null ? number : '👤'}</div>`;
+    return `<img class="pcard-photo" src="${c[0]}" data-rest="${c.slice(1).join('|')}" alt="${alt || ''}" loading="lazy" onload="pcardPhotoLoaded(this)" onerror="pcardPhotoNext(this)">`;
+  }
+  // 재사용 가능한 세로 선수 카드. opts: { cls, attrs, number, pos, nameKo, nameEn, faceSrc, badgesHtml, footHtml }
+  function playerCardInnerHtml(o) {
+    const name = isKorean ? o.nameKo : o.nameEn;
+    const idHtml = (o.number != null || o.pos)
+      ? `<div class="pcard-id">${o.number != null ? `<b class="pcard-num">${o.number}</b>` : ''}${o.pos ? `<span class="pcard-pos">${o.pos}</span>` : ''}</div>` : '';
+    return `
+        ${idHtml}
+        ${playerCardPhotoHtml(o.number, o.faceSrc, o.nameEn)}
+        ${o.badgesHtml ? `<div class="pcard-badges">${o.badgesHtml}</div>` : ''}
+        <div class="pcard-nameplate">
+          <span class="pcard-name lbl" data-en="${o.nameEn}" data-ko="${o.nameKo}">${name}</span>
+          ${o.footHtml || ''}
+        </div>`;
+  }
+  function playerCardHtml(o) {
+    return `<div class="pcard ${o.cls || ''}" ${o.attrs || ''}>${playerCardInnerHtml(o)}</div>`;
+  }
+
+  // 등번호로 선수 정보를 찾아 세로 카드(상반신 사진) 형태의 수상 카드 마크업을 반환
   function awardPlayerHtml(number, badgeText) {
     const sq = squadData.find(p => p.number === number);
     if (!sq) return '';
-    const name = isKorean ? sq.nameKo : sq.nameEn;
-    const photo = sq.photoSrc
-      ? `<img class="ti-award-card-photo" src="${sq.photoSrc}" alt="${sq.nameEn}">`
-      : `<div class="ti-award-card-photo ti-award-card-photo-placeholder">⭐</div>`;
-    return `
-      <div class="ti-award-card-item" data-player-number="${sq.number}">
-        <div class="ti-award-card-badge">${badgeText}</div>
-        ${photo}
-        <div class="ti-award-card-number">#${sq.number}</div>
-        <div class="ti-award-card-name lbl" data-en="${sq.nameEn}" data-ko="${sq.nameKo}">${name}</div>
-      </div>`;
+    return playerCardHtml({
+      cls: 'pcard-award', attrs: `data-player-number="${sq.number}"`,
+      number: sq.number, pos: sq.position, nameKo: sq.nameKo, nameEn: sq.nameEn, faceSrc: sq.photoSrc,
+      badgesHtml: `<span class="pcard-award-badge">${badgeText}</span>`
+    });
   }
 
   const MONTH_LABELS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -5552,7 +5587,7 @@
     const root = rootEl || document.getElementById('squadView');
     if (!root) return;
     const targets = root.querySelectorAll(
-      '.ti-card, .ti-scorer-card, .ti-award-card-item, .ti-gk-card-item, .squad-card, .ti-section-title, .ti-section-title-row, ' +
+      '.ti-card, .ti-scorer-card, .ti-award-card-item, .ti-gk-card-item, .squad-card, .pcard, .ti-section-title, .ti-section-title-row, ' +
       '.team-magic-number-card, .path-finder-card, .team-points-trend-details, .ti-record-card, .ti-yt-card'
     );
     if (!targets.length) return;
@@ -5728,18 +5763,16 @@
 
       const playerName = isKorean ? player.nameKo : player.nameEn;
       const goalsLabel = isKorean ? '골' : (player.goals === 1 ? 'GOAL' : 'GOALS');
-      const photo = player.photoSrc
-        ? `<img class="ti-scorer-card-photo" src="${player.photoSrc}" alt="${player.nameEn}">`
-        : `<div class="ti-scorer-card-photo ti-scorer-card-photo-placeholder">⚽</div>`;
-
-      cards.push(`
-        <div class="ti-scorer-card rank-${displayRank} player-name-link" data-en="${player.nameEn}" data-ko="${player.nameKo}" data-player-key="${player.key}">
-          <div class="ti-scorer-card-rank">${displayRank}</div>
-          ${photo}
-          <div class="ti-scorer-card-name lbl" data-en="${player.nameEn}" data-ko="${player.nameKo}">${playerName}</div>
-          <div class="ti-scorer-card-goals">${player.goals}<span class="ti-scorer-card-goals-label">${goalsLabel}</span></div>
-        </div>
-      `);
+      // 우리 팀 선수만 번호로 세로형 사진(번호L.png)을 찾고, 다른 팀은 기존 photoSrc(얼굴형)만 씁니다.
+      const mySq = (nameEn === REPORT_TEAM_EN) ? squadData.find(s => s.nameEn === player.nameEn) : null;
+      cards.push(playerCardHtml({
+        cls: `pcard-scorer rank-${displayRank} player-name-link`,
+        attrs: `data-en="${player.nameEn}" data-ko="${player.nameKo}" data-player-key="${player.key}"`,
+        number: mySq ? mySq.number : null, pos: mySq ? mySq.position : '',
+        nameKo: player.nameKo, nameEn: player.nameEn, faceSrc: player.photoSrc,
+        badgesHtml: `<span class="pcard-rank">${displayRank}</span>`,
+        footHtml: `<span class="pcard-goals"><b>${player.goals}</b>${goalsLabel}</span>`
+      }));
     });
 
     return `<div class="ti-scorer-card-row">${cards.join('')}</div>`;
@@ -6429,11 +6462,11 @@
       group.appendChild(title);
 
       const grid = document.createElement('div');
-      grid.className = 'squad-card-grid';
+      grid.className = 'squad-pcard-grid';
 
       players.forEach(p => {
         const card = document.createElement('div');
-        card.className = 'squad-card';
+        card.className = 'pcard squad-pcard';
         const hasNumber = (p.number !== undefined && p.number !== null);
         if (hasNumber) {
           card.dataset.playerNumber = p.number;
@@ -6456,27 +6489,12 @@
             : (isKorean ? '임대' : 'On Loan');
           badges.push(`<span class="squad-band squad-band-loan lbl" data-en="Loan" data-ko="임대" title="${loanTitle}">${isKorean ? '임대' : 'Loan'}</span>`);
         }
-        const badge = badges.length ? `<div class="squad-card-badges">${badges.join('')}</div>` : '';
 
-        const playerName = isKorean ? p.nameKo : p.nameEn;
-
-        const numberHtml = hasNumber
-          ? `<div class="squad-card-number">${p.number}</div>`
-          : `<div class="squad-card-number squad-card-number-none" title="${isKorean ? '등번호 미정' : 'Number TBD'}">-</div>`;
-
-        const photo = p.photoSrc
-          ? `<img class="squad-card-photo" src="${p.photoSrc}" alt="${p.nameEn}">`
-          : `<div class="squad-card-photo squad-card-photo-placeholder">${hasNumber ? p.number : (p.nameEn ? p.nameEn.charAt(0) : '?')}</div>`;
-
-        card.innerHTML = `
-          ${numberHtml}
-          ${photo}
-          <div class="squad-card-body">
-            <div class="squad-card-name lbl" data-en="${p.nameEn}" data-ko="${p.nameKo}">${playerName}</div>
-            <div class="squad-card-pos">${pos}</div>
-          </div>
-          ${badge}
-        `;
+        card.innerHTML = playerCardInnerHtml({
+          number: hasNumber ? p.number : null, pos: p.position,
+          nameKo: p.nameKo, nameEn: p.nameEn, faceSrc: p.photoSrc,
+          badgesHtml: badges.join('')
+        });
         grid.appendChild(card);
       });
 
@@ -12249,11 +12267,47 @@
 
     const photoImgEl = document.getElementById('squadPlayerModalPhoto');
     const photoFallbackEl = document.getElementById('squadPlayerModalPhotoFallback');
-    photoImgEl.src = player.photoSrc || '';
+    // 세로형 사진("번호L.확장자", 예: 9L.png)이 있으면 우선 쓰고(세로 카드형 디자인),
+    // 없으면 기존 photoSrc(원형 디자인)로 돌아갑니다. 전 선수(F번호)는 번호가 겹칠 수 있어 L 사진을 찾지 않습니다.
+    const photoWrapEl = photoImgEl.closest('.spm-photo-wrap');
+    const modalLeftEl = document.getElementById('squadPlayerModalLeft');
+    const portraitCands = [];
+    if (hasNumber && !isFormerPlayer) LINEUP_PHOTO_EXTS.forEach(ext => portraitCands.push(`${player.number}L.${ext}`));
+    const fallbackSrc = player.photoSrc || '';
+    const photoTok = (photoImgEl._spmTok = (photoImgEl._spmTok || 0) + 1);
+    const setPortraitMode = (on) => {
+      if (photoWrapEl) photoWrapEl.classList.toggle('is-portrait', on);
+      if (modalLeftEl) modalLeftEl.classList.toggle('has-portrait', on);
+    };
+    const showFallbackPhoto = () => {
+      setPortraitMode(false);
+      photoImgEl.onload = null; photoImgEl.onerror = null;
+      photoImgEl.src = fallbackSrc;
+      photoImgEl.style.display = fallbackSrc ? '' : 'none';
+      photoFallbackEl.style.display = fallbackSrc ? 'none' : '';
+      photoFallbackEl.textContent = fallbackSrc ? '' : (hasNumber ? player.number : (player.nameEn ? player.nameEn.charAt(0) : '?'));
+    };
+    const tryPortrait = (i) => {
+      if (photoTok !== photoImgEl._spmTok) return;
+      if (i >= portraitCands.length) { showFallbackPhoto(); return; }
+      photoImgEl.onload = () => {
+        if (photoTok !== photoImgEl._spmTok) return;
+        setPortraitMode(true);
+        photoImgEl.style.display = '';
+        photoFallbackEl.style.display = 'none';
+      };
+      photoImgEl.onerror = () => tryPortrait(i + 1);
+      photoImgEl.src = portraitCands[i];
+    };
     photoImgEl.alt = player.nameEn;
-    photoImgEl.style.display = player.photoSrc ? '' : 'none';
-    photoFallbackEl.style.display = player.photoSrc ? 'none' : '';
-    photoFallbackEl.textContent = player.photoSrc ? '' : (hasNumber ? player.number : (player.nameEn ? player.nameEn.charAt(0) : '?'));
+    if (portraitCands.length) {
+      setPortraitMode(false);
+      photoImgEl.style.display = 'none';      // 세로 사진을 찾는 동안 깜빡임 방지
+      photoFallbackEl.style.display = 'none';
+      tryPortrait(0);
+    } else {
+      showFallbackPhoto();
+    }
 
     document.getElementById('squadPlayerModalNumberChip').textContent = hasNumber ? player.number : '-';
     document.getElementById('squadPlayerModalLeft').setAttribute('data-num', hasNumber ? player.number : '-');
@@ -12678,7 +12732,7 @@
   }
 
   document.addEventListener('click', function(event) {
-    const card = event.target.closest('.squad-card');
+    const card = event.target.closest('.squad-card, .squad-pcard');
     if (card && (card.dataset.playerNumber || card.dataset.playerKey)) {
       openSquadPlayerModal(card.dataset.playerNumber || card.dataset.playerKey);
     }
@@ -12699,7 +12753,7 @@
   });
 
   document.addEventListener('click', function(event) {
-    const awardCard = event.target.closest('.ti-award-card-item');
+    const awardCard = event.target.closest('.ti-award-card-item, .pcard-award');
     if (awardCard && awardCard.dataset.playerNumber) {
       openSquadPlayerModal(awardCard.dataset.playerNumber);
     }
@@ -12920,6 +12974,29 @@
     GK:  [50, 88]
   };
 
+  // 카드형 경기장 보기 전용 좌표(%). 카드가 세로로 커서 행 간격을 넓게 잡았습니다(위쪽이 공격 방향).
+  // 키는 PITCH_COORDS와 같아야 합니다(canField 판정이 PITCH_COORDS 기준).
+  const PITCH_CARD_COORDS = {
+    ST:  [50, 9],  CF: [50, 9],  LS: [36, 9],  RS: [64, 9],
+    LW:  [14, 27], CAM: [50, 27], RW: [86, 27], LAM: [32, 27], RAM: [68, 27],
+    LM:  [13, 45], RM: [87, 45],
+    LCM: [37, 45], RCM: [63, 45], CM: [50, 45],
+    LDM: [37, 60], RDM: [63, 60], CDM: [50, 60],
+    LWB: [12, 64], RWB: [88, 64],
+    LB:  [13, 77], LCB: [37, 77], CB: [50, 77], RCB: [63, 77], RB: [87, 77],
+    GK:  [50, 92]
+  };
+
+  // 카드 사진 파일 확장자 탐색 순서. 쓰는 확장자만 남기면 불필요한 404 요청이 줄어듭니다.
+  const LINEUP_PHOTO_EXTS = ['png', 'webp', 'jpg'];
+  // 사진 로드 실패 시 data-rest의 다음 후보로 넘어가고, 후보가 없으면 이미지를 제거합니다.
+  window.ppCardPhotoNext = function (img) {
+    const rest = (img.dataset.rest || '').split('|').filter(Boolean);
+    if (!rest.length) { img.remove(); return; }
+    img.src = rest.shift();
+    img.dataset.rest = rest.join('|');
+  };
+
   function renderLineupField(lineup) {
     const isKo = isKorean;
     const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
@@ -12934,57 +13011,186 @@
       const sq = lookup(ev);
       return (sq && sq.nameEn) || ev.nameEn || ev.nameKo;
     };
-    const timeOf = (t) => (t && t !== '-') ? t : '';
 
-    const slots = lineup.starters.map(st => {
-      const [x, y] = PITCH_COORDS[st.pos];
+    // 실제로 쓰이는 행(y)만 골라 위(9.5%)~아래(90.5%) 사이에 고르게 펼칩니다(행 사이 간격 최대 22%).
+    const rowYs = Array.from(new Set(lineup.starters.map(st => (PITCH_CARD_COORDS[st.pos] || PITCH_COORDS[st.pos])[1]))).sort((a, b) => a - b);
+    const rowGap = rowYs.length > 1 ? Math.min(22, 81 / (rowYs.length - 1)) : 0;
+    const rowTop = 90.5 - rowGap * (rowYs.length - 1);
+    const spreadY = (y) => rowTop + rowGap * rowYs.indexOf(y);
+
+    // ----- PC(가로로 넓은 경기장) 전용 좌표 -----
+    // 비슷한 높이(y 5% 이내)의 포지션은 한 줄로 묶고, 줄 안에서는 왼쪽→오른쪽 순서로 균등 배치합니다.
+    // 줄 사이 간격은 최대 26%, 맨 아래(GK)는 92%에 고정합니다.
+    // 카드에는 성을 빼고 이름(첫 단어)만 표시합니다. 한 단어짜리 이름은 그대로 둡니다.
+    const givenName = (full) => String(full || '').trim().split(/\s+/)[0];
+    const pcRaw = lineup.starters.map(st => {
+      const c = PITCH_CARD_COORDS[st.pos] || PITCH_COORDS[st.pos];
+      return { st, x: c[0], y: c[1] };
+    }).sort((a, b) => a.y - b.y || a.x - b.x);
+    const pcRows = [];
+    pcRaw.forEach(r => {
+      const last = pcRows[pcRows.length - 1];
+      if (last && r.y - last.y <= 5) last.items.push(r); else pcRows.push({ y: r.y, items: [r] });
+    });
+    pcRows.forEach(row => row.items.sort((a, b) => a.x - b.x));   // 같은 줄 안에서는 왼쪽→오른쪽
+    // 카드 폭(%)과 높이(%)를 먼저 정하고, 맨 위/아래 카드가 경기장 밖으로 나가지 않도록 줄 위치를 잡습니다.
+    const pcCardW = pcRows.length >= 6 ? 10.5 : pcRows.length === 5 ? 12.5 : 16;
+    const pcHalfH = pcCardW * 1.5 / 2;              // 경기장 1.2:1, 카드 4:5 비율 기준(높이% = 폭% × 1.5)
+    const pcTop = pcHalfH + 2, pcBottom = 100 - pcHalfH - 2;
+    const pcGap = pcRows.length > 1 ? Math.min(28, (pcBottom - pcTop) / (pcRows.length - 1)) : 0;
+    const pcSpacing = (n) => n <= 1 ? 0 : n === 2 ? 28 : n === 3 ? 26 : n === 4 ? 23.5 : n === 5 ? 19 : 16;
+    const pcPos = new Map();
+    pcRows.forEach((row, ri) => {
+      const py = pcRows.length === 1 ? 50 : pcBottom - pcGap * (pcRows.length - 1 - ri);
+      const sp = pcSpacing(row.items.length);
+      row.items.forEach((r, i) => {
+        pcPos.set(r.st, [50 + (i - (row.items.length - 1) / 2) * sp, py]);
+      });
+    });
+    const flagOf = (sq) => (sq && sq.nationalBadge && typeof getNationalFlagSvg === 'function')
+      ? getNationalFlagSvg(sq.nationalBadge.flag) : '';
+
+    const cards = lineup.starters.map(st => {
+      const [x, rawY] = PITCH_CARD_COORDS[st.pos] || PITCH_COORDS[st.pos];
+      const y = spreadY(rawY);
+      const [px, py] = pcPos.get(st) || [x, y];
       const sq = lookup(st);
       const link = st.statKey || st.number;
       const goalN = (st.goals || []).length;
       const assistN = lineupAssistsMade(lineup, link);
       const subs = (lineup.subsIn || []).filter(s => s.pos === st.pos);
 
-      const photo = (sq && sq.photoSrc)
-        ? `<img class="pp-photo" src="${sq.photoSrc}" alt="" onerror="this.remove()">` : '';
+      // 카드용 세로 사진: "선수넘버L.확장자"(예: 4L.png, 9L.png)를 먼저 찾고,
+      // 없으면 확장자를 바꿔가며 시도한 뒤, 마지막으로 기존 photoSrc(no4.png 등)를 씁니다.
+      // 전 선수(F번호)는 번호가 현재 선수와 겹칠 수 있어 L 사진을 찾지 않습니다.
+      const isFormerKey = typeof st.statKey === 'string' && /^F\d+$/.test(st.statKey);
+      const photoCandidates = [];
+      if (!isFormerKey && st.number != null) LINEUP_PHOTO_EXTS.forEach(ext => photoCandidates.push(`${st.number}L.${ext}`));
+      if (sq && sq.photoSrc) photoCandidates.push(sq.photoSrc);
+      const photo = photoCandidates.length
+        ? `<img class="pp-card-photo" src="${photoCandidates[0]}" data-rest="${photoCandidates.slice(1).join('|')}" alt="" loading="lazy" onerror="ppCardPhotoNext(this)">` : '';
       const badges = [
-        st.captain ? `<span class="pp-badge pp-badge-c">C</span>` : '',
-        st.outMin ? `<span class="pp-badge pp-badge-out" title="${isKo ? '교체 아웃' : 'Subbed off'}">▼</span>` : '',
-        goalN ? `<span class="pp-badge pp-badge-goal">⚽${goalN > 1 ? goalN : ''}</span>` : '',
+        st.captain ? `<span class="pp-badge pp-badge-c" title="${isKo ? '주장' : 'Captain'}">C</span>` : '',
+        goalN ? `<span class="pp-badge pp-badge-goal" title="${isKo ? '득점' : 'Goal'}">⚽${goalN > 1 ? goalN : ''}</span>` : '',
         assistN ? `<span class="pp-badge pp-badge-assist" title="${isKo ? '도움' : 'Assist'}">A${assistN > 1 ? assistN : ''}</span>` : '',
-        `<span class="pp-badge pp-badge-num">${st.number}</span>`
+        st.outMin ? `<span class="pp-badge pp-badge-out" title="${isKo ? '교체 아웃' : 'Subbed off'}">▼</span>` : ''
       ].join('');
 
-      const subsHtml = subs.map(s => {
-        const sg = (s.goals || []).length;
-        const sa = lineupAssistsMade(lineup, s.statKey || s.number);
-        const tm = timeOf(s.inMin);
-        return `<div class="pp-sub lineup-squad-link" data-player-number="${s.statKey || s.number}">▲ ${nameOf(s)}${tm ? `<small>${tm}</small>` : ''}${sg ? ' ⚽' + (sg > 1 ? sg : '') : ''}${sa ? ' A' + (sa > 1 ? sa : '') : ''}${s.outMin ? ' ▼' : ''}</div>`;
+      const subsHtml = subs.map(sb => {
+        const sg = (sb.goals || []).length;
+        const sa = lineupAssistsMade(lineup, sb.statKey || sb.number);
+        return `<span class="pp-card-sub">▲ ${nameOf(sb)}${sg ? ' ⚽' + (sg > 1 ? sg : '') : ''}${sa ? ' A' + (sa > 1 ? sa : '') : ''}</span>`;
       }).join('');
 
       return `
-        <div class="pp-slot" style="left:${x}%;top:${y}%;">
-          <div class="pp-player lineup-squad-link${st.outMin ? ' pp-player-out' : ''}" data-player-number="${link}">
-            <div class="pp-marker"><span class="pp-ph">${st.number}</span>${photo}${badges}</div>
-            <div class="pp-name">${nameOf(st)}${st.injury ? ' 🩹' : ''}</div>
+        <div class="pp-slot" style="--mx:${x}%;--my:${y}%;--px:${px.toFixed(2)}%;--py:${py.toFixed(2)}%;">
+          <div class="pp-card lineup-squad-link${st.outMin ? ' pp-card-out' : ''}${st.pos === 'GK' ? ' pp-card-gk' : ''}" data-player-number="${link}">
+            <div class="pp-card-id"><b class="pp-card-num">${st.number != null ? st.number : ''}</b><span class="pp-card-pos">${st.pos}</span>${st.captain ? `<span class="pp-card-cap" title="${isKo ? '주장' : 'Captain'}">C</span>` : ''}</div>
+            ${photo}
+            <div class="pp-card-badges">${badges}</div>
+            <div class="pp-card-nameplate">
+              <span class="pp-card-name">${givenName(nameOf(st))}${st.injury ? ' 🩹' : ''}</span>
+              ${subsHtml}
+            </div>
           </div>
-          ${subsHtml}
         </div>`;
     }).join('');
 
     const lines = `
-      <svg class="pp-lines" viewBox="0 0 68 92" preserveAspectRatio="none" aria-hidden="true">
-        <g fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="0.35">
-          <rect x="2" y="2" width="64" height="88"/>
-          <line x1="2" y1="46" x2="66" y2="46"/>
-          <circle cx="34" cy="46" r="7.5"/>
-          <rect x="13.5" y="2" width="41" height="16.5"/>
-          <rect x="24" y="2" width="20" height="5.5"/>
-          <rect x="13.5" y="73.5" width="41" height="16.5"/>
-          <rect x="24" y="84.5" width="20" height="5.5"/>
+      <svg class="pp-lines" viewBox="0 0 68 100" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="0.35">
+          <rect x="2" y="2" width="64" height="96"/>
+          <line x1="2" y1="50" x2="66" y2="50"/>
+          <circle cx="34" cy="50" r="8"/>
+          <rect x="13.5" y="2" width="41" height="16"/>
+          <rect x="24" y="2" width="20" height="6"/>
+          <rect x="13.5" y="82" width="41" height="16"/>
+          <rect x="24" y="92" width="20" height="6"/>
         </g>
-        <circle cx="34" cy="46" r="0.6" fill="rgba(255,255,255,0.7)"/>
       </svg>`;
-    return `<div class="lineup-field">${lines}${slots}</div>`;
+
+    // PC용 가로형 경기장 선(120×100). 하프라인 쪽 절반(센터서클 아래쪽)과 아래쪽 페널티 지역만 보여줍니다.
+    const linesPc = `
+      <svg class="pp-lines pp-lines-pc" viewBox="0 0 120 100" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="0.45" stroke-linecap="round">
+          <line x1="0" y1="7.5" x2="120" y2="7.5"/>
+          <path d="M43 7.5 A17 17 0 0 0 77 7.5"/>
+          <rect x="25" y="70" width="70" height="40"/>
+          <rect x="41" y="88" width="38" height="22"/>
+          <path d="M47 70 A14 14 0 0 1 73 70"/>
+          <path d="M0 94 A6 6 0 0 0 6 100"/>
+          <path d="M120 94 A6 6 0 0 1 114 100"/>
+        </g>
+      </svg>`;
+
+    // 교체명단(왼쪽 패널용): 교체 투입 + 미출전 벤치를 GK→DF→MF→FW, 번호순으로 정렬
+    const groupOfPos = (pos) => {
+      if (pos === 'GK') return 'GK';
+      if (/B$/.test(pos)) return 'DF';
+      if (/^(ST|CF|LS|RS|LW|RW)$/.test(pos)) return 'FW';
+      return 'MF';
+    };
+    const groupOrder = { GK: 0, DF: 1, MF: 2, FW: 3 };
+    const benchRaw = [];
+    (lineup.subsIn || []).forEach(sb => benchRaw.push({
+      key: sb.statKey || sb.number, number: sb.number, sq: lookup(sb), pos: sb.pos,
+      name: nameOf(sb), used: true,
+      goalN: (sb.goals || []).length, assistN: lineupAssistsMade(lineup, sb.statKey || sb.number)
+    }));
+    (lineup.subsUnused || []).forEach(num => {
+      const isFormerKey = typeof num === 'string' && /^F\d+$/.test(num);
+      const dispNum = isFormerKey ? parseInt(num.slice(1), 10) : num;
+      const sq = isFormerKey ? former.find(p => p.number === dispNum) : squadData.find(p => p.number === num);
+      benchRaw.push({
+        key: num, number: dispNum, sq, pos: sq && sq.position,
+        name: sq ? (isKo ? sq.nameKo : sq.nameEn) : String(dispNum), used: false
+      });
+    });
+    const benchRows = benchRaw.map(b => ({
+      ...b, group: (b.sq && b.sq.position) || groupOfPos(b.pos || '')
+    })).sort((a, b) => (groupOrder[a.group] - groupOrder[b.group]) || ((a.number || 0) - (b.number || 0)))
+      .map(b => `
+          <li class="lineup-side-row lineup-squad-link${b.used ? ' is-used' : ''}" data-player-number="${b.key}">
+            <span class="lsr-num">${b.number != null ? b.number : ''}</span>
+            <span class="lsr-pos">${b.group}</span>
+            <span class="lsr-name">${b.name}</span>
+            ${b.goalN ? `<span class="lsr-tag" title="${isKo ? '득점' : 'Goal'}">⚽${b.goalN > 1 ? b.goalN : ''}</span>` : ''}
+            ${b.assistN ? `<span class="lsr-tag lsr-tag-a" title="${isKo ? '도움' : 'Assist'}">A${b.assistN > 1 ? b.assistN : ''}</span>` : ''}
+            ${b.used ? `<span class="lsr-in" title="${isKo ? '교체 투입' : 'Subbed on'}">▲</span>` : ''}
+          </li>`).join('');
+
+    // 상단 팀 헤더: 구단 로고 / 팀명 / 감독 (staffData의 "감독" 첫 번째 인물)
+    const logo = (typeof getTeamLogo === 'function') ? getTeamLogo(REPORT_TEAM_EN) : '';
+    const coachGroup = (typeof staffData !== 'undefined' ? staffData : []).find(g => g.roleEn === 'Head Coach');
+    const coach = coachGroup && coachGroup.people && coachGroup.people[0];
+    const coachName = coach ? (isKo ? coach.nameKo : coach.nameEn) : '';
+    const teamName = isKo ? REPORT_TEAM_KO : REPORT_TEAM_EN;
+    const head = `
+      <div class="lineup-board-head">
+        ${logo ? `<img class="lineup-board-logo" src="${logo}" alt="" onerror="this.remove()">` : ''}
+        <div class="lineup-board-team">
+          <div class="lineup-board-name">${teamName}</div>
+          ${coachName ? `<div class="lineup-board-coach">${isKo ? '감독' : 'Head Coach'} ${coachName}</div>` : ''}
+        </div>
+        <div class="lineup-board-form">${String(lineup.formation || '').split('-').join(' · ')}</div>
+      </div>`;
+
+    // PC 전용 왼쪽 팀 패널(모바일에서는 CSS로 숨김): 로고 / 팀명 / 감독 / 교체명단 / 포메이션
+    const side = `
+      <aside class="lineup-side">
+        <div class="lineup-side-top">
+          ${logo ? `<img class="lineup-side-logo" src="${logo}" alt="" onerror="this.remove()">` : ''}
+          <div class="lineup-side-team">${teamName}</div>
+          ${coachName ? `<div class="lineup-side-coach"><span>${isKo ? '감독' : 'Head Coach'}</span><b>${coachName}</b></div>` : ''}
+        </div>
+        <div class="lineup-side-bench">
+          <div class="lineup-side-title">${isKo ? '교체명단' : 'Substitutes'}</div>
+          <ul class="lineup-side-list">${benchRows || `<li class="lineup-side-empty">${isKo ? '없음' : 'None'}</li>`}</ul>
+        </div>
+        <div class="lineup-side-form">${String(lineup.formation || '').split('-').join(' · ')}</div>
+      </aside>`;
+
+    return `<div class="lineup-board">${head}${side}<div class="lineup-field-wrap"><div class="lineup-field" style="--pcw:${pcCardW}%;">${lines.replace('class="pp-lines"', 'class="pp-lines pp-lines-m"')}${linesPc}${cards}</div></div></div>`;
   }
 
   function renderLineupLeft(lineup) {
