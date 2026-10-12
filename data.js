@@ -1389,25 +1389,34 @@ const upcomingMatchHistory = {
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
+  // 15주차 (전반기 마지막 정규 라운드). 10월 15일(목) 루베 vs 젠다는 11주차에서 연기됐던 경기입니다.
+  // 치하메 vs 친테체는 연기경기주차(10월 24일)로 변경되어 아래에 자리표시자만 남겨뒀습니다.
+  // 치주물루는 15주차 휴식(bye)이며, 13주차에서 연기된 비전전은 연기경기주차(10월 23일)에 열립니다.
   round15: [
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-17", kickoffTime: "14:30" },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-17", kickoffTime: "14:30" },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-17", kickoffTime: "14:30" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-18", kickoffTime: "14:30" },
-    // 13주차에서 연기됐던 치주물루 vs 비전 S 아카데미 경기가 15주차 홈 경기(10월 16일 금요일)로 확정되었습니다.
-    // 치주물루의 15주차 휴식(bye) 자리를 이 경기가 대신합니다.
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-16", kickoffTime: "15:00", movedFromWeek: 13, changed: true }
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-15", kickoffTime: "15:00", movedFromWeek: 11 },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-17", kickoffTime: "15:00" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-17", kickoffTime: "15:00" },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-17", kickoffTime: "15:00" },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", postponed: true, movedToWeek: 16, changed: true },
+    // 치주물루 유나이티드 FC는 15주차 휴식(bye)입니다.
+    { byeKo: "치주물루 유나이티드 FC", byeEn: "Chizumulu United FC" }
   ],
-  // ── 연기경기주차 (정규 15주차와 정규 16주차 사이) ──
-  // 9주차에서 연기됐던 치주물루 vs 루비리 경기를 15주차(비전전) 다음 경기로 잡아둔 보충 주차입니다.
+  // ── 연기경기주차 (정규 15주차와 정규 16주차 사이, 10월 20일~24일) ──
   // 화면에는 "연기경기주차"로 표시되고(MAKEUP_ROUND_KEYS 참고), 정규 16주차 일정은 round17 키에 입력해주세요.
-  // 정확한 날짜/시간은 아직 미정이라 kickoffDate/kickoffTime을 비워뒀습니다 — 확정되면
-  // kickoffDate: "YYYY-MM-DD", kickoffTime: "HH:MM" 만 추가해주세요.
+  //  - 치주물루 vs 루비리: 9주차에서 연기
+  //  - 칠룸바 vs 치하메: 12주차에서 연기
+  //  - 치주물루 vs 비전 S: 13주차에서 일정 변경
+  //  - 마푸 vs 칠룸바: 13주차에서 연기
+  //  - 치하메 vs 친테체: 15주차에서 일정 변경
   round16: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", movedFromWeek: 9 }
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-20", kickoffTime: "15:00", movedFromWeek: 9 },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-21", kickoffTime: "15:00", movedFromWeek: 12 },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-23", kickoffTime: "15:00", movedFromWeek: 13, changed: true },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13 },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 15, changed: true }
   ]
 };
 
@@ -1560,7 +1569,7 @@ const roundsData = {
   round11: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true, movedToWeek: 13 },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "ALBERT KAUNDA", scorersAway: "없음" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", postponed: true },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", postponed: true, movedToWeek: 15 },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 5, awayScore: 0, scorersHome: "YAMIKANI NYIRENDA, JASON ZIMBA, JONATHAN MGUNTHA, KONDWANI CHIRWA, MOFFAT MVULA", scorersAway: "없음" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-19", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "NORMAN NDLOVU (2골), PRECIOUS MWANZA", scorersAway: "MISHECK SILVESTER" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-19", kickoffTime: "14:30", homeScore: 3, awayScore: 5, scorersHome: "FRANK KAUNDA (3골)", scorersAway: "LUKE JERE (3골), LEVISON SILUNGWE, BENSON KACHALI" },
@@ -1575,7 +1584,7 @@ const roundsData = {
   // 채워지면 postponed를 지우고 matchDetails.round12 목록 맨 뒤에 추가해주세요.)
   round12: [
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "BORNFACE MWANDIRA, JOMO PHIRI", scorersAway: "TEMWA NDHLOVU, SIMEONE PHIRI, MATHEWS NUNDWE" },
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", postponed: true },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", postponed: true, movedToWeek: 16 },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-26", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "GREEN MWALE", scorersAway: "없음" },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "SOLOMON MANDA, JONATHAN PHIRI", scorersAway: "없음" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", postponed: true, movedToWeek: 13 },
@@ -1586,16 +1595,16 @@ const roundsData = {
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-23", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 4, awayScore: 0, scorersHome: "WANANGWA GONDWE, DEUS NKUTU, BENJAMIN MAPUNDA (2골)", scorersAway: "없음" }
   ],
   // 13주차는 전체 라운드가 종료되어 roundsData.round13으로 옮겨졌습니다.
-  // 단, 치주물루 vs 비전(15주차로 이동)과 마푸 vs 칠룸바는 연기(postponed)되어 스코어가 아직 없습니다.
+  // 단, 치주물루 vs 비전(연기경기주차로 이동)과 마푸 vs 칠룸바는 연기(postponed)되어 스코어가 아직 없습니다.
   // (새 날짜가 확정되고 스코어가 채워지면 postponed를 지우고 matchDetails.round13 목록 맨 뒤에 추가해주세요.)
   round13: [
-    // 13주차 치주물루 vs 비전 S 아카데미 경기는 연기되어 15주차(10월 13일)로 옮겨졌습니다.
-    // (15주차 쪽 항목에 movedFromWeek: 13이 있고, 이쪽에는 changed + movedToWeek로 "변경됨" 배지가 표시됩니다.)
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", postponed: true, movedToWeek: 15, changed: true },
+    // 13주차 치주물루 vs 비전 S 아카데미 경기는 연기경기주차(10월 23일)로 옮겨졌습니다.
+    // (연기경기주차 쪽 항목에 movedFromWeek: 13이 있고, 이쪽에는 changed + movedToWeek로 "변경됨" 배지가 표시됩니다.)
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", postponed: true, movedToWeek: 16, changed: true },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 0, awayScore: 2, scorersHome: "없음", scorersAway: "ZIKANI KASAMBALA, MIKE LUHANGA" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 2, scorersHome: "TYGO GOMEKA, ALLAN NKHONJERA", scorersAway: "TYSON NYIRONGO, ABRAHAM MVULA" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-04", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "PEARSON NYIRENDA, ZAKALIA MPHAMBA", scorersAway: "없음" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true, movedToWeek: 16 },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FRANK KAUNDA, ROBIN CHIOKO", scorersAway: "HENDERSON KANYIKA (2골), PETER LUNGU" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-04", kickoffTime: "14:30", homeScore: 1, awayScore: 3, scorersHome: "EDSON NYIRENDA", scorersAway: "WYSON NYIRENDA, CHISOMO MYEGHA (2골)" },
     { byeKo: "친테체 유나이티드 FC", byeEn: "Chintheche United FC" },
@@ -1904,10 +1913,8 @@ function applyComputedLeagueStats() {
   scheduledKeysSorted.forEach(roundKey => {
     (scheduledRounds[roundKey] || []).forEach(m => {
       if (m.byeKo || m.byeEn) {
-        const nameEn = m.byeEn;
-        if (nameEn && stats[nameEn] && !nextMatchFound[nameEn]) {
-          nextMatchFound[nameEn] = { isBye: true };
-        }
+        // 휴식(bye) 라운드는 "다음 경기" 후보로 잡지 않고 건너뜁니다.
+        // (휴식주차라도 다음 경기 영역에는 그 이후 실제 경기가 보이도록)
         return;
       }
       if (!m.homeEn || !m.awayEn) return;
@@ -2314,10 +2321,8 @@ function computeNextMatchPreview(nameEn, nameKo) {
     const roundKey = scheduledKeysSorted[i];
     const matches = scheduledRounds[roundKey] || [];
 
-    const byeEntry = matches.find(m => (m.byeKo || m.byeEn) && (m.byeEn === nameEn || m.byeKo === nameKo));
-    if (byeEntry) {
-      return { isBye: true, roundKey };
-    }
+    // 휴식(bye) 라운드는 "다음 경기"로 잡지 않고 건너뛰어, 그 이후 실제 경기를 보여줍니다.
+    // (아래 candidates 필터가 bye 항목을 이미 제외하므로 별도 처리가 필요 없습니다.)
 
     // 재편성(movedFromWeek)으로 같은 팀의 경기가 한 주차에 둘 이상일 수 있습니다
     // (예: 원래 경기는 연기, 다른 주차에서 연기된 경기가 새로 들어옴). 첫 번째 경기만 보면
@@ -2455,19 +2460,22 @@ function computeFixtureDifficulty(nameEn, nameKo, count) {
   scheduledKeysSorted.forEach(roundKey => {
     if (fixtures.length >= n) return;
     const matches = scheduledRounds[roundKey] || [];
-    const found = matches.find(m => !(m.byeKo || m.byeEn) &&
-      (m.homeEn === nameEn || m.homeKo === nameKo || m.awayEn === nameEn || m.awayKo === nameKo));
-    if (!found) return;
+    // 재편성(movedFromWeek)·연기경기주차로 한 라운드에 같은 팀 경기가 둘 이상일 수 있으므로
+    // 첫 경기만 쓰지 않고 아직 안 치른 경기를 전부 킥오프 순으로 넣습니다.
+    const mine = matches.filter(m => !(m.byeKo || m.byeEn) &&
+      (m.homeEn === nameEn || m.homeKo === nameKo || m.awayEn === nameEn || m.awayKo === nameKo))
+      .filter(m => !(typeof m.homeScore === 'number' && typeof m.awayScore === 'number') && !m.postponed)
+      .sort((a, b) => ((a.kickoffDate || '9999') + ' ' + (a.kickoffTime || '')).localeCompare((b.kickoffDate || '9999') + ' ' + (b.kickoffTime || '')));
 
-    const alreadyPlayed = typeof found.homeScore === 'number' && typeof found.awayScore === 'number';
-    if (alreadyPlayed || found.postponed) return;
+    mine.forEach(found => {
+      if (fixtures.length >= n) return;
+      const isHome = found.homeEn === nameEn || found.homeKo === nameKo;
+      const oppEn = isHome ? found.awayEn : found.homeEn;
+      const oppKo = isHome ? found.awayKo : found.homeKo;
 
-    const isHome = found.homeEn === nameEn || found.homeKo === nameKo;
-    const oppEn = isHome ? found.awayEn : found.homeEn;
-    const oppKo = isHome ? found.awayKo : found.homeKo;
-
-    const single = computeSingleFixtureDifficulty(oppEn, oppKo, isHome, rankOf);
-    fixtures.push(Object.assign({ roundKey, week: parseInt(roundKey.replace('round', ''), 10) }, single));
+      const single = computeSingleFixtureDifficulty(oppEn, oppKo, isHome, rankOf);
+      fixtures.push(Object.assign({ roundKey, week: parseInt(roundKey.replace('round', ''), 10) }, single));
+    });
   });
 
   return fixtures;
