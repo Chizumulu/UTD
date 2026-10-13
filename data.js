@@ -494,6 +494,36 @@ const staffData = [
   ]}
 ];
 
+// ===== 팀 스토리 (구단 정보 → 팀 스토리 탭) =====
+// 이 객체를 채우면 "팀 스토리" 탭에 자동으로 나타납니다.
+//  - 비워 둔 항목(빈 문자열/빈 배열)은 그 섹션이 통째로 숨겨지고, 전부 비어 있으면 "준비 중" 안내가 나옵니다.
+//  - 영문(…En)은 선택 사항이며 비우면 한국어가 그대로 표시됩니다.
+//  - 사진 파일은 index.html과 같은 폴더에 두고 파일명만 적으세요. (스태프 사진은 얼굴형, 갤러리는 가로형 권장)
+const teamStory = {
+  // 1) 치주물루 섬 소개
+  island: {
+    titleKo: "", titleEn: "",
+    heroImage: "",                      // 예: "섬.jpg"
+    paragraphsKo: [],                   // 문단 단위로: ["첫 문단", "두 번째 문단"]
+    paragraphsEn: [],
+    facts: [
+      // { labelKo: "위치", labelEn: "Location", valueKo: "", valueEn: "" }
+    ]
+  },
+  // 2) 구단 역사 (오래된 순으로 적으면 위에서 아래로 흐릅니다)
+  history: [
+    // { year: "", titleKo: "", titleEn: "", textKo: "", textEn: "" }
+  ],
+  // 3) 감독·스태프 이야기 (staffData의 명단과는 별개로, 소개글을 쓰고 싶은 사람만 적습니다)
+  staffStories: [
+    // { nameKo: "", nameEn: "", roleKo: "", roleEn: "", photoSrc: "", bioKo: "", bioEn: "" }
+  ],
+  // 4) 사진 갤러리
+  gallery: [
+    // { src: "", captionKo: "", captionEn: "" }
+  ]
+};
+
 // ===== 스폰서 정보 (메인 / 키트 / 일반) =====
 const sponsorData = {
   main: [

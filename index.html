@@ -677,6 +677,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <div class="team-info-tab-bar" id="teamInfoTabBar">
     <button class="team-info-tab-btn active lbl" id="tiOverviewBtn" data-en="OVERVIEW" data-ko="개요" onclick="switchTeamInfoTab('overview')">개요</button>
+    <button class="team-info-tab-btn lbl" id="tiStoryBtn" data-en="STORY" data-ko="팀 스토리" onclick="switchTeamInfoTab('story')">팀 스토리</button>
     <button class="team-info-tab-btn lbl" id="tiSquadBtn" data-en="SQUAD" data-ko="선수단" onclick="switchTeamInfoTab('squad')">선수단</button>
     <button class="team-info-tab-btn lbl" id="tiHonorsBtn" data-en="RECORDS" data-ko="기록·수상" onclick="switchTeamInfoTab('honors')">기록·수상</button>
     <button class="team-info-tab-btn lbl" id="tiResultsBtn" data-en="RESULTS" data-ko="경기결과" onclick="switchTeamInfoTab('results')">경기결과</button>
@@ -702,6 +703,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="ti-section-title lbl" data-en="Next Match" data-ko="다음 경기">다음 경기</div>
     <div id="teamInfoNextMatchTab" class="team-info-tab-content"></div>
   </section>
+  <section id="tiSection-story" class="ti-section ti-tabpage">
+    <div id="teamInfoStoryTab" class="team-info-tab-content"></div>
+  </section>
   <section id="tiSection-squad" class="ti-section ti-tabpage">
     <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
     <div id="teamInfoStaffTab" class="team-info-tab-content"></div>
@@ -725,6 +729,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </details>
   </section>
   <section id="tiSection-honors" class="ti-section ti-tabpage">
+    <div class="ti-section-title lbl" data-en="Team Records" data-ko="팀 기록실">팀 기록실</div>
+    <div id="teamInfoRecordRoomTab" class="team-info-tab-content"></div>
     <div class="ti-section-title lbl" data-en="Player Records" data-ko="선수 기록">선수 기록</div>
     <div id="teamInfoScorersTab" class="team-info-tab-content"></div>
     <div id="teamInfoAwardsTab" class="team-info-tab-content"></div>
@@ -1239,6 +1245,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         <div class="spm-section-title lbl" id="squadPlayerModalAssistTitle" data-en="Assist Connections" data-ko="도움 관계" style="display:none;">도움 관계</div>
         <div class="spm-assist-list" id="squadPlayerModalAssistBody" style="display:none;"></div>
+
+        <div class="spm-section-title lbl" id="squadPlayerModalFormTitle" data-en="Season Form" data-ko="시즌 흐름">시즌 흐름</div>
+        <div class="spm-form" id="squadPlayerModalForm"></div>
 
         <div class="spm-section-title lbl" data-en="Recent Appearances" data-ko="최근 출전 기록">최근 출전 기록</div>
         <div class="player-timeline" id="squadPlayerTimeline"></div>

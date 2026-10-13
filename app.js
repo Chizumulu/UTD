@@ -80,6 +80,8 @@
   let statBoardExpanded = false;
   let currentPlayerModalKey = null;
   let currentSquadPlayerModalNumber = null;
+  // 선수 모달의 시즌 그래프에서 경기 상세로 넘어갔을 때, 경기 상세를 닫으면 그 선수 모달로 돌아오기 위한 메모
+  let returnToPlayerAfterMatch = null;
   let lineupViewMode = 'pitch';                     // 경기 상세 라인업: 'pitch'(기본) | 'list'
   let currentMatchDetailLineup = null;
   let squadViewMode = 'card';                       // 'card'(기본) | 'table'
@@ -3648,11 +3650,214 @@
     el.innerHTML = renderByeWeekFlowCard(info.team);
   }
 
+  // ===== 팀 기록실 (기록·수상 탭) =====
+  // 우리 팀의 끝난 경기(몰수승 제외)를 라운드 순으로 모아서 시즌 베스트 기록을 자동 계산합니다.
+  // 연승·무패·연속 무실점·연속 득점, 최다 점수차 승/패, 최다 골 경기가 대상이며
+  // 경기를 추가하면 자동으로 갱신됩니다. (시즌 합계는 개요 탭의 "구단 기록" 카드가 담당)
+  function collectMyTeamResults() {
+    const list = [];
+    completedRoundKeysIncludingScheduled().forEach(key => {
+      const wk = roundKeyPos(key);
+      buildRoundMatches(key).forEach(m => {
+        if (m.isBye || m.isScheduled || m.forfeit) return;
+        if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+        const isHome = isMyTeamName(m.homeEn, m.homeKo);
+        const isAway = isMyTeamName(m.awayEn, m.awayKo);
+        if (!isHome && !isAway) return;
+        const gf = isHome ? m.homeScore : m.awayScore;
+        const ga = isHome ? m.awayScore : m.homeScore;
+        list.push({
+          wk, gf, ga, isHome,
+          oppEn: isHome ? m.awayEn : m.homeEn, oppKo: isHome ? m.awayKo : m.homeKo,
+          res: gf > ga ? 'W' : gf < ga ? 'L' : 'D'
+        });
+      });
+    });
+    return list.sort((a, b) => a.wk - b.wk);
+  }
+
+  // 조건을 만족하는 가장 긴 연속 구간을 찾습니다. 길이가 같으면 더 최근 구간을 씁니다.
+  function longestRun(list, pred) {
+    let best = null, start = -1;
+    for (let i = 0; i <= list.length; i++) {
+      const ok = i < list.length && pred(list[i]);
+      if (ok && start < 0) start = i;
+      if (!ok && start >= 0) {
+        const len = i - start;
+        if (!best || len >= best.len) best = { len, from: list[start].wk, to: list[i - 1].wk, live: i === list.length };
+        start = -1;
+      }
+    }
+    return best;
+  }
+
+  function renderTeamRecordRoomTab() {
+    const el = document.getElementById('teamInfoRecordRoomTab');
+    if (!el) return;
+    const L = collectMyTeamResults();
+    if (!L.length) { el.innerHTML = ''; return; }
+
+    const wkBoth = (wk) => ({ ko: wkKo(wk), en: wkEn(wk, 'Wk', ' ') });
+    const lblSpan = (ko, en) => `<span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`;
+    // wk 가 있으면(경기 단위 기록) 카드를 눌러 해당 경기로 이동합니다.
+    const item = (ico, ko, en, valueHtml, subHtml, live, wk) => `
+      <div class="ti-room-item${live ? ' is-live' : ''}${wk ? ' is-link' : ''}"${wk ? ` data-room-wk="${wk}" role="button" tabindex="0"` : ''}>
+        <div class="ti-room-label"><span class="ti-room-ico" aria-hidden="true">${ico}</span>${lblSpan(ko, en)}${live ? `<span class="ti-room-live">${lblSpan('진행 중', 'ONGOING')}</span>` : ''}</div>
+        <div class="ti-room-value">${valueHtml}</div>
+        <div class="ti-room-sub">${subHtml}</div>
+        ${wk ? `<span class="ti-room-go" aria-hidden="true">›</span>` : ''}
+      </div>`;
+
+    const streakItem = (ico, ko, en, pred) => {
+      const r = longestRun(L, pred);
+      if (!r || r.len < 2) return '';   // 1경기짜리는 "연속"이 아니므로 숨김
+      const a = wkBoth(r.from), b = wkBoth(r.to);
+      const range = r.from === r.to ? lblSpan(a.ko, a.en) : `${lblSpan(a.ko, a.en)} ~ ${lblSpan(b.ko, b.en)}`;
+      return item(ico, ko, en, `${r.len}<small>${lblSpan('경기', isKorean ? '경기' : (r.len === 1 ? 'game' : 'games'))}</small>`, range, r.live);
+    };
+    const pick = (cmp) => L.reduce((best, m) => (!best || cmp(m, best) >= 0) ? m : best, null);
+    const matchSub = (m) => {
+      const w = wkBoth(m.wk);
+      const venueKo = m.isHome ? '홈' : '원정', venueEn = m.isHome ? 'H' : 'A';
+      return `${lblSpan(w.ko, w.en)} · ${lblSpan('vs ' + m.oppKo, 'vs ' + m.oppEn)} (${lblSpan(venueKo, venueEn)})`;
+    };
+    const scoreItem = (ico, ko, en, m, show) => (!m || !show(m)) ? ''
+      : item(ico, ko, en, `${m.gf}<span class="ti-room-dash">-</span>${m.ga}`, matchSub(m), false, m.wk);
+
+    const biggestWin = pick((a, b) => (a.gf - a.ga) - (b.gf - b.ga) || a.gf - b.gf);
+    const wildest = pick((a, b) => (a.gf + a.ga) - (b.gf + b.ga));
+    const biggestLoss = pick((a, b) => (a.ga - a.gf) - (b.ga - b.gf));
+    // 홈/원정 베스트 승리: 전체 최다 점수차 승리와 같은 경기면 중복이라 숨깁니다.
+    const bestWinAt = (home) => {
+      const sub = L.filter(m => m.isHome === home && m.gf > m.ga);
+      return sub.reduce((best, m) => (!best || (m.gf - m.ga) - (best.gf - best.ga) >= 0) ? m : best, null);
+    };
+    const notDup = (m) => !(m && biggestWin && m.wk === biggestWin.wk && m.gf === biggestWin.gf && m.ga === biggestWin.ga);
+    const homeBest = bestWinAt(true), awayBest = bestWinAt(false);
+
+    const cards = [
+      streakItem('🔥', '최다 연승', 'Longest Win Streak', m => m.res === 'W'),
+      streakItem('🛡️', '최장 무패', 'Longest Unbeaten Run', m => m.res !== 'L'),
+      streakItem('🧤', '최다 연속 무실점', 'Most Consecutive Clean Sheets', m => m.ga === 0),
+      streakItem('⚽', '최다 연속 득점', 'Longest Scoring Run', m => m.gf > 0),
+      scoreItem('💪', '최다 점수차 승리', 'Biggest Win', biggestWin, m => m.gf > m.ga),
+      scoreItem('🏟️', '홈 최다 점수차 승리', 'Biggest Home Win', homeBest, notDup),
+      scoreItem('✈️', '원정 최다 점수차 승리', 'Biggest Away Win', awayBest, notDup),
+      scoreItem('🎆', '최다 골 경기', 'Most Goals in a Match', wildest, m => m.gf + m.ga > 0),
+      scoreItem('📉', '최다 점수차 패배', 'Heaviest Defeat', biggestLoss, m => m.ga > m.gf)
+    ].filter(Boolean);
+
+    el.innerHTML = cards.length ? `<div class="ti-room-grid">${cards.join('')}</div>` : '';
+  }
+
+  // 팀 기록실 카드 클릭 → 라인업 상세가 있는 경기는 상세 모달, 없으면 해당 라운드로 이동
+  function openRoomMatch(wk) {
+    const key = 'round' + wk;
+    if (typeof matchLineups !== 'undefined' && matchLineups[key]) {
+      goToRoundWeek(wk);
+      openMatchDetail(key, wk);
+    } else {
+      goToRoundWeek(wk);
+    }
+  }
+  document.addEventListener('click', function (e) {
+    const c = e.target.closest('.ti-room-item[data-room-wk]');
+    if (c) openRoomMatch(parseInt(c.dataset.roomWk, 10));
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const c = e.target.closest && e.target.closest('.ti-room-item[data-room-wk]');
+    if (c) { e.preventDefault(); openRoomMatch(parseInt(c.dataset.roomWk, 10)); }
+  });
+
   function renderTeamAwardsTab() {
     const el = document.getElementById('teamInfoAwardsTab');
     if (!el) return;
     el.innerHTML = renderTeamAwardsCard();
     attachImageFallback();
+  }
+
+  // ===== 선수 상세 모달: 시즌 흐름 막대 그래프 =====
+  // 우리 팀이 치른 라운드를 가로로 모두 늘어놓고, 라운드마다 이 선수의 출전 형태를 막대 높이로 보여줍니다.
+  //  선발=가장 높음 / 교체 투입=중간 / 벤치 대기(미출전)=낮음 / 명단 제외=빈칸
+  // 막대 위에는 득점(금색 숫자 원)·도움(A)·MOTM(★) 표시를 올립니다. matchLineups에서 자동 계산됩니다.
+  function renderSquadPlayerSeasonChart(stats, number, hasNumber, isFormerPlayer) {
+    const wrap = document.getElementById('squadPlayerModalForm');
+    const title = document.getElementById('squadPlayerModalFormTitle');
+    if (!wrap) return;
+    const keys = Object.keys(matchLineups || {}).sort((a, b) => roundKeyPos(a) - roundKeyPos(b));
+    const show = keys.length > 0 && stats.history.length > 0;
+    wrap.style.display = title.style.display = show ? '' : 'none';
+    if (!show) { wrap.innerHTML = ''; return; }
+
+    const KIND = {
+      start: { ko: '선발', en: 'Start', h: 100 },
+      sub:   { ko: '교체 투입', en: 'Sub', h: 56 },
+      bench: { ko: '벤치 대기', en: 'Unused sub', h: 18 },
+      out:   { ko: '명단 제외', en: 'Not in squad', h: 0 }
+    };
+    let apps = 0, starts = 0;
+    const cols = keys.map(key => {
+      const wk = roundKeyPos(key);
+      const lu = matchLineups[key] || {};
+      const h = stats.history.find(x => x.roundKey === key);
+      let kind = 'out';
+      if (h) { kind = h.wasStarter ? 'start' : 'sub'; apps++; if (h.wasStarter) starts++; }
+      else if (hasNumber && !isFormerPlayer && (lu.subsUnused || []).includes(number)) kind = 'bench';
+
+      const opp = leagueData.find(t => t.nameKo === lu.opponentKo);
+      const oppName = opp ? (isKorean ? opp.nameKo : opp.nameEn) : (lu.opponentKo || '');
+      const k = KIND[kind];
+      // 막대 색 = 경기 결과(승/무/패), 막대 높이 = 출전 형태. 벤치·명단 제외는 결과색 없이 회색.
+      const rm = String(lu.result || '').match(/(승|무|패)\s*$/);
+      const res = rm ? { '승': 'w', '무': 'd', '패': 'l' }[rm[1]] : 'x';
+      const parts = [isKorean ? wkKo(wk) : wkEn(wk, 'Week', ' '), oppName ? `vs ${oppName}` : '', lu.result ? translateResultSuffix(lu.result) : '', isKorean ? k.ko : k.en];
+      if (h && h.goals) parts.push(isKorean ? `${h.goals}골` : `${h.goals} G`);
+      if (h && h.assists) parts.push(isKorean ? `도움 ${h.assists}` : `${h.assists} A`);
+      if (h && h.wasMotm) parts.push('MOTM');
+
+      const marks = [
+        h && h.wasMotm ? `<i class="spm-form-mark spm-form-motm">★</i>` : '',
+        h && h.assists ? `<i class="spm-form-mark spm-form-assist">${h.assists > 1 ? h.assists : 'A'}</i>` : '',
+        h && h.goals ? `<i class="spm-form-mark spm-form-goal">${h.goals}</i>` : ''
+      ].join('');
+      return `
+        <div class="spm-form-col is-link" data-round="${key}" role="button" tabindex="0" title="${parts.filter(Boolean).join(' · ')}">
+          <div class="spm-form-marks">${marks}</div>
+          <div class="spm-form-track"><span class="spm-form-bar is-${kind}${(kind === 'start' || kind === 'sub') ? ' res-' + res : ''}" style="height:${k.h}%"></span></div>
+          <div class="spm-form-wk">${wkAxis(wk)}</div>
+        </div>`;
+    }).join('');
+
+    const lg = (cls, ko, en) => `<span class="spm-form-lg"><i class="spm-form-sw ${cls}"></i>${isKorean ? ko : en}</span>`;
+    wrap.innerHTML = `
+      <div class="spm-form-scroll"><div class="spm-form-bars">${cols}</div></div>
+      <div class="spm-form-legend">
+        ${lg('res-w', '승', 'W')}${lg('res-d', '무', 'D')}${lg('res-l', '패', 'L')}
+        <span class="spm-form-lg">${isKorean ? '높이: 선발 › 교체 › 벤치' : 'Height: Start › Sub › Bench'}</span>
+        <span class="spm-form-lg"><i class="spm-form-mark spm-form-goal">1</i>${isKorean ? '득점' : 'Goals'}</span>
+        <span class="spm-form-lg"><i class="spm-form-mark spm-form-assist">A</i>${isKorean ? '도움' : 'Assist'}</span>
+        <span class="spm-form-lg"><i class="spm-form-mark spm-form-motm">★</i>MOTM</span>
+      </div>
+      <div class="spm-form-sum">${isKorean
+        ? `${keys.length}경기 중 ${apps}경기 출전 (선발 ${starts}) · 막대를 누르면 경기 상세로 이동`
+        : `${apps} of ${keys.length} matches played (${starts} starts) · Tap a bar for match details`}</div>`;
+
+    // 막대(열)를 누르면 선수 모달을 닫고 해당 경기 상세를 엽니다.
+    const go = (col) => {
+      const key = col && col.dataset.round;
+      if (!key) return;
+      const fromPlayer = currentSquadPlayerModalNumber;   // closeSquadPlayerModal()이 지우기 전에 기억
+      closeSquadPlayerModal();
+      openMatchDetail(key, roundKeyPos(key));
+      returnToPlayerAfterMatch = fromPlayer;               // openMatchDetail은 메모를 비우므로 그 뒤에 저장
+    };
+    wrap.onclick = (e) => go(e.target.closest('.spm-form-col'));
+    wrap.onkeydown = (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const col = e.target.closest('.spm-form-col');
+      if (col) { e.preventDefault(); go(col); }
+    };
   }
 
   // ===== 선수 사진 2종 공통 헬퍼 =====
@@ -5512,6 +5717,7 @@
   function setActiveTeamInfoButton(tab) {
     const buttons = {
       overview: 'tiOverviewBtn',
+      story: 'tiStoryBtn',
       squad: 'tiSquadBtn',
       honors: 'tiHonorsBtn',
       results: 'tiResultsBtn',
@@ -5555,7 +5761,7 @@
   // 예전에는 8개 섹션을 한 페이지에 다 늘어놓고 앵커 스크롤 + IntersectionObserver로
   // "지금 보고 있는 섹션"만 추정해서 탭을 하이라이트했습니다. 지금은 4개 탭으로
   // 정리하면서 실제로 선택한 탭의 .ti-tabpage만 보여주고 나머지는 숨깁니다.
-  const TEAM_INFO_TABS = ['overview', 'squad', 'honors', 'results', 'predict'];
+  const TEAM_INFO_TABS = ['overview', 'story', 'squad', 'honors', 'results', 'predict'];
   function applyTeamInfoTab(tab) {
     if (TEAM_INFO_TABS.indexOf(tab) === -1) tab = 'overview';
     currentTeamInfoTab = tab;
@@ -5588,7 +5794,7 @@
     if (!root) return;
     const targets = root.querySelectorAll(
       '.ti-card, .ti-scorer-card, .ti-award-card-item, .ti-gk-card-item, .squad-card, .pcard, .ti-section-title, .ti-section-title-row, ' +
-      '.team-magic-number-card, .path-finder-card, .team-points-trend-details, .ti-record-card, .ti-yt-card'
+      '.team-magic-number-card, .path-finder-card, .team-points-trend-details, .ti-record-card, .ti-room-item, .ti-yt-card, .ti-story-block'
     );
     if (!targets.length) return;
     if (reduceMotion) {
@@ -5707,7 +5913,9 @@
     renderTeamInfoByeFlow();
     renderTeamH2HTab();
     renderTeamStaffTab();
+    renderTeamStoryTab();
     renderSquadView();
+    renderTeamRecordRoomTab();
     renderTeamScorersTab();
     renderTeamAwardsTab();
     renderTeamYoutubeTab();
@@ -6430,6 +6638,138 @@
       + renderPositionPairCards()
       + renderKeyPlayerImpactCard();
   }
+
+  // ===== 팀 스토리 탭 =====
+  // data.js의 teamStory(섬 소개 / 구단 역사 / 스태프 이야기 / 사진 갤러리)를 읽어 그립니다.
+  // 비어 있는 섹션은 숨기고, 전부 비어 있으면 "준비 중" 안내를 보여줍니다.
+  let storyLightboxIdx = -1;
+  function renderTeamStoryTab() {
+    const el = document.getElementById('teamInfoStoryTab');
+    if (!el) return;
+    const st = (typeof teamStory !== 'undefined' && teamStory) ? teamStory : {};
+    const pickText = (ko, en) => isKorean ? (ko || en || '') : (en || ko || '');
+    // 언어 전환 시 다시 그리지 않아도 바뀌도록 .lbl + data-ko/data-en 로 내보냅니다.
+    const t = (tag, cls, ko, en) => {
+      if (!ko && !en) return '';
+      return `<${tag} class="${cls} lbl" data-ko="${escapeHtml(ko || en)}" data-en="${escapeHtml(en || ko)}">${escapeHtml(pickText(ko, en))}</${tag}>`;
+    };
+    const title = (ko, en) => `<div class="ti-section-title lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</div>`;
+    let html = '';
+
+    // 1) 섬 소개
+    const isl = st.island || {};
+    const paraKo = isl.paragraphsKo || [], paraEn = isl.paragraphsEn || [];
+    const paraN = Math.max(paraKo.length, paraEn.length);
+    const facts = (isl.facts || []).filter(f => f && (f.valueKo || f.valueEn));
+    if (isl.titleKo || isl.titleEn || paraN || facts.length) {
+      const paras = Array.from({ length: paraN }, (_, i) => t('p', 'ti-story-p', paraKo[i], paraEn[i])).join('');
+      const factsHtml = facts.length ? `<div class="ti-story-facts">${facts.map(f => `
+        <div class="ti-story-fact">
+          ${t('span', 'ti-story-fact-label', f.labelKo, f.labelEn)}
+          ${t('b', 'ti-story-fact-value', f.valueKo, f.valueEn)}
+        </div>`).join('')}</div>` : '';
+      const hero = isl.heroImage ? `<img class="ti-story-hero-img" src="${escapeHtml(isl.heroImage)}" alt="" loading="lazy" onerror="this.remove()">` : '';
+      html += title('치주물루 섬', 'Chizumulu Island') + `
+        <div class="ti-card ti-story-block">
+          ${hero}
+          ${t('h3', 'ti-story-h', isl.titleKo, isl.titleEn)}
+          ${paras}${factsHtml}
+        </div>`;
+    }
+
+    // 2) 구단 역사 타임라인
+    const hist = (st.history || []).filter(h => h && (h.titleKo || h.titleEn || h.textKo || h.textEn));
+    if (hist.length) {
+      html += title('구단 역사', 'Club History') + `
+        <div class="ti-story-timeline">${hist.map(h => `
+          <div class="ti-story-tl-item ti-story-block">
+            <span class="ti-story-tl-year">${escapeHtml(h.year || '')}</span>
+            <div class="ti-story-tl-body">
+              ${t('div', 'ti-story-tl-title', h.titleKo, h.titleEn)}
+              ${t('div', 'ti-story-tl-text', h.textKo, h.textEn)}
+            </div>
+          </div>`).join('')}
+        </div>`;
+    }
+
+    // 3) 감독·스태프 이야기
+    const staff = (st.staffStories || []).filter(p => p && (p.nameKo || p.nameEn));
+    if (staff.length) {
+      html += title('감독·스태프 이야기', 'Coaches & Staff') + `
+        <div class="ti-story-staff">${staff.map(p => `
+          <div class="ti-card ti-story-block ti-story-person">
+            ${p.photoSrc ? `<img class="ti-story-person-photo" src="${escapeHtml(p.photoSrc)}" alt="${escapeHtml(p.nameEn || p.nameKo)}" loading="lazy" onerror="this.remove()">` : ''}
+            <div class="ti-story-person-body">
+              ${t('div', 'ti-story-person-name', p.nameKo, p.nameEn)}
+              ${t('div', 'ti-story-person-role', p.roleKo, p.roleEn)}
+              ${t('p', 'ti-story-p', p.bioKo, p.bioEn)}
+            </div>
+          </div>`).join('')}
+        </div>`;
+    }
+
+    // 4) 사진 갤러리
+    const gal = (st.gallery || []).filter(g => g && g.src);
+    if (gal.length) {
+      html += title('사진 갤러리', 'Gallery') + `
+        <div class="ti-story-gallery">${gal.map((g, i) => `
+          <button type="button" class="ti-story-gal-item ti-story-block" data-story-idx="${i}">
+            <img src="${escapeHtml(g.src)}" alt="${escapeHtml(g.captionEn || g.captionKo || '')}" loading="lazy" onerror="this.closest('button').remove()">
+          </button>`).join('')}
+        </div>`;
+    }
+
+    if (!html) {
+      html = `<div class="ti-card" style="text-align:center; color:var(--color-text-faint);">
+        <span class="lbl" data-en="The team story is coming soon." data-ko="팀 스토리를 준비 중이에요.">${isKorean ? '팀 스토리를 준비 중이에요.' : 'The team story is coming soon.'}</span></div>`;
+    }
+    el.innerHTML = html;
+  }
+
+  // 갤러리 확대 보기 (좌우 이동 / ESC / 바깥 클릭으로 닫기)
+  function storyGalleryItems() {
+    return ((typeof teamStory !== 'undefined' && teamStory && teamStory.gallery) || []).filter(g => g && g.src);
+  }
+  function showStoryLightbox(idx) {
+    const items = storyGalleryItems();
+    if (!items.length) return;
+    storyLightboxIdx = (idx + items.length) % items.length;
+    const g = items[storyLightboxIdx];
+    let box = document.getElementById('storyLightbox');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'storyLightbox';
+      box.className = 'ti-lightbox';
+      box.innerHTML = `<button type="button" class="ti-lb-btn ti-lb-close" aria-label="close">&times;</button>
+        <button type="button" class="ti-lb-btn ti-lb-prev" aria-label="prev">&#8249;</button>
+        <figure class="ti-lb-fig"><img class="ti-lb-img" alt=""><figcaption class="ti-lb-cap"></figcaption></figure>
+        <button type="button" class="ti-lb-btn ti-lb-next" aria-label="next">&#8250;</button>`;
+      box.addEventListener('click', (e) => {
+        if (e.target.closest('.ti-lb-prev')) showStoryLightbox(storyLightboxIdx - 1);
+        else if (e.target.closest('.ti-lb-next')) showStoryLightbox(storyLightboxIdx + 1);
+        else if (!e.target.closest('.ti-lb-img')) closeStoryLightbox();
+      });
+      document.body.appendChild(box);
+    }
+    box.querySelector('.ti-lb-img').src = g.src;
+    box.querySelector('.ti-lb-cap').textContent = isKorean ? (g.captionKo || g.captionEn || '') : (g.captionEn || g.captionKo || '');
+    box.classList.add('open');
+  }
+  function closeStoryLightbox() {
+    const box = document.getElementById('storyLightbox');
+    if (box) box.classList.remove('open');
+    storyLightboxIdx = -1;
+  }
+  document.addEventListener('click', function (e) {
+    const b = e.target.closest('.ti-story-gal-item[data-story-idx]');
+    if (b) showStoryLightbox(parseInt(b.dataset.storyIdx, 10));
+  });
+  document.addEventListener('keydown', function (e) {
+    if (storyLightboxIdx < 0) return;
+    if (e.key === 'Escape') closeStoryLightbox();
+    else if (e.key === 'ArrowLeft') showStoryLightbox(storyLightboxIdx - 1);
+    else if (e.key === 'ArrowRight') showStoryLightbox(storyLightboxIdx + 1);
+  });
 
   function renderTeamStaffTab() {
     const el = document.getElementById('teamInfoStaffTab');
@@ -12429,6 +12769,7 @@
       awardsRowEl.innerHTML = '';
     }
 
+    renderSquadPlayerSeasonChart(stats, player.number, hasNumber, isFormerPlayer);
     renderSquadPlayerAssistRelations(statsKey, hasNumber);
 
     const listEl = document.getElementById('squadPlayerTimeline');
@@ -13302,6 +13643,7 @@
   }
 
   function openMatchDetail(roundKey, weekNum) {
+    returnToPlayerAfterMatch = null;   // 다른 경로로 열린 경기 상세는 선수 모달로 되돌아가지 않음
     const lineup = matchLineups[roundKey];
     if (!lineup) return;
 
@@ -13338,6 +13680,16 @@
 
   function closeMatchDetail() {
     closeModalAnimated(document.getElementById('matchDetailModal'));
+    // 선수 모달 시즌 그래프에서 왔다면(X·배경·ESC 모두 이 함수를 거침) 그 선수 모달을 다시 열고 그래프 위치로 맞춥니다.
+    if (returnToPlayerAfterMatch !== null && returnToPlayerAfterMatch !== undefined) {
+      const id = returnToPlayerAfterMatch;
+      returnToPlayerAfterMatch = null;   // 한 번 쓰면 비움
+      openSquadPlayerModal(id);
+      setTimeout(() => {
+        const f = document.getElementById('squadPlayerModalForm');
+        if (f && f.scrollIntoView) f.scrollIntoView({ block: 'center' });
+      }, 80);
+    }
   }
 
   // ===== 경기 전 팀 비교(전적 비교) 모달 =====
