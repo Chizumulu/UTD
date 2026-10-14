@@ -24,11 +24,12 @@ importScripts('data.js?v=' + DATA_VERSION);
 //   'titleHistory' → 우승확률 추이 차트용 computeTitleProbabilityHistory(iterations)
 //                    (라운드마다 시즌을 다시 시뮬레이션해서 무거우므로 메인 스레드 대신 여기서 계산)
 self.onmessage = function (e) {
-  const { requestId, iterations, type } = e.data || {};
+  // overrides: '만약에 시뮬레이터'가 보내는 결과 고정({ "홈||원정": 'H'|'D'|'A' }). 없으면 평소 예측과 동일합니다.
+  const { requestId, iterations, type, overrides } = e.data || {};
   try {
     const result = (type === 'titleHistory')
       ? computeTitleProbabilityHistory(iterations)
-      : runMonteCarloSimulation(iterations);
+      : runMonteCarloSimulation(iterations, overrides);
     self.postMessage({ requestId, result });
   } catch (err) {
     self.postMessage({ requestId, error: (err && err.message) || String(err) });

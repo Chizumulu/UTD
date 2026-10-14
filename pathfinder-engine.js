@@ -131,19 +131,50 @@
       : null; // null = 남은 경기 수만으론 이번 시즌 확정 불가
   }
 
-  // ---- 라이벌 결정 (기존 매직넘버 로직과 동일) ----
+  // ---- 목표 순위 슬롯 보정 ----
+  // title이면 1위(=1슬롯), safety면 "상위 safeSlots위 안에 들어야 안전".
+  // safeSlots가 없거나(undefined/NaN) 상대 팀 수보다 크면 범위 안으로 보정해서
+  // 아래 정렬 배열의 인덱스가 undefined가 되는 것을 막습니다.
+  function resolveSlot(mode, safeSlots, opponentCount) {
+    if (mode === 'title') return 1;
+    const s = Number.isFinite(safeSlots) ? Math.floor(safeSlots) : 1;
+    return Math.min(Math.max(s, 1), opponentCount);
+  }
+
+  // ---- 라이벌 결정 (안전 경로용: 기존 매직넘버 로직과 동일) ----
+  // "최대 도달 가능 승점"이 slot번째로 높은 팀. 상대가 전승한다는 최악의 가정에서
+  // 우리가 넘어야 할 팀입니다. 상대 팀이 하나도 없으면 null.
   // mode: 'title' | 'safety'
   function pickRival(team, rankedTeams, seasonGames, mode, safeSlots) {
     const opponents = rankedTeams.filter(t => t.nameEn !== team.nameEn);
-    if (mode === 'title') {
-      return opponents.reduce((best, other) =>
-        maxPossiblePoints(other, seasonGames) > maxPossiblePoints(best, seasonGames) ? other : best
-      );
-    }
-    // safety: safeSlots번째로 최대승점이 높은 팀 = 우리가 넘어야 할 강등권 경계선 팀
+    if (opponents.length === 0) return null;
+    const slot = resolveSlot(mode, safeSlots, opponents.length);
     return opponents.slice()
       .sort((a, b) => maxPossiblePoints(b, seasonGames) - maxPossiblePoints(a, seasonGames))
-      [safeSlots - 1];
+      [slot - 1];
+  }
+
+  // ---- 라이벌 결정 (쉬운 경로용) ----
+  // 쉬운 경로는 "상대들이 남은 경기에서 더 이상 승점을 못 딴다"는 낙관적 가정이므로,
+  // 그때 실제로 우리 앞을 막는 팀은 "최대 승점이 높은 팀"이 아니라 "현재 승점이
+  // slot번째로 높은 팀"입니다. (예: A는 현재 40점·잔여 1경기, B는 현재 45점·잔여 0경기
+  // 라면 최대 승점 기준으로는 A(43)가 아니라 B(45)가 더 높지만, 어느 쪽이든 '현재 승점'이
+  // 가장 높은 B가 우리가 넘어야 할 최소 기준선입니다.) 동점이면 최대 승점이 높은 팀을
+  // 앞에 둡니다.
+  function pickEasiestRival(team, rankedTeams, seasonGames, mode, safeSlots) {
+    const opponents = rankedTeams.filter(t => t.nameEn !== team.nameEn);
+    if (opponents.length === 0) return null;
+    const slot = resolveSlot(mode, safeSlots, opponents.length);
+    return opponents.slice()
+      .sort((a, b) =>
+        (b.pts - a.pts) ||
+        (maxPossiblePoints(b, seasonGames) - maxPossiblePoints(a, seasonGames)))
+      [slot - 1];
+  }
+
+  // 우리 팀과 특정 상대가 "아직 안 치른 직접 맞대결" 수
+  function countHeadToHead(remainingFixtures, rivalEn) {
+    return remainingFixtures.filter(fx => fx.opponentEn === rivalEn).length;
   }
 
   // ---- 남은 알려진 경기 중, 목표 달성에 필요한 결과(승/무)만큼을 예시 경로로 표시 ----
@@ -213,6 +244,8 @@
     if (!team) return null;
 
     const rival = pickRival(team, rankedTeams, seasonGames, mode, safeSlots);
+    const easiestRival = pickEasiestRival(team, rankedTeams, seasonGames, mode, safeSlots);
+    if (!rival || !easiestRival) return null; // 비교할 상대 팀이 없음
     const remainingFixtures = getRemainingFixtures(teamEn, scheduledRounds);
     const remainingGames = getTotalRemainingGames(team, seasonGames);
 
@@ -221,18 +254,26 @@
     const safestResults = resultsNeededFor(safestPointsNeeded, remainingGames);
     const safestPlan = buildMustWinPlan(remainingFixtures, safestResults, rival.nameEn, remainingGames);
 
-    // 쉬운 경로: 라이벌이 남은 경기를 전부 못 딴다고 가정 (가장 낙관적인 하한)
-    const easiestPointsNeeded = Math.max(0, minPossiblePoints(rival) - team.pts + 1);
+    // 쉬운 경로: 상대들이 남은 경기에서 승점을 더 못 딴다고 가정 (가장 낙관적인 하한).
+    // 이때 넘어야 할 기준선은 "현재 승점이 slot번째로 높은 팀"(easiestRival)입니다.
+    // 주의: 실제로는 상대끼리도 경기를 하므로 모두가 동시에 0점을 얻는 건 불가능한
+    // "도달 불가능한 하한선"입니다. 그래서 '최소한 이 정도는 필요하다'는 바닥값으로만
+    // 해석해야 합니다.
+    const easiestPointsNeeded = Math.max(0, minPossiblePoints(easiestRival) - team.pts + 1);
     const easiestResults = resultsNeededFor(easiestPointsNeeded, remainingGames);
-    const easiestPlan = buildMustWinPlan(remainingFixtures, easiestResults, rival.nameEn, remainingGames);
+    const easiestPlan = buildMustWinPlan(remainingFixtures, easiestResults, easiestRival.nameEn, remainingGames);
 
-    // 라이벌 의존도 경기 (쉬운 경로가 안전 경로보다 실제로 덜 요구할 때만 의미 있음)
+    // 라이벌 의존도 경기
     const rivalDependencyFixtures = getRivalDependencyFixtures(rival.nameEn, teamEn, scheduledRounds);
+    const easiestRivalDependencyFixtures = getRivalDependencyFixtures(easiestRival.nameEn, teamEn, scheduledRounds);
 
     return {
       mode: mode,
       team: { nameEn: team.nameEn, nameKo: team.nameKo, pts: team.pts, played: team.played },
       rival: { nameEn: rival.nameEn, nameKo: rival.nameKo, pts: rival.pts, played: rival.played },
+      // 라이벌과 아직 안 치른 직접 맞대결 수. 1 이상이면 "라이벌 전승" 가정이 우리가
+      // 그 경기를 이기는 순간 성립하지 않으므로, 안전 경로 요구치가 실제보다 보수적일 수 있음.
+      headToHeadRemaining: countHeadToHead(remainingFixtures, rival.nameEn),
       remainingGames: remainingGames,
       remainingKnownFixtures: remainingFixtures,
       safest: {
@@ -244,6 +285,10 @@
         isActuallyMandatory: safestPlan.isActuallyMandatory
       },
       easiest: {
+        // 쉬운 경로의 기준 팀(현재 승점 기준). 안전 경로의 rival과 다를 수 있음.
+        rival: { nameEn: easiestRival.nameEn, nameKo: easiestRival.nameKo, pts: easiestRival.pts, played: easiestRival.played },
+        headToHeadRemaining: countHeadToHead(remainingFixtures, easiestRival.nameEn),
+        rivalDependencyFixtures: easiestRivalDependencyFixtures,
         pointsNeeded: easiestPointsNeeded,
         resultsNeeded: easiestResults, // { wins, draws, gamesNeeded } | null
         mustWinFixtures: easiestPlan.fixtures,
@@ -262,6 +307,7 @@
     maxPossiblePoints: maxPossiblePoints,
     minPossiblePoints: minPossiblePoints,
     resultsNeededFor: resultsNeededFor,
-    pickRival: pickRival
+    pickRival: pickRival,
+    pickEasiestRival: pickEasiestRival
   };
 }));

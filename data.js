@@ -1424,7 +1424,7 @@ const scheduledRounds = {
   // 치주물루는 15주차 휴식(bye)이며, 13주차에서 연기된 비전전은 연기경기주차(10월 23일)에 열립니다.
   round15: [
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-15", kickoffTime: "15:00", movedFromWeek: 11 },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-17", kickoffTime: "15:00" },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-17", kickoffTime: "15:00" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-17", kickoffTime: "15:00" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
@@ -3439,12 +3439,18 @@ function generateRemainingFixtures() {
     if (roundsData[roundKey]) return; // 이미 결과가 확정된 라운드는 제외
     (scheduledRounds[roundKey] || []).forEach(m => {
       if (m.byeKo || m.byeEn) return;
+      // 다른 주차로 옮겨진 경기의 자리표시자(postponed + movedToWeek)는 제외합니다.
+      // 실제 경기는 옮겨진 주차(예: 연기경기주차)에 별도 항목으로 들어 있어서,
+      // 여기서 또 세면 같은 경기가 이중으로 집계됩니다.
+      if (m.postponed && m.movedToWeek) return;
       // 라운드가 통째로 끝나지 않았어도, 개별 경기에 이미 스코어가 채워져 있으면
       // (=그 경기만 먼저 끝난 경우) 이미 leagueData에 반영된 결과이므로 제외합니다.
       if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
       const home = teamByEn[m.homeEn];
       const away = teamByEn[m.awayEn];
-      if (home && away) fixtures.push({ home, away, leg: 1 });
+      // 일정이 이미 정해진 경기(예: 연기경기주차 경기)는 킥오프 정보를 함께 실어서
+      // '만약에 시뮬레이터' 같은 화면에서 날짜를 보여줄 수 있게 합니다. 시뮬레이션 계산에는 쓰이지 않습니다.
+      if (home && away) fixtures.push({ home, away, leg: 1, kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime });
     });
   });
 
@@ -4610,9 +4616,36 @@ function getEffectiveRoundHistory(roundKey, weekNum, lineup) {
   return { list, summary };
 }
 
-function runMonteCarloSimulation(iterations) {
+// overrides(선택): '만약에 시뮬레이터'용 결과 고정. { "홈팀 nameEn||원정팀 nameEn": 'H' | 'D' | 'A' }
+//   H = 홈팀 승, D = 무승부, A = 원정팀 승. 고정된 경기는 평소처럼 스코어를 뽑되, 고정한 결과와
+//   다르면 다시 뽑아서(기각 샘플링) 득실차까지 자연스럽게 반영합니다. 인자를 생략하면 기존과 완전히 동일하게 동작합니다.
+function whatIfFixtureId(homeEn, awayEn) { return homeEn + '||' + awayEn; }
+
+// 아직 열리지 않은 경기를 화면용 평범한 객체 목록으로 돌려줍니다(1라운드 잔여 + 재대결).
+// 재대결(leg 2)은 대진(누가 홈인지)만 확정이고 날짜는 아직 없어서 kickoffDate가 비어 있습니다 —
+// 날짜가 scheduledRounds에 입력되면 generateRemainingFixtures()를 거쳐 자동으로 채워집니다.
+function listRemainingFixturesForWhatIf() {
+  return generateRemainingFixtures().map(fx => ({
+    id: whatIfFixtureId(fx.home.nameEn, fx.away.nameEn),
+    leg: fx.leg,
+    homeEn: fx.home.nameEn, homeKo: fx.home.nameKo, homeLogo: fx.home.logoSrc,
+    awayEn: fx.away.nameEn, awayKo: fx.away.nameKo, awayLogo: fx.away.logoSrc,
+    kickoffDate: fx.kickoffDate || null,
+    kickoffTime: fx.kickoffTime || null
+  }));
+}
+
+function runMonteCarloSimulation(iterations, overrides) {
   const N = iterations || 4000;
   const fixtures = generateRemainingFixtures();
+  // 결과 고정: 남은 경기에 실제로 존재하는 대진만, 유효한 값(H/D/A)만 받아들입니다.
+  const fixtureIds = fixtures.map(fx => whatIfFixtureId(fx.home.nameEn, fx.away.nameEn));
+  const forcedByIdx = fixtureIds.map(id => {
+    const v = overrides && overrides[id];
+    return (v === 'H' || v === 'D' || v === 'A') ? v : null;
+  });
+  const whatIfFixedCount = forcedByIdx.filter(Boolean).length;
+  const outcomeOf = (h, a) => (h > a ? 'H' : (h < a ? 'A' : 'D'));
   // 팀별 홈/원정 특화 공격·수비 지수(축소추정 적용) — 팀마다 다른 홈 강세/
   // 원정 약세 성향을 반영합니다. HOME_ADVANTAGE/AWAY_DISADVANTAGE는 이제
   // teamHomeAway 지수의 기준선(homeBaseline/awayBaseline) 안에 녹아 있습니다.
@@ -4652,8 +4685,11 @@ function runMonteCarloSimulation(iterations) {
   const finalRankSum = {};
   // 순위별 최종 승점 표본(인덱스 0 = 1위): '우승·잔류 라인 예상 승점'에 사용
   const ptsAtRank = Array.from({ length: teamCount }, () => []);
+  // 팀별 최종 승점 표본: 예측 표의 '예상 최종승점' 옆에 10~90% 범위를 보여주는 데 사용
+  const ptsByTeam = {};
 
   teams.forEach(t => {
+    ptsByTeam[t.nameEn] = [];
     rankCounts[t.nameEn] = new Array(teamCount).fill(0);
     champCount[t.nameEn] = 0;
     top3Count[t.nameEn] = 0;
@@ -4703,15 +4739,26 @@ function runMonteCarloSimulation(iterations) {
       const homeExpected = applyGoalCorrection(homeBaseline * homeAttackAdj * awayDefenseAdj, fxCorrection.mode, fxCorrection.homeFactor, fxCorrection.homeOffset);
       const awayExpected = applyGoalCorrection(awayBaseline * awayAttackAdj * homeDefenseAdj, fxCorrection.mode, fxCorrection.awayFactor, fxCorrection.awayOffset);
 
-      let homeGoals, awayGoals;
-      if (dc.active && dc.rho !== 0) {
-        const sampled = sampleDixonColesScore(homeExpected, awayExpected, dc.rho);
-        homeGoals = sampled.h;
-        awayGoals = sampled.a;
-      } else {
-        homeGoals = poissonRandom(homeExpected);
-        awayGoals = poissonRandom(awayExpected);
+      const drawScore = () => {
+        if (dc.active && dc.rho !== 0) {
+          const sampled = sampleDixonColesScore(homeExpected, awayExpected, dc.rho);
+          return { h: sampled.h, a: sampled.a };
+        }
+        return { h: poissonRandom(homeExpected), a: poissonRandom(awayExpected) };
+      };
+      let drawn = drawScore();
+      const forced = forcedByIdx[fxIdx];
+      if (forced) {
+        // 기각 샘플링: 고정한 결과가 나올 때까지 다시 뽑습니다. 아주 희박한 결과여도 무한 루프가
+        // 되지 않도록 횟수 상한을 두고, 그래도 안 되면 가장 단순한 스코어로 대체합니다.
+        let tries = 0;
+        while (outcomeOf(drawn.h, drawn.a) !== forced && tries < 400) { drawn = drawScore(); tries++; }
+        if (outcomeOf(drawn.h, drawn.a) !== forced) {
+          drawn = forced === 'H' ? { h: 1, a: 0 } : (forced === 'A' ? { h: 0, a: 1 } : { h: 1, a: 1 });
+        }
       }
+      const homeGoals = drawn.h;
+      const awayGoals = drawn.a;
 
       const homeState = state[fx.home.nameEn];
       const awayState = state[fx.away.nameEn];
@@ -4748,6 +4795,7 @@ function runMonteCarloSimulation(iterations) {
       const rank = idx + 1;
       rankCounts[s.nameEn][idx] += 1;
       ptsAtRank[idx].push(s.pts);
+      ptsByTeam[s.nameEn].push(s.pts);
       finalPtsSum[s.nameEn] += s.pts;
       finalRankSum[s.nameEn] += rank;
       if (rank === 1) champCount[s.nameEn] += 1;
@@ -4755,6 +4803,13 @@ function runMonteCarloSimulation(iterations) {
       if (rank > teamCount - 3) bottom3Count[s.nameEn] += 1;
     });
   }
+
+  // 팀별 최종 승점 분위수 (정렬된 표본에서 가장 가까운 값을 사용 — rankLines와 같은 방식)
+  const ptsQuantile = (arr, f) => {
+    if (!arr.length) return 0;
+    const sorted = arr.slice().sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(f * (sorted.length - 1))))];
+  };
 
   const results = teams.map(t => ({
     nameEn: t.nameEn,
@@ -4764,6 +4819,9 @@ function runMonteCarloSimulation(iterations) {
     top3Pct: (top3Count[t.nameEn] / N) * 100,
     bottom3Pct: (bottom3Count[t.nameEn] / N) * 100,
     avgFinalPts: finalPtsSum[t.nameEn] / N,
+    ptsP10: ptsQuantile(ptsByTeam[t.nameEn], 0.1),
+    ptsP50: ptsQuantile(ptsByTeam[t.nameEn], 0.5),
+    ptsP90: ptsQuantile(ptsByTeam[t.nameEn], 0.9),
     avgFinalRank: finalRankSum[t.nameEn] / N,
     // 순위별 확률(%) — 인덱스 0이 1위. '순위별 확률 표'(rankProbMatrix)가 사용합니다.
     rankPcts: rankCounts[t.nameEn].map(c => (c / N) * 100)
@@ -4786,6 +4844,7 @@ function runMonteCarloSimulation(iterations) {
     results,
     rankLines,
     iterations: N,
+    whatIfFixedCount,
     remainingFixtureCount: fixtures.length,
     correctionApplied: correction.active,
     correctionMode: correction.mode,

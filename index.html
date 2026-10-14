@@ -21,12 +21,12 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '002',
-    data: '002',
-    app: '002',
-    archive: '001',
-    predictWorker: '005',
-    pathfinderEngine: '001',
+    style: '100',
+    data: '100',
+    app: '100',
+    archive: '100',
+    predictWorker: '100',
+    pathfinderEngine: '100',
     poster: '001'
   };
 </script>
@@ -872,7 +872,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <th class="lbl" data-en="TOP 3 %" data-ko="상위 3위 확률">상위 3위 확률</th>
           <th class="lbl" data-en="BOTTOM 3 %" data-ko="하위 3위 확률">하위 3위 확률</th>
           <th class="lbl" data-en="AVG FINAL RANK" data-ko="예상 최종순위">예상 최종순위</th>
-          <th class="lbl" data-en="AVG FINAL PTS" data-ko="예상 최종승점">예상 최종승점</th>
+          <th class="lbl" data-en="AVG FINAL PTS (80% RANGE)" data-ko="예상 최종승점 (80% 범위)">예상 최종승점 (80% 범위)</th>
         </tr>
       </thead>
       <tbody id="predictTableBody">
@@ -886,6 +886,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span><span class="dot dot-gd-neg"></span><span class="lbl" data-en="13th–15th: Relegated to NRFA League Two" data-ko="13~15위: NRFA 리그 투 강등">13~15위: NRFA 리그 투 강등</span></span>
     </div>
   </div>
+
+  <section class="whatif-section" id="whatIfSection" aria-live="polite">
+    <div class="stats-title advanced">
+      <span class="advanced-tag lbl" data-en="WHAT IF" data-ko="시나리오">시나리오</span>
+      <span class="lbl" data-en="WHAT-IF SIMULATOR" data-ko="만약에 시뮬레이터">만약에 시뮬레이터</span>
+    </div>
+    <p class="whatif-note lbl" data-en="Fix the result of any remaining game (win / draw / loss) and re-run the season simulation to see how the title, top-3 and bottom-3 chances change. Second-half games have no dates yet, so they are listed by opponent; scheduled games show their kickoff." data-ko="남은 경기의 결과(승/무/패)를 직접 정하고 시즌 시뮬레이션을 다시 돌려서 우승·상위 3위·하위 3위 확률이 어떻게 달라지는지 확인해 보세요. 후반기 경기는 아직 날짜가 없어 상대 팀 기준으로 보여주고, 일정이 정해진 경기는 킥오프 날짜가 함께 표시돼요.">남은 경기의 결과(승/무/패)를 직접 정하고 시즌 시뮬레이션을 다시 돌려서 우승·상위 3위·하위 3위 확률이 어떻게 달라지는지 확인해 보세요. 후반기 경기는 아직 날짜가 없어 상대 팀 기준으로 보여주고, 일정이 정해진 경기는 킥오프 날짜가 함께 표시돼요.</p>
+    <div id="whatIfBody"></div>
+  </section>
 
   <div class="scatter-card" style="margin-top:20px;">
     <div class="stats-title">
@@ -956,7 +965,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="advanced-tag lbl" data-en="RACE" data-ko="레이스">레이스</span>
       <span class="lbl" data-en="TITLE & SAFETY MAGIC NUMBERS" data-ko="우승·잔류 확정 매직넘버">우승·잔류 확정 매직넘버</span>
     </div>
-    <p class="magic-number-stats-note lbl" data-en="A conservative figure based on each rival's maximum possible points. All 15 teams are shown." data-ko="각 상대의 이론상 최대 승점을 기준으로 한 보수적 수치이며, 15개 팀 전체를 보여줍니다.">각 상대의 이론상 최대 승점을 기준으로 한 보수적 수치이며, 15개 팀 전체를 보여줍니다.</p>
+    <p class="magic-number-stats-note lbl" data-en="A conservative figure based on each rival's maximum possible points. All 15 teams are shown. Teams already out of the title race or relegated show a status instead of a number." data-ko="각 상대의 이론상 최대 승점을 기준으로 한 보수적 수치이며, 15개 팀 전체를 보여줍니다 이미 우승 경쟁에서 탈락했거나 강등이 확정된 팀은 숫자 대신 상태로 표시됩니다.">각 상대의 이론상 최대 승점을 기준으로 한 보수적 수치이며, 15개 팀 전체를 보여줍니다 이미 우승 경쟁에서 탈락했거나 강등이 확정된 팀은 숫자 대신 상태로 표시됩니다.</p>
     <div class="scroll-fade-wrap magic-number-stats-fade" id="magicNumberStatsFade">
       <div class="table-wrap magic-number-stats-wrap" id="magicNumberStatsScroller">
         <table class="stats-table magic-number-stats-table">
@@ -1384,7 +1393,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.write('<script src="pathfinder-engine.js?v=' + window.ASSET_VERSIONS.pathfinderEngine + '"><\/script>');
   document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
   document.write('<script src="poster.js?v=' + window.ASSET_VERSIONS.poster + '"><\/script>');
-  document.write('<script src="archive-2526.js?v=' + window.ASSET_VERSIONS.archive + '"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
 </script>
 </body>

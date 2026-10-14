@@ -323,6 +323,7 @@
   function showView(view) {
     setArchiveMode(false); // 25/26 전용 화면에서 다른 화면으로 가면 항상 현재 시즌으로 복귀
     currentView = view;
+    prepareArchiveForView(view); // 작년 기록을 쓰는 화면이면 archive-2526.js를 이때 불러옵니다
     const rankView = document.getElementById('rankView');
     const leagueRankView = document.getElementById('leagueRankView');
     const squadView = document.getElementById('squadView');
@@ -530,6 +531,7 @@
     if (!predictionCache) {
       tbody.innerHTML = `<tr><td colspan="7" class="predict-loading"><span class="predict-loading-inner"><span class="predict-spinner"></span><span>${isKorean ? '시뮬레이션 실행 중...' : 'Running simulation...'}</span></span></td></tr>`;
       refreshBtn.disabled = true;
+      renderWhatIf(); // 기본 예측이 끝나기 전에는 '다시 계산' 버튼이 비활성 상태로 보입니다
       runMonteCarloSimulationAsync(4000).then(result => {
         predictionCache = result;
         drawPredictionTable();
@@ -588,13 +590,14 @@
         <td class="pt-prob-cell">${barCell(r.top3Pct, 'top3')}</td>
         <td class="pt-prob-cell">${barCell(r.bottom3Pct, 'bottom3')}</td>
         <td>${r.avgFinalRank.toFixed(1)}</td>
-        <td>${r.avgFinalPts.toFixed(1)}</td>
+        <td class="pt-pts-cell">${r.avgFinalPts.toFixed(1)}${(typeof r.ptsP10 === 'number' && typeof r.ptsP90 === 'number') ? `<small class="pt-pts-range" title="${isKorean ? '시뮬레이션 결과의 80% 구간 (하위 10% ~ 상위 10% 제외)' : 'Middle 80% of simulated outcomes'}">${r.ptsP10}~${r.ptsP90}</small>` : ''}</td>
       `;
       tbody.appendChild(tr);
     });
 
     renderRankProbMatrix();
     renderRankLines();
+    renderWhatIf();
     attachImageFallback();
     refreshScrollFadeHints();
   }
@@ -723,6 +726,310 @@
       ${summary}`;
   }
 
+  // ===== 만약에 시뮬레이터 (What-if) =====
+  // 남은 경기의 결과를 사용자가 직접 고정(승/무/패)하고, 그 가정으로 몬테카를로를 다시 돌려
+  // 기본 예측과 나란히 비교합니다. 계산은 기존 예측과 같은 워커(requestPredictWorker)를 쓰고,
+  // 고정한 결과는 { "홈팀||원정팀": 'H'|'D'|'A' } 형태로 넘깁니다(data.js runMonteCarloSimulation 참고).
+  // 후반기(재대결) 경기는 날짜/순서가 아직 없어도 대진은 확정이라 그대로 고를 수 있고,
+  // 일정이 정해진 경기는 날짜를 함께 보여줍니다(데이터에 일정이 들어오면 자동 반영).
+  const WHATIF_ITERATIONS = 4000;
+  const WHATIF_MY_TEAM_EN = 'Chizumulu United FC';
+  const WHATIF_FLAT_PCT = 1.0;  // 두 번의 몬테카를로 사이의 무작위 오차(약 ±1%p) 안쪽 변화는 '변화 없음'으로 표시
+  const WHATIF_FLAT_PTS = 0.5;
+  const whatIfState = { teamEn: WHATIF_MY_TEAM_EN, picks: {}, result: null, running: false, failed: false, wired: false };
+  let whatIfFixturesCache = null;
+
+  function wiEsc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function wiFixtures() {
+    if (!whatIfFixturesCache) {
+      whatIfFixturesCache = (typeof listRemainingFixturesForWhatIf === 'function') ? listRemainingFixturesForWhatIf() : [];
+    }
+    return whatIfFixturesCache;
+  }
+
+  function wiTeamName(en) {
+    const t = leagueData.find(x => x.nameEn === en);
+    return t ? (isKorean ? t.nameKo : t.nameEn) : en;
+  }
+
+  function wiSig(picks) {
+    return Object.keys(picks).sort().map(k => k + '=' + picks[k]).join('|');
+  }
+
+  // 선택한 팀 기준 '승(W)/무(D)/패(L)' ↔ 실제 저장값(H=홈승, D=무, A=원정승) 변환
+  function wiPickFromView(fx, teamEn, view) {
+    if (view === 'D') return 'D';
+    return ((view === 'W') === (fx.homeEn === teamEn)) ? 'H' : 'A';
+  }
+  function wiViewFromPick(fx, teamEn, pick) {
+    if (pick === 'D') return 'D';
+    return ((pick === 'H') === (fx.homeEn === teamEn)) ? 'W' : 'L';
+  }
+
+  function wiDateText(fx) {
+    if (!fx.kickoffDate) return null;
+    const [y, mo, d] = fx.kickoffDate.split('-').map(Number);
+    const dt = new Date(y, mo - 1, d);
+    const time = fx.kickoffTime ? ' ' + fx.kickoffTime : '';
+    if (isKorean) return `${mo}.${d}(${WEEKDAY_KO[dt.getDay()]})${time}`;
+    return `${dt.toLocaleDateString('en-US', { month: 'short' })} ${d}${time}`;
+  }
+
+  // 팀의 남은 경기: 일정이 정해진 경기를 날짜순으로 먼저, 나머지는 상대의 현재 순위순
+  function wiTeamFixtures(teamEn) {
+    const rankMap = {};
+    getRankedTeams('all').forEach((t, i) => { rankMap[t.nameEn] = i; });
+    return wiFixtures()
+      .filter(fx => fx.homeEn === teamEn || fx.awayEn === teamEn)
+      .sort((a, b) => {
+        const da = a.kickoffDate ? a.kickoffDate + ' ' + (a.kickoffTime || '') : null;
+        const db = b.kickoffDate ? b.kickoffDate + ' ' + (b.kickoffTime || '') : null;
+        if (da && db) return da < db ? -1 : (da > db ? 1 : 0);
+        if (da) return -1;
+        if (db) return 1;
+        const oa = a.homeEn === teamEn ? a.awayEn : a.homeEn;
+        const ob = b.homeEn === teamEn ? b.awayEn : b.homeEn;
+        return (rankMap[oa] || 0) - (rankMap[ob] || 0);
+      });
+  }
+
+  function wiDeltaChip(delta, isPts, invert) {
+    const flat = Math.abs(delta) < (isPts ? WHATIF_FLAT_PTS : WHATIF_FLAT_PCT);
+    if (flat) return '<small class="wi-delta wi-delta-flat">≈</small>';
+    const good = invert ? delta < 0 : delta > 0;
+    const sign = delta > 0 ? '+' : '−';
+    const txt = isPts ? Math.abs(delta).toFixed(1) : Math.abs(delta).toFixed(1) + '%p';
+    return `<small class="wi-delta ${good ? 'wi-delta-good' : 'wi-delta-bad'}">${sign}${txt}</small>`;
+  }
+
+  function wiResultHtml(stale) {
+    const res = whatIfState.result;
+    if (!res || !predictionCache) return '';
+    const baseBy = {};
+    predictionCache.results.forEach(r => { baseBy[r.nameEn] = r; });
+
+    // 선택한 팀의 한 줄 요약
+    const focusEn = res.focusEn;
+    const fs = res.data.results.find(r => r.nameEn === focusEn);
+    const fb = baseBy[focusEn];
+    let headline = '';
+    if (fs && fb) {
+      const name = wiTeamName(focusEn);
+      const d = fs.championPct - fb.championPct;
+      const dTxt = Math.abs(d) < WHATIF_FLAT_PCT ? (isKorean ? '변화 없음' : 'no real change') : `${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}%p`;
+      headline = isKorean
+        ? `<strong>${name}</strong> 우승 확률 ${fb.championPct.toFixed(1)}% → <strong>${fs.championPct.toFixed(1)}%</strong> (${dTxt})`
+        : `<strong>${name}</strong> title chance ${fb.championPct.toFixed(1)}% → <strong>${fs.championPct.toFixed(1)}%</strong> (${dTxt})`;
+    }
+
+    const rows = res.data.results.map(r => {
+      const b = baseBy[r.nameEn];
+      const name = wiTeamName(r.nameEn);
+      const shortName = name.split(' ')[0];
+      const cls = [r.nameEn === focusEn ? 'wi-focus' : '', r.nameEn === WHATIF_MY_TEAM_EN ? 'my-team' : ''].join(' ').trim();
+      const cell = (val, baseVal, invert) => `<td class="wi-num"><span class="wi-val">${val.toFixed(1)}%</span>${b ? wiDeltaChip(val - baseVal, false, invert) : ''}</td>`;
+      return `<tr class="${cls}">
+        <td class="wi-team"><img class="team-logo team-logo-sm" src="${wiEsc(r.logoSrc)}" alt=""><span class="wi-name-full">${name}</span><span class="wi-name-short">${shortName}</span></td>
+        ${cell(r.championPct, b ? b.championPct : 0, false)}
+        ${cell(r.top3Pct, b ? b.top3Pct : 0, false)}
+        ${cell(r.bottom3Pct, b ? b.bottom3Pct : 0, true)}
+        <td class="wi-num"><span class="wi-val">${r.avgFinalPts.toFixed(1)}</span>${(typeof r.ptsP10 === 'number') ? `<small class="wi-range">${r.ptsP10}~${r.ptsP90}</small>` : ''}${b ? wiDeltaChip(r.avgFinalPts - b.avgFinalPts, true, false) : ''}</td>
+      </tr>`;
+    }).join('');
+
+    const staleNote = stale
+      ? `<p class="wi-stale">${isKorean ? '경기 선택이 바뀌었어요. 아래 결과는 이전 선택 기준이에요 — 다시 계산해 주세요.' : 'Your picks changed. The result below reflects the previous picks — recalculate to update.'}</p>`
+      : '';
+
+    return `
+      <div class="wi-result${stale ? ' is-stale' : ''}">
+        ${staleNote}
+        ${headline ? `<p class="wi-headline">${headline}</p>` : ''}
+        <div class="table-wrap wi-result-wrap">
+          <table class="stats-table wi-result-table">
+            <thead><tr>
+              <th>${isKorean ? '팀' : 'TEAM'}</th>
+              <th>${isKorean ? '우승' : 'TITLE'}</th>
+              <th>${isKorean ? '상위 3위' : 'TOP 3'}</th>
+              <th>${isKorean ? '하위 3위' : 'BOTTOM 3'}</th>
+              <th>${isKorean ? '예상 승점' : 'AVG PTS'}</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <p class="wi-foot">${isKorean
+          ? `고정한 ${res.fixedCount}경기를 반영해 ${res.data.iterations.toLocaleString()}회 시뮬레이션했어요. 작은 숫자는 기본 예측 대비 변화이며, ±1%p 안쪽(≈)은 시뮬레이션 오차 범위예요.`
+          : `${res.data.iterations.toLocaleString()} simulations with ${res.fixedCount} fixed result(s). Small figures show the change vs. the base forecast; changes within ±1%p (≈) are simulation noise.`}</p>
+      </div>`;
+  }
+
+  function renderWhatIf() {
+    const body = document.getElementById('whatIfBody');
+    if (!body) return;
+    wiWire(body);
+
+    const fixtures = wiFixtures();
+    if (!fixtures.length) {
+      body.innerHTML = `<p class="wi-empty">${isKorean ? '남은 경기가 없어요.' : 'No remaining fixtures.'}</p>`;
+      return;
+    }
+
+    const teamEn = whatIfState.teamEn;
+    const teamFx = wiTeamFixtures(teamEn);
+    const picks = whatIfState.picks;
+    const totalPicks = Object.keys(picks).length;
+    const teamPicks = teamFx.filter(fx => picks[fx.id]).length;
+    const otherPicks = totalPicks - teamPicks;
+
+    const teamOptions = getRankedTeams('all').map(t =>
+      `<option value="${wiEsc(t.nameEn)}"${t.nameEn === teamEn ? ' selected' : ''}>${isKorean ? t.nameKo : t.nameEn}</option>`
+    ).join('');
+
+    const rowsHtml = teamFx.map(fx => {
+      const isHome = fx.homeEn === teamEn;
+      const oppEn = isHome ? fx.awayEn : fx.homeEn;
+      const oppLogo = isHome ? fx.awayLogo : fx.homeLogo;
+      const cur = picks[fx.id] ? wiViewFromPick(fx, teamEn, picks[fx.id]) : null;
+      const dateTxt = wiDateText(fx);
+      const btn = (view, labelKo, labelEn, cls) =>
+        `<button type="button" class="wi-btn ${cls}${cur === view ? ' is-on' : ''}" data-wi-id="${wiEsc(fx.id)}" data-wi-view="${view}" aria-pressed="${cur === view}">${isKorean ? labelKo : labelEn}</button>`;
+      return `<div class="wi-row${cur ? ' is-picked' : ''}">
+        <div class="wi-match">
+          <img class="team-logo team-logo-sm" src="${wiEsc(oppLogo)}" alt="">
+          <span class="wi-opp">${wiTeamName(oppEn)}</span>
+          <span class="wi-ha ${isHome ? 'wi-ha-home' : 'wi-ha-away'}">${isHome ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A')}</span>
+          <span class="wi-date${dateTxt ? '' : ' wi-date-tbd'}">${dateTxt || (isKorean ? '일정 미정' : 'TBD')}</span>
+        </div>
+        <div class="wi-btns" role="group">
+          ${btn('W', '승', 'W', 'wi-btn-w')}${btn('D', '무', 'D', 'wi-btn-d')}${btn('L', '패', 'L', 'wi-btn-l')}
+        </div>
+      </div>`;
+    }).join('');
+
+    const canRun = !!predictionCache && totalPicks > 0 && !whatIfState.running;
+    const stale = !!(whatIfState.result && whatIfState.result.sig !== wiSig(picks));
+    const runLabel = whatIfState.running
+      ? (isKorean ? '계산 중...' : 'Calculating...')
+      : (isKorean ? '이 시나리오로 다시 계산' : 'Recalculate with these picks');
+    const hint = !predictionCache
+      ? (isKorean ? '기본 예측 계산이 끝나면 사용할 수 있어요.' : 'Available once the base forecast finishes.')
+      : (totalPicks === 0 ? (isKorean ? '경기 결과를 하나 이상 골라 주세요.' : 'Pick at least one result.') : '');
+    const teamNameTxt = wiTeamName(teamEn);
+
+    body.innerHTML = `
+      <div class="wi-controls">
+        <label class="wi-select-wrap"><span class="wi-select-label">${isKorean ? '팀 선택' : 'Team'}</span>
+          <select id="whatIfTeamSelect" class="wi-select">${teamOptions}</select>
+        </label>
+        <div class="wi-presets">
+          <button type="button" class="wi-chip" data-wi-action="all-win">${isKorean ? '전승' : 'Win all'}</button>
+          <button type="button" class="wi-chip" data-wi-action="home-win">${isKorean ? '홈 전승' : 'Win all home'}</button>
+          <button type="button" class="wi-chip" data-wi-action="all-loss">${isKorean ? '전패' : 'Lose all'}</button>
+          <button type="button" class="wi-chip wi-chip-ghost" data-wi-action="clear-team">${isKorean ? '이 팀 선택 해제' : 'Clear this team'}</button>
+        </div>
+      </div>
+      <p class="wi-sub">${isKorean
+        ? `${teamNameTxt} 남은 ${teamFx.length}경기 · 결과는 ${teamNameTxt} 기준이에요. 고르지 않은 경기는 시뮬레이션에 맡겨요.`
+        : `${teamNameTxt}: ${teamFx.length} remaining games · results are from ${teamNameTxt}'s side. Unpicked games are simulated as usual.`}</p>
+      <div class="wi-list">${rowsHtml}</div>
+      <div class="wi-actions">
+        <span class="wi-count">${isKorean
+          ? `고정한 경기 ${totalPicks}개${otherPicks > 0 ? ` (다른 팀 경기 ${otherPicks}개 포함)` : ''}`
+          : `${totalPicks} fixed${otherPicks > 0 ? ` (${otherPicks} from other teams)` : ''}`}</span>
+        <button type="button" class="wi-chip wi-chip-ghost" data-wi-action="reset"${totalPicks ? '' : ' disabled'}>${isKorean ? '전체 초기화' : 'Reset all'}</button>
+        <button type="button" class="wi-run" data-wi-action="run"${canRun ? '' : ' disabled'}>${runLabel}</button>
+      </div>
+      ${hint ? `<p class="wi-hint">${hint}</p>` : ''}
+      ${whatIfState.failed ? `<p class="wi-hint wi-error">${isKorean ? '계산에 실패했어요. 잠시 후 다시 시도해 주세요.' : 'Calculation failed. Please try again.'}</p>` : ''}
+      ${wiResultHtml(stale)}`;
+    attachImageFallback();
+    refreshScrollFadeHints();
+  }
+
+  function wiWire(body) {
+    if (whatIfState.wired) return;
+    whatIfState.wired = true;
+    body.addEventListener('change', e => {
+      if (e.target && e.target.id === 'whatIfTeamSelect') {
+        whatIfState.teamEn = e.target.value;
+        renderWhatIf();
+      }
+    });
+    body.addEventListener('click', e => {
+      const t = e.target.closest('[data-wi-view],[data-wi-action]');
+      if (!t || t.disabled) return;
+      const teamEn = whatIfState.teamEn;
+      const byId = {};
+      wiFixtures().forEach(fx => { byId[fx.id] = fx; });
+
+      if (t.dataset.wiView) {
+        const fx = byId[t.dataset.wiId];
+        if (!fx) return;
+        const pick = wiPickFromView(fx, teamEn, t.dataset.wiView);
+        if (whatIfState.picks[fx.id] === pick) delete whatIfState.picks[fx.id];
+        else whatIfState.picks[fx.id] = pick;
+        renderWhatIf();
+        return;
+      }
+
+      const teamFx = wiTeamFixtures(teamEn);
+      switch (t.dataset.wiAction) {
+        case 'all-win':
+          teamFx.forEach(fx => { whatIfState.picks[fx.id] = wiPickFromView(fx, teamEn, 'W'); });
+          break;
+        case 'all-loss':
+          teamFx.forEach(fx => { whatIfState.picks[fx.id] = wiPickFromView(fx, teamEn, 'L'); });
+          break;
+        case 'home-win':
+          // 홈 경기는 승리로 고정하고, 원정 경기는 선택을 풀어 시뮬레이션에 맡깁니다.
+          teamFx.forEach(fx => {
+            if (fx.homeEn === teamEn) whatIfState.picks[fx.id] = 'H';
+            else delete whatIfState.picks[fx.id];
+          });
+          break;
+        case 'clear-team':
+          teamFx.forEach(fx => { delete whatIfState.picks[fx.id]; });
+          break;
+        case 'reset':
+          whatIfState.picks = {};
+          whatIfState.result = null;
+          break;
+        case 'run':
+          runWhatIfSimulation();
+          return;
+        default:
+          return;
+      }
+      renderWhatIf();
+    });
+  }
+
+  function runWhatIfSimulation() {
+    if (whatIfState.running || !predictionCache) return;
+    const picks = Object.assign({}, whatIfState.picks);
+    const fixedCount = Object.keys(picks).length;
+    if (!fixedCount) return;
+    const focusEn = whatIfState.teamEn;
+    whatIfState.running = true;
+    whatIfState.failed = false;
+    renderWhatIf();
+    requestPredictWorker({ iterations: WHATIF_ITERATIONS, overrides: picks }, () => runMonteCarloSimulation(WHATIF_ITERATIONS, picks))
+      .then(data => {
+        whatIfState.result = { data, sig: wiSig(picks), fixedCount, focusEn };
+      })
+      .catch(err => {
+        console.error('만약에 시뮬레이션 실행 중 오류:', err);
+        whatIfState.failed = true;
+      })
+      .then(() => {
+        whatIfState.running = false;
+        renderWhatIf();
+      });
+  }
+
   // ===== 순위별 확률표 (팀 × "N위 이내") =====
   // 칸 값은 몬테카를로 결과(predictionCache.results[].rankPcts)의 누적 확률입니다.
   // 승점만으로 이미 정해진 칸은 확률 대신 "확보"/"불가"로 덮어씁니다 (매직넘버와 같은
@@ -745,7 +1052,7 @@
     const releg1st = teamCount - 2; // 강등 시작 순위(13위). 13위 칸 오른쪽(12위와의 경계)에 강등선
     const promoEdge = 2;            // 2위 칸 오른쪽(1위와의 경계)에 승격선
     const cols = [];
-    for (let k = teamCount - 1; k >= 1; k--) cols.push(k); // 14위 ... 1위 (15위 이내는 항상 100%)
+    for (let k = teamCount; k >= 1; k--) cols.push(k); // 15위 ... 1위 (꼴찌 칸은 항상 '확보')
 
     const lockLabel = isKorean ? '확보' : 'Locked';
     const outLabel = isKorean ? '불가' : 'Out';
@@ -8422,6 +8729,56 @@
   let archiveMode = false;
   let archiveWeekIdx = null; // null = 최종 주차
 
+  // ===== 25/26 아카이브 데이터 지연 로드 =====
+  // archive-2526.js(약 107KB)는 첫 화면에서 받지 않고, 필요한 순간에 한 번만 불러옵니다.
+  //  - 아카이브 화면 진입(openSeasonArchive / #/archive 주소)
+  //  - 작년 기록을 같이 보여주는 화면(통계·구단 정보·예측)에 들어갈 때
+  // 데이터가 아직 없는 동안에도 작년 비교 코드는 typeof 가드로 조용히 빠지도록 되어 있어서
+  // (archiveNameForTeam 등) 화면이 깨지지 않고, 로드가 끝나면 해당 화면만 다시 그립니다.
+  const ARCHIVE_DEPENDENT_VIEWS = ['stats', 'squad', 'predict'];
+  let archiveLoadPromise = null;
+
+  function archiveDataReady() {
+    return typeof ARCHIVE_2526 !== 'undefined' && !!ARCHIVE_2526.weeks && ARCHIVE_2526.weeks.length > 0;
+  }
+
+  // 항상 Promise<boolean>을 돌려줍니다(true = 사용 가능). 동시에 여러 번 불러도 요청은 한 번만 나갑니다.
+  function loadArchiveData() {
+    if (archiveDataReady()) return Promise.resolve(true);
+    if (archiveLoadPromise) return archiveLoadPromise;
+    archiveLoadPromise = new Promise(function (resolve) {
+      const el = document.createElement('script');
+      const v = (window.ASSET_VERSIONS && window.ASSET_VERSIONS.archive) || '';
+      el.src = 'archive-2526.js' + (v ? '?v=' + v : '');
+      el.async = true;
+      const fail = function () {
+        el.remove();
+        archiveLoadPromise = null; // 다음 시도에서 다시 받을 수 있도록 초기화
+        resolve(false);
+      };
+      el.onload = function () { archiveDataReady() ? resolve(true) : fail(); };
+      el.onerror = fail;
+      document.head.appendChild(el);
+    });
+    return archiveLoadPromise;
+  }
+
+  // 데이터 로드가 끝난 뒤, 작년 기록이 들어가는 화면만 다시 그립니다(무거운 예측 시뮬레이션은 건드리지 않음).
+  function refreshArchiveDependentViews() {
+    if (archiveMode) return;
+    if (currentView === 'stats') buildStatsTables();
+    else if (currentView === 'squad') showTeamInfoForKey(currentTeamInfoKey);
+    else if (currentView === 'predict') { renderPointsHistoryChart(); renderMagicNumberStats(); }
+  }
+
+  // showView에서 호출: 작년 기록을 쓰는 화면이면 백그라운드로 로드를 시작합니다.
+  function prepareArchiveForView(view) {
+    if (archiveDataReady() || ARCHIVE_DEPENDENT_VIEWS.indexOf(view) === -1) return;
+    loadArchiveData().then(function (ok) {
+      if (ok && currentView === view) refreshArchiveDependentViews();
+    });
+  }
+
   function archiveWeeks() {
     return (typeof ARCHIVE_2526 !== 'undefined' && ARCHIVE_2526.weeks) ? ARCHIVE_2526.weeks : [];
   }
@@ -8463,7 +8820,16 @@
   }
   // opts: { tab: 'weekly'|'clubs', team: 25/26 팀명, fromTeamInfo: boolean }
   function openSeasonArchive(opts) {
-    if (!archiveWeeks().length) return;
+    if (!archiveWeeks().length) {
+      // 아직 로드 전이면 불러온 뒤 같은 인자로 다시 엽니다.
+      document.body.style.cursor = 'progress';
+      loadArchiveData().then(function (ok) {
+        document.body.style.cursor = '';
+        if (ok) openSeasonArchive(opts);
+        else alert(isKorean ? '지난 시즌 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.' : 'Could not load last season data. Please try again in a moment.');
+      });
+      return;
+    }
     const o = (opts && typeof opts === 'object' && !opts.target) ? opts : {};
     archiveWeekIdx = null;
     archiveReturnToTeamInfo = !!o.fromTeamInfo;
@@ -9163,29 +9529,51 @@
       const wins = Math.ceil(number / 3);
       return wins <= remainingGames ? wins : null; // 남은 경기를 전승해도 승점만으로는 부족한 경우 null
     };
-    const title = { number: numberAgainst(titleRival), rival: titleRival };
-    const safety = { number: numberAgainst(safetyThreshold), rival: safetyThreshold };
-    title.wins = winsNeeded(title.number);
-    safety.wins = winsNeeded(safety.number);
+    const title = { kind: 'title', number: numberAgainst(titleRival), rival: titleRival };
+    const safety = { kind: 'safety', number: numberAgainst(safetyThreshold), rival: safetyThreshold };
+    // 이미 확실히 나보다 위인 팀 수: 남은 경기를 전승해도(myMax) 현재 승점이 그보다 높은 팀.
+    // 동률(pts === myMax)은 동률 순위결정 기준이 미정이므로 "아직 가능"으로 둡니다.
+    const myMax = context.maxPoints(team);
+    const teamsAbove = opponents.filter(other => other.pts > myMax).length;
+    // 상태: clinched(확정) / eliminated(우승 경쟁 탈락·강등 확정) / alive(진행 중)
+    title.status = title.number === 0 ? 'clinched' : (teamsAbove >= 1 ? 'eliminated' : 'alive');
+    safety.status = safety.number === 0 ? 'clinched' : (teamsAbove >= context.safeSlots ? 'eliminated' : 'alive');
+    title.wins = title.status === 'eliminated' ? null : winsNeeded(title.number);
+    safety.wins = safety.status === 'eliminated' ? null : winsNeeded(safety.number);
+    // 확정 조건에 쓰는 절대 기준: 라이벌의 최대 승점과, 그걸 넘기 위한 최종 승점
+    [title, safety].forEach(entry => {
+      entry.rivalMax = context.maxPoints(entry.rival);
+      entry.targetPts = entry.rivalMax + 1;
+    });
     return { remainingGames, title, safety };
   }
 
   // 표 셀용: PC는 "N점 남음", 모바일은 "N점"으로 짧게 (CSS가 .mn-full / .mn-short 를 전환)
   function magicNumberCellHtml(entry) {
-    if (entry.number === 0) return isKorean ? '확정' : 'CLINCHED';
+    if (entry.status === 'eliminated') {
+      const isTitle = entry.kind === 'title';
+      const full = isKorean ? (isTitle ? '탈락' : '강등 확정') : (isTitle ? 'ELIMINATED' : 'RELEGATED');
+      const short = isKorean ? (isTitle ? '탈락' : '강등') : (isTitle ? 'OUT' : 'REL');
+      return `<span class="mn-out"><span class="mn-full">${full}</span><span class="mn-short">${short}</span></span>`;
+    }
+    if (entry.number === 0) return `<span class="mn-clinched">${isKorean ? '확정' : 'CLINCHED'}</span>`;
     const full = magicNumberText(entry);
     const short = isKorean ? `${entry.number}점` : `${entry.number} pts`;
     return `<span class="mn-full">${full}</span><span class="mn-short">${short}</span>`;
   }
 
   function magicNumberText(entry) {
+    if (entry.status === 'eliminated') {
+      const isTitle = entry.kind === 'title';
+      return isKorean ? (isTitle ? '우승 경쟁 탈락' : '강등 확정') : (isTitle ? 'ELIMINATED' : 'RELEGATED');
+    }
     return entry.number === 0 ? (isKorean ? '확정' : 'CLINCHED') : (isKorean ? `${entry.number}점 남음` : `${entry.number} PTS LEFT`);
   }
 
   // 승점 매직넘버를 "최소 몇 승이면 확정"으로 환산한 배지 텍스트.
   // 이미 확정됐거나(0), 남은 경기를 전승해도 승점만으로 부족한 경우(null)에는 표시하지 않습니다.
   function magicNumberWinsText(entry) {
-    if (entry.number === 0) return '';
+    if (entry.number === 0 || entry.status === 'eliminated') return '';
     if (entry.wins === null) return isKorean ? '승점만으로는 이번 시즌 확정 불가' : 'Not clinchable by wins alone this season';
     return isKorean ? `최소 ${entry.wins}승이면 확정` : `Clinch with ${entry.wins} more win${entry.wins > 1 ? 's' : ''}`;
   }
@@ -9197,9 +9585,27 @@
     const name = isKorean ? team.nameKo : team.nameEn;
     const titleWinsMsg = magicNumberWinsText(numbers.title);
     const safetyWinsMsg = magicNumberWinsText(numbers.safety);
+    // 확정 조건 한 줄: 라이벌 최대 승점과 그걸 넘기 위한 목표 승점을 구체적인 숫자로 보여줍니다.
+    const conditionText = (entry, ctx) => {
+      const rivalName = isKorean ? entry.rival.nameKo : entry.rival.nameEn;
+      if (entry.status === 'clinched') {
+        return isKorean ? '이미 조건을 충족했어요' : 'Condition already met';
+      }
+      if (entry.status === 'eliminated') {
+        return entry.kind === 'title'
+          ? (isKorean ? '남은 경기를 전승해도 이미 앞선 팀을 넘을 수 없어요' : 'Cannot catch the teams already ahead, even by winning out')
+          : (isKorean ? `남은 경기를 전승해도 ${ctx.safeSlots}위 안에 들 수 없어요` : `Cannot reach the top ${ctx.safeSlots}, even by winning out`);
+      }
+      const rank = entry.kind === 'title' ? '' : (isKorean ? ` (${ctx.safeSlots}위 보장)` : ` (top-${ctx.safeSlots} guarantee)`);
+      return isKorean
+        ? `${rivalName}의 최대 승점 ${entry.rivalMax}점 → 최종 ${entry.targetPts}점 이상이면 확정${rank}`
+        : `${rivalName}'s max is ${entry.rivalMax} pts → reach ${entry.targetPts}+ to clinch${rank}`;
+    };
+    const titleCondition = conditionText(numbers.title, context);
+    const safetyCondition = conditionText(numbers.safety, context);
     const titleWinsHtml = titleWinsMsg ? `<span class="magic-number-wins${numbers.title.wins === null ? ' magic-number-wins-na' : ''}">${titleWinsMsg}</span>` : '';
     const safetyWinsHtml = safetyWinsMsg ? `<span class="magic-number-wins${numbers.safety.wins === null ? ' magic-number-wins-na' : ''}">${safetyWinsMsg}</span>` : '';
-    return `<section class="team-magic-number-card"><div class="team-magic-number-head"><div><span class="magic-number-kicker">SEASON RACE</span><h3>${isKorean ? '매직넘버' : 'MAGIC NUMBER'}</h3></div><span class="magic-number-rounds">${isKorean ? `남은 ${context.remainingRounds}R · ${numbers.remainingGames}경기` : `${context.remainingRounds} rounds left · ${numbers.remainingGames} games`}</span></div><div class="magic-number-grid"><div class="magic-number-item title-race"><span class="magic-number-label">${isKorean ? '우승 확정' : 'TITLE CLINCH'}</span><strong>${magicNumberText(numbers.title)}</strong>${titleWinsHtml}<small>${isKorean ? `${numbers.title.rival.nameKo}의 최대 승점 기준` : `vs ${numbers.title.rival.nameEn}'s maximum`}</small></div><div class="magic-number-item safety-race"><span class="magic-number-label">${isKorean ? '잔류 확정' : 'SAFETY CLINCH'}</span><strong>${magicNumberText(numbers.safety)}</strong>${safetyWinsHtml}<small>${isKorean ? `12위 보장 기준 · ${numbers.safety.rival.nameKo}` : `Top-12 guarantee · ${numbers.safety.rival.nameEn}`}</small></div></div><p class="magic-number-note">${isKorean ? `${name}의 승점 획득과 경쟁 팀의 승점 손실을 합친 보수적 수치입니다.` : `A conservative combined total of ${name}'s points gained and rivals' points dropped.`}</p></section>`;
+    return `<section class="team-magic-number-card"><div class="team-magic-number-head"><div><span class="magic-number-kicker">SEASON RACE</span><h3>${isKorean ? '매직넘버' : 'MAGIC NUMBER'}</h3></div><span class="magic-number-rounds">${isKorean ? `남은 ${context.remainingRounds}R · ${numbers.remainingGames}경기` : `${context.remainingRounds} rounds left · ${numbers.remainingGames} games`}</span></div><div class="magic-number-grid"><div class="magic-number-item title-race is-${numbers.title.status}"><span class="magic-number-label">${isKorean ? '우승 확정' : 'TITLE CLINCH'}</span><strong>${magicNumberText(numbers.title)}</strong>${titleWinsHtml}<small>${titleCondition}</small></div><div class="magic-number-item safety-race is-${numbers.safety.status}"><span class="magic-number-label">${isKorean ? '잔류 확정' : 'SAFETY CLINCH'}</span><strong>${magicNumberText(numbers.safety)}</strong>${safetyWinsHtml}<small>${safetyCondition}</small></div></div><p class="magic-number-note">${isKorean ? `${name}의 승점 획득과 경쟁 팀의 승점 손실을 합친 보수적 수치입니다.` : `A conservative combined total of ${name}'s points gained and rivals' points dropped.`}</p></section>`;
   }
 
   function renderMagicNumberStats() {
@@ -9253,7 +9659,7 @@
       </div>`;
   }
 
-  function pathFinderPlanHtml(plan, teamByEnMap, label) {
+  function pathFinderPlanHtml(plan, teamByEnMap, label, noteHtml) {
     const resultsTxt = pathFinderResultsLabel(plan.resultsNeeded);
     const fixturesHtml = plan.mustWinFixtures.length
       ? plan.mustWinFixtures.map(fx => pathFinderFixtureRowHtml(fx, teamByEnMap)).join('')
@@ -9274,18 +9680,24 @@
         </div>
         <div class="pf-plan-results">${resultsTxt}</div>
         ${statusTag}
+        ${noteHtml || ''}
         <div class="pf-fixture-list">${fixturesHtml}</div>
         ${shortfallNote}
       </div>`;
   }
 
-  function pathFinderRaceCardHtml(result, teamByEnMap, labelKo, labelEn) {
-    if (!result) return '';
-    const rivalName = isKorean ? result.rival.nameKo : result.rival.nameEn;
-    const depFixtures = result.rivalDependencyFixtures;
-    const depHtml = depFixtures.length ? `
+  // 언어 토글(.lbl + data-ko/data-en)을 따르는 한 줄 안내문
+  function pathFinderNoteHtml(ko, en) {
+    return `<p class="pf-note lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</p>`;
+  }
+
+  // 특정 팀의 "남은 경기 중 우리에게 유리한 카드" 접이식 목록
+  function pathFinderRivalDepHtml(rival, depFixtures) {
+    if (!depFixtures || !depFixtures.length) return '';
+    const rivalName = isKorean ? rival.nameKo : rival.nameEn;
+    return `
       <details class="pf-rival-dep-details">
-        <summary class="lbl" data-en="${rivalName}&#39;s remaining games that help you" data-ko="${rivalName}의 남은 경기 중 우리에게 유리한 카드">${isKorean ? `${rivalName}의 남은 경기 중 우리에게 유리한 카드` : `${rivalName}'s remaining games that help you`}</summary>
+        <summary class="lbl" data-en="${rival.nameEn}&#39;s remaining games that help you" data-ko="${rival.nameKo}의 남은 경기 중 우리에게 유리한 카드">${isKorean ? `${rivalName}의 남은 경기 중 우리에게 유리한 카드` : `${rivalName}'s remaining games that help you`}</summary>
         <div class="pf-fixture-list">
           ${depFixtures.map(fx => `
             <div class="pf-fixture-row">
@@ -9294,17 +9706,47 @@
               <span class="pf-fixture-req pf-req-draw">${isKorean ? '무승부·패배가 유리' : 'Draw/loss helps'}</span>
             </div>`).join('')}
         </div>
-      </details>` : '';
+      </details>`;
+  }
+
+  function pathFinderRaceCardHtml(result, teamByEnMap, labelKo, labelEn) {
+    if (!result) return '';
+    // 안전 경로와 쉬운 경로는 기준 팀이 다를 수 있습니다.
+    //  - 안전 경로: 최대 도달 승점이 가장 높은 팀(result.rival)이 남은 경기를 전승한다고 가정
+    //  - 쉬운 경로: 현재 승점이 가장 높은 팀(result.easiest.rival)이 더 이상 승점을 못 딴다고 가정
+    const safeRival = result.rival;
+    const easyRival = (result.easiest && result.easiest.rival) || result.rival;
+
+    const safestNote = pathFinderNoteHtml(
+      `${safeRival.nameKo}의 남은 경기 전승 기준`,
+      `Assumes ${safeRival.nameEn} wins all remaining games`
+    );
+    const easiestNote = pathFinderNoteHtml(
+      `${easyRival.nameKo}의 현재 승점 기준 · 상대가 더 이상 승점을 못 얻는 최선의 경우`,
+      `Based on ${easyRival.nameEn}'s current points · best case where rivals gain no more points`
+    );
+    // 라이벌과 직접 맞대결이 남아 있으면 '라이벌 전승' 가정이 성립하지 않으므로 안내
+    const h2h = result.headToHeadRemaining || 0;
+    const h2hNote = h2h > 0
+      ? pathFinderNoteHtml(
+          `${safeRival.nameKo} 상대 직접 맞대결이 ${h2h}경기 남아 있어 실제 필요치는 이보다 낮을 수 있어요`,
+          `${h2h} head-to-head game(s) vs ${safeRival.nameEn} remain, so the real requirement may be lower`
+        )
+      : '';
+
+    const depHtml = pathFinderRivalDepHtml(safeRival, result.rivalDependencyFixtures)
+      + (easyRival.nameEn !== safeRival.nameEn
+          ? pathFinderRivalDepHtml(easyRival, result.easiest && result.easiest.rivalDependencyFixtures)
+          : '');
     return `
       <div class="path-finder-card">
         <div class="path-finder-head">
           <span class="pf-kicker lbl" data-en="PATH FINDER" data-ko="경로 찾기">${isKorean ? '경로 찾기' : 'PATH FINDER'}</span>
           <h3 class="lbl" data-en="${labelEn}" data-ko="${labelKo}">${isKorean ? labelKo : labelEn}</h3>
         </div>
-        <p class="pf-rival-note lbl" data-en="Based on ${rivalName}&#39;s remaining results" data-ko="${rivalName}의 남은 경기 결과 기준">${isKorean ? `${rivalName}의 남은 경기 결과 기준` : `Based on ${rivalName}'s remaining results`}</p>
         <div class="pf-plan-grid">
-          ${pathFinderPlanHtml(result.easiest, teamByEnMap, isKorean ? '가장 쉬운 경로' : 'Easiest path')}
-          ${pathFinderPlanHtml(result.safest, teamByEnMap, isKorean ? '가장 안전한 경로' : 'Safest path')}
+          ${pathFinderPlanHtml(result.easiest, teamByEnMap, isKorean ? '가장 쉬운 경로' : 'Easiest path', easiestNote)}
+          ${pathFinderPlanHtml(result.safest, teamByEnMap, isKorean ? '가장 안전한 경로' : 'Safest path', safestNote + h2hNote)}
         </div>
         ${depHtml}
       </div>`;
@@ -15237,7 +15679,11 @@
           const tab = (parts[1] === 'weekly' || parts[1] === 'clubs') ? parts[1] : 'main';
           if (archiveMode) setArchiveTab(tab);
           else openSeasonArchive({ tab });
-          if (!archiveMode) showView('rank'); // 아카이브 데이터가 없으면 메인으로
+          if (!archiveMode) {
+            // 데이터를 지연 로드하는 중이면 주소를 그대로 두고 기다립니다(로드 후 openSeasonArchive가 화면을 엽니다).
+            if (!archiveDataReady()) { lastHash = normHash(location.hash); return; }
+            showView('rank'); // 아카이브 데이터가 없으면 메인으로
+          }
         } else if (head === 'rounds') {
           const key = 'round' + parseInt(parts[1], 10);
           if (roundsData[key] || (typeof scheduledRounds !== 'undefined' && scheduledRounds && scheduledRounds[key])) currentRoundKey = key;
