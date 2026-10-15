@@ -42,6 +42,12 @@ function lev(a, b) {
   return prev[n];
 }
 
+// 골 이벤트 판정: API 가 득점 이벤트의 type 을 "goal" 로 통일하지 않고 득점 방식으로 내려주는 경우가 있습니다
+// (예: 프리킥 골 → "free_kick"). 그래서 type 이름만 보지 않고, 득점자(role=scorer 등)가 붙어 있는지도 함께 봅니다.
+// 경고/교체/하프타임/단순 프리킥 같은 이벤트는 득점자 role 이 없으므로 걸러집니다.
+const GOAL_TYPE_RE = /goal|penalt|own/i;
+const isGoalEvent = (ev) => GOAL_TYPE_RE.test(ev.type || '') || (ev.players || []).some(p => /scorer|own|pen/i.test(p.role || ''));
+
 // ---------- data.js 읽기 ----------
 const dataSrc = fs.readFileSync(DATA_PATH, 'utf8');
 const D = vm.runInNewContext(
@@ -97,7 +103,7 @@ function aggregate(items) {
       if (m.dateText) g.dateText = m.dateText;
       if (g.statusHistory[g.statusHistory.length - 1] !== m.status) g.statusHistory.push(m.status);
       for (const ev of (m.events || [])) {
-        if (!/goal|penalt|own/i.test(ev.type || '')) continue;
+        if (!isGoalEvent(ev)) continue;
         if (ev.homeScore == null || ev.awayScore == null) continue;
         // 같은 골이 여러 게시물에 중복되므로 "골 직후 스코어"를 고유키로 삼습니다. (예: 0-1, 0-2 ...)
         const gk = `${ev.homeScore}-${ev.awayScore}`;
@@ -157,6 +163,11 @@ function buildScorers(g, finalHome, finalAway, issues) {
   };
   const out = { scorersHome: fmt(perTeam.home), scorersAway: fmt(perTeam.away) };
 
+  // 같은 경기 안에서 철자가 1~2자만 다른 이름(예: KELVIN / KEVIN GONDWE)은 같은 선수일 가능성이 높습니다.
+  const uniq = [...new Set(names)];
+  for (let i = 0; i < uniq.length; i++) for (let j = i + 1; j < uniq.length; j++) {
+    if (lev(uniq[i], uniq[j]) <= 2) issues.push(`철자가 비슷한 이름 ${uniq[i]} / ${uniq[j]} — 같은 선수라면 nameAliases 에 등록 (지금은 다른 선수로 따로 셈)`);
+  }
   // 처음 보는 이름 / 기존 선수와 철자가 1~2자 다른 이름
   for (const n of new Set(names)) {
     if (n === '(이름 미확인)' || knownPlayers.has(n)) continue;
