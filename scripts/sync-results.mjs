@@ -136,8 +136,11 @@ function aggregate(items) {
       if (!m.homeTeam || !m.awayTeam) continue;
       seenStatuses.add(m.status);
       const key = norm(m.homeTeam) + '|' + norm(m.awayTeam);
-      const g = games.get(key) || { key, homeRaw: m.homeTeam, awayRaw: m.awayTeam, goals: new Map(), posts: 0, statusHistory: [] };
+      const g = games.get(key) || { key, homeRaw: m.homeTeam, awayRaw: m.awayTeam, goals: new Map(), narratives: [], posts: 0, statusHistory: [] };
       g.posts++;
+      for (const text of [it.latestObservation?.text, it.korean?.text]) {
+        if (typeof text === 'string' && text.trim() && !g.narratives.includes(text.trim())) g.narratives.push(text.trim());
+      }
       g.last = { status: m.status, homeScore: m.homeScore, awayScore: m.awayScore, at: it.sourceTimestamp, id: it.rawUpdateId };
       if (m.dateText) g.dateText = m.dateText;
       if (g.statusHistory[g.statusHistory.length - 1] !== m.status) g.statusHistory.push(m.status);
@@ -154,6 +157,58 @@ function aggregate(items) {
     }
   }
   return { games, seenStatuses };
+}
+
+// 기사 문장에 명시된 멀티골(예: "complete his brace")은 구조화된 득점 이벤트의 득점자 기록을 보완합니다.
+// 정확히 한 명의 이벤트 선수와 팀에 연결되는 문장만 신뢰하고, 불명확하면 review로 보냅니다.
+function extractBraceClaims(g, issues) {
+  const cue = /\b(?:complete(?:s|d)?\s+(?:his|her|their)\s+brace|(?:his|her|their)\s+brace|brace|scored?\s+(?:his|her|their)\s+second|second\s+goal|scored?\s+twice)\b|두\s*골을?\s*(?:완성|기록|넣)|멀티골/i;
+  const candidates = [];
+  for (const ev of g.goals.values()) {
+    const player = (ev.players || []).find(p => /scorer|own|pen|goal/i.test(p.role || ''));
+    if (!player?.name || !ev.team) continue;
+    candidates.push({ name: player.name, team: ev.team });
+  }
+  const escapeRe = value => value.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
+  const claims = new Map();
+  let sawCue = false, ambiguousCue = false;
+  for (const narrative of g.narratives || []) {
+    for (const sentence of narrative.split(/\n|(?<=[.!?])\s+/)) {
+      if (!cue.test(sentence)) continue;
+      sawCue = true;
+      const matched = candidates.filter(c => new RegExp('(^|[^A-Za-z])' + escapeRe(c.name) + '(?=$|[^A-Za-z])', 'i').test(sentence));
+      const unique = new Map(matched.map(c => [norm(c.team) + '|' + upperName(c.name), c]));
+      if (unique.size > 1) ambiguousCue = true;
+      else if (unique.size === 1) {
+        const claim = [...unique.values()][0];
+        claims.set(norm(claim.team) + '|' + upperName(claim.name), claim);
+      }
+    }
+  }
+  if (ambiguousCue) issues.push('멀티골 설명에 연결되는 득점자가 여러 명이라 확인 필요');
+  if (sawCue && !claims.size && !ambiguousCue) issues.push('멀티골 설명은 있지만 구조화된 득점자 이름과 연결되지 않아 확인 필요');
+  return [...claims.values()];
+}
+
+// ---------- 득점 이벤트 → 득점자 문자열 ----------');
+  const claims = new Map();
+  let sawCue = false, ambiguousCue = false;
+  for (const narrative of g.narratives || []) {
+    for (const sentence of narrative.split(/\\n|(?<=[.!?])\\s+/)) {
+      if (!cue.test(sentence)) continue;
+      sawCue = true;
+      const matched = candidates.filter(c => new RegExp(`(^|[^A-Za-z])${escapeRe(c.name)}(?=$|[^A-Za-z])`, 'i').test(sentence));
+      const unique = new Map(matched.map(c => [`${norm(c.team)}|${upperName(c.name)}`, c]));
+      if (unique.size > 1) ambiguousCue = true;
+      else if (unique.size === 1) {
+        const claim = [...unique.values()][0];
+        claims.set(`${norm(claim.team)}|${upperName(claim.name)}`, claim);
+      }
+    }
+  }
+  if (ambiguousCue) issues.push('멀티골 설명에 연결되는 득점자가 여러 명이라 확인 필요');
+  if (sawCue && !claims.size && !ambiguousCue) issues.push('멀티골 설명은 있지만 구조화된 득점자 이름과 연결되지 않아 확인 필요');
+  return [...claims.values()];
 }
 
 // ---------- 득점 이벤트 → 득점자 문자열 ----------
@@ -182,8 +237,10 @@ function buildScorers(g, finalHome, finalAway, issues) {
   const names = [];
   const ambiguous = [];
   const seenByTeam = { home: new Set(), away: new Set() };
+  const braceClaims = extractBraceClaims(g, issues);
+  const knownTeamNames = new Set([norm(g.homeRaw), norm(g.awayRaw)]);
+  if (braceClaims.some(c => !knownTeamNames.has(norm(c.team)))) issues.push('멀티골 설명에 나온 팀을 경기의 홈/원정 팀과 연결하지 못해 확인 필요');
   const fmt = (list, side) => {
-    if (!list.length) return '없음';
     const order = [], map = new Map();
     for (const g1 of list) {
       let key = g1.name ? resolveScorerName(g1.name, side === 'home' ? g.homeRaw : g.awayRaw, seenByTeam[side], issues) : '(이름 미확인)';
@@ -193,6 +250,24 @@ function buildScorers(g, finalHome, finalAway, issues) {
       if (!map.has(k)) { map.set(k, { key, n: 0, pen: 0, own: g1.isOwn }); order.push(k); }
       const e = map.get(k); e.n++; if (g1.isPen) e.pen++;
     }
+    const sideTeam = norm(side === 'home' ? g.homeRaw : g.awayRaw);
+    for (const claim of braceClaims.filter(c => norm(c.team) === sideTeam)) {
+      const canonical = resolveScorerName(claim.name, side === 'home' ? g.homeRaw : g.awayRaw, seenByTeam[side], issues);
+      let scorer = map.get(canonical);
+      // 이벤트의 점수 변화가 비정상이라 일반 집계에서 빠졌어도, 기사 문구와 동일 선수/팀이
+      // 연결된 경우 득점자 요약은 보여줍니다. 스코어 체인 오류 자체는 계속 자동 반영을 막습니다.
+      if (!scorer) {
+        scorer = { key: canonical, n: 0, pen: 0, own: false };
+        map.set(canonical, scorer); order.push(canonical);
+      }
+      if (scorer.n < 2) {
+        issues.push(`기사의 멀티골 문구로 ${canonical} 득점을 ${scorer.n}골에서 2골로 보완`);
+        scorer.n = 2;
+      } else if (scorer.n > 2) {
+        issues.push(`기사에는 ${canonical} 멀티골이라고 되어 있지만 구조화된 득점 수는 ${scorer.n}골이라 확인 필요`);
+      }
+    }
+    if (!map.size) return '없음';
     return order.map(k => {
       const e = map.get(k);
       if (e.own) return `${e.key} (자책골)`;
@@ -203,7 +278,7 @@ function buildScorers(g, finalHome, finalAway, issues) {
     }).join(', ');
   };
   const out = { scorersHome: fmt(perTeam.home, 'home'), scorersAway: fmt(perTeam.away, 'away') };
-  const needsReview = issues.some(x => /이름 후보가 여러 명|득점자 이름 없음|골 중 PK/.test(x));
+  const needsReview = issues.some(x => /이름 후보가 여러 명|득점자 이름 없음|골 중 PK|멀티골 설명|멀티골 문구와|구조화된 득점 수는|멀티골 설명에 나온 팀/.test(x));
   return { ...out, chainOk, needsReview };
 }
 
