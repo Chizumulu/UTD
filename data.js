@@ -719,6 +719,45 @@ function computeAssistCombos() {
 }
 
 // ============================================================
+// 콤비 합작률 (computeAssistComboRates)
+// ------------------------------------------------------------
+// computeAssistCombos()는 "도움 → 골" 조합의 "횟수"만 셉니다. 그런데 횟수는 두 선수가
+// 같이 뛴 경기가 많을수록 자연히 커져서, 출전 기회가 적었던 콤비가 불리해 보입니다.
+// 여기서는 두 선수가 같은 경기에 함께 출전(선발 또는 교체 투입)한 경기 수를 세어
+// 합작률 = 합작 횟수 ÷ 함께 출전한 경기 수 ("함께 뛴 경기당 합작 골")를 붙여줍니다.
+// - 반환: { combos: [{ from, to, count, together, rate }], minTogether, ... }
+//   combos 순서는 computeAssistCombos()와 같고(횟수 순), 필드만 늘어납니다.
+// - 같이 뛴 경기가 너무 적거나(minTogether) 합작이 1회뿐이면(minCount) 비율이 우연에 크게
+//   좌우되므로, 합작률 순위에는 두 기준을 모두 넘긴 콤비만 씁니다.
+// - 같은 경기에서 두 번 합작하면 rate가 1을 넘을 수 있습니다(정상).
+// - 출전 판정은 starters + subsIn 기준(subsUnused는 제외)이며, 교체 투입 시점이
+//   "후반"처럼 거친 단위라 실제로 같이 그라운드에 있던 시간까지는 따지지 않습니다.
+// ============================================================
+const ASSIST_COMBO_RATE_MIN_TOGETHER = 3;
+const ASSIST_COMBO_RATE_MIN_COUNT = 2; // 합작 1회짜리(1골/3경기 = 0.33 등)가 표본 착시로 상위에 오르는 걸 막습니다
+function computeAssistComboRates() {
+  const base = computeAssistCombos();
+  const appeared = [];
+  Object.keys(matchLineups).forEach(roundKey => {
+    const lu = matchLineups[roundKey];
+    if (!lu) return;
+    const set = new Set();
+    (lu.starters || []).concat(lu.subsIn || []).forEach(p => {
+      const k = p.statKey || p.number;
+      if (k !== undefined && k !== null && k !== '') set.add(String(k));
+    });
+    appeared.push(set);
+  });
+  const combos = base.combos.map(c => {
+    const a = String(c.from), b = String(c.to);
+    let together = 0;
+    appeared.forEach(set => { if (set.has(a) && set.has(b)) together++; });
+    return Object.assign({}, c, { together, rate: together ? c.count / together : 0 });
+  });
+  return { combos, minTogether: ASSIST_COMBO_RATE_MIN_TOGETHER, minCount: ASSIST_COMBO_RATE_MIN_COUNT, totalGoals: base.totalGoals, assistedGoals: base.assistedGoals, solo: base.solo };
+}
+
+// ============================================================
 // 선수 한 명의 도움 관계 (computeAssistRelationsForPlayer)
 // ------------------------------------------------------------
 // matchLineups의 goals[i] ↔ assists[i]를 훑어서, playerKey 선수 한 명의 도움 관계를 계산합니다.
@@ -870,6 +909,87 @@ function computeKeyPlayerImpactCandidates() {
   }
   const list = buildList(2);
   return list.length ? list : buildList(1);
+}
+
+// ============================================================
+// 선발 조합 효과 (computePairImpact)
+// ------------------------------------------------------------
+// computeKeyPlayerImpact()가 "선수 1명"의 선발/결장 승점 차이를 본다면, 이건 "두 선수가
+// 같은 경기에 함께 선발"로 나온 경기와 그렇지 않은 경기의 경기당 승점을 비교합니다.
+// - 함께 선발 = 두 선수 모두 starters에 있는 라운드 / 그 외 = 그 밖의 모든 라운드
+//   (한 명만 선발이거나 둘 다 선발이 아닌 경기 포함 — 교체 출전 여부는 따지지 않습니다)
+// - 표본이 작아 승점 평균이 크게 출렁이므로, 양쪽 평균 모두 "팀 평균 승점을 PRIOR_GAMES경기
+//   분량으로 섞어서" 평균 쪽으로 당긴 뒤(shrinkage) 차이를 냅니다. 표본이 적을수록 0에 가까워집니다.
+// - 반환: { pairs: [{ a, b, together, apart, ppgTogether, ppgApart, diff, soloDiffA, soloDiffB,
+//                    dominant, lowSample }], games, basePpg, minTogether, minApart, priorGames }
+//   diff = 보정된 경기당 승점 차이(함께 선발 − 그 외), 큰 순으로 정렬됩니다.
+//   dominant = 한 선수의 개인 효과가 조합 효과의 80% 이상을 설명하면 그 선수 키(아니면 null)
+//   lowSample = 함께/그 외 중 적은 쪽이 SAMPLE_OK 경기 미만
+// - 인과가 아니라 "같이 선발이었을 때 성적이 어땠나"의 기록입니다. 표본이 12경기 안팎이라
+//   화면에서도 참고용으로만 표시합니다.
+// ============================================================
+const PAIR_IMPACT_MIN_TOGETHER = 4;   // 함께 선발이 이보다 적으면 후보에서 제외
+const PAIR_IMPACT_MIN_APART = 3;      // 그 외 경기가 이보다 적으면 비교 불가라 제외
+const PAIR_IMPACT_PRIOR_GAMES = 3;    // 팀 평균을 섞어주는 가상 경기 수 (클수록 보수적)
+const PAIR_IMPACT_SAMPLE_OK = 5;      // 양쪽 표본이 모두 이 이상이어야 "표본 적음" 배지가 안 붙음
+function computePairImpact(opts) {
+  opts = opts || {};
+  const minTogether = opts.minTogether || PAIR_IMPACT_MIN_TOGETHER;
+  const minApart = opts.minApart || PAIR_IMPACT_MIN_APART;
+  const K = PAIR_IMPACT_PRIOR_GAMES;
+  const rounds = [];
+  Object.keys(matchLineups).forEach(roundKey => {
+    const lu = matchLineups[roundKey];
+    if (!lu) return;
+    const parsed = parseLineupResult(lu.result);
+    if (!parsed) return;
+    const starters = new Set();
+    (lu.starters || []).forEach(p => {
+      const k = p.statKey || p.number;
+      if (k !== undefined && k !== null && k !== '') starters.add(String(k));
+    });
+    rounds.push({
+      pts: parsed.outcome === 'W' ? 3 : (parsed.outcome === 'D' ? 1 : 0),
+      gd: parsed.ownGoals - parsed.oppGoals,
+      starters
+    });
+  });
+  const total = rounds.length;
+  if (!total) return { pairs: [], games: 0, basePpg: 0, minTogether, minApart, priorGames: K };
+  const basePpg = rounds.reduce((s, r) => s + r.pts, 0) / total;
+  const shrink = (sum, n) => (sum + K * basePpg) / (n + K);
+  const split = (pred) => {
+    let nW = 0, pW = 0, nO = 0, pO = 0;
+    rounds.forEach(r => { if (pred(r)) { nW++; pW += r.pts; } else { nO++; pO += r.pts; } });
+    return { nW, nO, ppgW: nW ? pW / nW : 0, ppgO: nO ? pO / nO : 0, adjDiff: shrink(pW, nW) - shrink(pO, nO) };
+  };
+  const solo = {};
+  const keys = [];
+  rounds.forEach(r => r.starters.forEach(k => { if (!solo[k]) { solo[k] = split(x => x.starters.has(k)); keys.push(k); } }));
+  const pairs = [];
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = i + 1; j < keys.length; j++) {
+      const a = keys[i], b = keys[j];
+      const s = split(r => r.starters.has(a) && r.starters.has(b));
+      if (s.nW < minTogether || s.nO < minApart) continue;
+      // 한 선수의 개인 효과가 조합 효과의 대부분을 설명하면(같은 부호, 80% 이상) 그 선수를 표시합니다.
+      // (조합 효과 = 두 선수가 같이 선발일 때 vs 아닐 때, 개인 효과 = 한 명 기준 같은 비교)
+      const pd = s.adjDiff;
+      const cand = Math.abs(solo[a].adjDiff) >= Math.abs(solo[b].adjDiff) ? a : b;
+      const sc = solo[cand].adjDiff;
+      const dominant = (Math.abs(pd) >= 0.1 && sc * pd > 0 && Math.abs(sc) >= 0.8 * Math.abs(pd)) ? cand : null;
+      pairs.push({
+        a: /^\d+$/.test(a) ? Number(a) : a, b: /^\d+$/.test(b) ? Number(b) : b,
+        together: s.nW, apart: s.nO,
+        ppgTogether: s.ppgW, ppgApart: s.ppgO,
+        diff: pd, soloDiffA: solo[a].adjDiff, soloDiffB: solo[b].adjDiff,
+        dominant: dominant === null ? null : (/^\d+$/.test(dominant) ? Number(dominant) : dominant),
+        lowSample: Math.min(s.nW, s.nO) < PAIR_IMPACT_SAMPLE_OK
+      });
+    }
+  }
+  pairs.sort((x, y) => (y.diff - x.diff) || (y.together - x.together));
+  return { pairs, games: total, basePpg, minTogether, minApart, priorGames: K };
 }
 
 const matchDetails = {
@@ -5999,6 +6119,71 @@ function validateSiteData() {
     }
   }
   return summary;
+}
+
+// ============================================================
+// 예측 대비 결과 — 이변 지수 & 팀별 기대 승점 (computePredictionSurprise)
+// ------------------------------------------------------------
+// computeAiPredictionTrackRecord()의 경기별 행(rows)에는, 그 경기 "직전까지의 데이터만으로"
+// 계산한 승/무/패 확률(homeWinPct/drawPct/awayWinPct, 미래 데이터 유출 없음)이 들어 있습니다.
+// 트랙레코드는 이걸로 "적중했나"를 보지만, 여기서는 같은 확률로 두 가지를 더 뽑습니다.
+//  1) 이변 지수: 실제로 나온 결과의 사전 확률(pActual). 낮을수록 의외였던 경기입니다.
+//  2) 팀별 기대 승점(xPts): 경기마다 3×승 확률 + 1×무 확률을 팀별로 더한 값. 피타고리안은
+//     득실점만 보지만, 이 값은 "그 경기에서 누굴 상대했는지(상대 전력·홈/원정)"까지 반영돼
+//     있어서, 실제 승점과의 차이는 일정 난이도까지 감안한 \"기대 대비 성과\"가 됩니다.
+// - 표본이 없는 개막 라운드(lowConfidence)는 기존 summary와 같은 이유로 제외합니다.
+// - 보정 없는 raw 확률(트랙레코드 표에 보이는 예측과 같은 것)을 씁니다.
+// - 반환: { n, matches, topSurprises, favoriteGames, favoriteUpsets, lowProbCount, expectedLowProb, teams }
+//   lowProbCount: 사전 확률 20% 미만 결과가 실제로 나온 경기 수
+//   expectedLowProb: 모델이 맞다면 그런 결과가 \"나올 것으로 기대되는\" 경기 수(비교용)
+//   teams: [{ nameEn, nameKo, played, pts, xPts, diff }] diff 큰 순
+// - computeAiPredictionTrackRecord()가 돌려준 객체는 공유되므로 읽기만 합니다.
+// ============================================================
+const SURPRISE_LOW_PROB = 0.2;       // 이 확률 미만의 결과를 "의외"로 셉니다
+const SURPRISE_FAVORITE_MIN = 0.5;   // 이 확률 이상이던 쪽이 못 이기면 "우세 팀의 이변"
+const SURPRISE_TOP_N = 5;
+
+function computePredictionSurprise() {
+  const track = (typeof computeAiPredictionTrackRecord === 'function') ? computeAiPredictionTrackRecord() : null;
+  const rows = ((track && track.rows) || []).filter(r =>
+    !r.lowConfidence && typeof r.homeWinPct === 'number' && typeof r.drawPct === 'number' && typeof r.awayWinPct === 'number');
+  if (!rows.length) return { n: 0, matches: [], topSurprises: [], favoriteGames: 0, favoriteUpsets: 0, lowProbCount: 0, expectedLowProb: 0, teams: [] };
+
+  const teamMap = {};
+  const ensure = (en, ko) => (teamMap[en] = teamMap[en] || { nameEn: en, nameKo: ko, played: 0, pts: 0, xPts: 0 });
+  let lowProbCount = 0, expectedLowProb = 0, favoriteUpsets = 0, favoriteGames = 0;
+
+  const matches = rows.map(r => {
+    const pH = r.homeWinPct / 100, pD = r.drawPct / 100, pA = r.awayWinPct / 100;
+    const pActual = r.actualResult === 'H' ? pH : (r.actualResult === 'A' ? pA : pD);
+    const probs = { H: pH, D: pD, A: pA };
+    const favorite = (pH >= pD && pH >= pA) ? 'H' : ((pA >= pD && pA >= pH) ? 'A' : 'D');
+    const favoriteUpset = probs[favorite] >= SURPRISE_FAVORITE_MIN && r.actualResult !== favorite;
+    if (probs[favorite] >= SURPRISE_FAVORITE_MIN) favoriteGames++;
+    if (favoriteUpset) favoriteUpsets++;
+    if (pActual < SURPRISE_LOW_PROB) lowProbCount++;
+    [pH, pD, pA].forEach(p => { if (p < SURPRISE_LOW_PROB) expectedLowProb += p; });
+
+    const home = ensure(r.homeEn, r.homeKo), away = ensure(r.awayEn, r.awayKo);
+    home.played++; away.played++;
+    home.xPts += 3 * pH + pD; away.xPts += 3 * pA + pD;
+    home.pts += r.actualResult === 'H' ? 3 : (r.actualResult === 'D' ? 1 : 0);
+    away.pts += r.actualResult === 'A' ? 3 : (r.actualResult === 'D' ? 1 : 0);
+
+    return {
+      weekNum: r.weekNum, homeEn: r.homeEn, homeKo: r.homeKo, awayEn: r.awayEn, awayKo: r.awayKo,
+      homeScore: r.homeScore, awayScore: r.awayScore, actualResult: r.actualResult,
+      pH, pD, pA, pActual, favorite, favoriteUpset
+    };
+  });
+
+  const topSurprises = matches.slice()
+    .sort((x, y) => (x.pActual - y.pActual) || (y.weekNum - x.weekNum))
+    .slice(0, SURPRISE_TOP_N);
+  const teams = Object.values(teamMap)
+    .map(t => Object.assign(t, { diff: t.pts - t.xPts }))
+    .sort((x, y) => (y.diff - x.diff) || (y.played - x.played));
+  return { n: matches.length, matches, topSurprises, favoriteGames, favoriteUpsets, lowProbCount, expectedLowProb, teams };
 }
 
 try { validateSiteData(); } catch (e) { console.warn('데이터 검증 중 오류가 발생했습니다:', e); }

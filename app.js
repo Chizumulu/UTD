@@ -1274,6 +1274,7 @@
 
     renderAiAutoCorrection(track, s);
     renderAiDCCorrection(track);
+    renderAiSurprise();
 
     const wdlLabel = { H: isKorean ? '홈승' : 'Home', D: isKorean ? '무승부' : 'Draw', A: isKorean ? '원정승' : 'Away' };
     const rowsSorted = track.rows.slice().sort((a, b) => b.weekNum - a.weekNum);
@@ -1301,6 +1302,86 @@
     }).join('');
 
     refreshScrollFadeHints();
+  }
+
+  // ===== 예측 대비 결과: 이변 지수 & 팀별 기대 승점 =====
+  // computePredictionSurprise()(data.js)가 트랙레코드의 "경기 전 확률"로 계산합니다.
+  // 1) 가장 의외였던 경기 TOP N (실제 결과의 사전 확률이 낮은 순)
+  // 2) 우세 팀이 못 이긴 경기 수 / 확률 20% 미만 결과 수 (모델 기대치와 비교 = 모델이 과신하는지 점검)
+  // 3) 팀별 실제 승점 vs 기대 승점(상대 전력·홈/원정이 반영된 값)
+  function renderAiSurprise() {
+    const el = document.getElementById('aiTrackSurprise');
+    if (!el) return;
+    if (typeof computePredictionSurprise !== 'function') { el.innerHTML = ''; return; }
+    const S = computePredictionSurprise();
+    if (!S.n) { el.innerHTML = ''; return; }
+
+    const nameOf = (en, ko) => (isKorean ? ko : en).split(' ')[0];
+    const pct = (p) => Math.round(p * 100);
+    const resLabel = { H: isKorean ? '홈승' : 'Home win', D: isKorean ? '무승부' : 'Draw', A: isKorean ? '원정승' : 'Away win' };
+    const weekTxt = (w) => isMakeupPos(w) ? (isKorean ? '연기' : 'MU') : (isKorean ? regularWkNum(w) + '주차' : 'Wk ' + regularWkNum(w));
+    const sgn = (v) => (v > 0 ? '+' : '') + v.toFixed(1);
+
+    const chip = (val, ko, en) => `
+      <div class="ai-track-chip">
+        <span class="ai-track-chip-val">${val}</span>
+        <span class="ai-track-chip-lbl lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>
+      </div>`;
+    const chips = chip(`${S.favoriteUpsets}/${S.favoriteGames}`, '우세(50%↑) 팀이 못 이긴 경기', 'Favorites (50%+) that failed to win')
+      + chip(`${S.lowProbCount}`, `확률 20% 미만 결과 (모델 기대 ${S.expectedLowProb.toFixed(1)}경기)`, `Results under 20% (model expects ${S.expectedLowProb.toFixed(1)})`);
+
+    const rows = S.topSurprises.map(m => {
+      const home = nameOf(m.homeEn, m.homeKo), away = nameOf(m.awayEn, m.awayKo);
+      const tag = m.favoriteUpset
+        ? `<span class="ai-surp-tag">${isKorean ? '이변' : 'Upset'}</span>` : '';
+      return `
+        <div class="ai-surp-row">
+          <span class="ai-surp-week">${weekTxt(m.weekNum)}</span>
+          <span class="ai-surp-match">${home} ${m.homeScore}-${m.awayScore} ${away}${tag}</span>
+          <span class="ai-surp-prob">${pct(m.pActual)}%</span>
+          <div class="ai-surp-meta">${isKorean
+            ? `경기 전 확률 홈 ${pct(m.pH)} · 무 ${pct(m.pD)} · 원정 ${pct(m.pA)} → ${resLabel[m.actualResult]}`
+            : `Pre-match: home ${pct(m.pH)} · draw ${pct(m.pD)} · away ${pct(m.pA)} → ${resLabel[m.actualResult]}`}</div>
+        </div>`;
+    }).join('');
+
+    const teamRows = S.teams.map(t => {
+      const cls = t.diff > 0.05 ? 'ai-surp-pos' : (t.diff < -0.05 ? 'ai-surp-neg' : '');
+      const us = isOurTeamLabel(t.nameKo) || isOurTeamLabel(t.nameEn);
+      return `<tr class="${us ? 'ai-surp-us' : ''}">
+        <td class="ai-track-match">${nameOf(t.nameEn, t.nameKo)}</td>
+        <td>${t.played}</td><td>${t.pts}</td><td>${t.xPts.toFixed(1)}</td>
+        <td class="${cls}"><b>${sgn(t.diff)}</b></td>
+      </tr>`;
+    }).join('');
+
+    const titleKo = '이변 지수 & 기대 승점', titleEn = 'UPSETS & EXPECTED POINTS';
+    const topKo = '가장 의외였던 경기 (실제 결과의 경기 전 확률이 낮은 순)', topEn = 'Biggest surprises (lowest pre-match chance of the actual result)';
+    const noteKo = `개막 초반 경기를 뺀 ${S.n}경기 기준이에요. 기대 승점은 경기마다 (3×승리 확률 + 무승부 확률)을 더한 값이라 상대 전력과 홈/원정이 반영돼 있어요. 차이가 +면 모델 기대보다 승점을 더 땄다는 뜻이고, 운과 모델 오차가 섞여 있어요.`;
+    const noteEn = `Based on ${S.n} matches excluding early-season games. Expected points = sum of (3 × win chance + draw chance) per match, so opponent strength and venue are included. A positive gap means more points than the model expected — a mix of luck and model error.`;
+    const sumKo = '팀별 실제 승점 vs 기대 승점', sumEn = 'Actual vs expected points by team';
+
+    el.innerHTML = `
+      <div class="ai-track-subtitle"><span class="lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</span></div>
+      <div class="ai-track-summary">${chips}</div>
+      <div class="ai-surp-head lbl" data-en="${topEn}" data-ko="${topKo}">${isKorean ? topKo : topEn}</div>
+      <div class="ai-surp-list">${rows}</div>
+      <details class="ai-surp-details">
+        <summary class="lbl" data-en="${sumEn}" data-ko="${sumKo}">${isKorean ? sumKo : sumEn}</summary>
+        <div class="table-wrap ai-track-table-wrap">
+          <table class="stats-table ai-track-table">
+            <thead><tr>
+              <th class="lbl" data-en="TEAM" data-ko="팀">${isKorean ? '팀' : 'TEAM'}</th>
+              <th class="lbl" data-en="GP" data-ko="경기">${isKorean ? '경기' : 'GP'}</th>
+              <th class="lbl" data-en="PTS" data-ko="실제 승점">${isKorean ? '실제 승점' : 'PTS'}</th>
+              <th class="lbl" data-en="xPTS" data-ko="기대 승점">${isKorean ? '기대 승점' : 'xPTS'}</th>
+              <th class="lbl" data-en="DIFF" data-ko="차이">${isKorean ? '차이' : 'DIFF'}</th>
+            </tr></thead>
+            <tbody>${teamRows}</tbody>
+          </table>
+        </div>
+      </details>
+      <p class="ai-track-note lbl" data-en="${noteEn}" data-ko="${noteKo}">${isKorean ? noteKo : noteEn}</p>`;
   }
 
   // ===== AI 자동 보정 (Auto-Correction) 요약 렌더링 =====
@@ -6347,7 +6428,10 @@
   // 도움 최다 / 공격포인트(골+도움) 상위 3순위(동률은 모두 포함) / 2회 이상 호흡을 맞춘 콤비.
   function renderAssistLeadersCard() {
     if (typeof computeAssistCombos !== 'function') return '';
-    const { combos, totalGoals, assistedGoals, solo } = computeAssistCombos();
+    const { combos: baseCombos, totalGoals, assistedGoals, solo } = computeAssistCombos();
+    // 합작률(함께 뛴 경기 수 포함)이 계산 가능하면 그 버전을 쓰고, 없으면 기존 횟수만 씁니다.
+    const rated = (typeof computeAssistComboRates === 'function') ? computeAssistComboRates() : null;
+    const combos = rated ? rated.combos : baseCombos;
     if (!assistedGoals) return '';
 
     const MIN_APPS_FOR_PER_GAME = 3; // 출전이 너무 적으면 경기당 수치가 부풀려져서 제외
@@ -6385,9 +6469,29 @@
             <span class="ti-assist-combo-name lineup-squad-link" data-player-number="${c.from}">${firstWord(nameOfNum(c.from))}</span>
             <span class="ti-assist-combo-arrow">→</span>
             <span class="ti-assist-combo-name lineup-squad-link" data-player-number="${c.to}">${firstWord(nameOfNum(c.to))}</span>
-            <span class="ti-assist-combo-count">${isKorean ? c.count + '회' : '×' + c.count}</span>
+            <span class="ti-assist-combo-count">${isKorean ? c.count + '회' : '×' + c.count}${c.together ? `<small class="ti-assist-combo-together">${isKorean ? '함께 ' + c.together + '경기' : 'in ' + c.together + ' G'}</small>` : ''}</span>
           </div>`).join('')}</div>`
       : `<div class="ti-appear-empty lbl" data-en="No repeat pairs yet" data-ko="아직 2회 이상 호흡을 맞춘 조합이 없습니다">${isKorean ? '아직 2회 이상 호흡을 맞춘 조합이 없습니다' : 'No repeat pairs yet'}</div>`;
+
+    // ---- 콤비 합작률 (함께 뛴 경기당 합작 골) ----
+    // 횟수만 보면 같이 많이 뛴 콤비가 유리하므로, 같이 출전한 경기 수로 나눠 비교합니다.
+    // 함께 출전이 minTogether 경기 미만이면 비율이 부풀려져서 제외합니다.
+    const rateMin = rated ? rated.minTogether : 3;
+    const rateList = rated
+      ? rated.combos.filter(c => c.together >= rateMin && c.count >= rated.minCount)
+          .map(c => Object.assign({}, c, { r2: Math.round(c.rate * 100) / 100 }))
+          .sort((x, y) => (y.r2 - x.r2) || (y.count - x.count) || (Number(x.from) - Number(y.from)))
+      : [];
+    const rateTop = rateList.slice(0, 4);
+    const rateRows = rateTop.length
+      ? `<div class="ti-assist-combo-list">${rateTop.map(c => `
+          <div class="ti-assist-combo-row">
+            <span class="ti-assist-combo-name lineup-squad-link" data-player-number="${c.from}">${firstWord(nameOfNum(c.from))}</span>
+            <span class="ti-assist-combo-arrow">→</span>
+            <span class="ti-assist-combo-name lineup-squad-link" data-player-number="${c.to}">${firstWord(nameOfNum(c.to))}</span>
+            <span class="ti-assist-combo-count">${c.r2.toFixed(2)}<small class="ti-assist-combo-together">${isKorean ? c.count + '회 / 함께 ' + c.together + '경기' : c.count + ' in ' + c.together + ' G'}</small></span>
+          </div>`).join('')}</div>`
+      : `<div class="ti-appear-empty lbl" data-en="No duo qualifies yet (${rateMin}+ shared games, 2+ combos)" data-ko="조건을 채운 콤비가 아직 없습니다 (함께 ${rateMin}경기 이상 · 2회 이상 합작)">${isKorean ? '조건을 채운 콤비가 아직 없습니다 (함께 ' + rateMin + '경기 이상 · 2회 이상 합작)' : 'No duo qualifies yet (' + rateMin + '+ shared games, 2+ combos)'}</div>`;
 
     // ---- 전체 콤비 표 (행 = 도운 선수, 열 = 득점 선수) ----
     // 칸 색이 진할수록 그 조합이 많다는 뜻입니다. 맨 아래에 "도움 없는 골"과 득점 합계도 붙입니다.
@@ -6431,10 +6535,12 @@
       { type: 'pg', titleKo: '경기당 공격포인트', titleEn: 'Contributions per Game', subKo: `출전 ${MIN_APPS_FOR_PER_GAME}경기 이상 기준`, subEn: `${MIN_APPS_FOR_PER_GAME}+ appearances`,
         rows: appearanceLeaderRowsHtml(topRanked('pg', r => r.apps >= MIN_APPS_FOR_PER_GAME), r => r.pg.toFixed(2)) },
       { type: 'combo', titleKo: '최강 콤비', titleEn: 'Best Duos', subKo: '2회 이상 합작 (도움 → 골)', subEn: '2+ combos (assist → goal)',
-        rows: comboRows }
+        rows: comboRows },
+      { type: 'comborate', wide: true, titleKo: '콤비 합작률', titleEn: 'Duo Scoring Rate', subKo: `함께 뛴 경기당 합작 골 (${rateMin}경기 이상 · 2회 이상 합작)`, subEn: `Combos per shared game (${rateMin}+ games together, 2+ combos)`,
+        rows: rateRows }
     ];
     const blocksHtml = blocks.map(b => `
-      <div class="ti-appear-block">
+      <div class="ti-appear-block${b.wide ? ' ti-appear-block-wide' : ''}">
         <div class="ti-appear-block-head">
           <span class="ti-appear-block-title lbl" data-en="${b.titleEn}" data-ko="${b.titleKo}">${isKorean ? b.titleKo : b.titleEn}</span>
           <span class="ti-appear-block-sub lbl" data-en="${b.subEn}" data-ko="${b.subKo}">${isKorean ? b.subKo : b.subEn}</span>
@@ -6560,7 +6666,8 @@
     assists:{ ko: '도움 최다', en: 'Most Assists' },
     ga:     { ko: '공격포인트', en: 'Goal Contributions' },
     pg:     { ko: '경기당 공격포인트', en: 'Contributions per Game' },
-    combo:  { ko: '최강 콤비', en: 'Best Duos' }
+    combo:  { ko: '최강 콤비', en: 'Best Duos' },
+    comborate: { ko: '콤비 합작률', en: 'Duo Scoring Rate' }
   };
 
   function fullRecordBtnHtml(type) {
@@ -6601,13 +6708,26 @@
       return assignFullRanks(rows, r => r.value).map(r => Object.assign(r, { valueText: isKorean ? `${r.value}골` : `${r.value}` }));
     }
 
-    if (type === 'combo') {
-      const { combos } = computeAssistCombos();
+    if (type === 'combo' || type === 'comborate') {
+      const rated = computeAssistComboRates();
       const nm = (num) => { const p = sq(num); return p ? (isKorean ? p.nameKo : (p.nameEn || p.nameKo)).split(' ')[0] : String(num); };
-      return assignFullRanks(combos, c => c.count).map(c => ({
+      const togetherTxt = (c) => isKorean ? `함께 ${c.together}경기` : `in ${c.together} G`;
+      if (type === 'combo') {
+        return assignFullRanks(rated.combos, c => c.count).map(c => ({
+          rank: c.rank, combo: true, from: c.from, to: c.to,
+          fromName: nm(c.from), toName: nm(c.to),
+          valueText: isKorean ? `${c.count}회` : `×${c.count}`,
+          subText: c.together ? togetherTxt(c) : ''
+        }));
+      }
+      const list = rated.combos.filter(c => c.together >= rated.minTogether && c.count >= rated.minCount)
+        .map(c => Object.assign({}, c, { r2: Math.round(c.rate * 100) / 100 }))
+        .sort((x, y) => (y.r2 - x.r2) || (y.count - x.count) || (Number(x.from) - Number(y.from)));
+      return assignFullRanks(list, c => c.r2).map(c => ({
         rank: c.rank, combo: true, from: c.from, to: c.to,
         fromName: nm(c.from), toName: nm(c.to),
-        valueText: isKorean ? `${c.count}회` : `×${c.count}`
+        valueText: c.r2.toFixed(2),
+        subText: isKorean ? `${c.count}회 / ${togetherTxt(c)}` : `${c.count} ${togetherTxt(c)}`
       }));
     }
 
@@ -6645,9 +6765,11 @@
 
     const noteKo = type === 'pg' ? `출전 ${FULL_RECORD_MIN_APPS}경기 이상 선수만 집계돼요` :
                    type === 'combo' ? '도움 → 골 조합 전체 (1회 포함)' :
+                   type === 'comborate' ? '함께 뛴 경기당 합작 골 · 함께 3경기 이상 출전하고 2회 이상 합작한 콤비만 집계돼요' :
                    '동률은 같은 순위로 표시돼요';
     const noteEn = type === 'pg' ? `Players with ${FULL_RECORD_MIN_APPS}+ appearances only` :
                    type === 'combo' ? 'All assist → goal pairs (including one-offs)' :
+                   type === 'comborate' ? 'Combos per shared game; only duos with 3+ shared games and 2+ combos' :
                    'Ties share the same rank';
 
     const body = document.getElementById('fullRecordBody');
@@ -6665,6 +6787,7 @@
             <span class="fullrec-arrow">→</span>
             <span class="lineup-squad-link" data-player-number="${r.to}">${escapeHtml(r.toName)}</span>
           </span>
+          ${r.subText ? `<span class="fullrec-sub">${r.subText}</span>` : ''}
           <span class="fullrec-value">${r.valueText}</span>
         </li>`;
       }
@@ -6923,6 +7046,65 @@
       </div>`;
   }
 
+  // ===== 선발 조합 효과 카드 =====
+  // computePairImpact()(data.js): 두 선수가 함께 선발이었던 경기 vs 아닌 경기의 경기당 승점 차이.
+  // 표본이 작아 팀 평균 쪽으로 보정된 값이며, 모든 줄에 표본 수와 주의 배지를 붙입니다.
+  function renderPairImpactCard() {
+    if (typeof computePairImpact !== 'function') return '';
+    const res = computePairImpact();
+    if (!res.pairs.length) return '';
+    const nameOf = (key) => {
+      const p = squadData.find(x => String(x.number) === String(key));
+      return p ? (isKorean ? p.nameKo : (p.nameEn || p.nameKo)).split(' ')[0] : String(key);
+    };
+    const fmt = (v) => (v > 0 ? '+' : '') + v.toFixed(2);
+    const rowHtml = (p) => {
+      const cls = p.diff > 0 ? 'ti-impact-chip-score-pos' : (p.diff < 0 ? 'ti-impact-chip-score-neg' : '');
+      const tags = [];
+      if (p.lowSample) tags.push(`<span class="ti-pair-tag ti-pair-tag-warn">${isKorean ? '표본 적음' : 'Small sample'}</span>`);
+      if (p.dominant !== null && p.dominant !== undefined) {
+        tags.push(`<span class="ti-pair-tag">${isKorean ? '주로 ' + nameOf(p.dominant) + ' 영향' : 'Mostly ' + nameOf(p.dominant)}</span>`);
+      }
+      return `
+        <div class="ti-assist-combo-row ti-pair-row">
+          <span class="ti-assist-combo-name lineup-squad-link" data-player-number="${p.a}">${nameOf(p.a)}</span>
+          <span class="ti-assist-combo-arrow">+</span>
+          <span class="ti-assist-combo-name lineup-squad-link" data-player-number="${p.b}">${nameOf(p.b)}</span>
+          <span class="ti-assist-combo-count ${cls}">${fmt(p.diff)}</span>
+          <div class="ti-pair-meta">
+            <span>${isKorean ? `함께 ${p.together}경기 ${p.ppgTogether.toFixed(2)}점 vs 그 외 ${p.apart}경기 ${p.ppgApart.toFixed(2)}점` : `Together ${p.together} G ${p.ppgTogether.toFixed(2)} pts vs other ${p.apart} G ${p.ppgApart.toFixed(2)} pts`}</span>
+            ${tags.join('')}
+          </div>
+        </div>`;
+    };
+    const best = res.pairs.filter(p => p.diff > 0).slice(0, 4);
+    const worst = res.pairs.filter(p => p.diff < 0).slice().reverse().slice(0, 4);
+    const blockHtml = (titleKo, titleEn, subKo, subEn, list) => `
+      <div class="ti-appear-block">
+        <div class="ti-appear-block-head">
+          <span class="ti-appear-block-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</span>
+          <span class="ti-appear-block-sub lbl" data-en="${subEn}" data-ko="${subKo}">${isKorean ? subKo : subEn}</span>
+        </div>
+        <div class="ti-appear-block-rows">${list.length
+          ? `<div class="ti-assist-combo-list">${list.map(rowHtml).join('')}</div>`
+          : `<div class="ti-appear-empty">${isKorean ? '해당하는 조합이 없어요' : 'None'}</div>`}</div>
+      </div>`;
+    const noteKo = `두 선수가 함께 선발일 때 vs 아닐 때의 경기당 승점 차이예요. 라인업 ${res.games}경기 기준이고, 표본이 작아 팀 평균(${res.basePpg.toFixed(2)}점) 쪽으로 보정했어요`;
+    const noteEn = `Points/game when two players start together vs. not, over ${res.games} lineups; shrunk toward the team average (${res.basePpg.toFixed(2)})`;
+    const warnKo = '인과가 아니라 기록이에요. 상대 전력과 일정이 보정되지 않았고, 한 선수 효과가 섞여 있을 수 있어 참고용으로만 봐주세요.';
+    const warnEn = 'A record, not causation: opponent strength is not adjusted and one player may drive the effect. Treat as a rough guide.';
+    return `
+      <div class="ti-card ti-pair-card">
+        <div class="ti-card-title lbl" data-en="Starting Duo Effect" data-ko="선발 조합 효과">${isKorean ? '선발 조합 효과' : 'Starting Duo Effect'}</div>
+        <div class="ti-gk-card-note lbl" data-en="${noteEn}" data-ko="${noteKo}">${isKorean ? noteKo : noteEn}</div>
+        <div class="ti-appear-grid">
+          ${blockHtml('잘 맞은 조합', 'Best Pairings', '함께 선발일 때 승점↑', 'More pts together', best)}
+          ${blockHtml('삐걱댄 조합', 'Rough Pairings', '함께 선발일 때 승점↓', 'Fewer pts together', worst)}
+        </div>
+        <div class="ti-gk-card-note ti-pair-warn lbl" data-en="${warnEn}" data-ko="${warnKo}">${isKorean ? warnKo : warnEn}</div>
+      </div>`;
+  }
+
   document.addEventListener('click', function(event) {
     const chip = event.target.closest('.ti-impact-chip');
     if (chip && chip.dataset.playerNumber) {
@@ -6943,7 +7125,8 @@
       + renderGoalkeeperRecordCard()
       + renderAppearanceStatsCard()
       + renderPositionPairCards()
-      + renderKeyPlayerImpactCard();
+      + renderKeyPlayerImpactCard()
+      + renderPairImpactCard();
   }
 
   // ===== 팀 스토리 탭 =====
@@ -14578,6 +14761,7 @@
       <div class="mc-compare-layout">
         ${played ? '' : `<div class="mc-compare-right">
           ${aiPredictionBlockHtml(homeEn, homeKo, awayEn, awayKo, home, away)}
+          ${mcTitleImpactContainerHtml(homeEn, awayEn, played)}
         </div>`}
         <div class="mc-compare-left">
           ${played ? `<div class="mc-played-note lbl" data-en="Standings and form shown are as of now, not at kickoff." data-ko="순위와 폼은 경기 당시가 아닌 현재 기준이에요.">${isKorean ? '순위와 폼은 경기 당시가 아닌 현재 기준이에요.' : 'Standings and form shown are as of now, not at kickoff.'}</div>` : ''}
@@ -14608,7 +14792,205 @@
     `;
 
     showModalAnimated(document.getElementById('matchCompareModal'));
+    mcLoadTitleImpact(homeEn, awayEn);
   }
+
+  // ===== 전적 비교: 경기 결과(승/무/패)별 치주물루 우승 확률 변화 =====
+  // "아직 안 치른" 모든 경기에서, 그 경기 결과를 각각 고정하고
+  // (만약에 시뮬레이터와 같은 overrides) 몬테카를로를 다시 돌려 우승 확률이 어떻게 달라지는지 보여줍니다.
+  // - 치주물루 경기: 치주물루 승/무/패 기준으로 보여줍니다.
+  // - 다른 팀끼리의 경기: 홈 승/무/원정 승 기준으로 보여주고, 치주물루에게 가장 유리한 결과를 한 줄로 알려줍니다.
+  // 캐시에는 항상 저장값(H/D/A) 기준으로 담고, 화면에서 치주물루 경기만 승/무/패로 바꿔 보여줍니다.
+  // - 계산은 같은 워커(requestPredictWorker)를 쓰고, 경기마다 한 번만 계산해서 캐시합니다
+  //   (언어 전환으로 모달이 다시 그려져도 재계산하지 않습니다).
+  // - 비교 기준(현재 확률)은 리그 예측표의 predictionCache가 있으면 그것을, 없으면 이 기능이 직접
+  //   돌린 기준 시뮬레이션을 씁니다(mcGetOwnBaseline). 예측표 기준으로 계산한 경우 예측표가 새로
+  //   계산되면 함께 다시 계산합니다.
+  // - 시뮬레이션 오차 때문에 ±WHATIF_FLAT_PCT 안쪽 변화는 "≈"로 표시합니다(만약에 시뮬레이터와 동일).
+  const MC_IMPACT_ITERATIONS = 6000;
+  const matchTitleImpactCache = {}; // fixtureId -> { base, basedOnPC, data: { H, D, A }, running, failed }
+
+  function mcTitleImpactApplicable(homeEn, awayEn, played) {
+    if (played) return false;
+    const id = whatIfFixtureId(homeEn, awayEn);
+    return wiFixtures().some(fx => fx.id === id);
+  }
+
+  function mcTitleImpactContainerHtml(homeEn, awayEn, played) {
+    return mcTitleImpactApplicable(homeEn, awayEn, played) ? '<div class="mc-title-impact" id="mcTitleImpact"></div>' : '';
+  }
+
+  function mcTitleImpactStillShown(homeEn, awayEn) {
+    return !!(lastMatchCompareArgs && lastMatchCompareArgs[0] === homeEn && lastMatchCompareArgs[2] === awayEn);
+  }
+
+  function mcRenderTitleImpact(homeEn, awayEn) {
+    const el = document.getElementById('mcTitleImpact');
+    if (!el || !mcTitleImpactStillShown(homeEn, awayEn)) return;
+    const id = whatIfFixtureId(homeEn, awayEn);
+    const entry = matchTitleImpactCache[id];
+    const titleKo = '이 경기 결과별 우승 확률', titleEn = 'TITLE CHANCE BY RESULT';
+    const head = `<div class="mc-form-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>`;
+    const msg = (ko, en, spin) => `${head}<div class="mc-ti-msg">${spin ? '<span class="predict-spinner"></span>' : ''}<span>${isKorean ? ko : en}</span></div>`;
+
+    const runBtn = (ko, en) => `<button type="button" class="wi-run mc-ti-run" id="mcTitleImpactRun">${isKorean ? ko : en}</button>`;
+    // 아직 계산 전(모달을 열기만 한 상태): 시뮬레이션은 버튼을 눌렀을 때만 시작합니다.
+    if (!entry) {
+      el.innerHTML = `${head}<p class="mc-ti-idle">${isKorean ? '이 경기의 승/무/패에 따라 치주물루 우승 확률이 얼마나 달라지는지 계산해 볼 수 있어요.' : "See how each result of this match changes Chizumulu's title chance."}</p>${runBtn('🔮 결과 예측하기', '🔮 Predict outcomes')}`;
+      return;
+    }
+    if (entry.failed) {
+      el.innerHTML = `${head}<div class="mc-ti-msg"><span>${isKorean ? '계산에 실패했어요.' : 'Calculation failed.'}</span></div>${runBtn('다시 시도', 'Retry')}`;
+      return;
+    }
+    if (!entry.data || !entry.base) {
+      // 계산 중: 누른 버튼이 그 자리에서 비활성 + 회전 링으로 바뀝니다.
+      el.innerHTML = `${head}<button type="button" class="wi-run mc-ti-run is-loading" disabled aria-busy="true"><span class="mc-ti-ring" aria-hidden="true"></span><span>${isKorean ? '시뮬레이션 계산 중...' : 'Simulating...'}</span></button><p class="mc-ti-idle">${isKorean ? '몇 초 걸려요. 창을 닫지 않고 기다려 주세요.' : 'This takes a few seconds.'}</p>`;
+      return;
+    }
+
+    const baseBy = {};
+    entry.base.results.forEach(r => { baseBy[r.nameEn] = r; });
+    const MY = WHATIF_MY_TEAM_EN;
+    const isMine = homeEn === MY || awayEn === MY;
+    const shortName = (en) => wiTeamName(en).split(' ')[0];
+    const pctOf = (pick, en) => { const r = entry.data[pick].results.find(x => x.nameEn === en); return r ? r.championPct : 0; };
+    const baseOf = (en) => baseBy[en] ? baseBy[en].championPct : 0;
+
+    // 열: 치주물루 경기는 치주물루 승/무/패, 그 외 경기는 홈 승/무/원정 승(저장값 H/D/A 그대로)
+    const fxLite = { homeEn };
+    const cols = isMine
+      ? [['W', isKorean ? '치주물루 승' : 'CHZ WIN'], ['D', isKorean ? '무' : 'DRAW'], ['L', isKorean ? '패' : 'LOSS']]
+          .map(([v, label]) => ({ pick: wiPickFromView(fxLite, MY, v), label }))
+      : [
+          { pick: 'H', label: isKorean ? `${shortName(homeEn)} 승` : `${shortName(homeEn)} WIN` },
+          { pick: 'D', label: isKorean ? '무' : 'DRAW' },
+          { pick: 'A', label: isKorean ? `${shortName(awayEn)} 승` : `${shortName(awayEn)} WIN` }
+        ];
+
+    // 치주물루 행에서 가장 유리한 결과 칸을 강조합니다(변화가 오차 범위 안이면 강조하지 않음).
+    const myVals = cols.map(c => pctOf(c.pick, MY));
+    const swing = Math.max(...myVals) - Math.min(...myVals);
+    const bestIdx = swing < WHATIF_FLAT_PCT ? -1 : myVals.indexOf(Math.max(...myVals));
+
+    const teamRowHtml = (en) => {
+      const b = baseOf(en);
+      const us = en === MY;
+      const cells = cols.map((c, i) => {
+        const val = pctOf(c.pick, en);
+        const best = us && i === bestIdx ? ' class="mc-ti-best"' : '';
+        return `<td${best}><span class="wi-val">${val.toFixed(1)}%</span>${wiDeltaChip(val - b, false, false)}</td>`;
+      }).join('');
+      return `<tr class="${us ? 'my-team' : ''}"><td class="mc-ti-team">${shortName(en)}</td><td><span class="wi-val">${b.toFixed(1)}%</span></td>${cells}</tr>`;
+    };
+
+    // 경기에 나오는 다른 팀(들)도 우승 가능성이 1% 이상 있을 때만 함께 보여줍니다.
+    const others = [homeEn, awayEn].filter(en => en !== MY).filter(en =>
+      Math.max(baseOf(en), ...cols.map(c => pctOf(c.pick, en))) >= 1);
+
+    let headline;
+    if (swing < WHATIF_FLAT_PCT) {
+      headline = isKorean ? '이 경기 결과는 치주물루 우승 확률에 거의 영향이 없어요' : "This result barely moves Chizumulu's title chance";
+    } else if (isMine) {
+      headline = isKorean
+        ? `이 경기 결과에 따라 치주물루 우승 확률이 최대 <strong>${swing.toFixed(1)}%p</strong> 달라져요`
+        : `The result swings Chizumulu's title chance by up to <strong>${swing.toFixed(1)}%p</strong>`;
+    } else {
+      const best = cols[bestIdx];
+      const gain = myVals[bestIdx] - baseOf(MY);
+      const gainTxt = (gain >= 0 ? '+' : '−') + Math.abs(gain).toFixed(1) + '%p';
+      const who = best.pick === 'H' ? shortName(homeEn) : (best.pick === 'A' ? shortName(awayEn) : null);
+      headline = isKorean
+        ? (who
+            ? `치주물루에게 가장 유리한 결과: <strong>${who} 승</strong> (현재 대비 <strong>${gainTxt}</strong>, 최대 ${swing.toFixed(1)}%p 차이)`
+            : `치주물루에게 가장 유리한 결과: <strong>무승부</strong> (현재 대비 <strong>${gainTxt}</strong>, 최대 ${swing.toFixed(1)}%p 차이)`)
+        : (who
+            ? `A <strong>${who}</strong> win is best for Chizumulu (<strong>${gainTxt}</strong> vs. now; up to ${swing.toFixed(1)}%p apart)`
+            : `A <strong>draw</strong> is best for Chizumulu (<strong>${gainTxt}</strong> vs. now; up to ${swing.toFixed(1)}%p apart)`);
+    }
+
+    el.innerHTML = `
+      ${head}
+      <p class="mc-ti-headline">${headline}</p>
+      <div class="table-wrap">
+        <table class="stats-table mc-ti-table">
+          <thead><tr>
+            <th>${isKorean ? '팀' : 'TEAM'}</th>
+            <th>${isKorean ? '현재' : 'NOW'}</th>
+            ${cols.map(c => `<th>${c.label}</th>`).join('')}
+          </tr></thead>
+          <tbody>${teamRowHtml(MY)}${others.map(teamRowHtml).join('')}</tbody>
+        </table>
+      </div>
+      <p class="mc-ti-foot">${isKorean
+        ? `이 경기 결과만 고정하고 ${MC_IMPACT_ITERATIONS.toLocaleString()}회씩 시뮬레이션했어요. 작은 숫자는 현재 대비 변화이고, ±${WHATIF_FLAT_PCT.toFixed(0)}%p 안쪽(≈)은 오차 범위예요.`
+        : `Only this result is fixed; ${MC_IMPACT_ITERATIONS.toLocaleString()} simulations each. Small figures show the change vs. now; within ±${WHATIF_FLAT_PCT.toFixed(0)}%p (≈) is simulation noise.`}</p>`;
+  }
+
+  // 리그 예측표(predictionCache)는 예측 화면을 열어야 계산되므로, 전적 비교 창만 연 경우에는
+  // 비어 있을 수 있습니다. 그때는 여기서 직접 "현재" 기준 시뮬레이션을 한 번 돌려 두고
+  // 모든 경기가 공유합니다(예측표가 있으면 그 값을 그대로 써서 예측표 숫자와 일치시킵니다).
+  let mcOwnBaselinePromise = null;
+  function mcGetOwnBaseline() {
+    if (!mcOwnBaselinePromise) {
+      mcOwnBaselinePromise = requestPredictWorker({ iterations: MC_IMPACT_ITERATIONS }, () => runMonteCarloSimulation(MC_IMPACT_ITERATIONS))
+        .catch(err => { mcOwnBaselinePromise = null; throw err; });
+    }
+    return mcOwnBaselinePromise;
+  }
+
+  // 창을 열 때는 계산하지 않고 안내 + '결과 예측하기' 버튼만 보여줍니다(캐시된 결과가 있으면 바로 표시).
+  function mcLoadTitleImpact(homeEn, awayEn) {
+    if (!document.getElementById('mcTitleImpact')) return;
+    const id = whatIfFixtureId(homeEn, awayEn);
+    const entry = matchTitleImpactCache[id];
+    // 예측표 값을 기준으로 계산했는데 예측표가 새로 계산돼 기준이 바뀌었다면, 낡은 결과는 버리고 버튼 상태로 돌아갑니다.
+    if (entry && !entry.running && entry.data && entry.basedOnPC && entry.base !== predictionCache) {
+      delete matchTitleImpactCache[id];
+    }
+    mcRenderTitleImpact(homeEn, awayEn);
+  }
+
+  function mcStartTitleImpact(homeEn, awayEn) {
+    if (!document.getElementById('mcTitleImpact')) return;
+    const id = whatIfFixtureId(homeEn, awayEn);
+    let entry = matchTitleImpactCache[id];
+    if (entry && entry.running) return;
+    if (entry && entry.data && !entry.failed) { mcRenderTitleImpact(homeEn, awayEn); return; }
+
+    const usingPC = !!predictionCache;
+    entry = matchTitleImpactCache[id] = { base: null, basedOnPC: usingPC, data: null, running: true, failed: false };
+    mcRenderTitleImpact(homeEn, awayEn);
+
+    const run = (pick) => {
+      const picks = {}; picks[id] = pick;
+      return requestPredictWorker({ iterations: MC_IMPACT_ITERATIONS, overrides: picks }, () => runMonteCarloSimulation(MC_IMPACT_ITERATIONS, picks));
+    };
+    // 스피너가 화면에 먼저 그려진 뒤에 계산을 시작합니다. 워커를 못 쓰는 환경에서는 계산이
+    // 메인 스레드를 막기 때문에, 바로 시작하면 스피너가 한 번도 그려지지 않고 화면이 멈춰 버립니다.
+    const afterPaint = new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 30)));
+    afterPaint.then(() => {
+      const basePromise = usingPC ? Promise.resolve(predictionCache) : mcGetOwnBaseline();
+      return Promise.all([basePromise, run('H'), run('D'), run('A')]);
+    }).then(([base, H, D, A]) => {
+      entry.base = base;
+      entry.data = { H, D, A };
+      entry.running = false;
+      mcRenderTitleImpact(homeEn, awayEn);
+    }).catch(err => {
+      console.error('경기 결과별 우승 확률 계산 중 오류:', err);
+      entry.running = false;
+      entry.failed = true;
+      mcRenderTitleImpact(homeEn, awayEn);
+    });
+  }
+
+  document.addEventListener('click', function(event) {
+    const btn = event.target.closest('#mcTitleImpactRun');
+    if (!btn || !lastMatchCompareArgs) return;
+    trackEvent('title_impact_run', { home_team: lastMatchCompareArgs[0], away_team: lastMatchCompareArgs[2], round_key: lastMatchCompareArgs[4] || '' }, 'title_impact_run');
+    mcStartTitleImpact(lastMatchCompareArgs[0], lastMatchCompareArgs[2]);
+  });
 
   function closeMatchCompareModal() {
     lastMatchCompareArgs = null;
