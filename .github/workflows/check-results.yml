@@ -1,0 +1,10 @@
+name: check-results
+on: workflow_dispatch   # 수동 실행 버튼
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node scripts/sync-results.mjs
