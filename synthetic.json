@@ -1,0 +1,285 @@
+{
+ "items": [
+  {
+   "rawUpdateId": 120,
+   "sourceTimestamp": "2026-10-15T16:40:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Lube Masters FC",
+      "awayTeam": "Jenda United FC",
+      "homeScore": 1,
+      "awayScore": 3,
+      "status": "full_time",
+      "events": []
+     }
+    ]
+   }
+  },
+  {
+   "rawUpdateId": 119,
+   "sourceTimestamp": "2026-10-15T16:30:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Lube Masters FC",
+      "awayTeam": "Jenda United FC",
+      "homeScore": 1,
+      "awayScore": 3,
+      "status": "live",
+      "events": [
+       {
+        "type": "own_goal",
+        "minute": 80,
+        "minuteText": "80'",
+        "team": "Lube Masters FC",
+        "homeScore": 1,
+        "awayScore": 3,
+        "players": [
+         {
+          "name": "Andrew Kamanga",
+          "role": "own_goal"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "rawUpdateId": 118,
+   "sourceTimestamp": "2026-10-15T16:10:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Lube Masters FC",
+      "awayTeam": "Jenda United FC",
+      "homeScore": 1,
+      "awayScore": 2,
+      "status": "live",
+      "events": [
+       {
+        "type": "penalty_goal",
+        "minute": 62,
+        "minuteText": "62'",
+        "team": "Lube Masters FC",
+        "homeScore": 1,
+        "awayScore": 2,
+        "players": [
+         {
+          "name": "Hastings Phirri",
+          "role": "scorer"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "rawUpdateId": 117,
+   "sourceTimestamp": "2026-10-15T15:50:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Lube Masters FC",
+      "awayTeam": "Jenda United FC",
+      "homeScore": 0,
+      "awayScore": 2,
+      "status": "half_time",
+      "events": []
+     }
+    ]
+   }
+  },
+  {
+   "rawUpdateId": 116,
+   "sourceTimestamp": "2026-10-15T15:45:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Lube Masters FC",
+      "awayTeam": "Jenda United FC",
+      "homeScore": 0,
+      "awayScore": 2,
+      "status": "live",
+      "events": [
+       {
+        "type": "goal",
+        "minute": 26,
+        "minuteText": "26'",
+        "team": "Jenda United FC",
+        "homeScore": 0,
+        "awayScore": 2,
+        "players": [
+         {
+          "name": "Chisomo Myegha",
+          "role": "scorer"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "rawUpdateId": 115,
+   "sourceTimestamp": "2026-10-15T15:44:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Lube Masters FC",
+      "awayTeam": "Jenda United FC",
+      "homeScore": 0,
+      "awayScore": 2,
+      "status": "live",
+      "events": [
+       {
+        "type": "goal",
+        "minute": 26,
+        "minuteText": "26'",
+        "team": "Jenda United FC",
+        "homeScore": 0,
+        "awayScore": 2,
+        "players": [
+         {
+          "name": "Chisomo Myegha",
+          "role": "scorer"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "rawUpdateId": 114,
+   "sourceTimestamp": "2026-10-15T15:20:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Lube Masters FC",
+      "awayTeam": "Jenda United FC",
+      "homeScore": 0,
+      "awayScore": 1,
+      "status": "live",
+      "events": [
+       {
+        "type": "goal",
+        "minute": 14,
+        "minuteText": "14'",
+        "team": "Jenda United FC",
+        "homeScore": 0,
+        "awayScore": 1,
+        "players": [
+         {
+          "name": "Chisomo Myegha",
+          "role": "scorer"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "rawUpdateId": 130,
+   "sourceTimestamp": "2026-10-17T17:00:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Raiply FC",
+      "awayTeam": "Chibavi Real Stars FC",
+      "homeScore": 2,
+      "awayScore": 1,
+      "status": "full_time",
+      "events": []
+     }
+    ]
+   }
+  },
+  {
+   "rawUpdateId": 129,
+   "sourceTimestamp": "2026-10-17T16:00:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Raiply FC",
+      "awayTeam": "Chibavi Real Stars FC",
+      "homeScore": 1,
+      "awayScore": 0,
+      "status": "live",
+      "events": [
+       {
+        "type": "goal",
+        "minute": 20,
+        "minuteText": "20'",
+        "team": "Raiply FC",
+        "homeScore": 1,
+        "awayScore": 0,
+        "players": [
+         {
+          "name": "Some Player",
+          "role": "scorer"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "rawUpdateId": 140,
+   "sourceTimestamp": "2026-10-17T17:00:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Foo FC",
+      "awayTeam": "Bar FC",
+      "homeScore": 1,
+      "awayScore": 0,
+      "status": "full_time",
+      "events": [
+       {
+        "type": "goal",
+        "minute": 5,
+        "minuteText": "5'",
+        "team": "Foo FC",
+        "homeScore": 1,
+        "awayScore": 0,
+        "players": [
+         {
+          "name": "X Y",
+          "role": "scorer"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "rawUpdateId": 150,
+   "sourceTimestamp": "2026-10-18T15:30:00.000Z",
+   "structured": {
+    "matches": [
+     {
+      "homeTeam": "Ekwendeni FC",
+      "awayTeam": "M'mbelwa Warriors FC",
+      "homeScore": 0,
+      "awayScore": 0,
+      "status": "live",
+      "events": []
+     }
+    ]
+   }
+  }
+ ]
+}
