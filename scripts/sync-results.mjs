@@ -203,8 +203,17 @@ function proposeLine(fixture, res) {
 
 // ---------- 실행 ----------
 const items = await fetchItems();
-const { games, seenStatuses } = aggregate(items);
+const { games: allGames, seenStatuses } = aggregate(items);
 const report = [];
+
+// 다른 리그 경기 제외: 홈/원정 두 팀 모두 data.js 의 leagueData 에 없으면 우리 리그 경기가 아니므로 조용히 건너뜁니다.
+// (한 팀이라도 있는데 대진을 못 찾는 경우는 아래에서 review 로 남겨 이름 표기 불일치를 알아챌 수 있게 합니다.)
+const games = new Map();
+const excluded = [];
+for (const [k, g] of allGames) {
+  if (teamByNorm.has(norm(g.homeRaw)) || teamByNorm.has(norm(g.awayRaw))) games.set(k, g);
+  else excluded.push(`${g.homeRaw} vs ${g.awayRaw}`);
+}
 
 for (const g of games.values()) {
   const isFinal = FINISHED_RE.test(g.last.status || '');
@@ -232,11 +241,11 @@ for (const g of games.values()) {
   report.push(entry);
 }
 
-if (flag('json')) { console.log(JSON.stringify({ report, seenStatuses: [...seenStatuses], globalWarnings }, null, 2)); process.exit(0); }
+if (flag('json')) { console.log(JSON.stringify({ report, excluded, seenStatuses: [...seenStatuses], globalWarnings }, null, 2)); process.exit(0); }
 
 // ---------- 사람이 읽는 리포트 ----------
 const L = [];
-L.push(`조회한 게시물 ${items.length}건 / 경기 ${games.size}개\n`);
+L.push(`조회한 게시물 ${items.length}건 / 우리 리그 경기 ${games.size}개 (다른 리그 ${excluded.length}개 제외)\n`);
 for (const r of report) {
   L.push(`■ ${r.match}  [${r.status} ${r.score}]  → ${r.verdict}`);
   if (r.result) {
