@@ -5175,7 +5175,9 @@
   }
   function parseLeagueScorerCounts(item) {
     const counts = new Map();
-    let text = String((item && item.latestObservation && item.latestObservation.text) || '');
+    const observation = String((item && item.latestObservation && item.latestObservation.text) || '');
+    const korean = String((item && item.korean && item.korean.text) || '');
+    let text = observation;
     if (!text) return counts;
     text = text
       .replace(/\(\s*(\d+)\s*(?:goals?|골)\s*\)/gi, '×$1')
@@ -5187,10 +5189,31 @@
       const key = leagueScorerNameKey(mm[1]);
       if (key && n >= 2 && n <= 9) counts.set(key, Math.max(counts.get(key) || 0, n));
     }
+
+    // 명시적인 멀티골 표현은 같은 게시물의 구조화 득점자와 문장 안에서 연결될 때만 반영합니다.
+    // 예: "Kevin Gondwe ... complete his brace", "두 골을 완성", "멀티골".
+    const scorerEvents = [];
+    const matches = item && item.structured && Array.isArray(item.structured.matches) ? item.structured.matches : [];
+    matches.forEach(match => (Array.isArray(match.events) ? match.events : []).forEach(ev => {
+      (Array.isArray(ev.players) ? ev.players : []).forEach(player => {
+        if (!player || !player.name || !/scorer/i.test(String(player.role || ''))) return;
+        scorerEvents.push({ name: String(player.name).trim(), key: leagueScorerNameKey(player.name) });
+      });
+    }));
+    const sentences = (observation + '\n' + korean).split(/[.!?。！？\n]+/);
+    const braceCue = /\bbrace\b|\bscored\s+twice\b|\btwo\s+goals?\b|두\s*골을\s*완성|멀티골|두\s*골째/i;
+    sentences.forEach(sentence => {
+      if (!braceCue.test(sentence)) return;
+      const normalizedSentence = leagueScorerNameKey(sentence);
+      const mentioned = scorerEvents.filter(player => player.key && normalizedSentence.includes(player.key));
+      const unique = Array.from(new Map(mentioned.map(player => [player.key, player])).values());
+      if (unique.length === 1) counts.set(unique[0].key, Math.max(counts.get(unique[0].key) || 1, 2));
+    });
     return counts;
   }
   function applyLeagueScorerCounts(ev, counts) {
-    if (!ev || ev.type !== 'goal' || !Array.isArray(ev.players) || !ev.players.length) return ev;
+    const hasScorer = Array.isArray(ev && ev.players) && ev.players.some(p => p && /scorer/i.test(String(p.role || '')));
+    if (!ev || (!/^goal$/i.test(String(ev.type || '')) && !hasScorer) || !Array.isArray(ev.players) || !ev.players.length) return ev;
     let changed = false;
     const players = ev.players.map(p => {
       if (!p) return p;
