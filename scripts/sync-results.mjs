@@ -179,8 +179,6 @@ function buildScorers(g, finalHome, finalAway, issues) {
   }
   if (ph !== finalHome || pa !== finalAway) { chainOk = false; issues.push(`득점 이벤트로 센 스코어(${ph}-${pa})가 최종 스코어(${finalHome}-${finalAway})와 다름 — 득점자 누락 가능`); }
 
-  const names = [];
-  const ambiguous = [];
   const seenByTeam = { home: new Set(), away: new Set() };
   const fmt = (list, side) => {
     if (!list.length) return '없음';
@@ -188,7 +186,6 @@ function buildScorers(g, finalHome, finalAway, issues) {
     for (const g1 of list) {
       let key = g1.name ? resolveScorerName(g1.name, side === 'home' ? g.homeRaw : g.awayRaw, seenByTeam[side], issues) : '(이름 미확인)';
       if (g1.name && key === upperName(g1.name)) seenByTeam[side].add(key);
-      if (g1.name) names.push(key);
       const k = key + (g1.isOwn ? '#OG' : '');
       if (!map.has(k)) { map.set(k, { key, n: 0, pen: 0, own: g1.isOwn }); order.push(k); }
       const e = map.get(k); e.n++; if (g1.isPen) e.pen++;
