@@ -5469,8 +5469,15 @@
         return parseInt(mm[1], 10) + (mm[2] ? parseInt(mm[2], 10) / 100 : 0);
       };
 
+      // API 가 득점 이벤트의 type 을 항상 "goal" 로 주지는 않습니다(예: 프리킥 골 → "free_kick").
+      // 그래서 type 이 goal/penalty/own 이거나, 득점자(role=scorer 등)가 붙은 이벤트를 골로 봅니다.
+      const isGoalEv = ev => !!ev && (
+        /^(goal|penalt|own)/i.test(String(ev.type || '')) ||
+        (Array.isArray(ev.players) && ev.players.some(p => p && /scorer|own|pen/i.test(String(p.role || ''))))
+      );
+
       const goalsRaw = rawEvents
-        .filter(ev => ev && ev.type === 'goal')
+        .filter(isGoalEv)
         .flatMap(ev => {
           const scoringTeamNameEn = resolveLeagueTeamNameEn({ name: ev.team });
           const base = {
@@ -5555,7 +5562,7 @@
 
       // 골을 제외한 경기 진행 이벤트(경고/퇴장/교체/부상 등). 치주물루 경기 카드에서만 보여줍니다.
       const progressEvents = rawEvents
-        .filter(ev => ev && ev.type && ev.type !== 'goal')
+        .filter(ev => ev && ev.type && !isGoalEv(ev))
         .map(ev => {
           const evTeamNameEn = resolveLeagueTeamNameEn({ name: ev.team });
           const names = (Array.isArray(ev.players) ? ev.players : []).map(p => (p && p.name) || '').filter(Boolean);
