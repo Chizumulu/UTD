@@ -1543,9 +1543,9 @@ const scheduledRounds = {
   // 치하메 vs 친테체는 연기경기주차(10월 24일)로 변경되어 아래에 자리표시자만 남겨뒀습니다.
   // 치주물루는 15주차 휴식(bye)이며, 13주차에서 연기된 비전전은 연기경기주차(10월 23일)에 열립니다.
   round15: [
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-15", kickoffTime: "15:00", movedFromWeek: 11 },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-15", kickoffTime: "15:00", movedFromWeek: 11, homeScore: 2, awayScore: 3, scorersHome: "KELVIN GONDWE (2골)", scorersAway: "CHISOMO MYEGHA (2골), WYSON NYIRENDA" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-17", kickoffTime: "15:00" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-17", kickoffTime: "15:00" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
@@ -2847,6 +2847,7 @@ const playerDirectory = {
   "LOTTIE BANDA": { nameKo: "로티 반다", nameEn: "Lottie Banda" },
   "TAWONGA CHIHANA": { nameKo: "타웡가 치하나", nameEn: "Tawonga Chihana" },
   "WYSON NYIRENDA": { nameKo: "와이슨 니렌다", nameEn: "Wyson Nyirenda" },
+  "KELVIN GONDWE": { nameKo: "켈빈 곤드웨", nameEn: "Kelvin Gondwe" },
   "CHISOMO MYGHA": { nameKo: "치소모 미그하", nameEn: "Chisomo Mygha" },
   "CHIKONDI NYIRENDA": { nameKo: "치콘디 니렌다", nameEn: "Chikondi Nyirenda" },
   "DUNCAN MPOHA": { nameKo: "던컨 음포하", nameEn: "Duncan Mpoha" },
