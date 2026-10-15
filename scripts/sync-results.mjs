@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-// ===== 경기 결과 자동 취합 (1단계: 읽기 전용 / dry-run) =====
-// api.chizumulu.net/v1/structured 를 조회해서
-//   1) 종료된 경기를 찾고  2) 득점자를 이벤트에서 취합하고  3) data.js 에 들어갈 한 줄을 "제안"만 합니다.
-// data.js / index.html 은 절대 수정하지 않습니다(2단계에서 --apply 를 붙일 예정).
+// ===== 경기 결과 자동 취합 (dry-run 기본, 검증된 제안만 --apply) =====
+// 종료된 경기의 결과를 취합하고, --apply일 때 안전 조건을 통과한 결과만 data.js에 반영합니다.
 //
 // 사용법
 //   node scripts/sync-results.mjs                    # 실제 API 조회 (Node 18+)
@@ -55,8 +53,49 @@ const D = vm.runInNewContext(
   { console: { log() {}, warn() {}, error() {} }, setTimeout }
 );
 const teamByNorm = new Map(D.leagueData.map(t => [norm(t.nameEn), t]));
-const knownPlayers = new Set(Object.keys(D.playerDirectory));
 const aliasOf = (key) => D.nameAliases[key] || key;
+
+// 기존 경기 데이터에서 팀별 득점자 이름을 모읍니다.
+// 선수 이름 fuzzy matching은 같은 팀 후보 안에서만 수행합니다.
+const scorerHistory = new Map();
+function scorerLabelName(label) {
+  return String(label || '').replace(/\s*\([^)]*\)\s*/g, '').trim();
+}
+function addScorerHistory(teamName, label) {
+  const name = upperName(scorerLabelName(label));
+  if (!name || name === '없음' || name.includes('이름 미확인')) return;
+  const key = norm(teamName);
+  if (!scorerHistory.has(key)) scorerHistory.set(key, new Set());
+  scorerHistory.get(key).add(aliasOf(name));
+}
+for (const rounds of [D.roundsData, D.scheduledRounds]) {
+  for (const list of Object.values(rounds)) for (const f of list || []) {
+    if (!f.homeEn || !f.awayEn) continue;
+    String(f.scorersHome || '').split(',').forEach(n => addScorerHistory(f.homeEn, n));
+    String(f.scorersAway || '').split(',').forEach(n => addScorerHistory(f.awayEn, n));
+  }
+}
+function resolveScorerName(rawName, teamName, matchSeen, issues) {
+  const raw = upperName(rawName);
+  const direct = aliasOf(raw);
+  if (direct !== raw) issues.push(`이름 보정(nameAliases): ${raw} → ${direct}`);
+  const history = scorerHistory.get(norm(teamName)) || new Set();
+  if (history.has(direct)) return direct;
+  const pool = new Set([...history, ...matchSeen].map(aliasOf));
+  const candidates = [...pool].map(name => ({ name, distance: lev(raw, name) }))
+    .filter(x => x.distance > 0 && x.distance <= 2)
+    .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name));
+  if (candidates.length && (!candidates[1] || candidates[0].distance < candidates[1].distance)) {
+    issues.push(`이름 철자 보정(같은 팀 기존 득점자): ${raw} → ${candidates[0].name}`);
+    return candidates[0].name;
+  }
+  if (candidates.length) {
+    issues.push(`이름 후보가 여러 명이라 확인 필요: ${raw} → ${candidates.filter(x => x.distance === candidates[0].distance).map(x => x.name).join(' / ')}`);
+    return raw;
+  }
+  issues.push(`신규 득점자: ${raw} (같은 팀 기존 득점자 기록에서 일치 항목 없음)`);
+  return direct;
+}
 
 // ---------- API 조회 ----------
 async function fetchItems() {
@@ -141,16 +180,18 @@ function buildScorers(g, finalHome, finalAway, issues) {
   if (ph !== finalHome || pa !== finalAway) { chainOk = false; issues.push(`득점 이벤트로 센 스코어(${ph}-${pa})가 최종 스코어(${finalHome}-${finalAway})와 다름 — 득점자 누락 가능`); }
 
   const names = [];
-  const fmt = (list) => {
+  const ambiguous = [];
+  const seenByTeam = { home: new Set(), away: new Set() };
+  const fmt = (list, side) => {
     if (!list.length) return '없음';
     const order = [], map = new Map();
     for (const g1 of list) {
-      let key = g1.name ? aliasOf(upperName(g1.name)) : '(이름 미확인)';
-      if (g1.name && key !== upperName(g1.name)) issues.push(`이름 보정(nameAliases): ${upperName(g1.name)} → ${key}`);
+      let key = g1.name ? resolveScorerName(g1.name, side === 'home' ? g.homeRaw : g.awayRaw, seenByTeam[side], issues) : '(이름 미확인)';
+      if (g1.name && key === upperName(g1.name)) seenByTeam[side].add(key);
+      if (g1.name) names.push(key);
       const k = key + (g1.isOwn ? '#OG' : '');
       if (!map.has(k)) { map.set(k, { key, n: 0, pen: 0, own: g1.isOwn }); order.push(k); }
       const e = map.get(k); e.n++; if (g1.isPen) e.pen++;
-      if (g1.name) names.push(key);
     }
     return order.map(k => {
       const e = map.get(k);
@@ -161,20 +202,9 @@ function buildScorers(g, finalHome, finalAway, issues) {
       return `${e.key} (${e.n}골, PK ${e.pen})`;
     }).join(', ');
   };
-  const out = { scorersHome: fmt(perTeam.home), scorersAway: fmt(perTeam.away) };
-
-  // 같은 경기 안에서 철자가 1~2자만 다른 이름(예: KELVIN / KEVIN GONDWE)은 같은 선수일 가능성이 높습니다.
-  const uniq = [...new Set(names)];
-  for (let i = 0; i < uniq.length; i++) for (let j = i + 1; j < uniq.length; j++) {
-    if (lev(uniq[i], uniq[j]) <= 2) issues.push(`철자가 비슷한 이름 ${uniq[i]} / ${uniq[j]} — 같은 선수라면 nameAliases 에 등록 (지금은 다른 선수로 따로 셈)`);
-  }
-  // 처음 보는 이름 / 기존 선수와 철자가 1~2자 다른 이름
-  for (const n of new Set(names)) {
-    if (n === '(이름 미확인)' || knownPlayers.has(n)) continue;
-    const near = [...knownPlayers].map(k => [k, lev(n, k)]).filter(([, d]) => d <= 2).sort((a, b) => a[1] - b[1])[0];
-    issues.push(near ? `처음 보는 이름 ${n} — 기존 선수 ${near[0]} 의 오타일 수 있음 (nameAliases 후보)` : `처음 보는 이름 ${n} — 신규 선수 (playerDirectory 에 없음)`);
-  }
-  return { ...out, chainOk };
+  const out = { scorersHome: fmt(perTeam.home, 'home'), scorersAway: fmt(perTeam.away, 'away') };
+  const needsReview = issues.some(x => /이름 후보가 여러 명|득점자 이름 없음|골 중 PK/.test(x));
+  return { ...out, chainOk, needsReview };
 }
 
 // ---------- data.js 의 어느 경기 줄인지 찾기 ----------
@@ -189,8 +219,10 @@ function findFixture(g) {
   return hits;
 }
 function alreadyRecorded(g) {
-  for (const [roundKey, list] of Object.entries(D.roundsData)) {
-    for (const f of list) if (f.homeEn && norm(f.homeEn) === norm(g.homeRaw) && norm(f.awayEn) === norm(g.awayRaw) && f.homeScore != null) return roundKey;
+  for (const rounds of [D.roundsData, D.scheduledRounds]) {
+    for (const [roundKey, list] of Object.entries(rounds)) {
+      for (const f of list) if (f.homeEn && norm(f.homeEn) === norm(g.homeRaw) && norm(f.awayEn) === norm(g.awayRaw) && f.homeScore != null) return roundKey;
+    }
   }
   return null;
 }
@@ -244,12 +276,31 @@ for (const g of games.values()) {
   const res = { homeScore: hs, awayScore: as, scorersHome: sc.scorersHome, scorersAway: sc.scorersAway };
   entry.roundKey = open[0].roundKey; entry.result = res;
   // 득점 합계가 0-0 이면 득점 이벤트가 없는 게 정상
-  const hard = !sc.chainOk;
+  const hard = !sc.chainOk || sc.needsReview;
   entry.verdict = hard ? 'review' : (entry.issues.length ? 'ok-with-notes' : 'ok');
   entry.issues = [...new Set(entry.issues)];
   // 검토가 필요한 건은 불완전한 줄을 제안하지 않습니다(사람이 확인한 뒤 수동 입력).
   if (!hard) entry.proposal = proposeLine(open[0], res);
   report.push(entry);
+}
+
+// --apply는 API 조회가 완전하고, 종료 경기이며, 검증 가능한 유일한 제안만 반영합니다.
+if (flag('apply')) {
+  const eligible = report.filter(r => r.final && ['ok', 'ok-with-notes'].includes(r.verdict) && r.proposal && !r.proposal.error);
+  if (globalWarnings.length) {
+    warn('--apply 보류: API 조회 경고가 있어 부분 데이터로는 파일을 수정하지 않았습니다.');
+  } else if (eligible.length) {
+    const lines = dataSrc.split(/\r?\n/);
+    for (const r of eligible) {
+      const i = r.proposal.lineNo - 1;
+      if (lines[i] !== r.proposal.old) throw new Error(`data.js ${r.proposal.lineNo}번째 줄이 조회 시점과 달라 안전하게 적용할 수 없습니다`);
+    }
+    for (const r of eligible.sort((a, b) => b.proposal.lineNo - a.proposal.lineNo)) {
+      lines[r.proposal.lineNo - 1] = r.proposal.next;
+      r.applied = true;
+    }
+    fs.writeFileSync(DATA_PATH, lines.join(dataSrc.includes('\r\n') ? '\r\n' : '\n'), 'utf8');
+  }
 }
 
 if (flag('json')) { console.log(JSON.stringify({ report, excluded, seenStatuses: [...seenStatuses], globalWarnings }, null, 2)); process.exit(0); }

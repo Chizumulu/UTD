@@ -1,10 +1,37 @@
 name: check-results
-on: workflow_dispatch   # 수동 실행 버튼
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 * * * *' # 매시간 API 결과 확인
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: api-result-sync
+  cancel-in-progress: false
+
 jobs:
-  run:
+  propose-results:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - run: node scripts/sync-results.mjs
+        with:
+          node-version: 22
+      - name: Read API and apply only safe results
+        run: node scripts/sync-results.mjs --apply --hours 168 --pages 20 --limit 50
+      - name: Open or update approval pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automation/api-result-sync
+          delete-branch: false
+          title: "Update league results from match API"
+          commit-message: "Update league results from match API"
+          body: |
+            This pull request contains finished match results collected from the structured match API.
+
+            Review the score and scorer changes in `data.js`, then merge this pull request to approve them. Ambiguous player names, incomplete scorer chains, and API fetch warnings are not applied automatically.
+          add-paths: data.js
