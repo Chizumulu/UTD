@@ -527,6 +527,7 @@
     const refreshBtn = document.getElementById('predictRefreshBtn');
 
     if (forceRerun) predictionCache = null;
+    renderScenarioTable(); // 시뮬레이션 전에도 표 자체는 바로 보여줍니다(우승선/잔류선 구분은 결과 도착 후 추가)
 
     if (!predictionCache) {
       tbody.innerHTML = `<tr><td colspan="7" class="predict-loading"><span class="predict-loading-inner"><span class="predict-spinner"></span><span>${isKorean ? '시뮬레이션 실행 중...' : 'Running simulation...'}</span></span></td></tr>`;
@@ -596,6 +597,7 @@
     });
 
     renderRankProbMatrix();
+    renderScenarioTable();
     renderRankLines();
     renderWhatIf();
     attachImageFallback();
@@ -1107,6 +1109,180 @@
     });
     html += '</tbody>';
     table.innerHTML = html;
+  }
+
+  // ===== 경우의 수 표 (팀별 최종 승점 시나리오 비교) =====
+  // 남은 경기를 어떻게 치르면 최종 승점이 몇 점이 되는지를, 고른 팀(최대 4팀)끼리 같은 행(=같은 최종 승점)에
+  // 맞춰 나란히 보여줍니다. 같은 승점을 만드는 W-D-L 조합은 여러 개라 승수가 가장 많은 조합만 표시합니다.
+  // 우승선/잔류선은 몬테카를로 결과(rankLines)의 중앙값을 그대로 씁니다(시뮬레이션 전에는 구분선 없이 표만 보여줌).
+  const SCENARIO_MAX_TEAMS = 4;
+  const SCENARIO_ACCENTS = [
+    { a: '#2b3d73', bg: 'rgba(43, 61, 115, 0.14)' },
+    { a: '#1f6fb5', bg: 'rgba(31, 111, 181, 0.14)' },
+    { a: '#d9601a', bg: 'rgba(217, 96, 26, 0.15)' },
+    { a: '#2e7d6b', bg: 'rgba(46, 125, 107, 0.15)' }
+  ];
+  let scenarioSelected = null; // 선택된 팀 nameEn 배열
+  let scenarioPickerBound = false;
+  let scenarioShowDanger = false; // 잔류선 미만 행 펼침 여부 (기본: 접힘)
+
+  function scenarioDefaultSelection(ranked) {
+    const meIdx = ranked.findIndex(t => t.nameEn === 'Chizumulu United FC');
+    if (meIdx < 0) return ranked.slice(0, SCENARIO_MAX_TEAMS).map(t => t.nameEn);
+    const picks = [meIdx];
+    for (let d = 1; picks.length < SCENARIO_MAX_TEAMS && d < ranked.length; d++) {
+      if (meIdx - d >= 0 && picks.length < SCENARIO_MAX_TEAMS) picks.push(meIdx - d);
+      if (meIdx + d < ranked.length && picks.length < SCENARIO_MAX_TEAMS) picks.push(meIdx + d);
+    }
+    picks.sort((x, y) => x - y);
+    return picks.map(i => ranked[i].nameEn);
+  }
+
+  // gain점을 n경기로 만드는 승·무·패 (승수 최대 조합). 만들 수 없으면 null
+  function scenarioRecord(gain, n) {
+    if (gain < 0 || gain > 3 * n) return null;
+    const w = Math.floor(gain / 3), d = gain % 3;
+    if (w + d > n) return null; // 예: 3n-1점은 n경기로 만들 수 없음
+    return { w, d, l: n - w - d };
+  }
+
+  function bindScenarioPicker() {
+    if (scenarioPickerBound) return;
+    const picker = document.getElementById('scenarioPicker');
+    if (!picker) return;
+    scenarioPickerBound = true;
+    const tbl = document.getElementById('scenarioTable');
+    if (tbl) tbl.addEventListener('click', function(e) {
+      if (!e.target.closest('[data-sc-toggle]')) return;
+      scenarioShowDanger = !scenarioShowDanger;
+      renderScenarioTable();
+    });
+    picker.addEventListener('click', function(e) {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const ranked = getRankedTeams('all');
+      if (btn.hasAttribute('data-reset')) {
+        scenarioSelected = scenarioDefaultSelection(ranked);
+      } else {
+        const key = btn.getAttribute('data-team');
+        if (!key) return;
+        scenarioSelected = (scenarioSelected || []).slice();
+        const at = scenarioSelected.indexOf(key);
+        if (at >= 0) {
+          if (scenarioSelected.length > 1) scenarioSelected.splice(at, 1);
+        } else {
+          scenarioSelected.push(key);
+          if (scenarioSelected.length > SCENARIO_MAX_TEAMS) scenarioSelected.shift();
+        }
+      }
+      renderScenarioTable();
+    });
+  }
+
+  function renderScenarioTable() {
+    const table = document.getElementById('scenarioTable');
+    const picker = document.getElementById('scenarioPicker');
+    if (!table || !picker) return;
+    bindScenarioPicker();
+
+    const ranked = getRankedTeams('all');
+    const ctx = getMagicNumberContext(ranked);
+    if (!ctx) { table.innerHTML = ''; picker.innerHTML = ''; return; }
+
+    const names = ranked.map(t => t.nameEn);
+    if (!scenarioSelected) scenarioSelected = scenarioDefaultSelection(ranked);
+    scenarioSelected = scenarioSelected.filter(n => names.indexOf(n) >= 0);
+    if (!scenarioSelected.length) scenarioSelected = scenarioDefaultSelection(ranked);
+
+    // 팀 선택 칩 (순위순)
+    picker.innerHTML = ranked.map((t, i) => {
+      const nm = isKorean ? t.nameKo : t.nameEn;
+      const on = scenarioSelected.indexOf(t.nameEn) >= 0;
+      const mine = t.nameEn === 'Chizumulu United FC';
+      return `<button type="button" class="sc-chip-btn${on ? ' active' : ''}${mine ? ' mine' : ''}" data-team="${t.nameEn}"><b>${i + 1}</b>${nm.split(' ')[0]}</button>`;
+    }).join('') + `<button type="button" class="sc-reset" data-reset="1">${isKorean ? '초기화' : 'Reset'}</button>`;
+
+    // 선택 팀을 현재 순위순으로 정렬해 열 구성
+    const cols = ranked
+      .map((t, i) => ({ t, rank: i + 1 }))
+      .filter(o => scenarioSelected.indexOf(o.t.nameEn) >= 0)
+      .map((o, ci) => {
+        const n = Math.max(0, ctx.seasonGames - o.t.played);
+        return { team: o.t, rank: o.rank, n, pts: o.t.pts, maxPts: o.t.pts + n * 3, accent: SCENARIO_ACCENTS[ci % SCENARIO_ACCENTS.length] };
+      });
+
+    const topPts = Math.max.apply(null, cols.map(c => c.maxPts));
+    const lowPts = Math.min.apply(null, cols.map(c => c.pts));
+
+    // 우승선/잔류선 (시뮬레이션 중앙값)
+    let titleLine = null, safeLine = null;
+    if (predictionCache && Array.isArray(predictionCache.rankLines) && predictionCache.rankLines.length >= 4) {
+      const lines = predictionCache.rankLines;
+      titleLine = lines[0] ? lines[0].p50 : null;
+      safeLine = lines[lines.length - 4] ? lines[lines.length - 4].p50 : null;
+    }
+
+    // 헤더
+    let head = `<thead><tr><th class="sc-pts-h" rowspan="2">${isKorean ? '최종 승점' : 'FINAL PTS'}</th>`;
+    cols.forEach(c => {
+      const nm = isKorean ? c.team.nameKo : c.team.nameEn;
+      const mine = c.team.nameEn === 'Chizumulu United FC' ? ' sc-mine' : '';
+      head += `<th class="sc-team-h${mine}" colspan="3" style="--sc-a:${c.accent.a}">${isKorean ? `현재 ${c.rank}위` : `#${c.rank}`} · ${c.pts}${isKorean ? '점' : ' pts'}<br><img class="team-logo" src="${c.team.logoSrc}" data-en-name="${c.team.nameEn}" alt="${c.team.nameEn}">${nm.split(' ')[0]}<small>${isKorean ? `잔여 ${c.n}경기` : `${c.n} left`}</small></th>`;
+    });
+    head += '</tr><tr>';
+    cols.forEach(() => {
+      head += `<th class="sc-sub-h sc-sub-first">${isKorean ? '승' : 'W'}</th><th class="sc-sub-h">${isKorean ? '무' : 'D'}</th><th class="sc-sub-h">${isKorean ? '패' : 'L'}</th>`;
+    });
+    head += '</tr></thead>';
+
+    // 본문: 최종 승점 내림차순
+    let body = '<tbody>';
+    let prevZone = null;
+    let rowCount = 0;
+    let dangerTotal = 0;
+    for (let F = topPts; F >= lowPts; F--) {
+      const recs = cols.map(c => scenarioRecord(F - c.pts, c.n));
+      if (!recs.some(r => r)) continue;
+
+      let zone = '';
+      if (titleLine !== null && safeLine !== null) {
+        zone = F >= titleLine ? 'title' : (F >= safeLine ? 'safe' : 'danger');
+      }
+      const edge = zone && prevZone !== null && zone !== prevZone;
+      const tag = (zone && zone !== prevZone && (zone === 'title' || zone === 'safe'))
+        ? `<em>${zone === 'title' ? (isKorean ? '우승선' : 'TITLE') : (isKorean ? '잔류선' : 'SAFE')}</em>` : '';
+      if (zone) prevZone = zone;
+      if (zone === 'danger') {
+        dangerTotal++;
+        if (!scenarioShowDanger) continue; // 접힌 상태에서는 잔류선 미만 행을 건너뜀
+      }
+
+      body += `<tr class="${zone ? 'sc-zone-' + zone : ''}${edge ? ' sc-edge' : ''}"><td class="sc-pts">${F}${tag}</td>`;
+      recs.forEach((r, ci) => {
+        const st = `style="--sc-bg:${cols[ci].accent.bg}"`;
+        if (!r) {
+          body += `<td class="sc-team-first"></td><td></td><td></td>`;
+        } else {
+          body += `<td class="sc-rec sc-w sc-team-first" ${st}>${r.w}</td><td class="sc-rec sc-d" ${st}>${r.d}</td><td class="sc-rec sc-l" ${st}>${r.l}</td>`;
+        }
+      });
+      body += '</tr>';
+      rowCount++;
+    }
+    if (dangerTotal > 0) {
+      const label = scenarioShowDanger
+        ? (isKorean ? '잔류선 미만 접기 ▲' : 'Hide below safety line ▲')
+        : (isKorean ? `잔류선 미만 ${dangerTotal}개 승점 펼치기 ▼` : `Show ${dangerTotal} more point totals below the safety line ▼`);
+      body += `<tr class="sc-toggle-row"><td colspan="${1 + cols.length * 3}"><button type="button" class="sc-toggle-btn" data-sc-toggle="1" aria-expanded="${scenarioShowDanger}">${label}</button></td></tr>`;
+    }
+    body += '</tbody>';
+
+    table.innerHTML = (rowCount + dangerTotal)
+      ? head + body
+      : `<tbody><tr><td class="sc-empty-msg">${isKorean ? '표시할 경우의 수가 없어요.' : 'No scenarios to show.'}</td></tr></tbody>`;
+
+    attachImageFallback();
+    refreshScrollFadeHints();
   }
 
   // ===== 예상 득점(xG) vs 실제 득점 산점도 =====
@@ -15955,6 +16131,7 @@
     registerScrollFadeHint('scorersTableScroller', 'scorersTableFade');
     registerScrollFadeHint('predictTableScroller', 'predictTableFade');
     registerScrollFadeHint('rankProbMatrixScroller', 'rankProbMatrixFade');
+    registerScrollFadeHint('scenarioTableScroller', 'scenarioTableFade');
   }
 
   // 데이터가 다시 렌더링되거나(언어 전환, 필터 변경, 화면 전환 등) 콘텐츠 폭이
