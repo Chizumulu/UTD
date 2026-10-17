@@ -1546,7 +1546,7 @@ const scheduledRounds = {
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-15", kickoffTime: "15:00", movedFromWeek: 11, homeScore: 2, awayScore: 3, scorersHome: "KELVIN GONDWE (2골)", scorersAway: "CHISOMO MYEGHA (2골), WYSON NYIRENDA" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-17", kickoffTime: "15:00" },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-17", kickoffTime: "15:00", homeScore: 2, awayScore: 3, scorersHome: "JACK GAMA", scorersAway: "THURASON SHABA, SILVESTER SMART, KING MKANDAWIRE" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
@@ -2918,7 +2918,10 @@ const playerDirectory = {
   "TYGO GOMEKA": { nameKo: "타이고 고메카", nameEn: "Tygo Gomeka" },
   "ALLAN NKHONJERA": { nameKo: "앨런 은콘제라", nameEn: "Allan Nkhonjera" },
   "TYSON NYIRONGO": { nameKo: "타이슨 니롱고", nameEn: "Tyson Nyirongo" },
-  "EDSON NYIRENDA": { nameKo: "에드슨 니렌다", nameEn: "Edson Nyirenda" }
+  "EDSON NYIRENDA": { nameKo: "에드슨 니렌다", nameEn: "Edson Nyirenda" },
+  "THURASON SHABA": { nameKo: "투라손 샤바", nameEn: "Thurason Shaba" },
+  "SILVESTER SMART": { nameKo: "실베스터 스마트", nameEn: "Silvester Smart" },
+  "KING MKANDAWIRE": { nameKo: "킹 음칸다위레", nameEn: "King Mkandawire" }
 };
 
 function toTitleCase(upperName) {

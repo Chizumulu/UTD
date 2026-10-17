@@ -10214,7 +10214,10 @@
       });
 
       let nextMatchHtml = '';
-      if (team.nextMatch.isBye) {
+      if (!team.nextMatch) {
+        // 남은 일정이 아직 등록되지 않은 팀(예: 마지막으로 등록된 경기를 막 치른 팀)
+        nextMatchHtml = `<span class="bye-text lbl" data-en="TBD" data-ko="미정">${isKorean ? '미정' : 'TBD'}</span>`;
+      } else if (team.nextMatch.isBye) {
         const byeText = isKorean ? '휴식' : 'BYE';
         nextMatchHtml = `<span class="bye-text lbl" data-en="BYE" data-ko="휴식">${byeText}</span>`;
       } else {
