@@ -13569,3 +13569,23 @@ body {
   .sc-toggle-btn:hover { color: var(--color-text-darkest); }
   .mc-ti-margin { margin: 2px 0 10px; font-size: 12.5px; line-height: 1.5; color: var(--color-text-secondary); }
   .mc-ti-margin strong { color: var(--color-text-darkest); }
+
+  /* ===== 득점 순위 > 득점 페이스 ===== */
+  .scorer-pace-wrap { width: 100%; }
+  table.scorer-pace-table { width: 100%; border-collapse: collapse; }
+  table.scorer-pace-table td.sp-num { font-variant-numeric: tabular-nums; text-align: center; }
+  table.scorer-pace-table td.sp-proj { font-weight: 800; color: var(--color-text-darkest); }
+  table.scorer-pace-table td.sp-team .team-logo { margin-right: 4px; vertical-align: middle; }
+  table.scorer-pace-table .sp-zero { color: var(--color-text-faint); }
+  .scorer-pace-note { margin: 12px 4px 4px; font-size: 12px; line-height: 1.55; color: var(--color-text-secondary); }
+  .sp-toolbar { display: flex; justify-content: flex-end; padding: 0 4px 10px; }
+  .sp-filter-btn { border: 1px solid var(--color-border-chip); background: var(--color-surface); color: var(--color-text-secondary); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 800; cursor: pointer; font-family: inherit; }
+  .sp-filter-btn.active { background: var(--color-text-darkest); color: var(--color-surface); border-color: var(--color-text-darkest); }
+  table.scorer-pace-table th.sp-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  table.scorer-pace-table th.sp-sortable:hover { text-decoration: underline; }
+  table.scorer-pace-table th.sp-sortable.active { color: var(--color-gold-strong); }
+  table.scorer-pace-table .sp-arrow { display: inline-block; min-width: 10px; margin-left: 2px; font-size: 9px; }
+  table.scorer-pace-table td.sp-trend { padding-left: 8px; padding-right: 8px; }
+  .sp-spark { display: block; margin: 0 auto; overflow: visible; }
+  .sp-spark .sp-bar-on { fill: var(--color-gold-strong); }
+  .sp-spark .sp-bar-off { fill: var(--color-border-light); }

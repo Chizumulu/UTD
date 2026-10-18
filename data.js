@@ -2981,8 +2981,9 @@ function computeTopScorers() {
   const teamByShortName = buildShortNameToTeamMap();
   const goalsByPlayer = {}; // key: 정규화된 영문 이름 -> { goals, team }
 
-  function addScorers(scorerText, team) {
+  function addScorers(scorerText, team, roundKey) {
     if (!scorerText || scorerText === "없음" || !team) return;
+    const roundNum = parseInt(String(roundKey || '').replace(/\D/g, ''), 10); // 득점 페이스(최근 N주) 계산용
 
     scorerText.split(",").forEach(rawSegment => {
       const segment = rawSegment.trim();
@@ -3003,9 +3004,10 @@ function computeTopScorers() {
       if (nameAliases[key]) key = nameAliases[key];
 
       if (!goalsByPlayer[key]) {
-        goalsByPlayer[key] = { goals: 0, team };
+        goalsByPlayer[key] = { goals: 0, team, goalsByRound: {} };
       }
       goalsByPlayer[key].goals += goals;
+      if (!isNaN(roundNum)) goalsByPlayer[key].goalsByRound[roundNum] = (goalsByPlayer[key].goalsByRound[roundNum] || 0) + goals;
     });
   }
 
@@ -3020,8 +3022,8 @@ function computeTopScorers() {
       const homeTeam = homeParse ? teamByShortName[homeParse[1]] : null;
       const awayTeam = awayParse ? teamByShortName[awayParse[1]] : null;
 
-      addScorers(m.scorersHome, homeTeam);
-      addScorers(m.scorersAway, awayTeam);
+      addScorers(m.scorersHome, homeTeam, roundKey);
+      addScorers(m.scorersAway, awayTeam, roundKey);
     });
   });
 
@@ -3039,15 +3041,15 @@ function computeTopScorers() {
         const homeTeam = findTeamByNameEn(m.homeEn);
         const awayTeam = findTeamByNameEn(m.awayEn);
 
-        addScorers(m.scorersHome, homeTeam);
-        addScorers(m.scorersAway, awayTeam);
+        addScorers(m.scorersHome, homeTeam, roundKey);
+        addScorers(m.scorersAway, awayTeam, roundKey);
       });
     });
   }
 
   return Object.keys(goalsByPlayer)
     .map(key => {
-      const { goals, team } = goalsByPlayer[key];
+      const { goals, team, goalsByRound } = goalsByPlayer[key];
       const info = playerDirectory[key] || { nameKo: toTitleCase(key), nameEn: toTitleCase(key) };
 
       // 치주물루 유나이티드 소속 선수라면 squadData 에서 선수 사진을 찾아 연결합니다
@@ -3066,7 +3068,8 @@ function computeTopScorers() {
         teamEn: team.nameEn,
         teamLogo: team.logoSrc,
         photoSrc,
-        goals
+        goals,
+        goalsByRound // { 라운드번호: 그 라운드 득점 } — 득점 페이스 보기에서 씁니다
       };
     })
     .sort((a, b) => b.goals - a.goals);

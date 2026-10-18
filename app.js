@@ -5492,7 +5492,11 @@
           const prevEv = goalMap.get(dedupeKey);
           const evCount = (ev.players && ev.players[0] && ev.players[0].count) || 1;
           const prevCount = (prevEv && prevEv.players && prevEv.players[0] && prevEv.players[0].count) || 1;
-          if (!prevEv || evCount > prevCount) goalMap.set(dedupeKey, ev);
+          if (!prevEv || evCount > prevCount) {
+            goalMap.set(dedupeKey, Object.assign({}, ev, { _ts: Math.max(ts, (prevEv && prevEv._ts) || 0) }));
+          } else if (prevEv && ts > (prevEv._ts || 0)) {
+            prevEv._ts = ts;
+          }
         }
       }
     }
@@ -5682,7 +5686,8 @@
           const base = {
             minuteText: ev.minuteText || '',
             scorer: (ev.players && ev.players[0] && ev.players[0].name) || '',
-            isHome: !!(scoringTeamNameEn && homeNameEn && scoringTeamNameEn === homeNameEn)
+            isHome: !!(scoringTeamNameEn && homeNameEn && scoringTeamNameEn === homeNameEn),
+            _ts: ev._ts || 0
           };
           // 분 없는 요약 골에 "×2" 같은 배수가 있으면 그 수만큼 골을 풀어서 보여줍니다.
           const n = Math.max(1, Math.min(9, (ev.players && ev.players[0] && ev.players[0].count) || 1));
@@ -5695,6 +5700,12 @@
       // 그래서 분 없는 골은 아래 두 단계로 걸러냅니다.
       //  1) 반대편 팀에 같은 선수(철자 차이 허용: Ndlovu/Ndhlovu)의 골이 이미 있으면 버립니다.
       //  2) 종료된 경기에서 한 팀의 골 수가 최종 스코어보다 많으면, 초과분은 분 없는 골부터 뒤에서 버립니다.
+      // 최신 게시물이 알려주는 구조화 스코어(숫자일 때만). 득점자 이름 정정 등으로 같은 골이
+      // 여러 번 누적돼도, 스코어를 이 값 이상으로 끌어올리지 않기 위한 상한입니다.
+      const latestStructured = entry && entry.match;
+      const capHome = latestStructured && Number.isInteger(latestStructured.homeScore) ? latestStructured.homeScore : Infinity;
+      const capAway = latestStructured && Number.isInteger(latestStructured.awayScore) ? latestStructured.awayScore : Infinity;
+
       const goals = (function reconcileGoals(list) {
         const hasMin = g => /\d/.test(String(g.minuteText || ''));
         const norm = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '').replace(/h/g, '');
@@ -5718,6 +5729,25 @@
             }
           });
         }
+        // 진행 중인 경기: 최신 게시물 스코어보다 골이 많으면 분 없는 골 중 "오래된 것"부터 버립니다.
+        // (득점자 이름이 정정된 경우 정정된 최신 이름만 남도록. 종료 경기는 위에서 뒤에서부터 처리)
+        if (!final) {
+          [true, false].forEach(side => {
+            const cap = side ? capHome : capAway;
+            if (!isFinite(cap)) return;
+            const cur = m.score ? (side ? m.score.home : m.score.away) : null;
+            const limit = Math.max(cap, cur != null ? cur : 0);
+            let sideGoals = out.filter(g => g.isHome === side);
+            while (sideGoals.length > limit) {
+              const minuteless = sideGoals.filter(g => !hasMin(g));
+              if (!minuteless.length) break;
+              // 가장 오래된 게시물에서 온 골을 버립니다(정정 전 이름). 같으면 앞쪽 것.
+              const oldest = minuteless.reduce((a, b) => (b._ts < a._ts ? b : a));
+              out = out.filter(g => g !== oldest);
+              sideGoals = out.filter(g => g.isHome === side);
+            }
+          });
+        }
         return out;
       })(goalsRaw);
 
@@ -5733,8 +5763,10 @@
         const awayGoalsCount = goals.length - homeGoalsCount;
         const curHome = m.score.home != null ? m.score.home : 0;
         const curAway = m.score.away != null ? m.score.away : 0;
-        if (homeGoalsCount > curHome || awayGoalsCount > curAway) {
-          updatedScore = { home: Math.max(curHome, homeGoalsCount), away: Math.max(curAway, awayGoalsCount) };
+        const newHome = Math.max(curHome, Math.min(homeGoalsCount, capHome));
+        const newAway = Math.max(curAway, Math.min(awayGoalsCount, capAway));
+        if (newHome !== curHome || newAway !== curAway) {
+          updatedScore = { home: newHome, away: newAway };
         }
       }
 
@@ -8567,10 +8599,12 @@
     const table = document.getElementById('scorersTable');
     if (table) {
       table.classList.toggle('grouped-by-team', mode === 'team');
-      table.style.display = (mode === 'multi') ? 'none' : '';
+      table.style.display = (mode === 'multi' || mode === 'pace') ? 'none' : '';
     }
     const multiWrap = document.getElementById('multiGoalGroupsWrap');
     if (multiWrap) multiWrap.style.display = (mode === 'multi') ? '' : 'none';
+    const paceWrap = document.getElementById('scorerPaceWrap');
+    if (paceWrap) paceWrap.style.display = (mode === 'pace') ? '' : 'none';
     renderScorersTable();
   }
 
@@ -8581,6 +8615,10 @@
     }
     if (scorersGroupMode === 'multi') {
       renderScorersTableMultiGoal();
+      return;
+    }
+    if (scorersGroupMode === 'pace') {
+      renderScorersTablePace();
       return;
     }
 
@@ -8639,6 +8677,168 @@
       tbody.appendChild(tr);
     }
 
+    refreshScrollFadeHints();
+  }
+
+  // ===== 득점 페이스 (Scoring Pace) =====
+  // 득점 순위의 4번째 보기. 득점자별로 "얼마나 빠른 페이스로 넣고 있는지"를 보여줍니다.
+  //  - 경기당  : 득점 ÷ 소속팀이 치른 경기 수 (타 팀 선수의 개인 출전 기록은 없어서 팀 경기 수 기준)
+  //  - 시즌 예상: 경기당 × 시즌 총 경기 수 (현재 페이스가 끝까지 유지된다고 가정한 단순 환산)
+  //  - 최근 3주: 가장 최근 3개 라운드에서 넣은 골
+  //  - 팀 비중 : 소속팀 전체 득점 중 이 선수의 비율
+  //  - 추이    : 1주차부터 라운드별 득점을 막대로 표시한 미니 차트
+  // 열 제목(득점/경기당/시즌 예상/최근 3주/팀 비중)을 누르면 그 기준으로 정렬하고, 다시 누르면 오름/내림차순이 바뀝니다.
+  // "치주물루 선수만" 필터를 켜도 순위 번호는 리그 전체 기준 그대로 보여줍니다.
+  const SCORER_PACE_RECENT_ROUNDS = 3;
+  let scorerPaceSort = { key: 'goals', dir: 'desc' };
+  let scorerPaceMineOnly = false;
+  let scorerPaceBound = false;
+
+  function bindScorerPaceControls() {
+    if (scorerPaceBound) return;
+    const wrap = document.getElementById('scorerPaceWrap');
+    if (!wrap) return;
+    scorerPaceBound = true;
+    wrap.addEventListener('click', function(e) {
+      const th = e.target.closest('th[data-sort]');
+      if (th) {
+        const key = th.getAttribute('data-sort');
+        scorerPaceSort = (scorerPaceSort.key === key)
+          ? { key, dir: scorerPaceSort.dir === 'desc' ? 'asc' : 'desc' }
+          : { key, dir: 'desc' };
+        renderScorersTablePace();
+        return;
+      }
+      if (e.target.closest('[data-sp-filter]')) {
+        scorerPaceMineOnly = !scorerPaceMineOnly;
+        renderScorersTablePace();
+      }
+    });
+  }
+
+  function renderScorersTablePace() {
+    const wrap = document.getElementById('scorerPaceWrap');
+    if (!wrap) return;
+    bindScorerPaceControls();
+
+    if (!topScorersData.length) {
+      wrap.innerHTML = `<div class="multigoal-empty">${isKorean ? '득점 데이터가 아직 없습니다.' : 'No scorer data yet.'}</div>`;
+      refreshScrollFadeHints();
+      return;
+    }
+
+    const ranked = getRankedTeams('all');
+    const ctx = getMagicNumberContext(ranked);
+    const seasonGames = (ctx && ctx.seasonGames) || 28;
+    const teamInfo = {};
+    ranked.forEach(t => { teamInfo[t.nameEn] = { played: t.played, gf: t.goalsFor }; });
+
+    // 최근 N개 라운드 / 추이 차트 범위(1주차 ~ 가장 마지막 득점 라운드)
+    const roundSet = new Set();
+    topScorersData.forEach(p => Object.keys(p.goalsByRound || {}).forEach(r => roundSet.add(Number(r))));
+    const recentRounds = Array.from(roundSet).sort((x, y) => y - x).slice(0, SCORER_PACE_RECENT_ROUNDS);
+    const maxRound = roundSet.size ? Math.max.apply(null, Array.from(roundSet)) : 0;
+
+    const rows = topScorersData.map(p => {
+      const info = teamInfo[p.teamEn] || { played: 0, gf: 0 };
+      const gpg = info.played > 0 ? p.goals / info.played : 0;
+      const recent = recentRounds.reduce((sum, r) => sum + ((p.goalsByRound && p.goalsByRound[r]) || 0), 0);
+      return {
+        p, gpg, recent,
+        projected: gpg * seasonGames,
+        share: info.gf > 0 ? (p.goals / info.gf) * 100 : 0
+      };
+    });
+
+    // 정렬 기준값(화면에 보이는 자릿수로 반올림해야 "표시상 같은 값"이 공동 순위가 됩니다)
+    const valOf = (r, key) => {
+      if (key === 'gpg') return Math.round(r.gpg * 100) / 100;
+      if (key === 'projected') return Math.round(r.projected * 10) / 10;
+      if (key === 'recent') return r.recent;
+      if (key === 'share') return Math.round(r.share);
+      return r.p.goals;
+    };
+    const sign = scorerPaceSort.dir === 'desc' ? -1 : 1;
+    rows.sort((x, y) =>
+      (sign * (valOf(x, scorerPaceSort.key) - valOf(y, scorerPaceSort.key)))
+      || (y.p.goals - x.p.goals) || (y.gpg - x.gpg) || playerMineFirst(x.p, y.p));
+
+    // 순위는 정렬 기준이 같으면 공동 순위, 필터와 상관없이 리그 전체 기준
+    let displayRank = 1, prevVal = null;
+    rows.forEach((r, idx) => {
+      const v = valOf(r, scorerPaceSort.key);
+      if (idx > 0 && v !== prevVal) displayRank = idx + 1;
+      prevVal = v;
+      r.displayRank = displayRank;
+    });
+
+    const shown = scorerPaceMineOnly ? rows.filter(r => r.p.teamEn === 'Chizumulu United FC') : rows;
+
+    // 라운드별 득점 미니 막대 차트 (모든 선수가 같은 눈금을 써서 서로 비교할 수 있게 함)
+    let barMax = 2;
+    shown.forEach(r => Object.keys(r.p.goalsByRound || {}).forEach(k => { barMax = Math.max(barMax, r.p.goalsByRound[k]); }));
+    const BAR_W = 4, BAR_GAP = 1.5, CH_H = 22;
+    const sparkline = (p) => {
+      if (!maxRound) return '';
+      let bars = '';
+      for (let r = 1; r <= maxRound; r++) {
+        const g = (p.goalsByRound && p.goalsByRound[r]) || 0;
+        const h = g > 0 ? Math.max(5, Math.round((g / barMax) * CH_H)) : 2;
+        const x = (r - 1) * (BAR_W + BAR_GAP);
+        const tip = isKorean ? `${r}주차 ${g}골` : `Round ${r}: ${g}`;
+        bars += `<rect x="${x}" y="${CH_H - h}" width="${BAR_W}" height="${h}" rx="1" class="${g > 0 ? 'sp-bar-on' : 'sp-bar-off'}"><title>${tip}</title></rect>`;
+      }
+      const w = maxRound * (BAR_W + BAR_GAP) - BAR_GAP;
+      return `<svg class="sp-spark" width="${w}" height="${CH_H}" viewBox="0 0 ${w} ${CH_H}" role="img" aria-label="${isKorean ? '라운드별 득점 추이' : 'Goals by round'}">${bars}</svg>`;
+    };
+
+    const body = shown.map(r => {
+      const p = r.p;
+      const name = isKorean ? p.nameKo : p.nameEn;
+      const teamShortEn = (p.teamEn || '').split(' ')[0];
+      const teamShortKo = (p.teamKo || '').split(' ')[0];
+      const mine = p.teamEn === 'Chizumulu United FC' ? ' class="my-team"' : '';
+      const recentCell = r.recent > 0 ? `<strong>+${r.recent}</strong>` : '<span class="sp-zero">-</span>';
+      return `<tr${mine}>
+        <td class="rank-cell">${r.displayRank}</td>
+        <td class="team"><span class="lbl player-name-link" data-en="${p.nameEn}" data-ko="${p.nameKo}" data-player-key="${p.key}">${name}</span></td>
+        <td class="team sp-team">${p.teamLogo ? `<img class="team-logo" src="${p.teamLogo}" alt="${p.teamEn}">` : ''}<span class="lbl" data-en="${teamShortEn}" data-ko="${teamShortKo}">${isKorean ? teamShortKo : teamShortEn}</span></td>
+        <td class="pts">${p.goals}</td>
+        <td class="sp-num">${r.gpg.toFixed(2)}</td>
+        <td class="sp-num sp-proj">${r.projected.toFixed(1)}</td>
+        <td class="sp-num">${recentCell}</td>
+        <td class="sp-num">${r.share.toFixed(0)}%</td>
+        <td class="sp-trend">${sparkline(p)}</td>
+      </tr>`;
+    }).join('');
+
+    const th = (en, ko) => `<th class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</th>`;
+    const thSort = (key, en, ko) => {
+      const active = scorerPaceSort.key === key;
+      const arrow = active ? (scorerPaceSort.dir === 'desc' ? '▼' : '▲') : '';
+      return `<th class="lbl sp-sortable${active ? ' active' : ''}" data-sort="${key}" data-en="${en}" data-ko="${ko}" role="button" tabindex="0" aria-sort="${active ? (scorerPaceSort.dir === 'desc' ? 'descending' : 'ascending') : 'none'}">${isKorean ? ko : en}<span class="sp-arrow">${arrow}</span></th>`;
+    };
+    const recentLabelEn = 'LAST ' + SCORER_PACE_RECENT_ROUNDS, recentLabelKo = '최근 ' + SCORER_PACE_RECENT_ROUNDS + '주';
+
+    const note = isKorean
+      ? `열 제목을 누르면 그 기준으로 정렬돼요(다시 누르면 오름차순/내림차순 전환). 경기당 = 득점 ÷ 소속팀이 치른 경기 수 (선수 개인 출전 기록이 없는 팀이 많아 팀 경기 수 기준이에요). 시즌 예상 = 경기당 × 시즌 ${seasonGames}경기, 지금 페이스가 끝까지 이어진다고 단순 환산한 값이에요. 최근 ${SCORER_PACE_RECENT_ROUNDS}주 = 가장 최근 ${SCORER_PACE_RECENT_ROUNDS}개 라운드의 득점, 팀 비중 = 팀 전체 득점 중 이 선수의 몫(상대 자책골 포함 팀 득점 기준), 추이 = 1주차부터 라운드별 득점(막대에 마우스를 올리면 라운드와 골 수가 나와요).`
+      : `Tap a column header to sort (tap again to reverse). Per game = goals ÷ games played by the player's team (individual appearances aren't tracked for most clubs). Projected = per game × ${seasonGames} season games, assuming the current pace holds. Last ${SCORER_PACE_RECENT_ROUNDS} rounds = goals in the latest ${SCORER_PACE_RECENT_ROUNDS} rounds; team share = % of the team's total goals; trend = goals per round from round 1.`;
+
+    const emptyRow = shown.length ? '' : `<tr><td colspan="9" style="padding:24px; color:var(--color-text-faint);">${isKorean ? '표시할 선수가 없어요.' : 'No players to show.'}</td></tr>`;
+
+    wrap.innerHTML = `
+      <div class="sp-toolbar">
+        <button type="button" class="sp-filter-btn${scorerPaceMineOnly ? ' active' : ''}" data-sp-filter="1" aria-pressed="${scorerPaceMineOnly}">${isKorean ? '치주물루 선수만' : 'Chizumulu only'}</button>
+      </div>
+      <table class="scorer-pace-table">
+        <thead><tr>
+          ${th('RANK', '순위')}${th('PLAYER', '선수')}${th('TEAM', '소속팀')}
+          ${thSort('goals', 'GOALS', '득점')}${thSort('gpg', 'PER GAME', '경기당')}${thSort('projected', 'PROJ.', '시즌 예상')}${thSort('recent', recentLabelEn, recentLabelKo)}${thSort('share', 'TEAM %', '팀 비중')}
+          ${th('TREND', '추이')}
+        </tr></thead>
+        <tbody>${body}${emptyRow}</tbody>
+      </table>
+      <p class="scorer-pace-note">${note}</p>`;
     refreshScrollFadeHints();
   }
 
