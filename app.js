@@ -5200,9 +5200,26 @@
         const info = (typeof playerDirectory !== 'undefined') ? playerDirectory[key] : null;
         return info ? (isKorean ? info.nameKo : info.nameEn) : raw;
       };
-      const goalRowHtml = (g) => `<div class="llt-goal-row">⚽ ${escapeHtml(formatGoalMinute(g.minuteText))} ${escapeHtml(localizeScorerName(g.scorer))}</div>`;
-      const homeGoalsHtml = goals.filter(g => g.isHome).map(goalRowHtml).join('');
-      const awayGoalsHtml = goals.filter(g => !g.isHome).map(goalRowHtml).join('');
+      // Summarized match updates can contain several goals by the same scorer without minutes.
+      // Group those entries so each scorer is shown once with an explicit goal count.
+      const groupScorerGoals = (sideGoals) => {
+        const groups = new Map();
+        sideGoals.forEach((g, i) => {
+          const scorer = String(g.scorer || '').trim();
+          const key = scorer ? scorer.toLowerCase() : `unknown-${i}`;
+          if (!groups.has(key)) groups.set(key, { scorer, goals: [] });
+          groups.get(key).goals.push(g);
+        });
+        return Array.from(groups.values());
+      };
+      const goalRowHtml = (group) => {
+        const minutes = group.goals.map(g => formatGoalMinute(g.minuteText)).filter(Boolean);
+        const minuteText = minutes.length ? `${minutes.join(', ')} ` : '';
+        const count = group.goals.length;
+        return `<div class="llt-goal-row">⚽ ${escapeHtml(minuteText)}${escapeHtml(localizeScorerName(group.scorer))} <span class="llt-goal-count">×${count}</span></div>`;
+      };
+      const homeGoalsHtml = groupScorerGoals(goals.filter(g => g.isHome)).map(goalRowHtml).join('');
+      const awayGoalsHtml = groupScorerGoals(goals.filter(g => !g.isHome)).map(goalRowHtml).join('');
       const goalsSectionHtml = goals.length
         ? `<div class="llt-goals">
              <div class="llt-goals-col llt-goals-home">${homeGoalsHtml}</div>
