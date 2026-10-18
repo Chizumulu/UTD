@@ -5551,12 +5551,21 @@
         let count = balls > 1 ? balls : 1;
         if (/hat[\s-]?trick/i.test(tok)) { count = Math.max(count, 3); tok = tok.replace(/hat[\s-]?trick/ig, ' ').trim(); }
         if (/\bbrace\b/i.test(tok)) { count = Math.max(count, 2); tok = tok.replace(/\bbrace\b/ig, ' ').trim(); }
-        let cm = tok.match(/^(.*?)\s*[\u00d7xX]\s*(\d+)\s*$/);
-        if (cm) { tok = cm[1].trim(); count = Math.max(count, Math.min(9, parseInt(cm[2], 10))); }
-        else if ((cm = tok.match(/^[\u00d7xX]\s*(\d+)\s+(.+)$/))) {
-          // The source also writes a scorer's multiplier before the name: "×3 Tyson Kaunda".
-          count = Math.max(count, Math.min(9, parseInt(cm[1], 10)));
+        let cm = tok.match(/^[\u00d7xX]\s*(\d+)\s+(.+)$/);
+        if (cm) {
+          // In this feed, a multiplier after a comma belongs to the preceding scorer:
+          // "Wyson Nyirenda, ×3 Tyson Kaunda" means Wyson ×3, then Tyson once.
+          const multiplier = Math.min(9, parseInt(cm[1], 10));
+          if (last && !last.minute) {
+            const previousCount = last.count || 1;
+            last.count = Math.max(previousCount, multiplier);
+            total += last.count - previousCount;
+          } else {
+            count = Math.max(count, multiplier);
+          }
           tok = cm[2].trim();
+        } else if ((cm = tok.match(/^(.*?)\s*[\u00d7xX]\s*(\d+)\s*$/))) {
+          tok = cm[1].trim(); count = Math.max(count, Math.min(9, parseInt(cm[2], 10)));
         }
         else if ((cm = tok.match(/^(.*?[A-Za-z.'\u2019])\s+(\d{1,2})\s*goals?\s*$/i))) {
           tok = cm[1].trim(); count = Math.max(count, Math.min(9, parseInt(cm[2], 10)));
