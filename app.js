@@ -5499,7 +5499,8 @@
   function parseLeagueTextGoals(text, homeNameEn, awayNameEn) {
     if (!text) return null;
     const lines = String(text).replace(/(\d)\uFE0F?\u20E3/g, '$1').split(/\r?\n/);
-    const matchLineRe = /^\s*(.+?)\s+(\d+)\s*[-\u2013:]\s*(\d+)\s+(.+?)\s*(?:@.*)?$/;
+    // Some source updates omit the space between the home team and its score ("Jenda United FC3-1").
+    const matchLineRe = /^\s*(.+?)\s*(\d+)\s*[-\u2013:]\s*(\d+)\s+(.+?)\s*(?:@.*)?$/;
     for (let i = 0; i < lines.length; i++) {
       const mm = lines[i].match(matchLineRe);
       if (!mm) continue;
@@ -5535,6 +5536,11 @@
         if (/\bbrace\b/i.test(tok)) { count = Math.max(count, 2); tok = tok.replace(/\bbrace\b/ig, ' ').trim(); }
         let cm = tok.match(/^(.*?)\s*[\u00d7xX]\s*(\d+)\s*$/);
         if (cm) { tok = cm[1].trim(); count = Math.max(count, Math.min(9, parseInt(cm[2], 10))); }
+        else if ((cm = tok.match(/^[\u00d7xX]\s*(\d+)\s+(.+)$/))) {
+          // The source also writes a scorer's multiplier before the name: "×3 Tyson Kaunda".
+          count = Math.max(count, Math.min(9, parseInt(cm[1], 10)));
+          tok = cm[2].trim();
+        }
         else if ((cm = tok.match(/^(.*?[A-Za-z.'\u2019])\s+(\d{1,2})\s*goals?\s*$/i))) {
           tok = cm[1].trim(); count = Math.max(count, Math.min(9, parseInt(cm[2], 10)));
         } else if ((cm = tok.match(/^(.*?[A-Za-z.'\u2019])\s+([2-9])\s*$/))) {
