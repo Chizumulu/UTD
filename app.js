@@ -5315,13 +5315,29 @@
       const resolved = resolveLeagueTeamNameEn({ name: ev.team });
       return (resolved || String(ev.team || '').trim()).toLowerCase();
     };
-    const nameKey = (p) => String((p && p.name) || '').trim().toLowerCase();
+    // 같은 팀 안에서 철자가 비슷한 이름은 같은 선수로 보고 하나의 대표 키로 묶습니다.
+    const canonByTeam = new Map(); // teamKey -> [canonical keys]
+    const nameKeyTeam = (tk, p) => {
+      const raw = leagueScorerNameKey((p && p.name) || '');
+      if (!raw) return '';
+      let list = canonByTeam.get(tk);
+      if (!list) { list = []; canonByTeam.set(tk, list); }
+      const hit = list.find(c => leagueSimilarScorerKeys(c, raw));
+      if (hit) return hit;
+      list.push(raw);
+      return raw;
+    };
 
-    const minutedScorers = new Set();
+    // (팀, 선수)별로 "분이 적힌 골"이 몇 개인지 셉니다.
+    const minutedCount = new Map();
     for (const ev of events) {
       if (!ev || ev.type !== 'goal' || !hasMinute(ev)) continue;
-      const n = nameKey(ev.players && ev.players[0]);
-      if (n) minutedScorers.add(teamKey(ev) + '|' + n);
+      const p = ev.players && ev.players[0];
+      const tk = teamKey(ev);
+      const n = nameKeyTeam(tk, p);
+      if (!n) continue;
+      const k = tk + '|' + n;
+      minutedCount.set(k, (minutedCount.get(k) || 0) + ((p && p.count) || 1));
     }
 
     const out = [];
@@ -5331,12 +5347,20 @@
       if (ev.type !== 'goal' || hasMinute(ev)) { out.push(ev); continue; }
       const players = (Array.isArray(ev.players) && ev.players.length) ? ev.players : [null];
       for (const p of players) {
-        const n = nameKey(p);
-        const key = teamKey(ev) + '|' + n;
-        if (n && minutedScorers.has(key)) continue;
-        if (seenMinuteless.has(key)) continue;
-        seenMinuteless.add(key);
-        out.push(p ? Object.assign({}, ev, { players: [p] }) : ev);
+        const tk = teamKey(ev);
+        const n = nameKeyTeam(tk, p);
+        const key = tk + '|' + n;
+        if (n && seenMinuteless.has(key)) continue;
+        if (n) seenMinuteless.add(key);
+        if (!n) { out.push(p ? Object.assign({}, ev, { players: [p] }) : ev); continue; }
+        // 요약 게시물의 "총 N골"에는 분이 적힌 골도 이미 포함돼 있으므로, 그만큼 빼고 남은 골만 추가합니다.
+        // 예) 노먼 ×3 요약 + 50' 노먼 골 1개 → 분 없는 골은 2개만 추가(총 3골).
+        const total = (p && p.count) || 1;
+        const extra = total - (minutedCount.get(key) || 0);
+        if (extra <= 0) continue;
+        const np = Object.assign({}, p, { count: extra });
+        if (extra === 1) delete np.count;
+        out.push(Object.assign({}, ev, { players: [np] }));
       }
     }
     return out;
@@ -5348,6 +5372,30 @@
   // 원문 텍스트에서 배수를 직접 읽어 선수에 count로 붙이고, 화면에서는 count만큼 골을 풀어 보여줍니다.
   function leagueScorerNameKey(name) {
     return String(name || '').toLowerCase().replace(/[×x]\s*\d+\s*$/i, '').replace(/[^a-z가-힣]/g, '').replace(/h/g, '');
+  }
+  // 같은 팀 안에서 철자가 조금 달라도(Ndlovu/Ndhlovu/Ndlovo 등) 같은 선수로 보기 위한 유사도 판정.
+  // 이름 키(leagueScorerNameKey)끼리 편집거리를 비교하고, 길이에 비례해 허용 오차를 둡니다.
+  function leagueNameEditDistance(a, b) {
+    const m = a.length, n = b.length;
+    let prev = new Array(n + 1), cur = new Array(n + 1);
+    for (let j = 0; j <= n; j++) prev[j] = j;
+    for (let i = 1; i <= m; i++) {
+      cur[0] = i;
+      for (let j = 1; j <= n; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      const t = prev; prev = cur; cur = t;
+    }
+    return prev[n];
+  }
+  function leagueSimilarScorerKeys(a, b) {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    const minLen = Math.min(a.length, b.length), maxLen = Math.max(a.length, b.length);
+    if (minLen < 5) return false;                       // 너무 짧은 이름은 오탐 방지를 위해 정확히 같을 때만
+    const tol = maxLen >= 14 ? 4 : maxLen >= 10 ? 3 : maxLen >= 7 ? 2 : 1;
+    if (maxLen - minLen > tol) return false;
+    return leagueNameEditDistance(a, b) <= tol;
   }
   function parseLeagueScorerCounts(item) {
     const counts = new Map();
@@ -5488,6 +5536,18 @@
             const allNames = (Array.isArray(ev.players) ? ev.players : []).map(p => (p && p.name || '').trim().toLowerCase()).join(',');
             const descKey = String(ev.description || ev.text || ev.detail || ev.note || '').trim().toLowerCase();
             dedupeKey = `evt|${String(ev.type || '').toLowerCase()}|${dedupeKey}|${allNames}|${descKey}`;
+          }
+          // 같은 골이 게시물마다 철자만 다르게 적힌 경우(같은 팀·같은 분·비슷한 이름)는 같은 골로 봅니다.
+          if (ev.type === 'goal' && scorerName && !goalMap.has(dedupeKey)) {
+            const myTeam = (ev.team || '').trim().toLowerCase();
+            const myKey = leagueScorerNameKey(scorerName);
+            for (const [k, g] of goalMap) {
+              if (g.type !== 'goal') continue;
+              if ((g.team || '').trim().toLowerCase() !== myTeam) continue;
+              if ((g.minuteText || '') !== (ev.minuteText || '')) continue;
+              const gn = (g.players && g.players[0] && g.players[0].name) || '';
+              if (leagueSimilarScorerKeys(leagueScorerNameKey(gn), myKey)) { dedupeKey = k; break; }
+            }
           }
           const prevEv = goalMap.get(dedupeKey);
           const evCount = (ev.players && ev.players[0] && ev.players[0].count) || 1;
