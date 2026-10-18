@@ -1510,6 +1510,17 @@ const matchDetails = {
       scorersHome: "없음",
       scorersAway: "없음"
     }
+  ],
+  // 15주차는 전체 라운드가 종료되어 roundsData.round15로 옮겨졌으므로 matchDetails.round15를 추가했습니다.
+  // (치하메 vs 친테체는 연기경기주차로 이동해 스코어가 없어 넣지 않았습니다. 순서는 roundsData.round15와 같습니다.)
+  round15: [
+    { match: "루베 2 : 젠다 3", scorersHome: "KELVIN GONDWE (2골)", scorersAway: "CHISOMO MYEGHA (2골), WYSON NYIRENDA" },
+    { match: "에크웬데니 0 : 음벨와 0", scorersHome: "없음", scorersAway: "없음" },
+    { match: "라이플리 2 : 치바비 1", scorersHome: "BLESSINGS CHINYAMA, PEARSON NYIRENDA", scorersAway: "CLIFFORD CHISALE" },
+    { match: "에우티니 2 : 루비리 3", scorersHome: "MAVUTO SHABA, JACK GAMA", scorersAway: "THURASON SHABA, SILVESTER SMART, KING MKANDAWIRE" },
+    { match: "젠다 3 : 치폴로폴로 2", scorersHome: "WYSON NYIRENDA (3골)", scorersAway: "TYSON KAUNDA, ZIKANI KASAMBALA" },
+    { match: "마푸 5 : 비전 1", scorersHome: "NORMAN NDLOVU (4골), PRECIOUS MWANZA", scorersAway: "BENJAMIN KALINGA" },
+    { match: "루베 0 : 칠룸바 0", scorersHome: "없음", scorersAway: "없음" }
   ]
 };
 
@@ -1539,21 +1550,8 @@ const upcomingMatchHistory = {
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
-  // 15주차 (전반기 마지막 정규 라운드). 10월 15일(목) 루베 vs 젠다는 11주차에서 연기됐던 경기입니다.
-  // 치하메 vs 친테체는 연기경기주차(10월 24일)로 변경되어 아래에 자리표시자만 남겨뒀습니다.
-  // 치주물루는 15주차 휴식(bye)이며, 13주차에서 연기된 비전전은 연기경기주차(10월 23일)에 열립니다.
-  round15: [
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-15", kickoffTime: "15:00", movedFromWeek: 11, homeScore: 2, awayScore: 3, scorersHome: "KELVIN GONDWE (2골)", scorersAway: "CHISOMO MYEGHA (2골), WYSON NYIRENDA" },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-17", kickoffTime: "15:00", homeScore: 2, awayScore: 3, scorersHome: "MAVUTO SHABA, JACK GAMA", scorersAway: "THURASON SHABA, SILVESTER SMART, KING MKANDAWIRE" },
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-18", kickoffTime: "15:00" },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", postponed: true, movedToWeek: 16, changed: true },
-    // 치주물루 유나이티드 FC는 15주차 휴식(bye)입니다.
-    { byeKo: "치주물루 유나이티드 FC", byeEn: "Chizumulu United FC" }
-  ],
+  // 15주차는 전체 라운드가 종료되어 roundsData.round15로 옮겨졌습니다.
+  // (치하메 vs 친테체는 연기경기주차로 이동 — 아래 round16 참고)
   // ── 연기경기주차 (정규 15주차와 정규 16주차 사이, 10월 20일~24일) ──
   // 화면에는 "연기경기주차"로 표시되고(MAKEUP_ROUND_KEYS 참고), 정규 16주차 일정은 round17 키에 입력해주세요.
   //  - 치주물루 vs 루비리: 9주차에서 연기
@@ -1774,6 +1772,20 @@ const roundsData = {
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-10-11", kickoffTime: "14:30", homeScore: 3, awayScore: 0, scorersHome: "ZIKANI KASAMBALA (2골), MIKE LUHANGA", scorersAway: "없음" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-10-11", kickoffTime: "14:30", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
     { byeKo: "젠다 유나이티드 FC", byeEn: "Jenda United FC" }
+  ],
+  // 15주차는 전체 라운드가 종료되어 scheduledRounds에서 roundsData.round15로 옮겨졌습니다.
+  // 치하메 vs 친테체는 연기경기주차(round16, 10월 24일)로 이동했고, 치주물루는 15주차 휴식(bye)입니다.
+  round15: [
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-15", kickoffTime: "15:00", movedFromWeek: 11, homeScore: 2, awayScore: 3, scorersHome: "KELVIN GONDWE (2골)", scorersAway: "CHISOMO MYEGHA (2골), WYSON NYIRENDA" },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 2, awayScore: 1, scorersHome: "BLESSINGS CHINYAMA, PEARSON NYIRENDA", scorersAway: "CLIFFORD CHISALE" },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-17", kickoffTime: "15:00", homeScore: 2, awayScore: 3, scorersHome: "MAVUTO SHABA, JACK GAMA", scorersAway: "THURASON SHABA, SILVESTER SMART, KING MKANDAWIRE" },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 3, awayScore: 2, scorersHome: "WYSON NYIRENDA (3골)", scorersAway: "TYSON KAUNDA, ZIKANI KASAMBALA" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 5, awayScore: 1, scorersHome: "NORMAN NDLOVU (4골), PRECIOUS MWANZA", scorersAway: "BENJAMIN KALINGA" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", postponed: true, movedToWeek: 16, changed: true },
+    // 치주물루 유나이티드 FC는 15주차 휴식(bye)입니다.
+    { byeKo: "치주물루 유나이티드 FC", byeEn: "Chizumulu United FC" }
   ]
 };
 
@@ -2922,7 +2934,10 @@ const playerDirectory = {
   "EDSON NYIRENDA": { nameKo: "에드슨 니렌다", nameEn: "Edson Nyirenda" },
   "MAVUTO SHABA": { nameKo: "마부토 샤바", nameEn: "Mavuto Shaba" },
   "SILVESTER SMART": { nameKo: "실베스터 스마트", nameEn: "Silvester Smart" },
-  "KING MKANDAWIRE": { nameKo: "킹 음칸다위레", nameEn: "King Mkandawire" }
+  "KING MKANDAWIRE": { nameKo: "킹 음칸다위레", nameEn: "King Mkandawire" },
+  // 2026-10-18 (15주차) 신규 득점자
+  "BLESSINGS CHINYAMA": { nameKo: "블레싱스 친야마", nameEn: "Blessings Chinyama" },
+  "BENJAMIN KALINGA": { nameKo: "벤자민 칼링가", nameEn: "Benjamin Kalinga" }
 };
 
 function toTitleCase(upperName) {
