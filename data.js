@@ -355,8 +355,8 @@ const matchLineups = {
     starters: [
       { pos: "ST", number: 22, nameKo: "티모시 카타파" },
       { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
-      { pos: "CAM", number: 9, nameKo: "제임스 헤르메스" },
-      { pos: "RW", number: 6, nameKo: "벤자민 니렌다", goals: ["-"], assists: [9] },
+      { pos: "CAM", number: 9, nameKo: "제임스 헤르메스", goals: ["-"] },
+      { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
       { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
       { pos: "RCM", number: 7, nameKo: "디킨스 니렌다" },
       { pos: "LB", number: 5, nameKo: "라반 롱웨" },
@@ -1423,7 +1423,7 @@ const matchDetails = {
     {
       match: "치바비 2 : 치주물루 1",
       scorersHome: "OVERTON NGULUBE, HENDERSON KANYIKA",
-      scorersAway: "BENJAMIN NYIRENDA"
+      scorersAway: "JAMES HERMES"
     },
     {
       match: "칠룸바 4 : 친테체 0",
@@ -1739,7 +1739,7 @@ const roundsData = {
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "SOLOMON MANDA, JONATHAN PHIRI", scorersAway: "없음" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", postponed: true, movedToWeek: 13 },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 3, awayScore: 2, scorersHome: "KONDE NYIRENDA, RICHARD SAKALA, WYSON NYIRENDA", scorersAway: "WATIPA NYIRENDA, ALBERT KAUNDA" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "OVERTON NGULUBE, HENDERSON KANYIKA", scorersAway: "BENJAMIN NYIRENDA" },
+    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "OVERTON NGULUBE, HENDERSON KANYIKA", scorersAway: "JAMES HERMES" },
     { byeKo: "에우티니 베테랑스 FC", byeEn: "Euthini Veterans FC" },
     // 10주차에서 연기됐던 칠룸바 vs 친테체 경기가 12주차 경기로 확정되었습니다.
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-23", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 4, awayScore: 0, scorersHome: "WANANGWA GONDWE, DEUS NKUTU, BENJAMIN MAPUNDA (2골)", scorersAway: "없음" }
@@ -2855,6 +2855,7 @@ const playerDirectory = {
   "TIMOTHY KATAPA": { nameKo: "티모시 카타파", nameEn: "Timothy Katapa" },
   "STEVEN PHIRI": { nameKo: "스티브 피리", nameEn: "Steve Phiri" },
   "BENJAMIN NYIRENDA": { nameKo: "벤자민 니렌다", nameEn: "Benjamin Nyirenda" },
+  "JAMES HERMES": { nameKo: "제임스 헤르메스", nameEn: "James Hermes" },
   "KUMBUKANI BANYA": { nameKo: "쿰부카니 바냐", nameEn: "Kumbukani Banya" },
   "BABA NKHOMA": { nameKo: "바바 은코마", nameEn: "Baba Nkhoma" },
   "SAMANI NYIRENDA": { nameKo: "사마니 니렌다", nameEn: "Samani Nyirenda" },
