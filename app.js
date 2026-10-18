@@ -5656,38 +5656,46 @@
         for (const evRaw of rawEvents) {
           const ev = applyLeagueScorerCounts(evRaw, scorerCounts);
           if (!ev) continue;
-          const scorerName = (ev.players && ev.players[0] && ev.players[0].name) || '';
-          // 골은 기존 키 그대로(득점 목록 동작 불변). 골이 아닌 이벤트(경고/퇴장/교체 등)는
-          // 종류·설명까지 키에 넣어, 같은 분의 서로 다른 이벤트가 합쳐지지 않게 합니다.
-          let dedupeKey = `${(ev.team || '').trim().toLowerCase()}|${ev.minuteText || ''}|${scorerName.trim().toLowerCase()}`;
-          if (ev.type !== 'goal') {
-            const allNames = (Array.isArray(ev.players) ? ev.players : []).map(p => (p && p.name || '').trim().toLowerCase()).join(',');
-            const descKey = String(ev.description || ev.text || ev.detail || ev.note || '').trim().toLowerCase();
-            dedupeKey = `evt|${String(ev.type || '').toLowerCase()}|${dedupeKey}|${allNames}|${descKey}`;
-          }
-          // 같은 골이 게시물마다 철자만 다르게 적힌 경우(같은 팀·같은 분·비슷한 이름)는 같은 골로 봅니다.
-          if (ev.type === 'goal' && scorerName && !goalMap.has(dedupeKey)) {
-            const myTeam = (ev.team || '').trim().toLowerCase();
-            const myKey = leagueScorerNameKey(scorerName);
-            for (const [k, g] of goalMap) {
-              if (g.type !== 'goal') continue;
-              if ((g.team || '').trim().toLowerCase() !== myTeam) continue;
-              if ((g.minuteText || '') !== (ev.minuteText || '')) continue;
-              const gn = (g.players && g.players[0] && g.players[0].name) || '';
-              if (leagueSimilarScorerKeys(leagueScorerNameKey(gn), myKey)) { dedupeKey = k; break; }
+          // A summary event can list several scorers, while a later update may split
+          // those same scorers into separate events. Deduplicate each scorer separately
+          // so a later event for the first player cannot discard the others' counts.
+          const scorerEvents = ev.type === 'goal' && Array.isArray(ev.players) && ev.players.length > 1
+            ? ev.players.map(player => Object.assign({}, ev, { players: [player] }))
+            : [ev];
+          for (const scorerEv of scorerEvents) {
+            const scorerName = (scorerEv.players && scorerEv.players[0] && scorerEv.players[0].name) || '';
+            // 골은 팀·분·선수별로 중복을 제거합니다. 골이 아닌 이벤트는
+            // 종류·설명까지 키에 넣어 서로 다른 이벤트가 합쳐지지 않게 합니다.
+            let dedupeKey = `${(scorerEv.team || '').trim().toLowerCase()}|${scorerEv.minuteText || ''}|${scorerName.trim().toLowerCase()}`;
+            if (scorerEv.type !== 'goal') {
+              const allNames = (Array.isArray(scorerEv.players) ? scorerEv.players : []).map(p => (p && p.name || '').trim().toLowerCase()).join(',');
+              const descKey = String(scorerEv.description || scorerEv.text || scorerEv.detail || scorerEv.note || '').trim().toLowerCase();
+              dedupeKey = `evt|${String(scorerEv.type || '').toLowerCase()}|${dedupeKey}|${allNames}|${descKey}`;
             }
-          }
-          const prevEv = goalMap.get(dedupeKey);
-          const evCount = (ev.players && ev.players[0] && ev.players[0].count) || 1;
-          const prevCount = (prevEv && prevEv.players && prevEv.players[0] && prevEv.players[0].count) || 1;
-          if (!prevEv || evCount > prevCount) {
-            goalMap.set(dedupeKey, Object.assign({}, ev, {
-              _ts: Math.max(ts, (prevEv && prevEv._ts) || 0),
-              _first: Math.min(ts, (prevEv && prevEv._first) || ts)
-            }));
-          } else if (prevEv) {
-            if (ts > (prevEv._ts || 0)) prevEv._ts = ts;
-            if (ts < (prevEv._first || ts)) prevEv._first = ts;
+            // 같은 골이 게시물마다 철자만 다르게 적힌 경우(같은 팀·같은 분·비슷한 이름)는 같은 골로 봅니다.
+            if (scorerEv.type === 'goal' && scorerName && !goalMap.has(dedupeKey)) {
+              const myTeam = (scorerEv.team || '').trim().toLowerCase();
+              const myKey = leagueScorerNameKey(scorerName);
+              for (const [k, g] of goalMap) {
+                if (g.type !== 'goal') continue;
+                if ((g.team || '').trim().toLowerCase() !== myTeam) continue;
+                if ((g.minuteText || '') !== (scorerEv.minuteText || '')) continue;
+                const gn = (g.players && g.players[0] && g.players[0].name) || '';
+                if (leagueSimilarScorerKeys(leagueScorerNameKey(gn), myKey)) { dedupeKey = k; break; }
+              }
+            }
+            const prevEv = goalMap.get(dedupeKey);
+            const evCount = (scorerEv.players && scorerEv.players[0] && scorerEv.players[0].count) || 1;
+            const prevCount = (prevEv && prevEv.players && prevEv.players[0] && prevEv.players[0].count) || 1;
+            if (!prevEv || evCount > prevCount) {
+              goalMap.set(dedupeKey, Object.assign({}, scorerEv, {
+                _ts: Math.max(ts, (prevEv && prevEv._ts) || 0),
+                _first: Math.min(ts, (prevEv && prevEv._first) || ts)
+              }));
+            } else if (prevEv) {
+              if (ts > (prevEv._ts || 0)) prevEv._ts = ts;
+              if (ts < (prevEv._first || ts)) prevEv._first = ts;
+            }
           }
         }
       }
