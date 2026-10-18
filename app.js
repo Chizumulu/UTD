@@ -15017,6 +15017,8 @@
   //   계산되면 함께 다시 계산합니다.
   // - 시뮬레이션 오차 때문에 ±WHATIF_FLAT_PCT 안쪽 변화는 "≈"로 표시합니다(만약에 시뮬레이터와 동일).
   const MC_IMPACT_ITERATIONS = 6000;
+  // 치주물루 경기는 점수차(득실차) 효과처럼 작은 차이를 구분해야 해서 조금 더 많이 돌립니다.
+  const MC_IMPACT_ITERATIONS_MINE = 10000;
   const matchTitleImpactCache = {}; // fixtureId -> { base, basedOnPC, data: { H, D, A }, running, failed }
 
   function mcTitleImpactApplicable(homeEn, awayEn, played) {
@@ -15040,12 +15042,13 @@
     const entry = matchTitleImpactCache[id];
     const titleKo = '이 경기 결과별 우승 확률', titleEn = 'TITLE CHANCE BY RESULT';
     const head = `<div class="mc-form-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>`;
+    const isMineMatch = homeEn === WHATIF_MY_TEAM_EN || awayEn === WHATIF_MY_TEAM_EN;
     const msg = (ko, en, spin) => `${head}<div class="mc-ti-msg">${spin ? '<span class="predict-spinner"></span>' : ''}<span>${isKorean ? ko : en}</span></div>`;
 
     const runBtn = (ko, en) => `<button type="button" class="wi-run mc-ti-run" id="mcTitleImpactRun">${isKorean ? ko : en}</button>`;
     // 아직 계산 전(모달을 열기만 한 상태): 시뮬레이션은 버튼을 눌렀을 때만 시작합니다.
     if (!entry) {
-      el.innerHTML = `${head}<p class="mc-ti-idle">${isKorean ? '이 경기의 승/무/패에 따라 치주물루 우승 확률이 얼마나 달라지는지 계산해 볼 수 있어요.' : "See how each result of this match changes Chizumulu's title chance."}</p>${runBtn('🔮 결과 예측하기', '🔮 Predict outcomes')}`;
+      el.innerHTML = `${head}<p class="mc-ti-idle">${isKorean ? (isMineMatch ? '이 경기의 승/무/패와 점수차(1골 차·2골 차 이상)에 따라 치주물루 우승 확률이 얼마나 달라지는지 계산해 볼 수 있어요.' : '이 경기의 승/무/패에 따라 치주물루 우승 확률이 얼마나 달라지는지 계산해 볼 수 있어요.') : (isMineMatch ? "See how the result and goal margin of this match change Chizumulu's title chance." : "See how each result of this match changes Chizumulu's title chance.")}</p>${runBtn('🔮 결과 예측하기', '🔮 Predict outcomes')}`;
       return;
     }
     if (entry.failed) {
@@ -15054,7 +15057,7 @@
     }
     if (!entry.data || !entry.base) {
       // 계산 중: 누른 버튼이 그 자리에서 비활성 + 회전 링으로 바뀝니다.
-      el.innerHTML = `${head}<button type="button" class="wi-run mc-ti-run is-loading" disabled aria-busy="true"><span class="mc-ti-ring" aria-hidden="true"></span><span>${isKorean ? '시뮬레이션 계산 중...' : 'Simulating...'}</span></button><p class="mc-ti-idle">${isKorean ? '몇 초 걸려요. 창을 닫지 않고 기다려 주세요.' : 'This takes a few seconds.'}</p>`;
+      el.innerHTML = `${head}<button type="button" class="wi-run mc-ti-run is-loading" disabled aria-busy="true"><span class="mc-ti-ring" aria-hidden="true"></span><span>${isKorean ? '시뮬레이션 계산 중...' : 'Simulating...'}</span></button><p class="mc-ti-idle">${isKorean ? (isMineMatch ? '점수차까지 계산하느라 10~20초쯤 걸려요. 창을 닫지 않고 기다려 주세요.' : '몇 초 걸려요. 창을 닫지 않고 기다려 주세요.') : (isMineMatch ? 'Margins take 10-20 seconds to simulate.' : 'This takes a few seconds.')}</p>`;
       return;
     }
 
@@ -15068,9 +15071,20 @@
 
     // 열: 치주물루 경기는 치주물루 승/무/패, 그 외 경기는 홈 승/무/원정 승(저장값 H/D/A 그대로)
     const fxLite = { homeEn };
+    // 치주물루 경기는 점수차까지 5칸(2골 차 이상 승 / 1골 차 승 / 무 / 1골 차 패 / 2골 차 이상 패),
+    // 그 외 경기는 홈 승/무/원정 승(저장값 H/D/A 그대로)
+    const myCode = (view, margin) => {
+      const base = wiPickFromView(fxLite, MY, view);
+      return base === 'D' ? 'D' : base + margin;
+    };
     const cols = isMine
-      ? [['W', isKorean ? '치주물루 승' : 'CHZ WIN'], ['D', isKorean ? '무' : 'DRAW'], ['L', isKorean ? '패' : 'LOSS']]
-          .map(([v, label]) => ({ pick: wiPickFromView(fxLite, MY, v), label }))
+      ? [
+          { pick: myCode('W', 2), label: isKorean ? '2골 차+ 승' : 'WIN by 2+' },
+          { pick: myCode('W', 1), label: isKorean ? '1골 차 승' : 'WIN by 1' },
+          { pick: 'D', label: isKorean ? '무' : 'DRAW' },
+          { pick: myCode('L', 1), label: isKorean ? '1골 차 패' : 'LOSS by 1' },
+          { pick: myCode('L', 2), label: isKorean ? '2골 차+ 패' : 'LOSS by 2+' }
+        ]
       : [
           { pick: 'H', label: isKorean ? `${shortName(homeEn)} 승` : `${shortName(homeEn)} WIN` },
           { pick: 'D', label: isKorean ? '무' : 'DRAW' },
@@ -15118,9 +15132,29 @@
             : `A <strong>draw</strong> is best for Chizumulu (<strong>${gainTxt}</strong> vs. now; up to ${swing.toFixed(1)}%p apart)`);
     }
 
+    // 점수차(득실차) 효과 한 줄 요약 — 치주물루 경기에서만. 득실차는 승점이 같을 때만 순위를 가르므로 대개 작습니다.
+    let marginNote = '';
+    if (isMine) {
+      const v = (view, m) => pctOf(myCode(view, m), MY);
+      const dWin = v('W', 2) - v('W', 1);   // 이길 때: 2골 차 이상 vs 1골 차
+      const dLoss = v('L', 1) - v('L', 2);  // 질 때: 1골 차 vs 2골 차 이상(덜 지는 쪽이 얼마나 나은지)
+      const sg = (x) => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(1) + '%p';
+      if (Math.abs(dWin) < WHATIF_FLAT_PCT && Math.abs(dLoss) < WHATIF_FLAT_PCT) {
+        marginNote = isKorean
+          ? '점수차를 따져도 우승 확률 차이는 오차 범위 안이에요. 득실차는 승점이 같을 때만 순위를 가르기 때문이에요.'
+          : 'Goal margin barely matters here: it only breaks ties on equal points, and the gap is within simulation noise.';
+      } else {
+        marginNote = isKorean
+          ? `점수차 효과: 이기면 2골 차 이상일 때 1골 차보다 <strong>${sg(dWin)}</strong>, 지더라도 1골 차로 지면 2골 차 이상보다 <strong>${sg(dLoss)}</strong>`
+          : `Margin effect: winning by 2+ vs. by 1 is <strong>${sg(dWin)}</strong>; losing by 1 vs. by 2+ is <strong>${sg(dLoss)}</strong>`;
+      }
+    }
+    const itersShown = isMine ? MC_IMPACT_ITERATIONS_MINE : MC_IMPACT_ITERATIONS;
+
     el.innerHTML = `
       ${head}
       <p class="mc-ti-headline">${headline}</p>
+      ${marginNote ? `<p class="mc-ti-margin">${marginNote}</p>` : ''}
       <div class="table-wrap">
         <table class="stats-table mc-ti-table">
           <thead><tr>
@@ -15132,8 +15166,8 @@
         </table>
       </div>
       <p class="mc-ti-foot">${isKorean
-        ? `이 경기 결과만 고정하고 ${MC_IMPACT_ITERATIONS.toLocaleString()}회씩 시뮬레이션했어요. 작은 숫자는 현재 대비 변화이고, ±${WHATIF_FLAT_PCT.toFixed(0)}%p 안쪽(≈)은 오차 범위예요.`
-        : `Only this result is fixed; ${MC_IMPACT_ITERATIONS.toLocaleString()} simulations each. Small figures show the change vs. now; within ±${WHATIF_FLAT_PCT.toFixed(0)}%p (≈) is simulation noise.`}</p>`;
+        ? `이 경기 결과만 고정하고 ${itersShown.toLocaleString()}회씩 시뮬레이션했어요. 작은 숫자는 현재 대비 변화이고, ±${WHATIF_FLAT_PCT.toFixed(0)}%p 안쪽(≈)은 오차 범위예요.`
+        : `Only this result is fixed; ${itersShown.toLocaleString()} simulations each. Small figures show the change vs. now; within ±${WHATIF_FLAT_PCT.toFixed(0)}%p (≈) is simulation noise.`}</p>`;
   }
 
   // 리그 예측표(predictionCache)는 예측 화면을 열어야 계산되므로, 전적 비교 창만 연 경우에는
@@ -15171,19 +15205,26 @@
     entry = matchTitleImpactCache[id] = { base: null, basedOnPC: usingPC, data: null, running: true, failed: false };
     mcRenderTitleImpact(homeEn, awayEn);
 
+    const mineMatch = homeEn === WHATIF_MY_TEAM_EN || awayEn === WHATIF_MY_TEAM_EN;
+    const iters = mineMatch ? MC_IMPACT_ITERATIONS_MINE : MC_IMPACT_ITERATIONS;
     const run = (pick) => {
       const picks = {}; picks[id] = pick;
-      return requestPredictWorker({ iterations: MC_IMPACT_ITERATIONS, overrides: picks }, () => runMonteCarloSimulation(MC_IMPACT_ITERATIONS, picks));
+      return requestPredictWorker({ iterations: iters, overrides: picks }, () => runMonteCarloSimulation(iters, picks));
     };
+    // 치주물루 경기: 점수차까지 5가지, 그 외: 승/무/패 3가지
+    const scenarioPicks = mineMatch
+      ? (homeEn === WHATIF_MY_TEAM_EN ? ['H2', 'H1', 'D', 'A1', 'A2'] : ['A2', 'A1', 'D', 'H1', 'H2'])
+      : ['H', 'D', 'A'];
     // 스피너가 화면에 먼저 그려진 뒤에 계산을 시작합니다. 워커를 못 쓰는 환경에서는 계산이
     // 메인 스레드를 막기 때문에, 바로 시작하면 스피너가 한 번도 그려지지 않고 화면이 멈춰 버립니다.
     const afterPaint = new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 30)));
     afterPaint.then(() => {
       const basePromise = usingPC ? Promise.resolve(predictionCache) : mcGetOwnBaseline();
-      return Promise.all([basePromise, run('H'), run('D'), run('A')]);
-    }).then(([base, H, D, A]) => {
+      return Promise.all([basePromise, ...scenarioPicks.map(run)]);
+    }).then(([base, ...results]) => {
       entry.base = base;
-      entry.data = { H, D, A };
+      entry.data = {};
+      scenarioPicks.forEach((p, i) => { entry.data[p] = results[i]; });
       entry.running = false;
       mcRenderTitleImpact(homeEn, awayEn);
     }).catch(err => {

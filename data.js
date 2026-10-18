@@ -4766,7 +4766,9 @@ function runMonteCarloSimulation(iterations, overrides) {
   const fixtureIds = fixtures.map(fx => whatIfFixtureId(fx.home.nameEn, fx.away.nameEn));
   const forcedByIdx = fixtureIds.map(id => {
     const v = overrides && overrides[id];
-    return (v === 'H' || v === 'D' || v === 'A') ? v : null;
+    // 'H'/'D'/'A'(승/무/패) 외에, 점수차까지 지정하는 'H1'/'H2'/'A1'/'A2'도 받습니다.
+    // 1 = 정확히 1골 차, 2 = 2골 차 이상 (예: 'H2' = 홈팀이 2골 차 이상으로 승리)
+    return (v === 'H' || v === 'D' || v === 'A' || v === 'H1' || v === 'H2' || v === 'A1' || v === 'A2') ? v : null;
   });
   const whatIfFixedCount = forcedByIdx.filter(Boolean).length;
   const outcomeOf = (h, a) => (h > a ? 'H' : (h < a ? 'A' : 'D'));
@@ -4875,10 +4877,18 @@ function runMonteCarloSimulation(iterations, overrides) {
       if (forced) {
         // 기각 샘플링: 고정한 결과가 나올 때까지 다시 뽑습니다. 아주 희박한 결과여도 무한 루프가
         // 되지 않도록 횟수 상한을 두고, 그래도 안 되면 가장 단순한 스코어로 대체합니다.
+        const forcedOutcome = forced.charAt(0);
+        const forcedMargin = forced.length > 1 ? Number(forced.charAt(1)) : 0; // 0=점수차 무관, 1=1골 차, 2=2골 차 이상
+        const matchesForced = (s) => {
+          if (outcomeOf(s.h, s.a) !== forcedOutcome) return false;
+          const gap = Math.abs(s.h - s.a);
+          return forcedMargin === 0 || (forcedMargin === 1 ? gap === 1 : gap >= 2);
+        };
         let tries = 0;
-        while (outcomeOf(drawn.h, drawn.a) !== forced && tries < 400) { drawn = drawScore(); tries++; }
-        if (outcomeOf(drawn.h, drawn.a) !== forced) {
-          drawn = forced === 'H' ? { h: 1, a: 0 } : (forced === 'A' ? { h: 0, a: 1 } : { h: 1, a: 1 });
+        while (!matchesForced(drawn) && tries < 400) { drawn = drawScore(); tries++; }
+        if (!matchesForced(drawn)) {
+          const big = forcedMargin === 2;
+          drawn = forcedOutcome === 'H' ? { h: big ? 2 : 1, a: 0 } : (forcedOutcome === 'A' ? { h: 0, a: big ? 2 : 1 } : { h: 1, a: 1 });
         }
       }
       const homeGoals = drawn.h;

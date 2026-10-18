@@ -13567,3 +13567,5 @@ body {
   table.sc-table tr.sc-toggle-row td { height: auto; padding: 0; border-bottom: 0; background: var(--color-bg-table-alt); }
   .sc-toggle-btn { width: 100%; padding: 10px 8px; border: 0; background: none; color: var(--color-text-secondary); font-size: 12.5px; font-weight: 800; cursor: pointer; font-family: inherit; }
   .sc-toggle-btn:hover { color: var(--color-text-darkest); }
+  .mc-ti-margin { margin: 2px 0 10px; font-size: 12.5px; line-height: 1.5; color: var(--color-text-secondary); }
+  .mc-ti-margin strong { color: var(--color-text-darkest); }
