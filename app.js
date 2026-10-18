@@ -5397,6 +5397,33 @@
     if (maxLen - minLen > tol) return false;
     return leagueNameEditDistance(a, b) <= tol;
   }
+  // 이미 알고 있는 선수 → 소속팀 (득점 순위표 topScorersData = data.js의 지난 경기 기록에서 자동 계산됨).
+  // 이름이 정확히 같으면 그걸 우선하고, 없을 때만 아주 작은 철자 차이(1~2자)를 허용합니다.
+  // 같은 이름이 여러 팀에 걸리면(동명이인 가능성) null을 돌려줘서 추측하지 않습니다.
+  function leagueKnownTeamForScorer(name) {
+    if (typeof topScorersData === 'undefined' || !Array.isArray(topScorersData)) return null;
+    const key = leagueScorerNameKey(name);
+    if (!key) return null;
+    const exact = new Set(), near = new Set();
+    topScorersData.forEach(pl => {
+      const k = leagueScorerNameKey(pl.nameEn);
+      if (!k) return;
+      if (k === key) { exact.add(pl.teamEn); return; }
+      const tol = Math.max(k.length, key.length) >= 12 ? 2 : 1;
+      if (Math.abs(k.length - key.length) <= tol && Math.min(k.length, key.length) >= 5 &&
+          leagueNameEditDistance(k, key) <= tol) near.add(pl.teamEn);
+    });
+    const pick = exact.size ? exact : near;
+    return pick.size === 1 ? Array.from(pick)[0] : null;
+  }
+  function leagueRosterSide(name, homeNameEn, awayNameEn) {
+    const t = leagueKnownTeamForScorer(name);
+    if (!t) return null;
+    const norm = x => String(x || '').trim().toLowerCase();
+    if (norm(t) === norm(homeNameEn)) return 'home';
+    if (norm(t) === norm(awayNameEn)) return 'away';
+    return null;
+  }
   function parseLeagueScorerCounts(item) {
     const counts = new Map();
     const observation = String((item && item.latestObservation && item.latestObservation.text) || '');
@@ -5464,6 +5491,72 @@
     return m;
   }
 
+  // 게시물 원문에서 한 경기의 "스코어 + 득점자 목록"을 직접 읽습니다. AI 파서가 득점자를 빠뜨리거나
+  // 팀을 잘못 붙이는 경우를 우회하기 위한 것으로, 형식은 다음과 같습니다.
+  //   Jenda United FC 1️⃣-1️⃣ Chipolopolo Boys FC @Jenda Community Ground
+  //   (Wyson Nyirenda, Tuson Kanda)          ← 홈팀 득점자부터 나열. 여러 줄/괄호로 나뉠 수도 있음
+  // 목록의 골 수가 원문 스코어 합과 정확히 같을 때만 결과를 돌려줍니다(아니면 null → 기존 방식 사용).
+  function parseLeagueTextGoals(text, homeNameEn, awayNameEn) {
+    if (!text) return null;
+    const lines = String(text).replace(/(\d)\uFE0F?\u20E3/g, '$1').split(/\r?\n/);
+    const matchLineRe = /^\s*(.+?)\s+(\d+)\s*[-\u2013:]\s*(\d+)\s+(.+?)\s*(?:@.*)?$/;
+    for (let i = 0; i < lines.length; i++) {
+      const mm = lines[i].match(matchLineRe);
+      if (!mm) continue;
+      const l = resolveLeagueTeamNameEn({ name: mm[1] });
+      const r = resolveLeagueTeamNameEn({ name: mm[4] });
+      if (l !== homeNameEn || r !== awayNameEn) continue;
+      const hs = parseInt(mm[2], 10), as = parseInt(mm[3], 10);
+      const chunks = [];
+      for (let j = i + 1; j < lines.length; j++) {
+        const ln = lines[j].trim();
+        if (!ln || ln.charAt(0) === '#') break;
+        if (matchLineRe.test(ln) && ln.indexOf('@') !== -1) break;   // 다음 경기 줄
+        chunks.push(ln);
+      }
+      let joined = chunks.join(',')
+        .replace(/\(\s*(\d+)\s*(?:goals?|\uace8)?\s*\)/gi, '\u00d7$1')   // "(2)" "(2 goals)" → ×2
+        .replace(/\(\s*hat[\s-]?trick\s*\)/gi, '\u00d73')
+        .replace(/\(\s*brace\s*\)/gi, '\u00d72')
+        .replace(/[()\[\]]/g, ',');
+      const goals = [];
+      let total = 0;
+      let last = null;
+      for (const raw of joined.split(/[,;]+/)) {
+        let tok = raw.trim();
+        if (!tok) continue;
+        const balls = (tok.match(/\u26bd/g) || []).length;           // ⚽⚽⚽ 개수
+        tok = tok.replace(/\u26bd\uFE0F?/g, ' ').trim();
+        let minute = '';
+        const mt = tok.match(/(\d{1,3}(?:\s*\+\s*\d{1,2})?)\s*['\u2019\u2032]/);
+        if (mt) { minute = mt[1].replace(/\s+/g, ''); tok = tok.replace(mt[0], ' ').trim(); }
+        let count = balls > 1 ? balls : 1;
+        if (/hat[\s-]?trick/i.test(tok)) { count = Math.max(count, 3); tok = tok.replace(/hat[\s-]?trick/ig, ' ').trim(); }
+        if (/\bbrace\b/i.test(tok)) { count = Math.max(count, 2); tok = tok.replace(/\bbrace\b/ig, ' ').trim(); }
+        let cm = tok.match(/^(.*?)\s*[\u00d7xX]\s*(\d+)\s*$/);
+        if (cm) { tok = cm[1].trim(); count = Math.max(count, Math.min(9, parseInt(cm[2], 10))); }
+        else if ((cm = tok.match(/^(.*?[A-Za-z.'\u2019])\s+(\d{1,2})\s*goals?\s*$/i))) {
+          tok = cm[1].trim(); count = Math.max(count, Math.min(9, parseInt(cm[2], 10)));
+        } else if ((cm = tok.match(/^(.*?[A-Za-z.'\u2019])\s+([2-9])\s*$/))) {
+          tok = cm[1].trim(); count = Math.max(count, parseInt(cm[2], 10));
+        }
+        tok = tok.replace(/^[-\u2013\s]+|[-\u2013\s]+$/g, '');
+        if (!/[A-Za-z]{2}/.test(tok)) {
+          // 분만 적힌 토큰("30'")은 바로 앞 선수의 골 시각입니다.
+          if (minute && last && last.count === 1) {
+            if (last.pendingMinute) { last.minute = minute; last.pendingMinute = false; }
+            else { const g2 = { name: last.name, minute, count: 1, pendingMinute: false }; goals.push(g2); total += 1; last = g2; }
+          }
+          continue;
+        }
+        const g = { name: tok, minute, count, pendingMinute: !minute && count === 1 };
+        goals.push(g); total += count; last = g;
+      }
+      return { hs, as, goals, total, complete: total === hs + as };
+    }
+    return null;
+  }
+
   async function fetchLeagueStructuredRecentMatches() {
     const res = await fetch(CHIZUMULU_API_BASE + '/v1/structured?limit=' + CHIZUMULU_STRUCTURED_LIMIT);
     if (!res.ok) {
@@ -5503,7 +5596,10 @@
 
         const prev = latestByPair.get(pairKey);
         if (!prev || ts > prev.ts) {
-          latestByPair.set(pairKey, { ts, homeNameEn, awayNameEn, match: m });
+          latestByPair.set(pairKey, {
+            ts, homeNameEn, awayNameEn, match: m,
+            text: String((item && item.latestObservation && item.latestObservation.text) || '')
+          });
         }
 
         if (isSingleLiveUpdate) {
@@ -5553,9 +5649,13 @@
           const evCount = (ev.players && ev.players[0] && ev.players[0].count) || 1;
           const prevCount = (prevEv && prevEv.players && prevEv.players[0] && prevEv.players[0].count) || 1;
           if (!prevEv || evCount > prevCount) {
-            goalMap.set(dedupeKey, Object.assign({}, ev, { _ts: Math.max(ts, (prevEv && prevEv._ts) || 0) }));
-          } else if (prevEv && ts > (prevEv._ts || 0)) {
-            prevEv._ts = ts;
+            goalMap.set(dedupeKey, Object.assign({}, ev, {
+              _ts: Math.max(ts, (prevEv && prevEv._ts) || 0),
+              _first: Math.min(ts, (prevEv && prevEv._first) || ts)
+            }));
+          } else if (prevEv) {
+            if (ts > (prevEv._ts || 0)) prevEv._ts = ts;
+            if (ts < (prevEv._first || ts)) prevEv._first = ts;
           }
         }
       }
@@ -5564,7 +5664,114 @@
     return Array.from(latestByPair.values()).map(entry => {
       const pairKey = leagueTeamPairKey(entry.homeNameEn, entry.awayNameEn);
       const goalMap = goalsByPair.get(pairKey);
-      const mergedEvents = normalizeLeagueGoalEvents(goalMap ? Array.from(goalMap.values()) : []);
+      let mergedEvents = normalizeLeagueGoalEvents(goalMap ? Array.from(goalMap.values()) : []);
+      // 최신 게시물이 "완전한 스냅샷"(골 이벤트 수 == 홈+원정 스코어 합)이면, 거기 이름이 없는
+      // 분 없는 골은 정정 전 이름(예: 13:37 게시물의 Alick Chavula → 13:39에 Wyson Nyirenda로 정정)이라
+      // 판단해 누적 목록에서 제거합니다. 개수가 안 맞으면(이전 골을 생략한 게시물) 건드리지 않습니다.
+      const textSnap = parseLeagueTextGoals(entry.text, entry.homeNameEn, entry.awayNameEn);
+      let usedTextSnap = false;
+      if (textSnap && textSnap.complete && textSnap.goals.length) {
+        const isGoalT = ev => ev && ev.type === 'goal';
+        const hasMinT = ev => /\d/.test(String(ev.minuteText || ''));
+        const minutedOld = mergedEvents.filter(ev => isGoalT(ev) && hasMinT(ev));
+        const others = mergedEvents.filter(ev => !isGoalT(ev));
+        const expanded = [];
+        textSnap.goals.forEach(g => { for (let k = 0; k < g.count; k++) expanded.push(g); });
+        // 팀 배정: ① 이미 알려진 선수는 소속팀 그대로, ② 모르는 선수만 나열 순서(홈 득점자 먼저)로 남은 자리에 채웁니다.
+        const rosterSides = expanded.map(g => leagueRosterSide(g.name, entry.homeNameEn, entry.awayNameEn));
+        let homeLeft = textSnap.hs - rosterSides.filter(x => x === 'home').length;
+        const finalSides = rosterSides.map(x => {
+          if (x) return x;
+          if (homeLeft > 0) { homeLeft--; return 'home'; }
+          return 'away';
+        });
+        const rebuilt = expanded.map((g, i) => {
+          let minute = g.minute || '';
+          if (!minute) {
+            const gk = leagueScorerNameKey(g.name);
+            const idx = minutedOld.findIndex(o => leagueSimilarScorerKeys(
+              leagueScorerNameKey(o.players && o.players[0] && o.players[0].name), gk));
+            if (idx !== -1) { minute = minutedOld[idx].minuteText; minutedOld.splice(idx, 1); }
+          }
+          const home = finalSides[i] === 'home';
+          return {
+            type: 'goal', minuteText: minute, minute: null,
+            team: home ? entry.homeNameEn : entry.awayNameEn,
+            players: [{ name: g.name, role: 'scorer' }],
+            _side: home ? 'home' : 'away', _ts: entry.ts, _first: entry.ts
+          };
+        });
+        mergedEvents = others.concat(rebuilt);
+        usedTextSnap = true;
+      }
+      // 원문에서 득점자 이름은 읽었는데 개수가 스코어와 안 맞는 경우(예: 해트트릭 표기를 못 읽음):
+      //  ① 원문에 없는 분 없는 골(정정 전 이름)은 지우고,
+      //  ② 한 팀의 골이 스코어보다 적은데 그 팀 득점자가 한 명뿐이면 모자란 만큼 그 선수의 골로 채웁니다.
+      if (!usedTextSnap && textSnap && textSnap.goals.length) {
+        const hasMinP = ev => /\d/.test(String(ev.minuteText || ''));
+        const listed = textSnap.goals.map(g => leagueScorerNameKey(g.name)).filter(Boolean);
+        const nameOf = ev => (ev.players && ev.players[0] && ev.players[0].name) || '';
+        mergedEvents = mergedEvents.filter(ev => {
+          if (!ev || ev.type !== 'goal' || hasMinP(ev)) return true;
+          const k = leagueScorerNameKey(nameOf(ev));
+          return !k || listed.some(l => leagueSimilarScorerKeys(l, k));
+        });
+        const sideOfEv = ev => {
+          const rs = leagueRosterSide(nameOf(ev), entry.homeNameEn, entry.awayNameEn);
+          if (rs) return rs;
+          const r = resolveLeagueTeamNameEn({ name: ev.team });
+          return r === entry.homeNameEn ? 'home' : (r === entry.awayNameEn ? 'away' : null);
+        };
+        [['home', textSnap.hs], ['away', textSnap.as]].forEach(([side, score]) => {
+          const mine = mergedEvents.filter(ev => ev && ev.type === 'goal' && sideOfEv(ev) === side);
+          const sum = mine.reduce((n, ev) => n + ((ev.players && ev.players[0] && ev.players[0].count) || 1), 0);
+          const open = mine.filter(ev => !hasMinP(ev));
+          if (sum < score && open.length === 1 && mine.length === 1) {
+            const ev = open[0];
+            const np = Object.assign({}, ev.players[0], { count: Math.min(9, score) });
+            mergedEvents = mergedEvents.map(x => (x === ev ? Object.assign({}, ev, { players: [np], _side: side }) : x));
+          }
+        });
+        usedTextSnap = true;
+      }
+      if (!usedTextSnap) (function pruneSupersededGoals() {
+        const lm = entry.match || {};
+        const lg = (Array.isArray(lm.events) ? lm.events : []).filter(e => e && e.type === 'goal');
+        if (!Number.isInteger(lm.homeScore) || !Number.isInteger(lm.awayScore)) return;
+        if (!lg.length || lg.length !== lm.homeScore + lm.awayScore) return;
+        const keepKeys = lg.map(e => leagueScorerNameKey(e.players && e.players[0] && e.players[0].name)).filter(Boolean);
+        if (keepKeys.length !== lg.length) return;
+        mergedEvents = mergedEvents.filter(ev => {
+          if (!ev || ev.type !== 'goal' || /\d/.test(String(ev.minuteText || ''))) return true;
+          const k = leagueScorerNameKey(ev.players && ev.players[0] && ev.players[0].name);
+          if (!k) return true;
+          return keepKeys.some(kk => leagueSimilarScorerKeys(kk, k));
+        });
+
+        // 득점자가 어느 팀 골인지 정합니다. NRFA 게시물은 득점자를 "홈팀 득점자 → 원정팀 득점자" 순서로
+        // 한 줄에 나열하는데, 파서가 팀을 한쪽으로 몰아 적는 경우가 있습니다.
+        //  1) 파서가 적은 팀별 골 수가 스코어와 정확히 맞으면 파서를 믿습니다.
+        //  2) 아니고 전부 분 없는 골이면, 나열 순서대로 앞에서 홈 스코어만큼은 홈, 나머지는 원정으로 봅니다.
+        const sideOfParser = e => {
+          const r = resolveLeagueTeamNameEn({ name: e.team });
+          return r === entry.homeNameEn ? 'home' : (r === entry.awayNameEn ? 'away' : null);
+        };
+        const parserSides = lg.map(sideOfParser);
+        const pHome = parserSides.filter(x => x === 'home').length;
+        const pAway = parserSides.filter(x => x === 'away').length;
+        let sides = null;
+        if (pHome === lm.homeScore && pAway === lm.awayScore) sides = parserSides;
+        else if (lg.every(e => !/\d/.test(String(e.minuteText || '')))) {
+          sides = lg.map((e, i) => (i < lm.homeScore ? 'home' : 'away'));
+        }
+        if (!sides) return;
+        mergedEvents.forEach(ev => {
+          if (!ev || ev.type !== 'goal' || /\d/.test(String(ev.minuteText || ''))) return;
+          const k = leagueScorerNameKey(ev.players && ev.players[0] && ev.players[0].name);
+          const idx = keepKeys.findIndex(kk => leagueSimilarScorerKeys(kk, k));
+          if (idx !== -1) ev._side = sides[idx];
+        });
+      })();
       // match 자체(스코어/상태 등)는 최신 게시물 것을 그대로 쓰되, events만 누적된
       // 목록으로 교체합니다.
       const mergedMatch = Object.assign({}, entry.match, { events: mergedEvents });
@@ -5739,6 +5946,9 @@
         (Array.isArray(ev.players) && ev.players.some(p => p && /scorer|own|pen/i.test(String(p.role || ''))))
       );
 
+      const rosterSideOf = ev => leagueRosterSide(
+        ev && ev.players && ev.players[0] && ev.players[0].name, homeNameEn, awayNameEn);
+
       const goalsRaw = rawEvents
         .filter(isGoalEv)
         .flatMap(ev => {
@@ -5746,8 +5956,11 @@
           const base = {
             minuteText: ev.minuteText || '',
             scorer: (ev.players && ev.players[0] && ev.players[0].name) || '',
-            isHome: !!(scoringTeamNameEn && homeNameEn && scoringTeamNameEn === homeNameEn),
-            _ts: ev._ts || 0
+            isHome: (ev._side || rosterSideOf(ev)) ? (ev._side || rosterSideOf(ev)) === 'home'
+              : !!(scoringTeamNameEn && homeNameEn && scoringTeamNameEn === homeNameEn),
+            _side: ev._side || rosterSideOf(ev) || '',
+            _ts: ev._ts || 0,
+            _first: ev._first || 0
           };
           // 분 없는 요약 골에 "×2" 같은 배수가 있으면 그 수만큼 골을 풀어서 보여줍니다.
           const n = Math.max(1, Math.min(9, (ev.players && ev.players[0] && ev.players[0].count) || 1));
@@ -5792,6 +6005,26 @@
         // 진행 중인 경기: 최신 게시물 스코어보다 골이 많으면 분 없는 골 중 "오래된 것"부터 버립니다.
         // (득점자 이름이 정정된 경우 정정된 최신 이름만 남도록. 종료 경기는 위에서 뒤에서부터 처리)
         if (!final) {
+          // 파서가 한 게시물의 양 팀 득점자를 한 팀 골로 몰아 기록하는 경우가 있습니다(위 주석 참고).
+          // 한쪽은 스코어보다 골이 많고 다른 쪽은 모자라면, 분 없는 골 중 "가장 늦게 처음 등장한" 골을
+          // 모자란 쪽으로 옮깁니다(방금 터진 골일 가능성이 가장 높음). 버리기 전에 먼저 이동합니다.
+          const limOf = side => {
+            const cap = side ? capHome : capAway;
+            const cur = m.score ? (side ? m.score.home : m.score.away) : null;
+            if (!isFinite(cap) && cur == null) return Infinity;
+            return Math.max(isFinite(cap) ? cap : 0, cur != null ? cur : 0);
+          };
+          const cntOf = side => out.filter(g => g.isHome === side).length;
+          [true, false].forEach(side => {
+            const other = !side;
+            while (isFinite(limOf(side)) && isFinite(limOf(other)) &&
+                   cntOf(side) > limOf(side) && cntOf(other) < limOf(other)) {
+              const movable = out.filter(g => g.isHome === side && !hasMin(g) && !g._side);
+              if (!movable.length) break;
+              const mv = movable.reduce((a, b) => ((b._first || 0) > (a._first || 0) ? b : a));
+              out = out.map(g => (g === mv ? Object.assign({}, g, { isHome: other }) : g));
+            }
+          });
           [true, false].forEach(side => {
             const cap = side ? capHome : capAway;
             if (!isFinite(cap)) return;
