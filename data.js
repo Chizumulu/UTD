@@ -42,7 +42,8 @@ const matchHighlights = {
   round1: 'https://www.youtube.com/watch?v=A5dGnTMTpw0',
   round2: 'https://www.youtube.com/watch?v=p5z6sYwoxJc&t=359s',
   round3: 'https://youtu.be/goM_m99MrDQ?si=coMD5rW48IhFYh0q',
-  round10: 'https://www.youtube.com/watch?v=JEBuNaWeewo'
+  round10: 'https://www.youtube.com/watch?v=JEBuNaWeewo',
+  round12: 'https://www.youtube.com/watch?v=gXAbTbQmExE' // 치바비 2 : 1 치주물루 (9/27)
 };
 
 // ===== 구단 유튜브 코너 - 채널 최신 영상 자동 연동 설정 =====
@@ -355,7 +356,7 @@ const matchLineups = {
     starters: [
       { pos: "ST", number: 22, nameKo: "티모시 카타파" },
       { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
-      { pos: "CAM", number: 9, nameKo: "제임스 헤르메스", goals: ["-"] },
+      { pos: "CAM", number: 9, nameKo: "제임스 헤르메스", goals: ["-"], assists: [6] },
       { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
       { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
       { pos: "RCM", number: 7, nameKo: "디킨스 니렌다" },
