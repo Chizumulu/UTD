@@ -13698,20 +13698,74 @@ body {
   .match-detail-right .h2h-result { white-space: normal; font-size: 11.5px; font-weight: 700; color: var(--color-text-secondary); }
 }
 
-/* ===== 목록 보기 / 모바일: 득점 · 도움을 한 줄짜리 작은 칩으로 (큰 카드 박스 방지) ===== */
-#matchDetailBody:not(:has(.lineup-board)) .match-goals-section { margin-bottom: 14px; }
-#matchDetailBody:not(:has(.lineup-board)) .match-goals-panel {
+/* ===== 득점 · 도움: 모든 보기에서 내용 폭만큼만 차지하는 한 줄짜리 칩 ===== */
+#matchDetailBody .match-goals-section { margin-bottom: 14px; }
+#matchDetailBody .match-goals-panel {
   display: flex; flex-wrap: wrap; gap: 8px;
   padding: 0; background: none; box-shadow: none; border-radius: 0;
 }
-#matchDetailBody:not(:has(.lineup-board)) .mgp-row {
+#matchDetailBody .mgp-row {
   flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 4px 14px;
   padding: 7px 14px; border: 0;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--card-shadow);
 }
-#matchDetailBody:not(:has(.lineup-board)) .mgp-scorer { font-size: 14px; line-height: 20px; }
-#matchDetailBody:not(:has(.lineup-board)) .mgp-assist { font-size: 13px; line-height: 20px; }
-#matchDetailBody:not(:has(.lineup-board)) .mgp-scorer .mgp-lbl,
-#matchDetailBody:not(:has(.lineup-board)) .mgp-assist .mgp-lbl { font-size: 11.5px; }
+#matchDetailBody .mgp-scorer { font-size: 14px; line-height: 20px; }
+#matchDetailBody .mgp-assist { font-size: 13px; line-height: 20px; }
+#matchDetailBody .mgp-scorer .mgp-lbl,
+#matchDetailBody .mgp-assist .mgp-lbl { font-size: 11.5px; }
+
+/* ===== 전반기 총평 (구단 정보 > 경기 결과 상단 / 주차별 리포트 > 전반기 결산) ===== */
+.hr-card { padding: 16px 18px; }
+.hr-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.hr-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: var(--color-bg-table-alt); color: var(--color-text-dark);
+}
+.hr-chip-rank { background: var(--color-teal-dark); color: #fff; }
+.hr-headline { margin: 0 0 8px; font-size: 17px; font-weight: 900; line-height: 1.35; color: var(--color-brand-text); }
+.hr-para { margin: 0 0 8px; font-size: 14px; line-height: 1.65; color: var(--color-text-dark); }
+.hr-focus {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+  margin-top: 12px; padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-table-alt);
+}
+.hr-focus-tag { font-size: 12px; font-weight: 900; color: var(--color-teal-dark); white-space: nowrap; }
+.hr-focus-text { font-size: 13.5px; font-weight: 700; line-height: 1.5; color: var(--color-text-dark); }
+.hr-note { margin-top: 10px; font-size: 12px; color: var(--color-text-faint); }
+
+.report-half-toggle {
+  margin-bottom: 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+}
+.report-half-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+}
+.report-half-summary::-webkit-details-marker { display: none; }
+.report-half-summary::after { content: '▾'; color: var(--color-text-faint); transition: transform .2s; }
+.report-half-toggle[open] > .report-half-summary::after { transform: rotate(180deg); }
+.report-half-count { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--color-text-faint); }
+.hr-list { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.report-half-toggle > .hr-note { padding: 0 18px 14px; margin-top: 0; }
+.hr-item { border: 1px solid var(--color-bg-table-alt); border-radius: var(--radius-lg); }
+.hr-item-mine { border-color: var(--color-teal-dark); }
+.hr-item-sum {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+  padding: 10px 12px; cursor: pointer; list-style: none;
+}
+.hr-item-sum::-webkit-details-marker { display: none; }
+.hr-item-rank { flex: 0 0 24px; font-size: 15px; font-weight: 900; text-align: center; color: var(--color-teal-dark); }
+.hr-item-name { font-size: 14.5px; font-weight: 900; color: var(--color-text-dark); }
+.hr-item-rec { font-size: 12.5px; font-weight: 700; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.hr-item-head { flex: 1 1 100%; padding-left: 34px; font-size: 12.5px; color: var(--color-text-faint); }
+.hr-item-body { padding: 4px 14px 14px; }
+
+.hr-compare { margin: 12px 0 4px; }
+.hr-compare-note { margin-top: 8px; font-size: 11.5px; line-height: 1.45; color: var(--color-text-faint); }

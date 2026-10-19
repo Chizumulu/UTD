@@ -2348,11 +2348,14 @@
     const predictionCardHtml = renderRoundPredictionReportHtml();
 
     container.innerHTML = `
+      ${buildReportHalfReviewToggleHtml()}
       <div class="report-grid">
         ${resultCardHtml}
         ${predictionCardHtml}
       </div>
-    `;
+    `;
+    const hrToggle = document.getElementById('reportHalfToggle');
+    if (hrToggle) hrToggle.addEventListener('toggle', () => { reportHalfReviewOpen = hrToggle.open; });
   }
 
   // ===================================================================
@@ -6669,6 +6672,379 @@
     return html;
   }
 
+  // ===================================================================
+  // ===== 전반기 총평 (경기 데이터로 자동 생성) =====
+  // 전반기(정규 1~15주차 + 연기경기주차)를 한 팀이 모두 마치면(상대 팀 수만큼 경기 = 14경기)
+  // 그 팀의 '구단 정보 > 경기 결과' 맨 위와 '주차별 리포트 > 전반기 결산' 토글에
+  // 같은 내용이 나옵니다. 문장은 roundsData/matchDetails 숫자에서 규칙 기반으로 만들어집니다.
+  // ===================================================================
+  let reportHalfReviewOpen = false;
+
+  function hrEsc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+  function hrLbl(ko, en) {
+    return `<span class="lbl" data-en="${hrEsc(en)}" data-ko="${hrEsc(ko)}">${isKorean ? ko : en}</span>`;
+  }
+  function hrPick(o) { return isKorean ? o.ko : o.en; }
+
+  function hrParseScorers(text, into) {
+    if (!text || text === '없음') return;
+    String(text).split(',').forEach(raw => {
+      const seg = raw.trim();
+      if (!seg) return;
+      const pm = seg.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+      const name = (pm ? pm[1] : seg).trim();
+      const note = pm ? pm[2] : '';
+      if (/자책골/.test(note)) return; // 자책골은 개인 득점에서 제외
+      let g = 1;
+      const gm = note.match(/(\d+)\s*골/);
+      if (gm) g = parseInt(gm[1], 10);
+      let key = name.toUpperCase();
+      if (typeof nameAliases !== 'undefined' && nameAliases[key]) key = nameAliases[key];
+      into[key] = (into[key] || 0) + g;
+    });
+  }
+
+  function computeHalfReviews() {
+    const need = leagueData.length - 1;
+    const rows = {};
+    leagueData.forEach(t => { rows[t.nameEn] = { team: t, games: [] }; });
+
+    allRoundKeysIncludingScheduled().filter(k => roundHalfOfKey(k) === 1).forEach(key => {
+      buildRoundMatches(key).forEach(m => {
+        if (m.isBye || m.isScheduled) return;
+        if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+        const h = rows[m.homeEn], a = rows[m.awayEn];
+        if (!h || !a) return;
+        h.games.push({ home: true, opp: a.team, gf: m.homeScore, ga: m.awayScore, scorers: m.scorersHome });
+        a.games.push({ home: false, opp: h.team, gf: m.awayScore, ga: m.homeScore, scorers: m.scorersAway });
+      });
+    });
+
+    const list = leagueData.map(t => {
+      const g = rows[t.nameEn].games;
+      const s = { team: t, games: g, p: g.length, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, hp: 0, hg: 0, ap: 0, ag: 0, cs: 0, fts: 0 };
+      g.forEach(x => {
+        const pts = x.gf > x.ga ? 3 : (x.gf === x.ga ? 1 : 0);
+        x.pts = pts;
+        x.res = pts === 3 ? 'W' : (pts === 1 ? 'D' : 'L');
+        s.gf += x.gf; s.ga += x.ga; s.pts += pts;
+        if (pts === 3) s.w++; else if (pts === 1) s.d++; else s.l++;
+        if (x.home) { s.hp += pts; s.hg++; } else { s.ap += pts; s.ag++; }
+        if (x.ga === 0) s.cs++;
+        if (x.gf === 0) s.fts++;
+      });
+      s.gd = s.gf - s.ga;
+      s.complete = s.p === need;
+      s.isMine = isMyTeamName(t.nameEn, t.nameKo);
+      return s;
+    });
+
+    const table = list.slice().sort((a, b) =>
+      (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf) || teamMineFirst(a.team, b.team) ||
+      (a.team.nameEn < b.team.nameEn ? -1 : 1));
+    table.forEach((s, i) => { s.rank = i + 1; });
+
+    const active = list.filter(s => s.p > 0);
+    active.slice().sort((a, b) => (b.gf / b.p) - (a.gf / a.p)).forEach((s, i) => { s.gfRank = i + 1; });
+    active.slice().sort((a, b) => (a.ga / a.p) - (b.ga / b.p)).forEach((s, i) => { s.gaRank = i + 1; });
+
+    const partial = list.some(s => !s.complete);
+    list.forEach(s => {
+      s.partial = partial;
+      s.nTeams = leagueData.length;
+      if (!s.complete) return;
+
+      // 연속 기록
+      let unb = 0, win = 0, wless = 0, maxUnb = 0, maxWin = 0, maxWless = 0;
+      s.games.forEach(x => {
+        unb = x.res !== 'L' ? unb + 1 : 0; maxUnb = Math.max(maxUnb, unb);
+        win = x.res === 'W' ? win + 1 : 0; maxWin = Math.max(maxWin, win);
+        wless = x.res !== 'W' ? wless + 1 : 0; maxWless = Math.max(maxWless, wless);
+      });
+      s.maxUnb = maxUnb; s.maxWin = maxWin; s.maxWless = maxWless;
+
+      const last5 = s.games.slice(-5);
+      s.last5 = { w: last5.filter(x => x.res === 'W').length, d: last5.filter(x => x.res === 'D').length, l: last5.filter(x => x.res === 'L').length };
+
+      const topNames = table.filter(x => x !== s).slice(0, 5).map(x => x.team.nameEn);
+      const vt = s.games.filter(x => topNames.includes(x.opp.nameEn));
+      s.vsTop = { w: vt.filter(x => x.res === 'W').length, d: vt.filter(x => x.res === 'D').length, l: vt.filter(x => x.res === 'L').length };
+
+      let bigW = null, bigL = null;
+      s.games.forEach(x => {
+        const m = x.gf - x.ga;
+        if (m >= 3 && (!bigW || m > bigW.gf - bigW.ga)) bigW = x;
+        if (-m >= 3 && (!bigL || -m > bigL.ga - bigL.gf)) bigL = x;
+      });
+      s.bigW = bigW; s.bigL = bigL;
+
+      const goalsBy = {};
+      s.games.forEach(x => hrParseScorers(x.scorers, goalsBy));
+      const keys = Object.keys(goalsBy).sort((a, b) => goalsBy[b] - goalsBy[a]);
+      s.scorerCount = keys.length;
+      if (keys.length) {
+        const k = keys[0];
+        const info = (typeof playerDirectory !== 'undefined') ? playerDirectory[k] : null;
+        const fb = (typeof toTitleCase === 'function') ? toTitleCase(k) : k;
+        s.top = { goals: goalsBy[k], nameKo: info ? info.nameKo : fb, nameEn: info ? info.nameEn : fb, tied: keys.filter(x => goalsBy[x] === goalsBy[k]).length > 1 };
+      } else {
+        s.top = null;
+      }
+    });
+
+    list.forEach(s => { if (s.complete) s.text = hrWriteText(s); });
+    return list;
+  }
+
+  function hrWriteText(s) {
+    const T = s.team, n = s.nTeams, rank = s.rank;
+    const att = s.gfRank <= 3, def = s.gaRank <= 3;
+    const weakAtt = s.gfRank >= n - 4, weakDef = s.gaRank >= n - 4;
+    const gfpg = (s.gf / s.p).toFixed(1), gapg = (s.ga / s.p).toFixed(1);
+
+    // --- 한 줄 요약 ---
+    let hk, he;
+    if (rank === 1) {
+      if (att && def) { hk = '공수 모두 최고 수준의 선두'; he = 'Top of the table with the league’s best attack and defence'; }
+      else if (att) { hk = '공격이 이끈 선두'; he = 'Table-toppers powered by their attack'; }
+      else if (def) { hk = '수비로 지켜낸 선두'; he = 'Table-toppers built on defence'; }
+      else { hk = '승점을 차곡차곡 쌓은 선두'; he = 'Table-toppers who piled up points steadily'; }
+    } else if (rank <= 3) {
+      if (att && weakDef) { hk = '화끈하지만 불안한 상위권'; he = 'A thrilling but shaky top-three side'; }
+      else if (att) { hk = '공격력을 앞세운 상위권'; he = 'A top-three side led by its attack'; }
+      else if (def) { hk = '단단한 수비의 상위권'; he = 'A top-three side with a solid defence'; }
+      else { hk = '꾸준함으로 버틴 상위권'; he = 'A consistent top-three side'; }
+    } else if (rank <= 7) {
+      if (att) { hk = '공격은 합격점, 상위권을 추격 중'; he = 'Good attack, still chasing the top'; }
+      else if (def) { hk = '수비는 안정적, 마무리가 숙제'; he = 'Solid at the back, needs a cutting edge'; }
+      else { hk = '상위권 문턱에 선 중상위권'; he = 'Upper mid-table, at the door of the top group'; }
+    } else if (rank <= 11) {
+      if (weakDef) { hk = '수비 불안이 발목을 잡은 중하위권'; he = 'Lower mid-table, held back by a leaky defence'; }
+      else if (weakAtt) { hk = '결정력 부족이 아쉬운 중하위권'; he = 'Lower mid-table, short of goals'; }
+      else { hk = '반등이 필요한 중하위권'; he = 'Lower mid-table, in need of a rebound'; }
+    } else {
+      if (weakAtt && weakDef) { hk = '공수 모두 흔들린 하위권'; he = 'A bottom-group side struggling at both ends'; }
+      else if (weakDef) { hk = '실점이 아쉬웠던 하위권'; he = 'A bottom-group side undone by goals conceded'; }
+      else if (weakAtt) { hk = '골이 터지지 않은 하위권'; he = 'A bottom-group side that could not find the net'; }
+      else { hk = '반전이 절실한 하위권'; he = 'A bottom-group side needing a turnaround'; }
+    }
+
+    // --- 문단 1: 성적 ---
+    const prev = T.prevSeasonFinal;
+    let p1k = `${s.p}경기 ${s.w}승 ${s.d}무 ${s.l}패, 승점 ${s.pts}점으로 전반기를 ${rank}위로 마쳤습니다.`;
+    let p1e = `${s.w}W ${s.d}D ${s.l}L from ${s.p} games — ${s.pts} points, finishing the first half ${rank}${hrOrd(rank)}.`;
+    if (prev && prev.rank) {
+      const diff = prev.rank - rank;
+      p1k += diff > 0 ? ` 지난 시즌 최종 ${prev.rank}위보다 ${diff}계단 올라선 성적입니다.`
+        : (diff < 0 ? ` 지난 시즌 최종 ${prev.rank}위보다 ${-diff}계단 내려앉았습니다.` : ` 지난 시즌 최종 순위(${prev.rank}위)와 같은 자리입니다.`);
+      p1e += diff > 0 ? ` That is ${diff} place${diff > 1 ? 's' : ''} better than last season’s final ${prev.rank}${hrOrd(prev.rank)}.`
+        : (diff < 0 ? ` That is ${-diff} place${-diff > 1 ? 's' : ''} down on last season’s final ${prev.rank}${hrOrd(prev.rank)}.` : ` The same spot as last season’s final standing.`);
+    }
+    p1k += ` 이 페이스를 이어가면 시즌 승점은 약 ${s.pts * 2}점입니다.`;
+    p1e += ` At this pace the season would end on about ${s.pts * 2} points.`;
+
+    // --- 문단 2: 공수 ---
+    let p2k = `${s.gf}골(리그 ${s.gfRank}위, 경기당 ${gfpg})을 넣고 ${s.ga}골(리그 ${s.gaRank}위, 경기당 ${gapg})을 내줬습니다.`;
+    let p2e = `${s.gf} goals scored (${s.gfRank}${hrOrd(s.gfRank)} in the league, ${gfpg} per game) and ${s.ga} conceded (${s.gaRank}${hrOrd(s.gaRank)}, ${gapg} per game).`;
+    p2k += ` 무실점 경기는 ${s.cs}번, 무득점 경기는 ${s.fts}번이었습니다.`;
+    p2e += ` They kept ${s.cs} clean sheet${s.cs === 1 ? '' : 's'} and failed to score ${s.fts} time${s.fts === 1 ? '' : 's'}.`;
+    if (att && !def) { p2k += ' 득점력은 리그 최상위권입니다.'; p2e += ' Their scoring is among the league’s best.'; }
+    else if (def && !att) { p2k += ' 실점이 적은 단단한 수비가 강점이었습니다.'; p2e += ' A tight defence was the strength.'; }
+    else if (att && def) { p2k += ' 공격과 수비 모두 상위권이라 흠잡을 곳이 적습니다.'; p2e += ' Top-three at both ends, with few weak spots.'; }
+    else if (weakAtt && weakDef) { p2k += ' 공격과 수비 모두 하위권이라 전반적인 보강이 필요합니다.'; p2e += ' Bottom-group at both ends — a broad fix is needed.'; }
+
+    // --- 문단 3: 핵심 선수 / 흐름 ---
+    let p3k = '', p3e = '';
+    if (s.top) {
+      p3k += `팀 내 최다 득점자는 ${s.top.nameKo}(${s.top.goals}골${s.top.tied ? ', 공동' : ''})입니다.`;
+      p3e += `The team’s top scorer is ${s.top.nameEn} (${s.top.goals} goal${s.top.goals === 1 ? '' : 's'}${s.top.tied ? ', joint' : ''}).`;
+      const share = s.gf ? Math.round(s.top.goals / s.gf * 100) : 0;
+      if (share >= 35) { p3k += ` 팀 득점의 ${share}%를 책임져 의존도가 높았습니다.`; p3e += ` He accounts for ${share}% of the team’s goals, a heavy reliance.`; }
+      else if (s.scorerCount >= 6) { p3k += ` ${s.scorerCount}명이 골을 나눠 넣을 만큼 득점 루트가 다양했습니다.`; p3e += ` ${s.scorerCount} different players scored, so the goals came from many sources.`; }
+    }
+    if (s.maxUnb >= 5) { p3k += ` ${s.maxUnb}경기 연속 무패 기간이 가장 좋은 흐름이었습니다.`; p3e += ` Their best run was ${s.maxUnb} games unbeaten.`; }
+    else if (s.maxWin >= 3) { p3k += ` ${s.maxWin}연승을 기록한 구간이 있었습니다.`; p3e += ` They had a run of ${s.maxWin} straight wins.`; }
+    if (s.maxWless >= 4) { p3k += ` 반면 ${s.maxWless}경기 연속 무승의 부진도 겪었습니다.`; p3e += ` They also went ${s.maxWless} games without a win at one point.`; }
+    if (s.bigW) { p3k += ` 최다 점수차 승리는 ${s.bigW.opp.nameKo} 상대 ${s.bigW.gf}-${s.bigW.ga} 승리입니다.`; p3e += ` Their biggest win was ${s.bigW.gf}-${s.bigW.ga} against ${s.bigW.opp.nameEn}.`; }
+    if (s.bigL) { p3k += ` 가장 큰 패배는 ${s.bigL.opp.nameKo} 상대 ${s.bigL.gf}-${s.bigL.ga} 패배입니다.`; p3e += ` Their heaviest defeat was ${s.bigL.gf}-${s.bigL.ga} against ${s.bigL.opp.nameEn}.`; }
+
+    // --- 문단 4: 홈/원정, 최근 폼, 상위권 상대 ---
+    const hpg = s.hg ? s.hp / s.hg : 0, apg = s.ag ? s.ap / s.ag : 0;
+    let p4k = `홈 ${s.hg}경기에서 승점 ${s.hp}점, 원정 ${s.ag}경기에서 승점 ${s.ap}점을 얻었습니다.`;
+    let p4e = `${s.hp} points from ${s.hg} home games and ${s.ap} from ${s.ag} away games.`;
+    if (hpg - apg >= 0.8) { p4k += ' 원정에서 힘이 빠지는 경향이 있었습니다.'; p4e += ' They tended to fade on the road.'; }
+    else if (apg - hpg >= 0.8) { p4k += ' 홈보다 원정에서 더 잘 싸웠습니다.'; p4e += ' They did better away than at home.'; }
+    p4k += ` 최근 5경기는 ${s.last5.w}승 ${s.last5.d}무 ${s.last5.l}패, 전반기 상위 5개 팀과의 맞대결은 ${s.vsTop.w}승 ${s.vsTop.d}무 ${s.vsTop.l}패입니다.`;
+    p4e += ` The last five games read ${s.last5.w}W ${s.last5.d}D ${s.last5.l}L, and against the other top-five sides they went ${s.vsTop.w}W ${s.vsTop.d}D ${s.vsTop.l}L.`;
+
+    // --- 후반기 포인트 ---
+    let fk, fe;
+    const share2 = (s.top && s.gf) ? s.top.goals / s.gf : 0;
+    if (weakDef) { fk = `실점을 줄이는 것이 최우선 과제입니다(경기당 ${gapg}실점).`; fe = `Cutting goals against is the top priority (${gapg} per game).`; }
+    else if (weakAtt) { fk = `득점력을 끌어올리는 것이 최우선 과제입니다(경기당 ${gfpg}득점).`; fe = `Raising the goal output is the top priority (${gfpg} per game).`; }
+    else if (hpg - apg >= 0.8) { fk = '원정 승점 확보가 후반기 순위를 좌우할 것입니다.'; fe = 'Picking up points away from home will decide the second half.'; }
+    else if (share2 >= 0.35) { fk = '특정 선수에게 쏠린 득점 의존도를 줄이는 것이 숙제입니다.'; fe = 'Reducing the reliance on one scorer is the homework.'; }
+    else if (rank === 1) { fk = '선두를 지키려면 상위권 팀과의 후반기 맞대결이 분수령입니다.'; fe = 'Holding the lead will come down to the second-half meetings with the chasers.'; }
+    else if (rank <= 3) { fk = '선두권과의 승점 차를 좁힐 수 있는지가 관건입니다.'; fe = 'The question is whether they can close the gap to the leaders.'; }
+    else if (rank <= 7) { fk = '상위권 도약을 위해 중하위권 팀 상대 승점을 놓치지 않는 것이 중요합니다.'; fe = 'To climb, they must not drop points against the lower sides.'; }
+    else { fk = '승점 간격이 촘촘한 만큼 한두 경기 결과가 순위를 크게 바꿀 수 있습니다.'; fe = 'With the table so tight, one or two results can move them a long way.'; }
+
+    return {
+      headline: { ko: hk, en: he },
+      paras: [{ ko: p1k, en: p1e }, { ko: p2k, en: p2e }, { ko: p3k, en: p3e }, { ko: p4k, en: p4e }].filter(p => p.ko),
+      focus: { ko: fk, en: fe }
+    };
+  }
+
+  function hrOrd(n) { return ['th', 'st', 'nd', 'rd'][(n % 10 < 4 && (n % 100 < 11 || n % 100 > 13)) ? n % 10 : 0]; }
+
+  function hrChipsHtml(s) {
+    const gd = s.gd > 0 ? `+${s.gd}` : String(s.gd);
+    return `<div class="hr-chips">
+      <span class="hr-chip hr-chip-rank">${isKorean ? `${s.rank}위` : `${s.rank}${hrOrd(s.rank)}`}</span>
+      <span class="hr-chip">${s.w}${hrLbl('승', 'W')} ${s.d}${hrLbl('무', 'D')} ${s.l}${hrLbl('패', 'L')}</span>
+      <span class="hr-chip">${hrLbl('승점', 'Pts')} ${s.pts}</span>
+      <span class="hr-chip">${s.gf}:${s.ga} (${gd})</span>
+    </div>`;
+  }
+
+  // ----- 작년 전반기와 비교 (두 시즌 모두 있는 구단만) -----
+  // 25/26 아카이브에서 '전반기 종료' 시점(팀당 15경기) 순위표 행을 찾아 올해 전반기(14경기)와
+  // 경기당 수치로 비교합니다. 아카이브가 아직 로드되지 않았거나 대응하는 팀이 없으면 null.
+  function hrLastSeasonFirstHalfRow(t) {
+    if (typeof ARCHIVE_2526 === 'undefined' || !ARCHIVE_2526.weeks) return null;
+    const arch = archiveNameForTeam(t);
+    if (!arch) return null;
+    const wk = ARCHIVE_2526.weeks.find(w => /전반기\s*종료/.test(String(w.label || w.short || '')));
+    if (!wk) return null;
+    const row = wk.rows.find(r => r.team === arch);
+    return (row && row.p > 0) ? row : null;
+  }
+
+  function hrCompareData(s) {
+    const prev = hrLastSeasonFirstHalfRow(s.team);
+    if (!prev) return null;
+    const f2 = n => n.toFixed(2);
+    const cur = { ppg: s.pts / s.p, gf: s.gf / s.p, ga: s.ga / s.p, win: s.w / s.p * 100 };
+    const old = { ppg: prev.pts / prev.p, gf: prev.f / prev.p, ga: prev.a / prev.p, win: prev.w / prev.p * 100 };
+    const items = [];
+    const rd = prev.pos - s.rank; // 양수 = 순위 상승
+    items.push({ ko: '순위', en: 'RANK', prev: isKorean ? `${prev.pos}위` : `${prev.pos}`, cur: isKorean ? `${s.rank}위` : `${s.rank}`,
+      cls: rd === 0 ? 'flat' : (rd > 0 ? 'up' : 'down'), delta: rd === 0 ? '–' : `${rd > 0 ? '▲' : '▼'} ${Math.abs(rd)}` });
+    const push = (ko, en, a, b, lowerBetter, fmt, eps) => {
+      const d = b - a, flat = Math.abs(d) < eps;
+      const good = lowerBetter ? d < 0 : d > 0;
+      items.push({ ko, en, prev: fmt(a), cur: fmt(b), cls: flat ? 'flat' : (good ? 'up' : 'down'),
+        delta: flat ? '–' : `${d > 0 ? '▲' : '▼'} ${fmt(Math.abs(d))}` });
+    };
+    push('경기당 승점', 'PTS / GAME', old.ppg, cur.ppg, false, f2, 0.005);
+    push('경기당 득점', 'GOALS / GAME', old.gf, cur.gf, false, f2, 0.005);
+    push('경기당 실점', 'CONCEDED / GAME', old.ga, cur.ga, true, f2, 0.005);
+    push('승률', 'WIN %', old.win, cur.win, false, n => `${Math.round(n)}%`, 0.5);
+
+    const dp = cur.ppg - old.ppg;
+    let verdictKo, verdictEn;
+    if (rd > 0 && dp <= -0.15) { verdictKo = '순위는 올랐지만 경기당 성적은 작년보다 아쉽습니다.'; verdictEn = 'The rank is up, but the per-game numbers are weaker than last year.'; }
+    else if (rd < 0 && dp >= 0.15) { verdictKo = '순위는 내려갔지만 경기당 성적은 작년보다 좋아졌습니다.'; verdictEn = 'The rank is down, but the per-game numbers are better than last year.'; }
+    else if (dp >= 0.15) { verdictKo = '전체적으로 작년보다 나아진 모습입니다.'; verdictEn = 'Overall, a step up from last year.'; }
+    else if (dp <= -0.15) { verdictKo = '작년보다 뒷걸음질 친 모습입니다.'; verdictEn = 'Overall, a step back from last year.'; }
+    else { verdictKo = '작년과 비슷한 흐름입니다.'; verdictEn = 'Broadly in line with last year.'; }
+    const rankKo = rd > 0 ? `순위는 ${prev.pos}위에서 ${s.rank}위로 올라섰고` : (rd < 0 ? `순위는 ${prev.pos}위에서 ${s.rank}위로 내려앉았고` : `순위는 ${s.rank}위로 같고`);
+    const rankEn = rd > 0 ? `rank up from ${prev.pos}${hrOrd(prev.pos)} to ${s.rank}${hrOrd(s.rank)}` : (rd < 0 ? `rank down from ${prev.pos}${hrOrd(prev.pos)} to ${s.rank}${hrOrd(s.rank)}` : `rank unchanged at ${s.rank}${hrOrd(s.rank)}`);
+    const sentence = {
+      ko: `작년 전반기(${prev.p}경기)와 비교하면 ${rankKo}, 경기당 승점은 ${f2(old.ppg)} → ${f2(cur.ppg)}, 득점은 ${f2(old.gf)} → ${f2(cur.gf)}, 실점은 ${f2(old.ga)} → ${f2(cur.ga)}입니다. ${verdictKo}`,
+      en: `Against last year’s first half (${prev.p} games): ${rankEn}; points per game ${f2(old.ppg)} → ${f2(cur.ppg)}, goals ${f2(old.gf)} → ${f2(cur.gf)}, conceded ${f2(old.ga)} → ${f2(cur.ga)}. ${verdictEn}`
+    };
+    return { items, sentence, prevGames: prev.p };
+  }
+
+  function hrCompareHtml(s) {
+    const c = hrCompareData(s);
+    if (!c) return '';
+    const titleKo = '작년 전반기 대비', titleEn = 'vs Last Season’s First Half';
+    return `
+      <p class="hr-para">${hrLbl(c.sentence.ko, c.sentence.en)}</p>
+      <div class="ti-prev-delta hr-compare" role="group" aria-label="${isKorean ? titleKo : titleEn}">
+        <div class="ti-prev-delta-title">${hrLbl(titleKo, titleEn)}</div>
+        <div class="ti-prev-delta-grid">
+          ${c.items.map(i => `
+            <div class="ti-prev-delta-item">
+              <span class="ti-prev-delta-label">${hrLbl(i.ko, i.en)}</span>
+              <span class="ti-prev-delta-vals">${i.prev} → <b>${i.cur}</b></span>
+              <span class="ti-prev-delta-chg ${i.cls}">${i.delta}</span>
+            </div>`).join('')}
+        </div>
+        <div class="hr-compare-note">${hrLbl(`작년은 16팀(팀당 ${c.prevGames}경기), 올해는 ${s.nTeams}팀(팀당 ${s.p}경기)이라 경기당 수치로 비교했어요.`, `Last year had 16 teams (${c.prevGames} games each), this year ${s.nTeams} teams (${s.p} each), so per-game figures are compared.`)}</div>
+      </div>`;
+  }
+
+  function hrBodyHtml(s) {
+    const t = s.text;
+    return `
+      <h4 class="hr-headline">${hrLbl(t.headline.ko, t.headline.en)}</h4>
+      ${t.paras.map(p => `<p class="hr-para">${hrLbl(p.ko, p.en)}</p>`).join('')}
+      ${hrCompareHtml(s)}
+      <div class="hr-focus"><span class="hr-focus-tag">${hrLbl('후반기 포인트', '2nd-half focus')}</span><span class="hr-focus-text">${hrLbl(t.focus.ko, t.focus.en)}</span></div>
+      ${s.partial ? `<div class="hr-note">${hrLbl('일부 팀의 전반기가 끝나지 않아 순위는 바뀔 수 있어요.', 'Some teams have not finished the first half, so rankings may still change.')}</div>` : ''}`;
+  }
+
+  // 구단 정보 > 경기 결과 맨 위에 들어가는 섹션
+  function buildTeamHalfReviewSectionHtml(teamEn, bare) {
+    const s = computeHalfReviews().find(x => x.team.nameEn === teamEn);
+    if (!s || !s.complete) return '';
+    const inner = `
+        <div class="ti-section-title">${hrLbl('전반기 총평', '1st-Half Review')}</div>
+        <div class="ti-card hr-card">
+          ${hrChipsHtml(s)}
+          ${hrBodyHtml(s)}
+        </div>`;
+    return bare ? inner : `<div class="ti-section hr-section">${inner}</div>`;
+  }
+
+  // 치주물루 구단 정보 > 개요 > 구단 유튜브 바로 아래
+  function renderTeamHalfReviewTab() {
+    const el = document.getElementById('teamInfoHalfReviewTab');
+    if (!el) return;
+    const mine = getMyRankedTeam();
+    el.innerHTML = mine ? buildTeamHalfReviewSectionHtml(mine.team.nameEn, true) : '';
+  }
+
+  // 주차별 리포트 > '전반기 결산' 토글 (전반기를 마친 모든 팀, 순위순)
+  function buildReportHalfReviewToggleHtml() {
+    const done = computeHalfReviews().filter(s => s.complete).sort((a, b) => a.rank - b.rank);
+    if (!done.length) return '';
+    const items = done.map(s => {
+      const logo = getTeamLogo(s.team.nameEn);
+      const name = isKorean ? s.team.nameKo : s.team.nameEn;
+      return `
+        <details class="hr-item${s.isMine ? ' hr-item-mine' : ''}">
+          <summary class="hr-item-sum">
+            <span class="hr-item-rank">${s.rank}</span>
+            ${logo ? `<img class="team-logo-sm" src="${logo}" alt="${hrEsc(s.team.nameEn)}">` : ''}
+            <span class="hr-item-name"><span class="lbl" data-en="${hrEsc(s.team.nameEn)}" data-ko="${hrEsc(s.team.nameKo)}">${name}</span></span>
+            <span class="hr-item-rec">${s.w}${hrLbl('승', 'W')} ${s.d}${hrLbl('무', 'D')} ${s.l}${hrLbl('패', 'L')} · ${s.pts}${hrLbl('점', 'pts')}</span>
+            <span class="hr-item-head">${hrLbl(s.text.headline.ko, s.text.headline.en)}</span>
+          </summary>
+          <div class="hr-item-body">
+            ${hrChipsHtml(s)}
+            ${hrBodyHtml(s)}
+          </div>
+        </details>`;
+    }).join('');
+    const pending = leagueData.length - done.length;
+    return `
+      <details class="report-half-toggle" id="reportHalfToggle"${reportHalfReviewOpen ? ' open' : ''}>
+        <summary class="report-half-summary">
+          <span class="report-kicker">${hrLbl('전반기 결산', '1st-Half Review')}</span>
+          <span class="report-half-count">${hrLbl(`${done.length}개 팀`, `${done.length} teams`)}</span>
+        </summary>
+        <div class="hr-list">${items}</div>
+        ${pending > 0 ? `<div class="hr-note">${hrLbl(`전반기를 마친 팀만 표시됩니다. (${pending}개 팀 진행 중)`, `Only teams that have finished the first half are shown (${pending} still in progress).`)}</div>` : ''}
+      </details>`;
+  }
+
   function renderTeamResultsTab() {
     const el = document.getElementById('teamInfoResultsTab');
     if (!el) return;
@@ -6912,6 +7288,7 @@
     renderTeamScorersTab();
     renderTeamAwardsTab();
     renderTeamYoutubeTab();
+    renderTeamHalfReviewTab();
     renderTeamResultsTab();
     renderTeamInfoNextMatchTab();
     applyTeamInfoTab(currentTeamInfoTab);
@@ -9896,7 +10273,7 @@
   //  - 작년 기록을 같이 보여주는 화면(통계·구단 정보·예측)에 들어갈 때
   // 데이터가 아직 없는 동안에도 작년 비교 코드는 typeof 가드로 조용히 빠지도록 되어 있어서
   // (archiveNameForTeam 등) 화면이 깨지지 않고, 로드가 끝나면 해당 화면만 다시 그립니다.
-  const ARCHIVE_DEPENDENT_VIEWS = ['stats', 'squad', 'predict'];
+  const ARCHIVE_DEPENDENT_VIEWS = ['stats', 'squad', 'predict', 'report'];
   let archiveLoadPromise = null;
 
   function archiveDataReady() {
@@ -9930,6 +10307,7 @@
     if (currentView === 'stats') buildStatsTables();
     else if (currentView === 'squad') showTeamInfoForKey(currentTeamInfoKey);
     else if (currentView === 'predict') { renderPointsHistoryChart(); renderMagicNumberStats(); }
+    else if (currentView === 'report') renderRoundResultReport();
   }
 
   // showView에서 호출: 작년 기록을 쓰는 화면이면 백그라운드로 로드를 시작합니다.
@@ -14542,6 +14920,7 @@
     const scorersHtml = buildTeamScorerCardsHtml(t.nameEn, t.nameKo);
     const nextMatchHtml = nextMatchOpponentHtml(t, rank);
     const pastResultsHtml = buildTeamPastResultsHtml(t.nameEn, t.nameKo);
+    const halfReviewHtml = buildTeamHalfReviewSectionHtml(t.nameEn);
     const prevSeasonHtml = buildPrevSeasonCardHtml(t, rank);
 
     const bodyEl = document.getElementById('otherTeamFullBody');
@@ -14572,6 +14951,7 @@
             ${nextMatchHtml}
           </div>
         </div>
+        ${halfReviewHtml}
         <div class="ti-section">
           <div class="ti-section-title lbl" data-en="Results" data-ko="경기 결과">${isKorean ? '경기 결과' : 'Results'}</div>
           <div class="round-match-list ti-results-list">${pastResultsHtml}</div>
