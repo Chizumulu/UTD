@@ -13769,3 +13769,39 @@ body {
 
 .hr-compare { margin: 12px 0 4px; }
 .hr-compare-note { margin-top: 8px; font-size: 11.5px; line-height: 1.45; color: var(--color-text-faint); }
+
+/* 메인 최근 경기: 상세보기가 있는 경기는 눌러서 열기 */
+.home-match-item.is-clickable {
+  cursor: pointer;
+  padding: 6px 2px;
+  border-radius: var(--radius-lg);
+  transition: background .15s, transform .15s;
+}
+.home-match-item.is-clickable:hover { background: var(--color-bg-table-alt); transform: translateY(-1px); }
+.home-match-item.is-clickable:active { transform: translateY(0); }
+.home-match-item.is-clickable:focus-visible { outline: 2px solid var(--color-teal-dark); outline-offset: 2px; }
+
+/* 경기 상세(PC) 왼쪽 패널: 감독 이름 아래 사진 — 둥근 사각형으로 얼굴·어깨·가슴 로고까지만 보이게 자르고,
+   좌우는 살짝 확대해 옆 사람이 안 보이게 함. 모바일은 패널 자체가 숨겨져 있고,
+   화면 높이가 낮으면 교체명단 자리를 위해 사진을 숨깁니다. */
+.lineup-side-coach-photo { display: none; }
+@media (min-width: 721px) and (min-height: 800px) {
+  .lineup-side-coach-photo {
+    display: block;
+    align-self: center;
+    width: 108px; height: 120px;
+    margin-top: 8px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.06));
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5), 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .lineup-side-coach-photo img {
+    display: block;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: 50% 0;
+    transform: scale(1.126);
+    transform-origin: 46% 0;
+  }
+}

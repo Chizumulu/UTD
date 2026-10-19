@@ -3201,6 +3201,7 @@
       oppKo: m.oppKo,
       oppLogo: getTeamLogo(m.oppEn),
       weekNum: m.weekNum,
+      roundKey: m.roundKey,
       myGoals: m.myGoals,
       oppGoals: m.oppGoals,
       result: m.result
@@ -3269,8 +3270,15 @@
         const resultLabel = m.result === 'W' ? (isKorean ? '승' : 'W') : (m.result === 'L' ? (isKorean ? '패' : 'L') : (isKorean ? '무' : 'D'));
         const oppName = homeMatchTeamName(m.oppEn, m.oppKo);
         const weekTxt = isKorean ? `${wkKo(m.weekNum)}` : `${wkEn(m.weekNum, 'WK', '')}`;
+        // 라인업 기록(matchLineups)이 있는 경기만 눌러서 경기 상세보기를 열 수 있습니다.
+        // (경기 결과 탭의 '상세보기' 버튼과 같은 조건)
+        const canOpen = !!(m.roundKey && typeof matchLineups !== 'undefined' && matchLineups[m.roundKey]);
+        const detailHint = isKorean ? '경기 상세보기' : 'Match details';
+        const openAttrs = canOpen
+          ? ` is-clickable" role="button" tabindex="0" title="${detailHint}" aria-label="${oppName} ${m.myGoals}-${m.oppGoals} ${detailHint}" onclick="openMatchDetail('${m.roundKey}', ${roundKeyPos(m.roundKey)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMatchDetail('${m.roundKey}', ${roundKeyPos(m.roundKey)});}`
+          : '';
         return `
-          <div class="home-match-item">
+          <div class="home-match-item${openAttrs}">
             <img class="team-logo home-match-crest" src="${m.oppLogo}" alt="${m.oppEn}" title="${oppName}">
             <span class="home-match-name" title="${oppName}">${oppName}</span>
             <span class="home-match-score">${m.myGoals}-${m.oppGoals}</span>
@@ -3283,14 +3291,27 @@
 
     if (upcomingEl) {
       const upcoming = getMyUpcomingMatches(5);
+      const myInfo = getMyRankedTeam();
+      const jsq = (v) => String(v || '').replace(/'/g, "\\'");
       upcomingEl.innerHTML = upcoming.map(m => {
         const oppName = homeMatchTeamName(m.oppEn, m.oppKo);
         const haClass = m.homeAway === 'H' ? 'home' : 'away';
         const haLabel = m.homeAway === 'H' ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A');
         const weekNum = parseInt(String(m.roundKey).replace('round', ''), 10);
         const weekTxt = isKorean ? `${wkKo(weekNum)}` : `${wkEn(weekNum, 'WK', '')}`;
+        // 누르면 두 팀의 '전적 비교' 상세 창이 열립니다. (홈/원정 순서는 실제 경기 기준)
+        let openAttrs = '';
+        if (myInfo) {
+          const me = myInfo.team;
+          const isH = m.homeAway === 'H';
+          const hEn = isH ? me.nameEn : m.oppEn, hKo = isH ? me.nameKo : m.oppKo;
+          const aEn = isH ? m.oppEn : me.nameEn, aKo = isH ? m.oppKo : me.nameKo;
+          const call = `openMatchCompareModal('${jsq(hEn)}', '${jsq(hKo)}', '${jsq(aEn)}', '${jsq(aKo)}', '${jsq(m.roundKey)}')`;
+          const hint = isKorean ? '전적 비교' : 'Compare teams';
+          openAttrs = ` is-clickable" role="button" tabindex="0" title="${hint}" aria-label="${oppName} ${hint}" onclick="${call}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${call};}`;
+        }
         return `
-          <div class="home-match-item">
+          <div class="home-match-item${openAttrs}">
             <img class="team-logo home-match-crest" src="${m.oppLogo}" alt="${m.oppEn}" title="${oppName}">
             <span class="home-match-name" title="${oppName}">${oppName}</span>
             <span class="home-match-ha ${haClass}">${haLabel}</span>
@@ -15508,7 +15529,7 @@
         <div class="lineup-side-top">
           ${logo ? `<img class="lineup-side-logo" src="${logo}" alt="" onerror="this.remove()">` : ''}
           <div class="lineup-side-team">${teamName}</div>
-          ${coachName ? `<div class="lineup-side-coach"><span>${isKo ? '감독' : 'Head Coach'}</span><b>${coachName}</b></div>` : ''}
+          ${coachName ? `<div class="lineup-side-coach"><span>${isKo ? '감독' : 'Head Coach'}</span><b>${coachName}</b><span class="lineup-side-coach-photo"><img src="./감독.png" alt="${coachName}" loading="lazy" onerror="this.parentNode.remove()"></span></div>` : ''}
         </div>
         <div class="lineup-side-bench">
           <div class="lineup-side-title">${isKo ? '교체명단' : 'Substitutes'}</div>
