@@ -84,6 +84,7 @@
   let returnToPlayerAfterMatch = null;
   let lineupViewMode = 'pitch';                     // 경기 상세 라인업: 'pitch'(기본) | 'list'
   let currentMatchDetailLineup = null;
+  let currentMatchDetailAway = false; // 지금 열린 경기 상세가 우리 원정 경기인지(원정이면 카드를 흰색으로)
   let squadViewMode = 'card';                       // 'card'(기본) | 'table'
   let squadTableSort = { key: 'pos', dir: 1 };      // 표 정렬 상태
   let currentTeamInfoKey = 'Chizumulu United FC';
@@ -5537,6 +5538,18 @@
     });
     return counts;
   }
+  // API 득점 이벤트는 한 골에 선수를 여러 명 담습니다(scorer=득점자, assist=어시스트 등).
+  // 예) 35' { players: [ {Timothy Katapa, scorer}, {Harrison Phiri, assist} ] }
+  // 어시스트 선수까지 "골"로 세면 안 되므로, 득점 계열 선수가 함께 있을 때는 role=assist 선수를 떼어냅니다.
+  // (득점자가 아예 없으면 원본을 그대로 둡니다.)
+  function stripLeagueAssistPlayers(ev) {
+    if (!ev || !Array.isArray(ev.players) || ev.players.length < 2) return ev;
+    const isAssist = p => !!p && /assist/i.test(String(p.role || ''));
+    if (!ev.players.some(isAssist)) return ev;
+    const rest = ev.players.filter(p => !isAssist(p));
+    if (!rest.length) return ev;
+    return Object.assign({}, ev, { players: rest });
+  }
   function applyLeagueScorerCounts(ev, counts) {
     const hasScorer = Array.isArray(ev && ev.players) && ev.players.some(p => p && /scorer/i.test(String(p.role || '')));
     if (!ev || (!/^goal$/i.test(String(ev.type || '')) && !hasScorer) || !Array.isArray(ev.players) || !ev.players.length) return ev;
@@ -5712,7 +5725,7 @@
         let goalMap = goalsByPair.get(pairKey);
         if (!goalMap) { goalMap = new Map(); goalsByPair.set(pairKey, goalMap); }
         for (const evRaw of rawEvents) {
-          const ev = applyLeagueScorerCounts(evRaw, scorerCounts);
+          const ev = applyLeagueScorerCounts(stripLeagueAssistPlayers(evRaw), scorerCounts);
           if (!ev) continue;
           // A summary event can list several scorers, while a later update may split
           // those same scorers into separate events. Deduplicate each scorer separately
@@ -15538,7 +15551,7 @@
         <div class="lineup-side-form">${String(lineup.formation || '').split('-').join(' · ')}</div>
       </aside>`;
 
-    return `<div class="lineup-board">${head}${side}<div class="lineup-field-wrap"><div class="lineup-field" style="--pcw:${pcCardW}%;">${lines.replace('class="pp-lines"', 'class="pp-lines pp-lines-m"')}${linesPc}${cards}</div></div></div>`;
+    return `<div class="lineup-board${currentMatchDetailAway ? ' is-away' : ''}">${head}${side}<div class="lineup-field-wrap"><div class="lineup-field" style="--pcw:${pcCardW}%;">${lines.replace('class="pp-lines"', 'class="pp-lines pp-lines-m"')}${linesPc}${cards}</div></div></div>`;
   }
 
   function renderLineupLeft(lineup) {
@@ -15697,6 +15710,26 @@
     return `${scorePart} ${suffixMap[lastChar]}`;
   }
 
+  // 경기 상세에서 우리 팀이 원정인지 판별합니다. 해당 라운드(roundsData/scheduledRounds)에서
+  // 우리 팀 + 라인업의 상대(opponentKo)가 맞붙는 경기를 찾아 우리가 어웨이 쪽이면 true.
+  // 못 찾으면 홈(false)으로 봅니다. 라인업에 isAway: true 를 직접 적어도 됩니다.
+  function isOurMatchAway(roundKey, lineup) {
+    if (lineup && typeof lineup.isAway === 'boolean') return lineup.isAway;
+    const opp = lineup && lineup.opponentKo;
+    const pools = [
+      (typeof roundsData !== 'undefined' && roundsData[roundKey]) || [],
+      (typeof scheduledRounds !== 'undefined' && scheduledRounds[roundKey]) || []
+    ];
+    for (const list of pools) {
+      for (const m of list) {
+        if (!m || m.byeKo || m.byeEn) continue;
+        if (m.homeKo === REPORT_TEAM_KO && (!opp || m.awayKo === opp)) return false;
+        if (m.awayKo === REPORT_TEAM_KO && (!opp || m.homeKo === opp)) return true;
+      }
+    }
+    return false;
+  }
+
   function openMatchDetail(roundKey, weekNum) {
     returnToPlayerAfterMatch = null;   // 다른 경로로 열린 경기 상세는 선수 모달로 되돌아가지 않음
     const lineup = matchLineups[roundKey];
@@ -15715,6 +15748,7 @@
       : { list: lineup.recentHistory || [], summary: lineup.historySummary || '' };
 
     currentMatchDetailLineup = lineup;
+    currentMatchDetailAway = isOurMatchAway(roundKey, lineup);
     const bodyEl = document.getElementById('matchDetailBody');
     bodyEl.innerHTML = `
       <div class="lineup-formation-tag">${lineup.formation}</div>
