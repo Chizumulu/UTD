@@ -13873,3 +13873,22 @@ body {
 .lineup-board.is-away .pp-card:not(.pp-card-gk) .pp-card-sub { color: #0a6d67; }
 .lineup-board.is-away .pp-card:not(.pp-card-gk) .pp-card-cap { background: #0b1f4d; color: #fff; }
 .lineup-board.is-away .pp-card:not(.pp-card-gk) .pp-badge-goal { background: #0b1f4d; color: #fff; }
+
+/* ===== 라이브 카드: 치주물루 경기 실시간 순위(경기 전 ▲ 현재 스코어 기준) ===== */
+.llt-team-info { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; max-width: 100%; }
+.llt-team-rank {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--font-num); font-size: 11px; font-weight: 800;
+  color: var(--color-text-muted); white-space: nowrap; line-height: 1.2;
+}
+.llt-rank-from { opacity: 0.75; }
+.llt-rank-arrow { font-size: 10px; }
+.llt-team-rank.is-up .llt-rank-arrow,
+.llt-team-rank.is-up .llt-rank-to { color: var(--color-green-text); }
+.llt-team-rank.is-down .llt-rank-arrow,
+.llt-team-rank.is-down .llt-rank-to { color: var(--color-red-text); }
+@media (max-width: 720px) {
+  .llt-team-info { flex: 1 1 auto; }
+  .llt-team-info .llt-team-name { flex: 0 1 auto; max-width: 100%; }
+  .llt-team-rank { font-size: 10.5px; gap: 3px; }
+}

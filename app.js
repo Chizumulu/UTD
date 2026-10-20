@@ -5174,6 +5174,70 @@
     return res.json();
   }
 
+  // ===== 라이브 카드 실시간 순위 미리보기 (치주물루 경기 전용) =====
+  // 지금 스코어대로 경기가 끝난다고 가정하고 순위표를 다시 계산해서
+  // { home: {before, after}, away: {before, after} }를 돌려줍니다.
+  //  - before: 이 경기가 반영되기 전 순위(왼쪽에 표시)
+  //  - after : 현재 스코어(무승부 포함)를 반영한 순위(오른쪽에 표시)
+  // data.js에 이 경기의 최종 스코어가 이미 입력돼 leagueData에 들어가 있으면
+  // 먼저 그 결과를 빼서 이중 반영을 막습니다. 정렬은 순위표와 같은 기준입니다.
+  function computeLiveRankPreview(homeEn, awayEn, hs, as) {
+    if (!homeEn || !awayEn || typeof leagueData === 'undefined') return null;
+    if (typeof hs !== 'number' || typeof as !== 'number') return null;
+    const rows = leagueData.map(t => ({
+      nameEn: t.nameEn, won: t.won || 0, drawn: t.drawn || 0,
+      gf: t.goalsFor || 0, ga: t.goalsAgainst || 0
+    }));
+    const home = rows.find(r => r.nameEn === homeEn);
+    const away = rows.find(r => r.nameEn === awayEn);
+    if (!home || !away) return null;
+
+    const apply = (h, a, sign) => {
+      home.gf += sign * h; home.ga += sign * a;
+      away.gf += sign * a; away.ga += sign * h;
+      if (h > a) home.won += sign;
+      else if (h < a) away.won += sign;
+      else { home.drawn += sign; away.drawn += sign; }
+    };
+    const rankMap = () => {
+      const sorted = rows.slice().sort((a, b) => {
+        const pa = a.won * 3 + a.drawn, pb = b.won * 3 + b.drawn;
+        if (pb !== pa) return pb - pa;
+        const ga = a.gf - a.ga, gb = b.gf - b.ga;
+        if (gb !== ga) return gb - ga;
+        if (b.gf !== a.gf) return b.gf - a.gf;
+        return teamMineFirst(a, b);
+      });
+      const r = {};
+      sorted.forEach((x, i) => { r[x.nameEn] = i + 1; });
+      return r;
+    };
+
+    // 이미 확정 스코어가 반영된 같은 경기(홈/원정 동일, 킥오프 후 4시간 이내)가 있으면 제외
+    const now = Date.now();
+    for (const source of [scheduledRounds, roundsData]) {
+      if (!source) continue;
+      for (const roundKey in source) {
+        const round = source[roundKey];
+        if (!Array.isArray(round)) continue;
+        for (const m of round) {
+          if (m.homeEn !== homeEn || m.awayEn !== awayEn) continue;
+          if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') continue;
+          const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+          if (ms && ms <= now && now < ms + LEAGUE_LIVE_FORCE_CLOSE_MS) apply(m.homeScore, m.awayScore, -1);
+        }
+      }
+    }
+
+    const before = rankMap();
+    apply(hs, as, +1);
+    const after = rankMap();
+    return {
+      home: { before: before[homeEn], after: after[homeEn] },
+      away: { before: before[awayEn], after: after[awayEn] }
+    };
+  }
+
   function renderLeagueLiveTicker(matches) {
     const wrap = document.getElementById('leagueLiveTicker');
     const scroller = document.getElementById('leagueLiveTickerScroller');
@@ -5277,6 +5341,19 @@
       const lltHomeWin = !!m.ended && hs !== null && as !== null && hs > as;
       const lltAwayWin = !!m.ended && hs !== null && as !== null && as > hs;
       const lltResultCls = (win, lose) => win ? ' is-winner' : (lose ? ' is-loser' : '');
+      // 치주물루 경기에서만: 구단명 아래에 "경기 전 순위 ▲ 현재 스코어 기준 순위"를 보여줍니다.
+      const lltRankPreview = (home.isOurTeam || away.isOurTeam)
+        ? computeLiveRankPreview(resolveLeagueTeamNameEn(m.homeTeam), resolveLeagueTeamNameEn(m.awayTeam), hs, as)
+        : null;
+      const lltRankHtml = (r) => {
+        if (!r || !r.before || !r.after) return '';
+        const d = r.before - r.after; // 양수 = 순위 상승(숫자가 작아짐)
+        const dir = d > 0 ? 'up' : (d < 0 ? 'down' : 'flat');
+        const arrow = d > 0 ? '▲' : (d < 0 ? '▼' : '–');
+        const fmt = (n) => isKorean ? `${n}위` : ordinalEn(n);
+        const tip = isKorean ? '경기 전 순위 → 현재 스코어 기준 순위' : 'Before kickoff → at current score';
+        return `<span class="llt-team-rank is-${dir}" title="${tip}"><span class="llt-rank-from">${fmt(r.before)}</span><span class="llt-rank-arrow">${arrow}</span><span class="llt-rank-to">${fmt(r.after)}</span></span>`;
+      };
       const goalsSectionHtml = goals.length
         ? `<div class="llt-goals">
              <div class="llt-goals-col llt-goals-home">${homeGoalsHtml}</div>
@@ -5338,9 +5415,9 @@
         <div class="${cardClass}">
           <div class="llt-card-top">${topBadgeHtml}</div>
           <div class="llt-teams">
-            <div class="llt-team${lltResultCls(lltHomeWin, lltAwayWin)}">${homeLogo}<span class="llt-team-name" title="${escapeHtml(home.name)}">${escapeHtml(homeNameShort)}</span></div>
+            <div class="llt-team${lltResultCls(lltHomeWin, lltAwayWin)}">${homeLogo}<span class="llt-team-info"><span class="llt-team-name" title="${escapeHtml(home.name)}">${escapeHtml(homeNameShort)}</span>${lltRankHtml(lltRankPreview && lltRankPreview.home)}</span></div>
             <div class="llt-score"><span class="llt-score-num${lltResultCls(lltHomeWin, lltAwayWin)}">${homeScore}</span> : <span class="llt-score-num${lltResultCls(lltAwayWin, lltHomeWin)}">${awayScore}</span></div>
-            <div class="llt-team${lltResultCls(lltAwayWin, lltHomeWin)}">${awayLogo}<span class="llt-team-name" title="${escapeHtml(away.name)}">${escapeHtml(awayNameShort)}</span></div>
+            <div class="llt-team${lltResultCls(lltAwayWin, lltHomeWin)}">${awayLogo}<span class="llt-team-info"><span class="llt-team-name" title="${escapeHtml(away.name)}">${escapeHtml(awayNameShort)}</span>${lltRankHtml(lltRankPreview && lltRankPreview.away)}</span></div>
           </div>
           ${goalsSectionHtml}
           ${eventsSectionHtml}
