@@ -425,6 +425,31 @@ const matchLineups = {
     subsIn: [],
     subsUnused: [4, 8, 9, 10, 15, 25, 88]
   }
+  // ===== 연기경기주차 vs 루비리 FC (2026-10-20 홈, 9주차에서 연기) 선발 라인업 =====
+  // 라인업 이미지 기준입니다. 이미지 제목은 "15라운드"로 적혀 있지만 일정 데이터상 연기경기주차(round16)입니다.
+  // 경기 전이라 result는 "예정"으로 두었습니다. 경기가 끝나면 "N : N 승/무/패"로 바꾸고,
+  // 득점·도움(goals/assists)과 교체 투입(subsIn)을 채워주세요. 대기 명단은 3, 5, 8, 9, 66, 77, 88, 98번입니다.
+  // 만토 카망가(15)가 선발로 복귀해 주장 완장은 그에게 두었습니다. 다르면 고쳐주세요.
+  , round16: {
+    formation: "4-2-3-1",
+    opponentKo: "루비리 FC",
+    result: "예정",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
+      { pos: "LW", number: 11, nameKo: "해리 바튼" },
+      { pos: "CAM", number: 7, nameKo: "디킨스 니렌다" },
+      { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
+      { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
+      { pos: "RCM", number: 10, nameKo: "찰스 데야" },
+      { pos: "LB", number: 25, nameKo: "모버트 카타파" },
+      { pos: "LCB", number: 13, nameKo: "조셉 반다" },
+      { pos: "RCB", number: 4, nameKo: "켈빈 반다" },
+      { pos: "RB", number: 15, nameKo: "만토 카망가", captain: true },
+      { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
+    ],
+    subsIn: [],
+    subsUnused: [3, 5, 8, 9, 66, 77, 88, 98]
+  }
 };
 
 const squadData = [
@@ -445,7 +470,7 @@ const squadData = [
   { number: 9, position: "FW", nameKo: "제임스 헤르메스", nameEn: "James Hermes", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp", photoSrc: "헤르메스.png" },
   { number: 4, position: "DF", nameKo: "켈빈 반다", nameEn: "Kelvin Banda", isLoan: true, loanClubKo: "칠롭웨 유나이티드 FC", loanClubEn: "Chilobwe United FC", loanClubLogo: "칠롭웨.webp", photoSrc: "켈빈.png" },
   { number: 10, position: "MF", nameKo: "찰스 데야", nameEn: "Charles Deya", photoSrc: "no10.png" },
-  { number: 11, position: "FW", nameKo: "해리 바튼", nameEn: "Harry Barton", photoSrc: "no11.png" },
+  { number: 11, position: "FW", nameKo: "해리 바튼", nameEn: "Harry Barton", aliasesEn: ["Harrison Phiri", "Harley Phiri"], photoSrc: "no11.png" },
   { number: 13, position: "DF", nameKo: "조셉 반다", nameEn: "Joseph Banda", photoSrc: "no13.png" },
   { number: 15, position: "DF", nameKo: "만토 카망가", nameEn: "Mantoh Kamanga", isCaptain: true, photoSrc: "no15.png" },
   { number: 20, position: "DF", nameKo: "프란시스 피리", nameEn: "Francis Phiri", photoSrc: "no20.png" },
