@@ -433,22 +433,28 @@ const matchLineups = {
   , round16: {
     formation: "4-2-3-1",
     opponentKo: "루비리 FC",
-    result: "예정",
+    result: "4 : 0 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
-      { pos: "LW", number: 11, nameKo: "해리 바튼" },
-      { pos: "CAM", number: 7, nameKo: "디킨스 니렌다" },
-      { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["35'", "45+3'", "53'"], assists: [11, null, null] },
+      { pos: "LW", number: 11, nameKo: "해리 바튼", goals: ["3'"], assists: [null], outMin: "후반" },
+      { pos: "CAM", number: 7, nameKo: "디킨스 니렌다", outMin: "후반" },
+      { pos: "RW", number: 6, nameKo: "벤자민 니렌다", outMin: "후반" },
       { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
       { pos: "RCM", number: 10, nameKo: "찰스 데야" },
       { pos: "LB", number: 25, nameKo: "모버트 카타파" },
       { pos: "LCB", number: 13, nameKo: "조셉 반다" },
-      { pos: "RCB", number: 4, nameKo: "켈빈 반다" },
-      { pos: "RB", number: 15, nameKo: "만토 카망가", captain: true },
+      { pos: "RCB", number: 4, nameKo: "켈빈 반다", outMin: "후반" },
+      { pos: "RB", number: 15, nameKo: "만토 카망가", captain: true, outMin: "후반" },
       { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
     ],
-    subsIn: [],
-    subsUnused: [3, 5, 8, 9, 66, 77, 88, 98]
+    subsIn: [
+      { number: 8, nameKo: "엑스퍼트 카망가", pos: "RW", inMin: "후반" },
+      { number: 3, nameKo: "알란 음롱골라", pos: "RCB", inMin: "후반" },
+      { number: 66, nameKo: "조던 칠와", pos: "RB", inMin: "후반" },
+      { number: 98, nameKo: "스티브 피리", pos: "CAM", inMin: "후반" },
+      { number: 9, nameKo: "제임스 헤르메스", pos: "LW", inMin: "후반" }
+    ],
+    subsUnused: [5, 77, 88]
   }
 };
 
@@ -1586,9 +1592,9 @@ const scheduledRounds = {
   //  - 마푸 vs 칠룸바: 13주차에서 연기
   //  - 치하메 vs 친테체: 15주차에서 일정 변경
   round16: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-20", kickoffTime: "15:00", movedFromWeek: 9 },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-20", kickoffTime: "15:00", movedFromWeek: 9, homeScore: 4, awayScore: 0, scorersHome: "HARRY BARTON, TIMOTHY KATAPA (3골)", scorersAway: "없음" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-21", kickoffTime: "15:00", movedFromWeek: 12 },
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-23", kickoffTime: "15:00", movedFromWeek: 13, changed: true },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13, changed: true },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13 },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 15, changed: true }
   ]
@@ -1772,7 +1778,7 @@ const roundsData = {
   // 단, 치주물루 vs 비전(연기경기주차로 이동)과 마푸 vs 칠룸바는 연기(postponed)되어 스코어가 아직 없습니다.
   // (새 날짜가 확정되고 스코어가 채워지면 postponed를 지우고 matchDetails.round13 목록 맨 뒤에 추가해주세요.)
   round13: [
-    // 13주차 치주물루 vs 비전 S 아카데미 경기는 연기경기주차(10월 23일)로 옮겨졌습니다.
+    // 13주차 치주물루 vs 비전 S 아카데미 경기는 연기경기주차(10월 24일)로 옮겨졌습니다.
     // (연기경기주차 쪽 항목에 movedFromWeek: 13이 있고, 이쪽에는 changed + movedToWeek로 "변경됨" 배지가 표시됩니다.)
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", postponed: true, movedToWeek: 16, changed: true },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 0, awayScore: 2, scorersHome: "없음", scorersAway: "ZIKANI KASAMBALA, MIKE LUHANGA" },
