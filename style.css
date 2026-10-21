@@ -13892,3 +13892,29 @@ body {
   .llt-team-info .llt-team-name { flex: 0 1 auto; max-width: 100%; }
   .llt-team-rank { font-size: 10.5px; gap: 3px; }
 }
+
+
+/* ===== 교체 카드 뒤집기 (경기장 보기) ===== */
+.pp-flip { position: relative; aspect-ratio: 4 / 5; perspective: 900px; }
+.pp-flip-inner {
+  position: relative; width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+.pp-flip-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.pp-flip-face > .pp-card { width: 100%; height: 100%; aspect-ratio: auto; }
+.pp-flip-back { transform: rotateY(180deg); }
+.lineup-field.is-subs .pp-flip-inner { transform: rotateY(180deg); }
+.pp-flip-back .pp-card { box-shadow: 0 0 0 2px var(--color-teal), 0 3px 10px rgba(0, 0, 0, 0.28); }
+.pp-badge-in { background: var(--color-teal); color: #fff; }
+.pp-card-inmin { display: block; margin-top: 2px; font-size: clamp(8.5px, 12cqw, 12px); font-weight: 700; color: #8fe3dc; }
+.lineup-board.is-away .pp-card-in:not(.pp-card-gk) .pp-card-inmin { color: #0a6d67; }
+.lineup-subs-toggle {
+  position: absolute; top: 8px; right: 8px; z-index: 5;
+  padding: 5px 11px; border: 0; border-radius: 999px; cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 800; line-height: 1.2;
+  background: rgba(255, 255, 255, 0.92); color: #0b1f4d;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.lineup-subs-toggle.is-active { background: var(--color-teal); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .pp-flip-inner { transition: none; } }

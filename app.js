@@ -82,6 +82,7 @@
   let currentSquadPlayerModalNumber = null;
   // 선수 모달의 시즌 그래프에서 경기 상세로 넘어갔을 때, 경기 상세를 닫으면 그 선수 모달로 돌아오기 위한 메모
   let returnToPlayerAfterMatch = null;
+  let lineupShowSubs = false;                       // 경기장 보기: 교체 카드 뒤집기 상태
   let lineupViewMode = 'pitch';                     // 경기 상세 라인업: 'pitch'(기본) | 'list'
   let currentMatchDetailLineup = null;
   let currentMatchDetailAway = false; // 지금 열린 경기 상세가 우리 원정 경기인지(원정이면 카드를 흰색으로)
@@ -2354,7 +2355,8 @@
         ${resultCardHtml}
         ${predictionCardHtml}
       </div>
-    `;
+    `;
+
     const hrToggle = document.getElementById('reportHalfToggle');
     if (hrToggle) hrToggle.addEventListener('toggle', () => { reportHalfReviewOpen = hrToggle.open; });
   }
@@ -15488,6 +15490,7 @@
     const flagOf = (sq) => (sq && sq.nationalBadge && typeof getNationalFlagSvg === 'function')
       ? getNationalFlagSvg(sq.nationalBadge.flag) : '';
 
+    let hasFlip = false;
     const cards = lineup.starters.map(st => {
       const [x, rawY] = PITCH_CARD_COORDS[st.pos] || PITCH_COORDS[st.pos];
       const y = spreadY(rawY);
@@ -15520,8 +15523,47 @@
         return `<span class="pp-card-sub">▲ ${nameOf(sb)}${sg ? ' ⚽' + (sg > 1 ? sg : '') : ''}${sa ? ' A' + (sa > 1 ? sa : '') : ''}</span>`;
       }).join('');
 
-      return `
-        <div class="pp-slot" style="--mx:${x}%;--my:${y}%;--px:${px.toFixed(2)}%;--py:${py.toFixed(2)}%;">
+      // ----- 교체 카드(뒷면): 이 선발을 대신해 들어온 선수. starter.replacedBy(번호/배열)가 있으면 우선, 없으면 같은 pos의 첫 subsIn -----
+      let inSub = null;
+      if (st.outMin) {
+        const rb = st.replacedBy != null ? [].concat(st.replacedBy) : null;
+        inSub = rb
+          ? (lineup.subsIn || []).find(sb => rb.includes(sb.statKey || sb.number))
+          : subs[0];
+      }
+      let backHtml = '';
+      if (inSub) {
+        const isq = lookup(inSub);
+        const iLink = inSub.statKey || inSub.number;
+        const iFormer = typeof inSub.statKey === 'string' && /^F\d+$/.test(inSub.statKey);
+        const iCands = [];
+        if (!iFormer && inSub.number != null) LINEUP_PHOTO_EXTS.forEach(ext => iCands.push(`${inSub.number}L.${ext}`));
+        if (isq && isq.photoSrc) iCands.push(isq.photoSrc);
+        const iPhoto = iCands.length
+          ? `<img class="pp-card-photo" src="${iCands[0]}" data-rest="${iCands.slice(1).join('|')}" alt="" loading="lazy" onerror="ppCardPhotoNext(this)">` : '';
+        const ig = (inSub.goals || []).length;
+        const ia = lineupAssistsMade(lineup, iLink);
+        const iBadges = [
+          ig ? `<span class="pp-badge pp-badge-goal">⚽${ig > 1 ? ig : ''}</span>` : '',
+          ia ? `<span class="pp-badge pp-badge-assist">A${ia > 1 ? ia : ''}</span>` : '',
+          `<span class="pp-badge pp-badge-in" title="${isKo ? '교체 투입' : 'Subbed on'}">▲</span>`,
+          inSub.outMin ? `<span class="pp-badge pp-badge-out" title="${isKo ? '교체 아웃' : 'Subbed off'}">▼</span>` : ''
+        ].join('');
+        const inMinTxt = inSub.inMin && inSub.inMin !== '-' ? inSub.inMin : '';
+        backHtml = `
+          <div class="pp-card pp-card-in lineup-squad-link" data-player-number="${iLink}">
+            <div class="pp-card-id"><b class="pp-card-num">${inSub.number != null ? inSub.number : ''}</b><span class="pp-card-pos">${inSub.pos || st.pos}</span></div>
+            ${iPhoto}
+            <div class="pp-card-badges">${iBadges}</div>
+            <div class="pp-card-nameplate">
+              <span class="pp-card-name">${givenName(nameOf(inSub))}</span>
+              ${inMinTxt ? `<span class="pp-card-inmin">${inMinTxt}</span>` : ''}
+            </div>
+          </div>`;
+      }
+      if (backHtml) hasFlip = true;
+
+      const frontCard = `
           <div class="pp-card lineup-squad-link${st.outMin ? ' pp-card-out' : ''}${st.pos === 'GK' ? ' pp-card-gk' : ''}" data-player-number="${link}">
             <div class="pp-card-id"><b class="pp-card-num">${st.number != null ? st.number : ''}</b><span class="pp-card-pos">${st.pos}</span>${st.captain ? `<span class="pp-card-cap" title="${isKo ? '주장' : 'Captain'}">C</span>` : ''}</div>
             ${photo}
@@ -15530,8 +15572,13 @@
               <span class="pp-card-name">${givenName(nameOf(st))}${st.injury ? ' 🩹' : ''}</span>
               ${subsHtml}
             </div>
-          </div>
-        </div>`;
+          </div>`;
+
+      const inner = backHtml
+        ? `<div class="pp-flip"><div class="pp-flip-inner"><div class="pp-flip-face pp-flip-front">${frontCard}</div><div class="pp-flip-face pp-flip-back">${backHtml}</div></div></div>`
+        : frontCard;
+      return `
+        <div class="pp-slot" style="--mx:${x}%;--my:${y}%;--px:${px.toFixed(2)}%;--py:${py.toFixed(2)}%;">${inner}</div>`;
     }).join('');
 
     const lines = `
@@ -15628,7 +15675,7 @@
         <div class="lineup-side-form">${String(lineup.formation || '').split('-').join(' · ')}</div>
       </aside>`;
 
-    return `<div class="lineup-board${currentMatchDetailAway ? ' is-away' : ''}">${head}${side}<div class="lineup-field-wrap"><div class="lineup-field" style="--pcw:${pcCardW}%;">${lines.replace('class="pp-lines"', 'class="pp-lines pp-lines-m"')}${linesPc}${cards}</div></div></div>`;
+    return `<div class="lineup-board${currentMatchDetailAway ? ' is-away' : ''}">${head}${side}<div class="lineup-field-wrap"><div class="lineup-field${hasFlip && lineupShowSubs ? ' is-subs' : ''}" style="--pcw:${pcCardW}%;">${hasFlip ? `<button type="button" class="lineup-subs-toggle${lineupShowSubs ? ' is-active' : ''}" aria-pressed="${lineupShowSubs ? 'true' : 'false'}">${isKo ? (lineupShowSubs ? '선발 보기' : '교체 카드 보기') : (lineupShowSubs ? 'Starters' : 'Substitutes')}</button>` : ''}${lines.replace('class="pp-lines"', 'class="pp-lines pp-lines-m"')}${linesPc}${cards}</div></div></div>`;
   }
 
   function renderLineupLeft(lineup) {
@@ -15642,6 +15689,18 @@
       </div>` : '';
     return toggle + (mode === 'pitch' ? renderLineupField(lineup) : renderLineupPitch(lineup));
   }
+
+  document.addEventListener('click', function(event) {
+    const tg = event.target.closest('.lineup-subs-toggle');
+    if (!tg) return;
+    const field = tg.closest('.lineup-field');
+    if (!field) return;
+    lineupShowSubs = !lineupShowSubs;
+    field.classList.toggle('is-subs', lineupShowSubs);
+    tg.classList.toggle('is-active', lineupShowSubs);
+    tg.setAttribute('aria-pressed', lineupShowSubs ? 'true' : 'false');
+    tg.textContent = isKorean ? (lineupShowSubs ? '선발 보기' : '교체 카드 보기') : (lineupShowSubs ? 'Starters' : 'Substitutes');
+  });
 
   document.addEventListener('click', function(event) {
     const btn = event.target.closest('.lineup-view-btn');
