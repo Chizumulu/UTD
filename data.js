@@ -591,7 +591,8 @@ const teamAwards = {
     round5: [49],
     round7: [98],
     round10: [88],
-    round13: [7]
+    round13: [7],
+    round16: [22]
   },
   playerOfTheMonth: {
     '2026-07': 90,
@@ -1587,13 +1588,13 @@ const scheduledRounds = {
   // ── 연기경기주차 (정규 15주차와 정규 16주차 사이, 10월 20일~24일) ──
   // 화면에는 "연기경기주차"로 표시되고(MAKEUP_ROUND_KEYS 참고), 정규 16주차 일정은 round17 키에 입력해주세요.
   //  - 치주물루 vs 루비리: 9주차에서 연기
-  //  - 칠룸바 vs 치하메: 12주차에서 연기
+  //  - 칠룸바 vs 치하메: 12주차에서 연기 (치하메 사유로 칠룸바의 3:0 몰수승 처리)
   //  - 치주물루 vs 비전 S: 13주차에서 일정 변경
   //  - 마푸 vs 칠룸바: 13주차에서 연기
   //  - 치하메 vs 친테체: 15주차에서 일정 변경
   round16: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-20", kickoffTime: "15:00", movedFromWeek: 9, homeScore: 4, awayScore: 0, scorersHome: "HARRY BARTON, TIMOTHY KATAPA (3골)", scorersAway: "없음" },
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-21", kickoffTime: "15:00", movedFromWeek: 12 },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-21", kickoffTime: "15:00", movedFromWeek: 12, homeScore: 3, awayScore: 0, forfeit: true },
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13, changed: true },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13 },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 15, changed: true }
