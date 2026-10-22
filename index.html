@@ -357,8 +357,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         var diagnostic = formatMatchAlertDiagnostic(await getMatchAlertDiagnostic(OneSignal));
         var kr = (typeof isKorean === 'undefined') ? true : isKorean;
         alert(kr
-          ? '알림 연결을 다시 등록하지 못했어요. 아래 상태를 보내주세요.\\n\\n' + diagnostic
-          : 'Could not refresh push registration. Send these details.\\n\\n' + diagnostic);
+          ? '알림 연결을 다시 등록하지 못했어요. 아래 상태를 보내주세요.\n\n' + diagnostic
+          : 'Could not refresh push registration. Send these details.\n\n' + diagnostic);
         return;
       }
       var kr = (typeof isKorean === 'undefined') ? true : isKorean;
@@ -371,8 +371,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       var message = error && error.message ? error.message : String(error);
       var kr = (typeof isKorean === 'undefined') ? true : isKorean;
       alert(kr
-        ? '알림 연결 복구 중 오류가 났어요.\\n오류=' + message + '\\n' + diagnostic
-        : 'Push connection refresh failed.\\nError=' + message + '\\n' + diagnostic);
+        ? '알림 연결 복구 중 오류가 났어요.\n오류=' + message + '\n' + diagnostic
+        : 'Push connection refresh failed.\nError=' + message + '\n' + diagnostic);
       renderPushAlertBtn(OneSignal);
     }
   }
