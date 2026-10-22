@@ -325,6 +325,57 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       renderPushAlertBtn(OneSignal);
     }
   }
+  async function repairMatchAlerts() {
+    closeDisableMatchAlertsDialog();
+    var OneSignal = window.matchAlertOneSignal;
+    if (!OneSignal) return;
+    try {
+      await OneSignal.Notifications.requestPermission();
+      if (!OneSignal.Notifications.permission) {
+        renderPushAlertBtn(OneSignal);
+        return;
+      }
+      var registration = await navigator.serviceWorker.getRegistration('/UTD/');
+      if (!registration || !registration.pushManager) {
+        throw new Error('The /UTD/ service worker is not available');
+      }
+
+      // Replace the browser's existing endpoint. OneSignal can mark it unsubscribed
+      // after the push provider rejects it, even while the page still has stale local state.
+      await OneSignal.User.PushSubscription.optOut();
+      var nativeSubscription = await registration.pushManager.getSubscription();
+      if (nativeSubscription) await nativeSubscription.unsubscribe();
+      await OneSignal.User.PushSubscription.optIn();
+
+      var subscription = OneSignal.User.PushSubscription;
+      var deadline = Date.now() + 15000;
+      while ((!subscription.id || !subscription.optedIn) && Date.now() < deadline) {
+        await new Promise(function(resolve) { setTimeout(resolve, 250); });
+      }
+      renderPushAlertBtn(OneSignal);
+      if (!subscription.id || !subscription.optedIn) {
+        var diagnostic = formatMatchAlertDiagnostic(await getMatchAlertDiagnostic(OneSignal));
+        var kr = (typeof isKorean === 'undefined') ? true : isKorean;
+        alert(kr
+          ? '알림 연결을 다시 등록하지 못했어요. 아래 상태를 보내주세요.\n\n' + diagnostic
+          : 'Could not refresh push registration. Send these details.\n\n' + diagnostic);
+        return;
+      }
+      var kr = (typeof isKorean === 'undefined') ? true : isKorean;
+      alert(kr
+        ? '이 기기의 알림 연결을 새로 등록했어요. OneSignal에서 구독 상태를 확인한 뒤 테스트 알림을 보내겠습니다.'
+        : 'This device has a refreshed push registration. I will verify its OneSignal status before sending a test.');
+    } catch (error) {
+      console.error('OneSignal subscription refresh failed:', error);
+      var diagnostic = formatMatchAlertDiagnostic(await getMatchAlertDiagnostic(OneSignal));
+      var message = error && error.message ? error.message : String(error);
+      var kr = (typeof isKorean === 'undefined') ? true : isKorean;
+      alert(kr
+        ? '알림 연결 복구 중 오류가 났어요.\n오류=' + message + '\n' + diagnostic
+        : 'Push connection refresh failed.\nError=' + message + '\n' + diagnostic);
+      renderPushAlertBtn(OneSignal);
+    }
+  }
   // 기존 이름 호환
   function subscribeMatchAlerts() { toggleMatchAlerts(); }
 </script>
@@ -347,10 +398,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     border-radius: 9px; background: #fff; color: #24324a; font: inherit; font-weight: 650;
   }
   .match-alert-confirm-actions .match-alert-confirm-off { border-color: #b63838; background: #b63838; color: #fff; }
+  .match-alert-confirm-actions .match-alert-confirm-repair { border-color: #033990; background: #033990; color: #fff; }
   :root[data-theme="dark"] .match-alert-confirm { border-color: #3a4058; color: #f3f5fb; background: #232838; }
   :root[data-theme="dark"] .match-alert-confirm p { color: #bbc2d4; }
   :root[data-theme="dark"] .match-alert-confirm-actions button { border-color: #454c68; color: #f3f5fb; background: #2c3348; }
   :root[data-theme="dark"] .match-alert-confirm-actions .match-alert-confirm-off { border-color: #b94a4a; background: #b94a4a; }
+  :root[data-theme="dark"] .match-alert-confirm-actions .match-alert-confirm-repair { border-color: #426fcd; background: #426fcd; }
 </style>
 </head>
 <body>
@@ -364,9 +417,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </dialog>
 <dialog class="match-alert-confirm" id="disableMatchAlertsDialog" aria-labelledby="disableMatchAlertsTitle" aria-describedby="disableMatchAlertsDescription">
   <h2 class="lbl" id="disableMatchAlertsTitle" data-ko="경기 알림을 끄시겠어요?" data-en="Turn off match alerts?">경기 알림을 끄시겠어요?</h2>
-  <p class="lbl" id="disableMatchAlertsDescription" data-ko="킥오프·득점·경기 종료 알림을 더 이상 받지 않게 됩니다." data-en="You will stop receiving kickoff, goal, and full-time alerts.">킥오프·득점·경기 종료 알림을 더 이상 받지 않게 됩니다.</p>
+  <p class="lbl" id="disableMatchAlertsDescription" data-ko="알림이 오지 않으면 연결 복구를 눌러 이 기기의 푸시 등록을 새로 고칠 수 있어요. 끄면 경기 알림을 받지 않습니다." data-en="If alerts are not arriving, refresh this device's push registration. Turning alerts off will stop match notifications.">알림이 오지 않으면 연결 복구를 눌러 이 기기의 푸시 등록을 새로 고칠 수 있어요. 끄면 경기 알림을 받지 않습니다.</p>
   <div class="match-alert-confirm-actions">
-    <button type="button" class="lbl" data-ko="계속 받기" data-en="Keep alerts" onclick="closeDisableMatchAlertsDialog()" autofocus>계속 받기</button>
+    <button type="button" class="lbl" data-ko="취소" data-en="Cancel" onclick="closeDisableMatchAlertsDialog()" autofocus>취소</button>
+    <button type="button" class="match-alert-confirm-repair lbl" data-ko="연결 복구" data-en="Refresh connection" onclick="repairMatchAlerts()">연결 복구</button>
     <button type="button" class="match-alert-confirm-off lbl" data-ko="알림 끄기" data-en="Turn off alerts" onclick="confirmDisableMatchAlerts()">알림 끄기</button>
   </div>
 </dialog>
