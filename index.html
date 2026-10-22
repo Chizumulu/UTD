@@ -125,6 +125,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.oneSignalInitError = null;
+  window.matchAlertOneSignal = null;
+  // OneSignalDeferred callbacks may start before the async init callback finishes.
+  // Keep the custom button and all subscription calls behind this readiness gate.
+  window.oneSignalReady = new Promise(function(resolve) {
+    window.resolveOneSignalReady = resolve;
+  });
   OneSignalDeferred.push(async function(OneSignal) {
     try {
       // Register from the project root explicitly so GitHub Pages' /UTD/ path
@@ -142,9 +148,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       serviceWorkerParam: { scope: "/UTD/" },
       serviceWorkerPath: "/UTD/OneSignalSDKWorker.js",
       });
+      window.matchAlertOneSignal = OneSignal;
+      window.resolveOneSignalReady(OneSignal);
     } catch (error) {
       window.oneSignalInitError = error && error.message ? error.message : String(error);
       console.error('OneSignal initialization failed:', error);
+      window.resolveOneSignalReady(null);
     }
   });
 
@@ -178,17 +187,17 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     btn.classList.toggle('is-on', on);
     btn.style.display = '';
   }
-  OneSignalDeferred.push(function(OneSignal) {
-    renderPushAlertBtn(OneSignal);
-    OneSignal.User.PushSubscription.addEventListener('change', function() { renderPushAlertBtn(OneSignal); });
-    OneSignal.Notifications.addEventListener('permissionChange', function() { renderPushAlertBtn(OneSignal); });
+  OneSignalDeferred.push(async function(OneSignal) {
+    var readyOneSignal = await window.oneSignalReady;
+    if (!readyOneSignal) return;
+    renderPushAlertBtn(readyOneSignal);
+    readyOneSignal.User.PushSubscription.addEventListener('change', function() { renderPushAlertBtn(readyOneSignal); });
+    readyOneSignal.Notifications.addEventListener('permissionChange', function() { renderPushAlertBtn(readyOneSignal); });
   });
-  function toggleMatchAlerts() {
+  async function toggleMatchAlerts() {
     var OneSignal = window.matchAlertOneSignal;
-    if (!OneSignal) {
-      OneSignalDeferred.push(function(readyOneSignal) { presentMatchAlertPrompt(readyOneSignal); });
-      return;
-    }
+    if (!OneSignal && window.oneSignalReady) OneSignal = await window.oneSignalReady;
+    if (!OneSignal) return;
     presentMatchAlertPrompt(OneSignal);
   }
   function presentMatchAlertPrompt(OneSignal) {
