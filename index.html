@@ -155,10 +155,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     var lbl = document.getElementById('pushAlertLbl');
     if (!btn || !lbl) return;
     if (!pushAlertsVisible() || !OneSignal.Notifications.isPushSupported()) { btn.style.display = 'none'; return; }
-    var on = !!OneSignal.User.PushSubscription.optedIn;
+    var subscription = OneSignal.User.PushSubscription;
+    var on = !!(subscription.optedIn && subscription.id);
+    var registering = !!subscription.optedIn && !subscription.id;
     var denied = OneSignal.Notifications.permission === false && Notification.permission === 'denied';
-    var ko = denied ? '알림 차단됨 (브라우저 설정)' : (on ? '경기 알림 켜짐' : '경기 알림 받기');
-    var en = denied ? 'Blocked (browser settings)' : (on ? 'Match alerts on' : 'Match alerts');
+    var ko = denied ? '알림 차단됨 (브라우저 설정)' : (registering ? '알림 등록 확인 중' : (on ? '경기 알림 켜짐' : '경기 알림 받기'));
+    var en = denied ? 'Blocked (browser settings)' : (registering ? 'Confirming subscription' : (on ? 'Match alerts on' : 'Match alerts'));
     lbl.setAttribute('data-ko', ko); lbl.setAttribute('data-en', en);
     var kr = (typeof isKorean === 'undefined') ? true : isKorean;
     lbl.textContent = kr ? ko : en;
@@ -180,7 +182,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     presentMatchAlertPrompt(OneSignal);
   }
   function presentMatchAlertPrompt(OneSignal) {
-    var subscribed = !!OneSignal.User.PushSubscription.optedIn;
+    var pushSubscription = OneSignal.User.PushSubscription;
+    var subscribed = !!(pushSubscription.optedIn && pushSubscription.id);
     var dialog = document.getElementById(subscribed ? 'disableMatchAlertsDialog' : 'enableMatchAlertsDialog');
     if (dialog && typeof dialog.showModal === 'function') {
       dialog.showModal();
@@ -203,9 +206,36 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     closeEnableMatchAlertsDialog();
     var OneSignal = window.matchAlertOneSignal;
     if (!OneSignal) return;
-    await OneSignal.Notifications.requestPermission();
-    if (OneSignal.Notifications.permission) await OneSignal.User.PushSubscription.optIn();
-    renderPushAlertBtn(OneSignal);
+    try {
+      await OneSignal.Notifications.requestPermission();
+      if (!OneSignal.Notifications.permission) {
+        renderPushAlertBtn(OneSignal);
+        return;
+      }
+      var subscription = OneSignal.User.PushSubscription;
+      // optedIn can be true before OneSignal has assigned a server-side Subscription ID.
+      // Reset that incomplete state so a fresh opt-in can register the device.
+      if (subscription.optedIn && !subscription.id) await subscription.optOut();
+      await subscription.optIn();
+      var deadline = Date.now() + 10000;
+      while (!subscription.id && Date.now() < deadline) {
+        await new Promise(function(resolve) { setTimeout(resolve, 250); });
+      }
+      renderPushAlertBtn(OneSignal);
+      if (!subscription.id) {
+        var kr = (typeof isKorean === 'undefined') ? true : isKorean;
+        alert(kr
+          ? '브라우저 알림은 허용됐지만 OneSignal에 기기 등록이 완료되지 않았어요. 인터넷 연결을 확인하고 잠시 후 다시 시도해 주세요.'
+          : 'Browser notifications are allowed, but OneSignal has not finished registering this device. Check your connection and try again shortly.');
+      }
+    } catch (error) {
+      console.error('OneSignal subscription setup failed:', error);
+      var kr = (typeof isKorean === 'undefined') ? true : isKorean;
+      alert(kr
+        ? '알림 등록 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.'
+        : 'There was a problem registering notifications. Please try again shortly.');
+      renderPushAlertBtn(OneSignal);
+    }
   }
   function closeDisableMatchAlertsDialog() {
     var dialog = document.getElementById('disableMatchAlertsDialog');
