@@ -150,6 +150,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     } catch (e) { return PUSH_ALERTS_ENABLED; }
   }
   function renderPushAlertBtn(OneSignal) {
+    window.matchAlertOneSignal = OneSignal;
     var btn = document.getElementById('pushAlertBtn');
     var lbl = document.getElementById('pushAlertLbl');
     if (!btn || !lbl) return;
@@ -171,21 +172,99 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     OneSignal.Notifications.addEventListener('permissionChange', function() { renderPushAlertBtn(OneSignal); });
   });
   function toggleMatchAlerts() {
-    OneSignalDeferred.push(async function(OneSignal) {
-      if (OneSignal.User.PushSubscription.optedIn) {
-        await OneSignal.User.PushSubscription.optOut();
-      } else {
-        await OneSignal.Notifications.requestPermission();
-        if (OneSignal.Notifications.permission) await OneSignal.User.PushSubscription.optIn();
-      }
+    var OneSignal = window.matchAlertOneSignal;
+    if (!OneSignal) {
+      OneSignalDeferred.push(function(readyOneSignal) { presentMatchAlertPrompt(readyOneSignal); });
+      return;
+    }
+    presentMatchAlertPrompt(OneSignal);
+  }
+  function presentMatchAlertPrompt(OneSignal) {
+    var subscribed = !!OneSignal.User.PushSubscription.optedIn;
+    var dialog = document.getElementById(subscribed ? 'disableMatchAlertsDialog' : 'enableMatchAlertsDialog');
+    if (dialog && typeof dialog.showModal === 'function') {
+      dialog.showModal();
+      return;
+    }
+    var message = subscribed
+      ? ((typeof isKorean !== 'undefined' && isKorean) ? '경기 알림을 끄시겠어요?' : 'Turn off match alerts?')
+      : ((typeof isKorean !== 'undefined' && isKorean)
+        ? '킥오프 1시간 전, 득점, 경기 종료 알림입니다. 설정하시겠어요?'
+        : 'Get alerts one hour before kickoff, for goals, and at full time?');
+    if (!window.confirm(message)) return;
+    if (subscribed) confirmDisableMatchAlerts();
+    else enableMatchAlerts();
+  }
+  function closeEnableMatchAlertsDialog() {
+    var dialog = document.getElementById('enableMatchAlertsDialog');
+    if (dialog && dialog.open) dialog.close();
+  }
+  async function enableMatchAlerts() {
+    closeEnableMatchAlertsDialog();
+    var OneSignal = window.matchAlertOneSignal;
+    if (!OneSignal) return;
+    await OneSignal.Notifications.requestPermission();
+    if (OneSignal.Notifications.permission) await OneSignal.User.PushSubscription.optIn();
+    renderPushAlertBtn(OneSignal);
+  }
+  function closeDisableMatchAlertsDialog() {
+    var dialog = document.getElementById('disableMatchAlertsDialog');
+    if (dialog && dialog.open) dialog.close();
+  }
+  async function confirmDisableMatchAlerts() {
+    closeDisableMatchAlertsDialog();
+    var OneSignal = window.matchAlertOneSignal;
+    if (OneSignal && OneSignal.User.PushSubscription.optedIn) {
+      await OneSignal.User.PushSubscription.optOut();
       renderPushAlertBtn(OneSignal);
-    });
+    }
   }
   // 기존 이름 호환
   function subscribeMatchAlerts() { toggleMatchAlerts(); }
 </script>
+<style>
+  .match-alert-confirm {
+    width: min(92vw, 360px);
+    padding: 24px;
+    border: 1px solid rgba(3, 57, 144, .14);
+    border-radius: 16px;
+    color: #172033;
+    background: #fff;
+    box-shadow: 0 18px 56px rgba(12, 20, 35, .24);
+  }
+  .match-alert-confirm::backdrop { background: rgba(12, 20, 35, .48); }
+  .match-alert-confirm h2 { margin: 0 0 8px; font-size: 19px; }
+  .match-alert-confirm p { margin: 0; color: #586174; font-size: 14px; line-height: 1.5; }
+  .match-alert-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+  .match-alert-confirm-actions button {
+    min-height: 40px; padding: 8px 13px; border: 1px solid #d5dbea;
+    border-radius: 9px; background: #fff; color: #24324a; font: inherit; font-weight: 650;
+  }
+  .match-alert-confirm-actions .match-alert-confirm-off { border-color: #b63838; background: #b63838; color: #fff; }
+  :root[data-theme="dark"] .match-alert-confirm { border-color: #3a4058; color: #f3f5fb; background: #232838; }
+  :root[data-theme="dark"] .match-alert-confirm p { color: #bbc2d4; }
+  :root[data-theme="dark"] .match-alert-confirm-actions button { border-color: #454c68; color: #f3f5fb; background: #2c3348; }
+  :root[data-theme="dark"] .match-alert-confirm-actions .match-alert-confirm-off { border-color: #b94a4a; background: #b94a4a; }
+</style>
 </head>
 <body>
+<dialog class="match-alert-confirm" id="enableMatchAlertsDialog" aria-labelledby="enableMatchAlertsTitle" aria-describedby="enableMatchAlertsDescription">
+  <h2 class="lbl" id="enableMatchAlertsTitle" data-ko="경기 알림을 설정하시겠어요?" data-en="Set up match alerts?">경기 알림을 설정하시겠어요?</h2>
+  <p class="lbl" id="enableMatchAlertsDescription" data-ko="킥오프 1시간 전, 득점, 경기 종료 알림을 보내드립니다. 동의하면 브라우저 알림 권한을 요청합니다." data-en="Get alerts one hour before kickoff, for goals, and at full time. Continue to allow browser notifications.">킥오프 1시간 전, 득점, 경기 종료 알림을 보내드립니다. 동의하면 브라우저 알림 권한을 요청합니다.</p>
+  <div class="match-alert-confirm-actions">
+    <button type="button" class="lbl" data-ko="나중에" data-en="Not now" onclick="closeEnableMatchAlertsDialog()" autofocus>나중에</button>
+    <button type="button" class="match-alert-confirm-off lbl" data-ko="알림 설정하기" data-en="Set up alerts" onclick="enableMatchAlerts()">알림 설정하기</button>
+  </div>
+</dialog>
+<dialog class="match-alert-confirm" id="disableMatchAlertsDialog" aria-labelledby="disableMatchAlertsTitle" aria-describedby="disableMatchAlertsDescription">
+  <h2 class="lbl" id="disableMatchAlertsTitle" data-ko="경기 알림을 끄시겠어요?" data-en="Turn off match alerts?">경기 알림을 끄시겠어요?</h2>
+  <p class="lbl" id="disableMatchAlertsDescription" data-ko="킥오프·득점·경기 종료 알림을 더 이상 받지 않게 됩니다." data-en="You will stop receiving kickoff, goal, and full-time alerts.">킥오프·득점·경기 종료 알림을 더 이상 받지 않게 됩니다.</p>
+  <div class="match-alert-confirm-actions">
+    <button type="button" class="lbl" data-ko="계속 받기" data-en="Keep alerts" onclick="closeDisableMatchAlertsDialog()" autofocus>계속 받기</button>
+    <button type="button" class="match-alert-confirm-off lbl" data-ko="알림 끄기" data-en="Turn off alerts" onclick="confirmDisableMatchAlerts()">알림 끄기</button>
+  </div>
+</dialog>
+
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-T7RRHPMN"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
