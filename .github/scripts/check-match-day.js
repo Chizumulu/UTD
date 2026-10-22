@@ -12,7 +12,7 @@ const OUR_TEAM_KO = '치주물루 유나이티드 FC';
 
 // 이 스크립트를 실행하는 워크플로우의 cron 간격(분)과 반드시 동일하게 맞춰주세요.
 // (간격보다 넓게 잡으면 같은 경기에 알림이 두 번 나갈 수 있습니다.)
-const RUN_INTERVAL_MINUTES = 60;
+const RUN_INTERVAL_MINUTES = 5;
 
 // data.js는 브라우저용 스크립트라 module.exports가 없으므로,
 // vm 샌드박스에서 그대로 실행한 뒤 scheduledRounds만 꺼내옵니다.

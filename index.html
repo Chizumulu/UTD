@@ -139,9 +139,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   });
 
   // ===== 경기 알림 구독 버튼 =====
-  // 테스트 단계: 주소에 ?push=1 이 있을 때만 버튼을 노출합니다(한 번 켜면 이 브라우저에 기억).
-  // 정식 공개 때는 PUSH_ALERTS_ENABLED 를 true 로 바꾸면 모두에게 보입니다.
-  var PUSH_ALERTS_ENABLED = false;
+  // 경기 알림은 OneSignal 구독 버튼을 통해 직접 켜고 끌 수 있습니다.
+  // 정식 공개에서는 항상 버튼을 보여줍니다.
+  var PUSH_ALERTS_ENABLED = true;
   function pushAlertsVisible() {
     try {
       if (new URLSearchParams(location.search).get('push') === '1') localStorage.setItem('pushAlertsPreview', '1');
