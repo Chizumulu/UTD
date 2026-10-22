@@ -127,6 +127,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   window.oneSignalInitError = null;
   OneSignalDeferred.push(async function(OneSignal) {
     try {
+      // Register from the project root explicitly so GitHub Pages' /UTD/ path
+      // is not resolved relative to whichever nested page the user opens.
+      if (!('serviceWorker' in navigator)) throw new Error('Service workers are not supported');
+      await navigator.serviceWorker.register('/UTD/OneSignalSDKWorker.js', { scope: '/UTD/' });
       await OneSignal.init({
       appId: "7f880150-411f-49dc-9812-a1fba6dd4fdf",
       notifyButton: {
