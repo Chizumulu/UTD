@@ -286,9 +286,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         OneSignal.Debug.setLogLevel('trace');
       }
       var subscription = OneSignal.User.PushSubscription;
-      // optedIn can be true before OneSignal has assigned a server-side Subscription ID.
-      // Reset that incomplete state so a fresh opt-in can register the device.
-      if (subscription.optedIn && !subscription.id) await subscription.optOut();
+      // Never opt out just because the server-side Subscription ID is still pending.
+      // Doing so sends an unsubscribe while registration is in flight and can leave
+      // this browser marked unsubscribed in OneSignal.
       await subscription.optIn();
       var deadline = Date.now() + 10000;
       while (!subscription.id && Date.now() < deadline) {
