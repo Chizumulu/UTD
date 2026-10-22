@@ -150,6 +150,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     } catch (e) { return PUSH_ALERTS_ENABLED; }
   }
   function renderPushAlertBtn(OneSignal) {
+    window.matchAlertOneSignal = OneSignal;
     var btn = document.getElementById('pushAlertBtn');
     var lbl = document.getElementById('pushAlertLbl');
     if (!btn || !lbl) return;
@@ -171,37 +172,52 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     OneSignal.Notifications.addEventListener('permissionChange', function() { renderPushAlertBtn(OneSignal); });
   });
   function toggleMatchAlerts() {
-    OneSignalDeferred.push(async function(OneSignal) {
-      if (OneSignal.User.PushSubscription.optedIn) {
-        var dialog = document.getElementById('disableMatchAlertsDialog');
-        if (dialog && typeof dialog.showModal === 'function') {
-          dialog.showModal();
-          return;
-        }
-        var message = (typeof isKorean !== 'undefined' && isKorean)
-          ? '경기 알림을 끄시겠어요?'
-          : 'Turn off match alerts?';
-        if (!window.confirm(message)) return;
-        await OneSignal.User.PushSubscription.optOut();
-      } else {
-        await OneSignal.Notifications.requestPermission();
-        if (OneSignal.Notifications.permission) await OneSignal.User.PushSubscription.optIn();
-      }
-      renderPushAlertBtn(OneSignal);
-    });
+    var OneSignal = window.matchAlertOneSignal;
+    if (!OneSignal) {
+      OneSignalDeferred.push(function(readyOneSignal) { presentMatchAlertPrompt(readyOneSignal); });
+      return;
+    }
+    presentMatchAlertPrompt(OneSignal);
+  }
+  function presentMatchAlertPrompt(OneSignal) {
+    var subscribed = !!OneSignal.User.PushSubscription.optedIn;
+    var dialog = document.getElementById(subscribed ? 'disableMatchAlertsDialog' : 'enableMatchAlertsDialog');
+    if (dialog && typeof dialog.showModal === 'function') {
+      dialog.showModal();
+      return;
+    }
+    var message = subscribed
+      ? ((typeof isKorean !== 'undefined' && isKorean) ? '경기 알림을 끄시겠어요?' : 'Turn off match alerts?')
+      : ((typeof isKorean !== 'undefined' && isKorean)
+        ? '킥오프 1시간 전, 득점, 경기 종료 알림입니다. 설정하시겠어요?'
+        : 'Get alerts one hour before kickoff, for goals, and at full time?');
+    if (!window.confirm(message)) return;
+    if (subscribed) confirmDisableMatchAlerts();
+    else enableMatchAlerts();
+  }
+  function closeEnableMatchAlertsDialog() {
+    var dialog = document.getElementById('enableMatchAlertsDialog');
+    if (dialog && dialog.open) dialog.close();
+  }
+  async function enableMatchAlerts() {
+    closeEnableMatchAlertsDialog();
+    var OneSignal = window.matchAlertOneSignal;
+    if (!OneSignal) return;
+    await OneSignal.Notifications.requestPermission();
+    if (OneSignal.Notifications.permission) await OneSignal.User.PushSubscription.optIn();
+    renderPushAlertBtn(OneSignal);
   }
   function closeDisableMatchAlertsDialog() {
     var dialog = document.getElementById('disableMatchAlertsDialog');
     if (dialog && dialog.open) dialog.close();
   }
-  function confirmDisableMatchAlerts() {
+  async function confirmDisableMatchAlerts() {
     closeDisableMatchAlertsDialog();
-    OneSignalDeferred.push(async function(OneSignal) {
-      if (OneSignal.User.PushSubscription.optedIn) {
-        await OneSignal.User.PushSubscription.optOut();
-      }
+    var OneSignal = window.matchAlertOneSignal;
+    if (OneSignal && OneSignal.User.PushSubscription.optedIn) {
+      await OneSignal.User.PushSubscription.optOut();
       renderPushAlertBtn(OneSignal);
-    });
+    }
   }
   // 기존 이름 호환
   function subscribeMatchAlerts() { toggleMatchAlerts(); }
@@ -232,6 +248,14 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </style>
 </head>
 <body>
+<dialog class="match-alert-confirm" id="enableMatchAlertsDialog" aria-labelledby="enableMatchAlertsTitle" aria-describedby="enableMatchAlertsDescription">
+  <h2 class="lbl" id="enableMatchAlertsTitle" data-ko="경기 알림을 설정하시겠어요?" data-en="Set up match alerts?">경기 알림을 설정하시겠어요?</h2>
+  <p class="lbl" id="enableMatchAlertsDescription" data-ko="킥오프 1시간 전, 득점, 경기 종료 알림을 보내드립니다. 동의하면 브라우저 알림 권한을 요청합니다." data-en="Get alerts one hour before kickoff, for goals, and at full time. Continue to allow browser notifications.">킥오프 1시간 전, 득점, 경기 종료 알림을 보내드립니다. 동의하면 브라우저 알림 권한을 요청합니다.</p>
+  <div class="match-alert-confirm-actions">
+    <button type="button" class="lbl" data-ko="나중에" data-en="Not now" onclick="closeEnableMatchAlertsDialog()" autofocus>나중에</button>
+    <button type="button" class="match-alert-confirm-off lbl" data-ko="알림 설정하기" data-en="Set up alerts" onclick="enableMatchAlerts()">알림 설정하기</button>
+  </div>
+</dialog>
 <dialog class="match-alert-confirm" id="disableMatchAlertsDialog" aria-labelledby="disableMatchAlertsTitle" aria-describedby="disableMatchAlertsDescription">
   <h2 class="lbl" id="disableMatchAlertsTitle" data-ko="경기 알림을 끄시겠어요?" data-en="Turn off match alerts?">경기 알림을 끄시겠어요?</h2>
   <p class="lbl" id="disableMatchAlertsDescription" data-ko="킥오프·득점·경기 종료 알림을 더 이상 받지 않게 됩니다." data-en="You will stop receiving kickoff, goal, and full-time alerts.">킥오프·득점·경기 종료 알림을 더 이상 받지 않게 됩니다.</p>
