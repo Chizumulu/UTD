@@ -5176,25 +5176,26 @@
     return res.json();
   }
 
-  // ===== 라이브 카드 실시간 순위 미리보기 (치주물루 경기 전용) =====
-  // 지금 스코어대로 경기가 끝난다고 가정하고 순위표를 다시 계산해서
-  // { home: {before, after}, away: {before, after} }를 돌려줍니다.
-  //  - before: 이 경기가 반영되기 전 순위(왼쪽에 표시)
-  //  - after : 현재 스코어(무승부 포함)를 반영한 순위(오른쪽에 표시)
-  // data.js에 이 경기의 최종 스코어가 이미 입력돼 leagueData에 들어가 있으면
+  // ===== 라이브 카드 실시간 순위 미리보기 (모든 경기 / 동시 경기 반영) =====
+  // 지금 진행 중인 "모든" 경기가 현재 스코어대로 끝난다고 가정하고 순위표를 한 번에 다시 계산해서
+  // { 'homeEn|awayEn': { home: {before, after}, away: {before, after} } }를 돌려줍니다.
+  //  - before: 라이브 경기들이 반영되기 전 순위
+  //  - after : 모든 라이브 경기의 현재 스코어(무승부 포함)를 반영한 순위
+  // data.js에 이미 최종 스코어가 입력돼 leagueData에 들어가 있는 라이브 경기는
   // 먼저 그 결과를 빼서 이중 반영을 막습니다. 정렬은 순위표와 같은 기준입니다.
-  function computeLiveRankPreview(homeEn, awayEn, hs, as) {
-    if (!homeEn || !awayEn || typeof leagueData === 'undefined') return null;
-    if (typeof hs !== 'number' || typeof as !== 'number') return null;
+  function computeLiveRankPreviews(list) {
+    const out = {};
+    if (typeof leagueData === 'undefined' || !Array.isArray(list)) return out;
     const rows = leagueData.map(t => ({
       nameEn: t.nameEn, won: t.won || 0, drawn: t.drawn || 0,
       gf: t.goalsFor || 0, ga: t.goalsAgainst || 0
     }));
-    const home = rows.find(r => r.nameEn === homeEn);
-    const away = rows.find(r => r.nameEn === awayEn);
-    if (!home || !away) return null;
+    const byName = {};
+    rows.forEach(r => { byName[r.nameEn] = r; });
 
-    const apply = (h, a, sign) => {
+    const apply = (homeEn, awayEn, h, a, sign) => {
+      const home = byName[homeEn], away = byName[awayEn];
+      if (!home || !away) return;
       home.gf += sign * h; home.ga += sign * a;
       away.gf += sign * a; away.ga += sign * h;
       if (h > a) home.won += sign;
@@ -5215,29 +5216,38 @@
       return r;
     };
 
+    const valid = list.filter(x => x && x.homeEn && x.awayEn && byName[x.homeEn] && byName[x.awayEn]
+      && typeof x.hs === 'number' && typeof x.as === 'number');
+    if (!valid.length) return out;
+
     // 이미 확정 스코어가 반영된 같은 경기(홈/원정 동일, 킥오프 후 4시간 이내)가 있으면 제외
     const now = Date.now();
-    for (const source of [scheduledRounds, roundsData]) {
-      if (!source) continue;
-      for (const roundKey in source) {
-        const round = source[roundKey];
-        if (!Array.isArray(round)) continue;
-        for (const m of round) {
-          if (m.homeEn !== homeEn || m.awayEn !== awayEn) continue;
-          if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') continue;
-          const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
-          if (ms && ms <= now && now < ms + LEAGUE_LIVE_FORCE_CLOSE_MS) apply(m.homeScore, m.awayScore, -1);
+    for (const x of valid) {
+      for (const source of [scheduledRounds, roundsData]) {
+        if (!source) continue;
+        for (const roundKey in source) {
+          const round = source[roundKey];
+          if (!Array.isArray(round)) continue;
+          for (const m of round) {
+            if (m.homeEn !== x.homeEn || m.awayEn !== x.awayEn) continue;
+            if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') continue;
+            const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+            if (ms && ms <= now && now < ms + LEAGUE_LIVE_FORCE_CLOSE_MS) apply(x.homeEn, x.awayEn, m.homeScore, m.awayScore, -1);
+          }
         }
       }
     }
 
     const before = rankMap();
-    apply(hs, as, +1);
+    valid.forEach(x => apply(x.homeEn, x.awayEn, x.hs, x.as, +1));
     const after = rankMap();
-    return {
-      home: { before: before[homeEn], after: after[homeEn] },
-      away: { before: before[awayEn], after: after[awayEn] }
-    };
+    valid.forEach(x => {
+      out[x.homeEn + '|' + x.awayEn] = {
+        home: { before: before[x.homeEn], after: after[x.homeEn] },
+        away: { before: before[x.awayEn], after: after[x.awayEn] }
+      };
+    });
+    return out;
   }
 
   function renderLeagueLiveTicker(matches) {
@@ -5264,6 +5274,14 @@
       scroller.innerHTML = '';
       return;
     }
+
+    // 동시 진행 경기를 모두 반영한 순위 미리보기(한 번에 계산)
+    const lltRankPreviews = computeLiveRankPreviews(matches.map(m => ({
+      homeEn: resolveLeagueTeamNameEn(m.homeTeam),
+      awayEn: resolveLeagueTeamNameEn(m.awayTeam),
+      hs: (m.score && typeof m.score.home === 'number') ? m.score.home : null,
+      as: (m.score && typeof m.score.away === 'number') ? m.score.away : null
+    })));
 
     scroller.innerHTML = matches.map(m => {
       const home = getLeagueTeamDisplay(m.homeTeam);
@@ -5343,10 +5361,8 @@
       const lltHomeWin = !!m.ended && hs !== null && as !== null && hs > as;
       const lltAwayWin = !!m.ended && hs !== null && as !== null && as > hs;
       const lltResultCls = (win, lose) => win ? ' is-winner' : (lose ? ' is-loser' : '');
-      // 치주물루 경기에서만: 구단명 아래에 "경기 전 순위 ▲ 현재 스코어 기준 순위"를 보여줍니다.
-      const lltRankPreview = (home.isOurTeam || away.isOurTeam)
-        ? computeLiveRankPreview(resolveLeagueTeamNameEn(m.homeTeam), resolveLeagueTeamNameEn(m.awayTeam), hs, as)
-        : null;
+      // 모든 경기: 구단명 아래에 "경기 전 순위 ▲ 현재 스코어 기준 순위"를 보여줍니다(동시 경기 반영).
+      const lltRankPreview = lltRankPreviews[resolveLeagueTeamNameEn(m.homeTeam) + '|' + resolveLeagueTeamNameEn(m.awayTeam)] || null;
       const lltRankHtml = (r) => {
         if (!r || !r.before || !r.after) return '';
         const d = r.before - r.after; // 양수 = 순위 상승(숫자가 작아짐)
