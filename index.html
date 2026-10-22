@@ -124,8 +124,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.oneSignalInitError = null;
   OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
+    try {
+      await OneSignal.init({
       appId: "7f880150-411f-49dc-9812-a1fba6dd4fdf",
       notifyButton: {
         enable: false, // 기본 종모양 버튼 대신 커스텀 구독 버튼 사용
@@ -134,7 +136,11 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       // this project under /UTD/, so include that directory in the file path.
       serviceWorkerParam: { scope: "/UTD/" },
       serviceWorkerPath: "UTD/OneSignalSDKWorker.js",
-    });
+      });
+    } catch (error) {
+      window.oneSignalInitError = error && error.message ? error.message : String(error);
+      console.error('OneSignal initialization failed:', error);
+    }
   });
 
   // ===== 경기 알림 구독 버튼 =====
@@ -201,6 +207,48 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     var dialog = document.getElementById('enableMatchAlertsDialog');
     if (dialog && dialog.open) dialog.close();
   }
+  async function getMatchAlertDiagnostic(OneSignal) {
+    var result = {
+      permission: (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported',
+      serviceWorker: 'unknown',
+      browserPush: 'unknown',
+      oneSignalId: 'missing',
+      initError: window.oneSignalInitError || ''
+    };
+    try {
+      if (!('serviceWorker' in navigator)) {
+        result.serviceWorker = 'unsupported';
+      } else {
+        var registrations = await navigator.serviceWorker.getRegistrations();
+        var ownRegistration = registrations.find(function(registration) {
+          return registration.scope.indexOf(location.origin + '/UTD/') === 0;
+        });
+        result.serviceWorker = ownRegistration
+          ? ('registered: ' + (ownRegistration.active ? ownRegistration.active.scriptURL : 'no active worker'))
+          : 'not registered for /UTD/';
+        if (ownRegistration && ownRegistration.pushManager) {
+          var nativeSubscription = await ownRegistration.pushManager.getSubscription();
+          result.browserPush = nativeSubscription ? 'present' : 'missing';
+        }
+      }
+    } catch (error) {
+      result.serviceWorker = 'check failed: ' + (error && error.message ? error.message : String(error));
+    }
+    try {
+      var pushSubscription = OneSignal && OneSignal.User && OneSignal.User.PushSubscription;
+      if (pushSubscription && pushSubscription.id) result.oneSignalId = 'present';
+      else if (pushSubscription) result.oneSignalId = 'missing (optedIn: ' + !!pushSubscription.optedIn + ')';
+    } catch (error) {}
+    console.info('OneSignal match-alert diagnostic:', result);
+    return result;
+  }
+  function formatMatchAlertDiagnostic(result) {
+    return '권한=' + result.permission
+      + ', 서비스워커=' + result.serviceWorker
+      + ', 브라우저 푸시=' + result.browserPush
+      + ', OneSignal 기기 ID=' + result.oneSignalId
+      + (result.initError ? ', 초기화 오류=' + result.initError : '');
+  }
   async function enableMatchAlerts() {
     closeEnableMatchAlertsDialog();
     var OneSignal = window.matchAlertOneSignal;
@@ -222,17 +270,20 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       }
       renderPushAlertBtn(OneSignal);
       if (!subscription.id) {
+        var diagnostic = formatMatchAlertDiagnostic(await getMatchAlertDiagnostic(OneSignal));
         var kr = (typeof isKorean === 'undefined') ? true : isKorean;
         alert(kr
-          ? '브라우저 알림은 허용됐지만 OneSignal에 기기 등록이 완료되지 않았어요. 인터넷 연결을 확인하고 잠시 후 다시 시도해 주세요.'
-          : 'Browser notifications are allowed, but OneSignal has not finished registering this device. Check your connection and try again shortly.');
+          ? 'OneSignal 기기 등록이 완료되지 않았어요. 아래 상태를 보내주시면 원인을 확인할게요.\n\n' + diagnostic
+          : 'OneSignal registration did not complete. Send these details so I can identify the cause.\n\n' + diagnostic);
       }
     } catch (error) {
       console.error('OneSignal subscription setup failed:', error);
       var kr = (typeof isKorean === 'undefined') ? true : isKorean;
+      var diagnostic = formatMatchAlertDiagnostic(await getMatchAlertDiagnostic(OneSignal));
+      var errorMessage = error && error.message ? error.message : String(error);
       alert(kr
-        ? '알림 등록 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.'
-        : 'There was a problem registering notifications. Please try again shortly.');
+        ? '알림 등록 중 오류가 발생했어요. 상태를 보내주시면 원인을 확인할게요.\n\n오류=' + errorMessage + '\n' + diagnostic
+        : 'Notification registration failed. Send these details so I can identify the cause.\n\nError=' + errorMessage + '\n' + diagnostic);
       renderPushAlertBtn(OneSignal);
     }
   }
