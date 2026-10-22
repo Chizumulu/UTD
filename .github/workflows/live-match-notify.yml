@@ -1,0 +1,37 @@
+name: Live Match Notifications
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: live-match-notifications
+  cancel-in-progress: false
+
+jobs:
+  check-and-notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Restore alert state
+        uses: actions/cache/restore@v4
+        with:
+          path: .match-alert-state.json
+          key: match-alert-state-${{ github.run_id }}
+          restore-keys: |
+            match-alert-state-
+      - name: Check for goals and full time
+        env:
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
+        run: node .github/scripts/check-live-match-alerts.js
+      - name: Save alert state
+        uses: actions/cache/save@v4
+        with:
+          path: .match-alert-state.json
+          key: match-alert-state-${{ github.run_id }}
