@@ -135,7 +135,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       // serviceWorkerPath is relative to the origin root; GitHub Pages serves
       // this project under /UTD/, so include that directory in the file path.
       serviceWorkerParam: { scope: "/UTD/" },
-      serviceWorkerPath: "UTD/OneSignalSDKWorker.js",
+      serviceWorkerPath: "/UTD/OneSignalSDKWorker.js",
       });
     } catch (error) {
       window.oneSignalInitError = error && error.message ? error.message : String(error);
