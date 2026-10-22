@@ -216,6 +216,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       permission: (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported',
       serviceWorker: 'unknown',
       browserPush: 'unknown',
+      browserPushPermission: 'unknown',
       oneSignalId: 'missing',
       initError: window.oneSignalInitError || ''
     };
@@ -233,6 +234,13 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         if (ownRegistration && ownRegistration.pushManager) {
           var nativeSubscription = await ownRegistration.pushManager.getSubscription();
           result.browserPush = nativeSubscription ? 'present' : 'missing';
+          if (typeof ownRegistration.pushManager.permissionState === 'function') {
+            try {
+              result.browserPushPermission = await ownRegistration.pushManager.permissionState({ userVisibleOnly: true });
+            } catch (permissionError) {
+              result.browserPushPermission = 'check failed: ' + (permissionError && permissionError.message ? permissionError.message : String(permissionError));
+            }
+          }
         }
       }
     } catch (error) {
@@ -250,6 +258,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     return '권한=' + result.permission
       + ', 서비스워커=' + result.serviceWorker
       + ', 브라우저 푸시=' + result.browserPush
+      + ', 푸시 권한 상태=' + result.browserPushPermission
       + ', OneSignal 기기 ID=' + result.oneSignalId
       + (result.initError ? ', 초기화 오류=' + result.initError : '');
   }
@@ -262,6 +271,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       if (!OneSignal.Notifications.permission) {
         renderPushAlertBtn(OneSignal);
         return;
+      }
+      if (OneSignal.Debug && typeof OneSignal.Debug.setLogLevel === 'function') {
+        OneSignal.Debug.setLogLevel('trace');
       }
       var subscription = OneSignal.User.PushSubscription;
       // optedIn can be true before OneSignal has assigned a server-side Subscription ID.
