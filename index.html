@@ -130,11 +130,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       notifyButton: {
         enable: false, // 기본 종모양 버튼 대신 커스텀 구독 버튼 사용
       },
-      // GitHub Pages 프로젝트 사이트(사용자명.github.io/UTD/)라 하위 경로에서
-      // 서비스워커를 찾도록 명시적으로 지정해야 함
-      path: "/UTD/",
+      // serviceWorkerPath is relative to the origin root; GitHub Pages serves
+      // this project under /UTD/, so include that directory in the file path.
       serviceWorkerParam: { scope: "/UTD/" },
-      serviceWorkerPath: "OneSignalSDKWorker.js",
+      serviceWorkerPath: "UTD/OneSignalSDKWorker.js",
     });
   });
 
