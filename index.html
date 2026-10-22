@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '111',
-    data: '111',
-    app: '110',
+    style: '110',
+    data: '114',
+    app: '118',
     archive: '200',
     predictWorker: '200',
     pathfinderEngine: '200',
@@ -126,7 +126,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
-      appId: "bd959877-16f2-4fd2-86d5-18d777f356a9",
+      appId: "7f880150-411f-49dc-9812-a1fba6dd4fdf",
       notifyButton: {
         enable: false, // 기본 종모양 버튼 대신 커스텀 구독 버튼 사용
       },
@@ -138,12 +138,51 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     });
   });
 
-  // 구독 버튼 클릭 시 알림 권한 요청
-  function subscribeMatchAlerts() {
+  // ===== 경기 알림 구독 버튼 =====
+  // 테스트 단계: 주소에 ?push=1 이 있을 때만 버튼을 노출합니다(한 번 켜면 이 브라우저에 기억).
+  // 정식 공개 때는 PUSH_ALERTS_ENABLED 를 true 로 바꾸면 모두에게 보입니다.
+  var PUSH_ALERTS_ENABLED = false;
+  function pushAlertsVisible() {
+    try {
+      if (new URLSearchParams(location.search).get('push') === '1') localStorage.setItem('pushAlertsPreview', '1');
+      if (new URLSearchParams(location.search).get('push') === '0') localStorage.removeItem('pushAlertsPreview');
+      return PUSH_ALERTS_ENABLED || localStorage.getItem('pushAlertsPreview') === '1';
+    } catch (e) { return PUSH_ALERTS_ENABLED; }
+  }
+  function renderPushAlertBtn(OneSignal) {
+    var btn = document.getElementById('pushAlertBtn');
+    var lbl = document.getElementById('pushAlertLbl');
+    if (!btn || !lbl) return;
+    if (!pushAlertsVisible() || !OneSignal.Notifications.isPushSupported()) { btn.style.display = 'none'; return; }
+    var on = !!OneSignal.User.PushSubscription.optedIn;
+    var denied = OneSignal.Notifications.permission === false && Notification.permission === 'denied';
+    var ko = denied ? '알림 차단됨 (브라우저 설정)' : (on ? '경기 알림 켜짐' : '경기 알림 받기');
+    var en = denied ? 'Blocked (browser settings)' : (on ? 'Match alerts on' : 'Match alerts');
+    lbl.setAttribute('data-ko', ko); lbl.setAttribute('data-en', en);
+    var kr = (typeof isKorean === 'undefined') ? true : isKorean;
+    lbl.textContent = kr ? ko : en;
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.classList.toggle('is-on', on);
+    btn.style.display = '';
+  }
+  OneSignalDeferred.push(function(OneSignal) {
+    renderPushAlertBtn(OneSignal);
+    OneSignal.User.PushSubscription.addEventListener('change', function() { renderPushAlertBtn(OneSignal); });
+    OneSignal.Notifications.addEventListener('permissionChange', function() { renderPushAlertBtn(OneSignal); });
+  });
+  function toggleMatchAlerts() {
     OneSignalDeferred.push(async function(OneSignal) {
-      await OneSignal.Notifications.requestPermission();
+      if (OneSignal.User.PushSubscription.optedIn) {
+        await OneSignal.User.PushSubscription.optOut();
+      } else {
+        await OneSignal.Notifications.requestPermission();
+        if (OneSignal.Notifications.permission) await OneSignal.User.PushSubscription.optIn();
+      }
+      renderPushAlertBtn(OneSignal);
     });
   }
+  // 기존 이름 호환
+  function subscribeMatchAlerts() { toggleMatchAlerts(); }
 </script>
 </head>
 <body>
@@ -262,6 +301,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.5 14.5C19.3 15 18 15.3 16.6 15.1C12.9 14.6 10.1 11.4 10.1 7.5C10.1 6.1 10.4 4.8 11 3.6C6.9 4.4 3.8 8 3.8 12.4C3.8 17.3 7.8 21.3 12.7 21.3C16.6 21.3 19.9 18.8 21 15.3C20.8 15.1 20.6 14.8 20.5 14.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity="0.15"/></svg>
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity="0.15"/><path d="M12 2.5V4.5M12 19.5V21.5M4.5 12H2.5M21.5 12H19.5M5.6 5.6L7 7M17 17L18.4 18.4M18.4 5.6L17 7M7 17L5.6 18.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       <span class="lbl" data-ko="다크 모드" data-en="Dark Mode">다크 모드</span>
+    </button>
+    <button class="theme-toggle-btn push-alert-btn" onclick="toggleMatchAlerts()" id="pushAlertBtn" aria-pressed="false" style="display:none;">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <span class="lbl" id="pushAlertLbl" data-ko="경기 알림 받기" data-en="Match alerts">경기 알림 받기</span>
     </button>
     <button class="theme-toggle-btn install-app-btn" onclick="installApp()" id="installAppBtn" title="앱으로 저장" aria-label="Install app" data-title-ko="앱으로 저장" data-title-en="Save as app" style="display:none;">
       <svg viewBox="0 0 24 24" width="17" height="17" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V15M12 15L8 11M12 15L16 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16V17.8C4 19.567 5.433 21 7.2 21H16.8C18.567 21 20 19.567 20 17.8V16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>

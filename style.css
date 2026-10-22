@@ -13918,3 +13918,6 @@ body {
 }
 .lineup-subs-toggle.is-active { background: var(--color-teal); color: #fff; }
 @media (prefers-reduced-motion: reduce) { .pp-flip-inner { transition: none; } }
+
+/* 경기 알림 구독 버튼: 켜진 상태 */
+.push-alert-btn.is-on { background: var(--color-gold); border-color: var(--color-gold); color: var(--color-navy, #0b1f3a); }
