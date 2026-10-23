@@ -14,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '20'
       - name: Restore alert state
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: .match-alert-state.json
           key: match-alert-state-${{ github.run_id }}
@@ -31,7 +31,7 @@ jobs:
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
         run: node .github/scripts/check-live-match-alerts.js
       - name: Save alert state
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: .match-alert-state.json
           key: match-alert-state-${{ github.run_id }}
