@@ -14784,7 +14784,7 @@
   let squadPlayerCompMode = 'league';
   let squadPlayerPaneRenderer = null;
   function setSquadPlayerComp(comp) {
-    squadPlayerCompMode = comp === 'cup' ? 'cup' : 'league';
+    squadPlayerCompMode = (comp === 'cup' || comp === 'total') ? comp : 'league';
     syncSquadPlayerCompToggle();
     if (squadPlayerPaneRenderer) squadPlayerPaneRenderer(squadPlayerCompMode);
   }
@@ -14828,6 +14828,11 @@
     });
     const leagueStats = (hasNumber ? squadPlayerStats[statsKey] : null) || emptyStats();
     const cupStats = (hasNumber && typeof squadPlayerStatsCup !== 'undefined' ? squadPlayerStatsCup[statsKey] : null) || emptyStats();
+    // 토탈 = 리그 + 컵 합산. 클린시트/시즌 흐름 등 리그 전용 항목은 합산에 넣지 않습니다.
+    const sumKeys = ['appearances', 'starts', 'subApps', 'goals', 'assists', 'captainCount', 'motmCount'];
+    const totalStats = Object.assign(emptyStats(), leagueStats);
+    sumKeys.forEach(k => { totalStats[k] = (leagueStats[k] || 0) + (cupStats[k] || 0); });
+    totalStats.history = (leagueStats.history || []).concat((cupStats.history || []).map(h => Object.assign({}, h, { _cup: true })));
 
     const photoImgEl = document.getElementById('squadPlayerModalPhoto');
     const photoFallbackEl = document.getElementById('squadPlayerModalPhotoFallback');
@@ -14938,7 +14943,8 @@
 
     const renderStatsPane = (comp) => {
       const isCup = comp === 'cup';
-      const stats = isCup ? cupStats : leagueStats;
+      const leagueOnly = comp === 'league'; // 클린시트·시즌 흐름·도움 관계는 리그 기록 기준이라 리그 탭에서만 보여줍니다
+      const stats = isCup ? cupStats : (comp === 'total' ? totalStats : leagueStats);
       animateCountUp(document.getElementById('squadPlayerModalApps'), stats.appearances);
       animateCountUp(document.getElementById('squadPlayerModalGoals'), stats.goals, { delay: 60 });
       animateCountUp(document.getElementById('squadPlayerModalAssists'), stats.assists || 0, { delay: 90 });
@@ -14949,7 +14955,7 @@
       // computeGoalkeeperRecords()는 라인업상 '선발' GK 기준으로만 집계하므로
       // 교체 출전 클린시트는 포함되지 않습니다(선발기준 표기가 그래서 붙습니다).
       const csStatEl = document.getElementById('squadPlayerModalCleanSheetsStat');
-      if (player.position === 'GK' && csStatEl && !isCup) {
+      if (player.position === 'GK' && csStatEl && leagueOnly) {
         const gkRecords = (typeof computeGoalkeeperRecords === 'function') ? computeGoalkeeperRecords() : [];
         const gkRecord = gkRecords.find(r => r.number === num);
         animateCountUp(document.getElementById('squadPlayerModalCleanSheets'), gkRecord ? gkRecord.cleanSheets : 0, { delay: 90 });
@@ -14959,7 +14965,7 @@
       }
       // 카드 수가 홀수(골키퍼가 아닐 때)면 마지막 카드를 한 줄 전체로 늘려 균형을 맞춥니다.
       if (csStatEl && csStatEl.parentElement) {
-        csStatEl.parentElement.classList.toggle('spm-stat-grid-odd', !(player.position === 'GK' && !isCup));
+        csStatEl.parentElement.classList.toggle('spm-stat-grid-odd', !(player.position === 'GK' && leagueOnly));
       }
 
       // 주장 선발 출전 횟수 + 이달의 선수/이달의 골/MOTM 수상 경력을 하나의 칩 목록으로 모아 보여줍니다.
@@ -14996,8 +15002,8 @@
         awardsRowEl.innerHTML = '';
       }
 
-      if (isCup) {
-        // 시즌 흐름 막대·도움 관계는 리그 기록 기준이라 컵 탭에서는 숨깁니다.
+      if (!leagueOnly) {
+        // 시즌 흐름 막대·도움 관계는 리그 기록 기준이라 리그 탭에서만 보여줍니다.
         ['squadPlayerModalForm', 'squadPlayerModalFormTitle', 'squadPlayerModalAssistTitle', 'squadPlayerModalAssistBody'].forEach(id => {
           const el = document.getElementById(id); if (el) el.style.display = 'none';
         });
@@ -15010,7 +15016,8 @@
       listEl.innerHTML = '';
 
       stats.history.slice().reverse().forEach(entry => {
-        const weekLabel = isCup
+        const entryIsCup = isCup || !!entry._cup;
+        const weekLabel = entryIsCup
           ? (isKorean ? (entry.roundLabelKo || `컵 ${entry.weekNum}라운드`) : (entry.roundLabelEn || `Cup R${entry.weekNum}`))
           : (isKorean ? `${wkKo(entry.weekNum)}` : `${wkEn(entry.weekNum, 'Week', ' ')}`);
         const roleLabel = entry.wasStarter
