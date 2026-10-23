@@ -31,6 +31,7 @@ jobs:
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
         run: node .github/scripts/check-live-match-alerts.js
       - name: Save alert state
+        if: always()
         uses: actions/cache/save@v5
         with:
           path: .match-alert-state.json
