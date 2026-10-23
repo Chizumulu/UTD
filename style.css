@@ -13921,3 +13921,177 @@ body {
 
 /* 경기 알림 구독 버튼: 켜진 상태 */
 .push-alert-btn.is-on { background: var(--color-gold); border-color: var(--color-gold); color: var(--color-navy, #0b1f3a); }
+
+
+/* ============================================================
+   컵대회 토글 (NRFA 음벨와컵 2026)
+   - 모바일: 제목(.side-crest-text)과 주차 배지 사이 공란에 알약 토글
+   - PC: 사이드바 주차 박스(.side-week) 아래, 메인 메뉴 위에 버튼
+   ============================================================ */
+.cup-toggle-mobile { display: none; }
+.side-cup-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; margin-top: 8px; padding: 9px 12px;
+  font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .01em;
+  color: var(--color-gold-light);
+  background: linear-gradient(135deg, rgba(var(--color-gold-rgb), .20), rgba(var(--color-gold-rgb), .08));
+  border: 1px solid rgba(var(--color-gold-rgb), .45);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, transform .12s ease;
+}
+.side-cup-btn:hover { background: rgba(var(--color-gold-rgb), .28); border-color: rgba(var(--color-gold-rgb), .7); }
+.side-cup-btn:active { transform: scale(.98); }
+.side-cup-btn:focus-visible, .cup-toggle-mobile:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+.side-cup-icon { width: 17px; height: 17px; flex-shrink: 0; }
+.side-cup-btn.is-on { color: #1b2333; background: var(--color-gold); border-color: var(--color-gold); }
+.app-sidebar .side-cup-btn { margin-top: 6px; padding: 7px 10px; font-size: 12.5px; }
+
+@media (max-width: 880px) {
+  .cup-toggle-mobile {
+    display: inline-flex; align-items: center; gap: 5px;
+    flex-shrink: 0; margin-left: auto; margin-right: 4px;
+    padding: 7px 11px; font: inherit; font-size: 12px; font-weight: 800;
+    color: var(--color-gold-light);
+    background: rgba(var(--color-gold-rgb), .16);
+    border: 1px solid rgba(var(--color-gold-rgb), .5);
+    border-radius: var(--radius-pill);
+    cursor: pointer; white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cup-toggle-mobile:active { transform: scale(.96); }
+  .cup-toggle-icon { width: 15px; height: 15px; flex-shrink: 0; }
+  .cup-toggle-mobile.is-on { color: #1b2333; background: var(--color-gold); border-color: var(--color-gold); }
+  /* 토글이 남는 공간을 차지하므로, 주차 배지는 자기 폭만 쓰도록 auto 마진 해제 */
+  .side-crest-row .cup-toggle-mobile ~ .side-week-badge { margin-left: 0; }
+}
+/* 이전 시즌(25/26) 화면에서는 컵대회 토글을 숨깁니다 (주차 박스/배지와 같은 규칙) */
+body.season-archive .cup-toggle-mobile { display: none !important; }
+
+/* ----- 컵대회 화면 ----- */
+#cupView { display: none; }
+.cup-hero {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 22px; margin-bottom: 16px;
+  color: #fff; border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--color-navy-deep), var(--color-navy-light));
+  box-shadow: 0 4px 18px rgba(var(--color-navy-rgb), .25);
+}
+.cup-hero::after {
+  content: ''; position: absolute; right: -40px; top: -40px; width: 170px; height: 170px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--color-gold-rgb), .35), transparent 70%); pointer-events: none;
+}
+.cup-hero-icon {
+  flex-shrink: 0; width: 52px; height: 52px; padding: 12px; border-radius: 50%;
+  color: var(--color-gold-light); background: rgba(var(--color-gold-rgb), .18);
+  border: 1px solid rgba(var(--color-gold-rgb), .5);
+}
+.cup-hero-eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; color: var(--color-gold-light); margin-bottom: 3px; }
+.cup-hero-title { margin: 0; font-size: 22px; font-weight: 900; line-height: 1.2; }
+.cup-hero-desc { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: rgba(238,242,251,.78); }
+.cup-status {
+  display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: var(--radius-pill);
+  font-size: 11.5px; font-weight: 800; color: #1b2333; background: var(--color-gold);
+}
+.cup-status.is-live { color: #fff; background: var(--color-teal-dark); }
+.cup-round { margin-bottom: 18px; }
+.cup-round-title { font-size: 15px; font-weight: 800; color: var(--color-text-darkest); margin: 0 0 10px 2px; }
+.cup-match-list { display: flex; flex-direction: column; gap: 8px; }
+.cup-match {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
+  padding: 12px 14px; background: var(--color-surface); border-radius: var(--radius-lg);
+  box-shadow: 0 2px 10px rgba(var(--color-navy-rgb), .08);
+}
+.cup-team { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13.5px; font-weight: 700; color: var(--color-text-darkest); }
+.cup-team.is-away { flex-direction: row-reverse; text-align: right; }
+.cup-team img { width: 28px; height: 28px; object-fit: contain; flex-shrink: 0; }
+.cup-team span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cup-match-mid { text-align: center; min-width: 64px; }
+.cup-score { font-size: 17px; font-weight: 900; color: var(--color-brand-text); }
+.cup-score small { display: block; font-size: 10.5px; font-weight: 700; color: var(--color-text-muted); }
+.cup-when { font-size: 12px; font-weight: 700; color: var(--color-text-secondary); line-height: 1.35; }
+.cup-venue { grid-column: 1 / -1; text-align: center; font-size: 11.5px; color: var(--color-text-muted); }
+.cup-empty {
+  padding: 36px 20px; text-align: center; color: var(--color-text-secondary);
+  background: var(--color-surface); border-radius: var(--radius-lg);
+  box-shadow: 0 2px 10px rgba(var(--color-navy-rgb), .08);
+}
+.cup-empty-title { font-size: 16px; font-weight: 800; color: var(--color-text-darkest); margin-bottom: 6px; }
+.cup-empty p { margin: 0; font-size: 13px; line-height: 1.6; }
+.cup-back-btn {
+  margin-top: 16px; padding: 10px 18px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
+  color: var(--color-brand-text); background: transparent;
+  border: 1.5px solid var(--color-brand-text); border-radius: var(--radius-pill);
+}
+@media (max-width: 880px) {
+  .cup-hero { padding: 16px; gap: 12px; }
+  .cup-hero-icon { width: 44px; height: 44px; padding: 10px; }
+  .cup-hero-title { font-size: 18px; }
+  .cup-match { padding: 10px; gap: 6px; }
+  .cup-team { font-size: 12.5px; }
+}
+body.cup-mode #nextMatchLiveBar { display: none !important; }
+
+
+/* ===== 선수 상세 창: 리그 / 컵 기록 토글 ===== */
+.spm-comp-toggle {
+  display: inline-flex; gap: 2px; padding: 3px; margin: -2px 0 12px;
+  background: var(--color-border-light); border-radius: var(--radius-pill);
+}
+.spm-comp-btn {
+  min-width: 64px; padding: 6px 16px; font: inherit; font-size: 12.5px; font-weight: 800;
+  color: var(--color-text-secondary); background: transparent; border: 0; border-radius: var(--radius-pill);
+  cursor: pointer; transition: background .15s ease, color .15s ease;
+}
+.spm-comp-btn.is-active { color: #fff; background: var(--color-navy); box-shadow: 0 1px 4px rgba(var(--color-navy-rgb), .3); }
+:root[data-theme="dark"] .spm-comp-btn.is-active { background: var(--color-brand-text); color: #12141d; }
+.spm-comp-btn:focus-visible { outline: 2px solid var(--color-gold-strong); outline-offset: 1px; }
+
+
+/* ============================================================
+   PC 사이드바: 화면 높이에 따라 세로 간격이 "연속적으로" 늘고 줄어듭니다.
+   --sb-t 는 0px(높이 640px 이하) ~ 320px(높이 960px 이상) 사이 값이고,
+   각 간격은 [최소값 + --sb-t × 비율]로 계산됩니다. 즉 화면이 충분히 크면 원래 간격 그대로,
+   작아질수록 부드럽게 좁아지고, 단계가 끊기지 않습니다.
+   (최대값 = 기존 간격, 최소값 = 640px 높이에서도 한 화면에 들어오는 값)
+   그래도 모자라는 아주 낮은 화면에서는 스크롤바 없이 사이드바 안에서만 스크롤됩니다.
+   ============================================================ */
+@media (min-width: 881px) {
+  .app-sidebar {
+    --sb-t: clamp(0px, calc(100vh - 600px), 360px);
+    overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
+    padding-top: calc(10px + var(--sb-t) * 0.022222);
+    padding-bottom: calc(6px + var(--sb-t) * 0.033333);
+  }
+  .app-sidebar::-webkit-scrollbar { display: none; }
+
+  .app-sidebar .side-crest-row { padding-bottom: calc(7px + var(--sb-t) * 0.013889); gap: calc(10px + var(--sb-t) * 0.005556); }
+  .app-sidebar .club-logo { width: calc(34px + var(--sb-t) * 0.061111); height: calc(34px + var(--sb-t) * 0.061111); }
+  .app-sidebar .side-crest-text h1 { font-size: calc(15px + var(--sb-t) * 0.002778); }
+  .app-sidebar .side-season-row { margin-top: calc(2px + var(--sb-t) * 0.005556); margin-bottom: calc(10px + var(--sb-t) * 0.011111); }
+  .app-sidebar .side-season-seg { padding-top: calc(3px + var(--sb-t) * 0.008333); padding-bottom: calc(3px + var(--sb-t) * 0.008333); }
+  .app-sidebar .side-foot { margin-bottom: calc(6px + var(--sb-t) * 0.005556); padding-bottom: calc(6px + var(--sb-t) * 0.005556); }
+  .app-sidebar .side-week { padding-top: calc(6px + var(--sb-t) * 0.005556); padding-bottom: calc(6px + var(--sb-t) * 0.005556); }
+  .app-sidebar .side-cup-btn { margin-top: 7px; padding-top: calc(6px + var(--sb-t) * 0.005556); padding-bottom: calc(6px + var(--sb-t) * 0.005556); }
+
+  .app-sidebar .view-toggle-wrap { gap: 2px; }
+  .app-sidebar .view-toggle-btn,
+  .app-sidebar .view-toggle-community {
+    padding-top: calc(6px + var(--sb-t) * 0.005556);
+    padding-bottom: calc(6px + var(--sb-t) * 0.005556);
+    font-size: calc(12px + var(--sb-t) * 0.002778);
+  }
+  .app-sidebar .view-toggle-sep { margin-top: calc(2px + var(--sb-t) * 0.013889); margin-bottom: calc(2px + var(--sb-t) * 0.013889); }
+
+  .app-sidebar .side-controls { margin-top: calc(2px + var(--sb-t) * 0.016667); padding-top: calc(2px + var(--sb-t) * 0.016667); gap: calc(0px + var(--sb-t) * 0.005556); }
+  .app-sidebar .side-controls .lang-btn,
+  .app-sidebar .side-controls .theme-toggle-btn {
+    padding-top: calc(3px + var(--sb-t) * 0.008333);
+    padding-bottom: calc(3px + var(--sb-t) * 0.008333);
+  }
+}
+/* 아주 낮은 화면에서만 맨 아래 방문자 수 배지를 숨겨 공간 확보 */
+@media (min-width: 881px) and (max-height: 680px) {
+  .app-sidebar .site-footer { display: none; }
+}

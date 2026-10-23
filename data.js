@@ -43,7 +43,8 @@ const matchHighlights = {
   round2: 'https://www.youtube.com/watch?v=p5z6sYwoxJc&t=359s',
   round3: 'https://youtu.be/goM_m99MrDQ?si=coMD5rW48IhFYh0q',
   round10: 'https://www.youtube.com/watch?v=JEBuNaWeewo',
-  round12: 'https://www.youtube.com/watch?v=gXAbTbQmExE' // 치바비 2 : 1 치주물루 (9/27)
+  round12: 'https://www.youtube.com/watch?v=gXAbTbQmExE', // 치바비 2 : 1 치주물루 (9/27)
+  round13: 'https://www.youtube.com/watch?v=PL1cSweH95Y' // 치주물루 4 : 0 칠룸바 (10/2)
 };
 
 // ===== 구단 유튜브 코너 - 채널 최신 영상 자동 연동 설정 =====
@@ -615,7 +616,10 @@ const teamAwards = {
 //           motmCount, unusedCount, history: [ {roundKey, weekNum, opponentKo,
 //           result, wasStarter, goals, isCaptain, wasMotm}, ... ] } }
 // ============================================================
-function computeSquadPlayerStats() {
+function computeSquadPlayerStats(lineupsSrc, awardsSrc) {
+  // 인자를 생략하면 리그(matchLineups/teamAwards) 기준, 컵대회는 cupMatchLineups/cupTeamAwards를 넘깁니다.
+  const lineups = lineupsSrc || matchLineups;
+  const awards = awardsSrc || teamAwards;
   const stats = {};
 
   function ensure(number) {
@@ -636,16 +640,15 @@ function computeSquadPlayerStats() {
     return stats[number];
   }
 
-  const roundKeysSorted = Object.keys(matchLineups).sort((a, b) => {
-    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
-  });
+  const keyNum = (k) => parseInt(String(k).replace(/\D+/g, ''), 10); // 'round17' / 'cup2' → 17 / 2
+  const roundKeysSorted = Object.keys(lineups).sort((a, b) => keyNum(a) - keyNum(b));
 
   roundKeysSorted.forEach((roundKey) => {
-    const weekNum = parseInt(roundKey.replace('round', ''), 10);
-    const lineup = matchLineups[roundKey];
+    const weekNum = keyNum(roundKey);
+    const lineup = lineups[roundKey];
     if (!lineup) return;
 
-    const motmList = (teamAwards.motm && teamAwards.motm[roundKey]) || [];
+    const motmList = (awards.motm && awards.motm[roundKey]) || [];
 
     (lineup.starters || []).forEach(p => {
       const s = ensure(p.statKey || p.number);
@@ -659,6 +662,7 @@ function computeSquadPlayerStats() {
       s.history.push({
         roundKey, weekNum,
         opponentKo: lineup.opponentKo, result: lineup.result,
+        roundLabelKo: lineup.roundLabelKo, roundLabelEn: lineup.roundLabelEn,
         wasStarter: true, goals: goalCount, assists: 0,
         isCaptain: !!p.captain, wasMotm
       });
@@ -675,6 +679,7 @@ function computeSquadPlayerStats() {
       s.history.push({
         roundKey, weekNum,
         opponentKo: lineup.opponentKo, result: lineup.result,
+        roundLabelKo: lineup.roundLabelKo, roundLabelEn: lineup.roundLabelEn,
         wasStarter: false, goals: goalCount, assists: 0,
         isCaptain: false, wasMotm
       });
@@ -702,10 +707,10 @@ function computeSquadPlayerStats() {
   });
 
   // 이달의 선수 / 이달의 골 수상 횟수를 집계합니다.
-  Object.values(teamAwards.playerOfTheMonth || {}).forEach(number => {
+  Object.values(awards.playerOfTheMonth || {}).forEach(number => {
     ensure(number).potmCount = (ensure(number).potmCount || 0) + 1;
   });
-  Object.values(teamAwards.goalOfTheMonth || {}).forEach(number => {
+  Object.values(awards.goalOfTheMonth || {}).forEach(number => {
     ensure(number).gotmCount = (ensure(number).gotmCount || 0) + 1;
   });
 
@@ -714,6 +719,14 @@ function computeSquadPlayerStats() {
 
 // 스쿼드 선수별 통산 기록 데이터 (matchLineups/teamAwards 로부터 자동 계산됨)
 const squadPlayerStats = computeSquadPlayerStats();
+
+// ----- 컵대회(NRFA 음벨와컵 2026) 선수 기록 -----
+// cupMatchLineups는 matchLineups와 똑같은 모양입니다. 키는 'cup1', 'cup2' …처럼 쓰고,
+// 라운드 이름을 화면에 띄우려면 항목마다 roundLabelKo: '16강', roundLabelEn: 'Round of 16' 을 넣어 주세요.
+// 입력하면 선수 상세 창의 "컵" 탭 기록(출전/득점/도움/MOTM/출전 기록)이 자동으로 계산됩니다.
+const cupMatchLineups = {};
+const cupTeamAwards = { motm: {} };
+const squadPlayerStatsCup = computeSquadPlayerStats(cupMatchLineups, cupTeamAwards);
 
 // ============================================================
 // 어시스트 콤비 / 어시스트 기록 현황 (computeAssistCombos)
@@ -5914,7 +5927,8 @@ const competitionData = {
 // ----------------------------------------------------------------------------
 const squadPlayerStatsByCompetition = {
   // 지금 당장은 기존 squadPlayerStats(리그 전용)를 그대로 연결해둡니다.
-  league: (typeof squadPlayerStats !== 'undefined') ? squadPlayerStats : {}
+  league: (typeof squadPlayerStats !== 'undefined') ? squadPlayerStats : {},
+  mmbelwaCup: squadPlayerStatsCup
   // cupA: {}   // 컵 데이터가 생기면 computeSquadPlayerStats(competitionId)로 채움
 };
 
@@ -5982,6 +5996,30 @@ const squadPlayerStatsSeason = computeSeasonPlayerStats();
 // }
 
 
+
+// ============================================================================
+// ===== NRFA 음벨와컵 2026 (NRFA M'mbelwa Cup 2026) =====
+// ----------------------------------------------------------------------------
+// 컵대회 화면(#cupView)이 읽는 데이터입니다. 대진/일정이 발표되면 아래 rounds만 채우면
+// 화면이 자동으로 그려집니다. (rounds가 비어 있으면 "대진 발표 대기 중" 안내가 나옵니다.)
+//   - status: 'upcoming'(개막 전) | 'live'(진행 중) | 'finished'(종료)
+//   - rounds[].matches[].home / away : 리그와 같은 영문 팀명(nameEn). 리그 소속 팀이면 로고가 자동으로 붙고,
+//     리그 밖의 팀이면 이름만 표시됩니다. (한글명은 homeKo / awayKo 로 따로 줄 수 있습니다.)
+//   - 점수: homeScore / awayScore (미정이면 생략), 승부차기는 pso: '4:2' 처럼 문자열
+//   - date: 'YYYY-MM-DD', time: 'HH:MM', venueKo / venueEn 은 선택
+//   예) { labelKo: '16강', labelEn: 'Round of 16', matches: [
+//          { home: 'Chizumulu United FC', away: 'Jenda United FC', date: '2026-11-07', time: '14:00', venueKo: '치테코 커뮤니티 그라운드' } ] }
+// ============================================================================
+const cupTournament = {
+  id: 'mmbelwaCup',
+  year: 2026,
+  nameKo: 'NRFA 음벨와컵 2026',
+  nameEn: "NRFA M'mbelwa Cup 2026",
+  status: 'upcoming',
+  descKo: 'NRFA가 주최하는 컵대회입니다. 대진과 일정이 발표되는 대로 이곳에 업데이트됩니다.',
+  descEn: 'A cup competition organised by the NRFA. Draw and fixtures will appear here as soon as they are announced.',
+  rounds: []
+};
 
 // ============================================================
 // 데이터 검증 (validateSiteData)

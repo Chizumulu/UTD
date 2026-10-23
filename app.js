@@ -322,8 +322,98 @@
     el.classList.add('view-fade-in');
   }
 
+  // ===== 컵대회 (NRFA 음벨와컵 2026) =====
+  // 모바일(제목 옆 알약)·PC(사이드바 버튼) 토글이 같은 함수를 씁니다.
+  // 컵 화면 ↔ 리그 메인 화면을 오가며, 데이터는 data.js의 cupTournament를 읽습니다.
+  let cupMode = false;
+  function setCupMode(on) {
+    cupMode = !!on;
+    document.body.classList.toggle('cup-mode', cupMode);
+    const pairs = [['cupToggleMobile', 'cupToggleMobileLbl', '컵대회', 'Cup', '리그', 'League'],
+                   ['cupToggleSide', 'cupToggleSideLbl', '컵대회 보기', 'View Cup', '리그 보기', 'View League']];
+    pairs.forEach(function (p) {
+      const btn = document.getElementById(p[0]), lbl = document.getElementById(p[1]);
+      if (!btn || !lbl) return;
+      btn.classList.toggle('is-on', cupMode);
+      btn.setAttribute('aria-pressed', cupMode ? 'true' : 'false');
+      lbl.setAttribute('data-ko', cupMode ? p[4] : p[2]);
+      lbl.setAttribute('data-en', cupMode ? p[5] : p[3]);
+      lbl.textContent = isKorean ? lbl.getAttribute('data-ko') : lbl.getAttribute('data-en');
+    });
+  }
+  function toggleCupView() {
+    if (cupMode) showView('rank'); else showCupView();
+    window.scrollTo(0, 0);
+  }
+  function showCupView() {
+    setArchiveMode(false);
+    currentView = 'cup';
+    ['rankView', 'leagueRankView', 'squadView', 'roundsView', 'statsView', 'scorersView', 'predictView',
+     'venuesView', 'teamCompareView', 'reportView', 'nextMatchStrip', 'nextMatchPreviewCard'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    document.querySelectorAll('#viewToggleWrap .view-toggle-btn').forEach(function (b) { b.classList.remove('active'); });
+    const cv = document.getElementById('cupView');
+    if (cv) cv.style.display = 'block';
+    setCupMode(true);
+    renderCupView();
+    playViewEnterAnimation(cv);
+    renderLeagueLiveTicker(leagueLiveRenderedCache); // 컵 화면에서는 리그 라이브 창을 숨김
+    refreshScrollFadeHints();
+  }
+  function cupEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function cupTeamHtml(nameEn, nameKoOverride, away) {
+    const t = leagueData.find(function (x) { return x.nameEn === nameEn; });
+    const name = isKorean ? (nameKoOverride || (t && t.nameKo) || nameEn) : nameEn;
+    const logo = t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '';
+    return '<div class="cup-team' + (away ? ' is-away' : '') + '">' + logo + '<span>' + cupEsc(name) + '</span></div>';
+  }
+  function renderCupView() {
+    const root = document.getElementById('cupViewContent');
+    if (!root || typeof cupTournament === 'undefined') return;
+    const c = cupTournament, ko = isKorean;
+    const statusMap = {
+      upcoming: ['개막 전', 'Coming soon'], live: ['진행 중', 'In progress'], finished: ['종료', 'Finished']
+    };
+    const st = statusMap[c.status] || statusMap.upcoming;
+    let html = '<div class="cup-hero">' +
+      '<svg class="cup-hero-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v4.5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 6H4.5v1.2A3 3 0 0 0 7.5 10.2M17 6h2.5v1.2a3 3 0 0 1-3 3M12 13.5V17M8.5 20h7M10 17h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '<div><div class="cup-hero-eyebrow">NRFA CUP</div>' +
+      '<h2 class="cup-hero-title">' + cupEsc(ko ? c.nameKo : c.nameEn) + '</h2>' +
+      '<p class="cup-hero-desc">' + cupEsc(ko ? c.descKo : c.descEn) + '</p>' +
+      '<span class="cup-status' + (c.status === 'live' ? ' is-live' : '') + '">' + (ko ? st[0] : st[1]) + '</span></div></div>';
+
+    const rounds = (c.rounds || []).filter(function (r) { return r && r.matches && r.matches.length; });
+    if (!rounds.length) {
+      html += '<div class="cup-empty"><div class="cup-empty-title">' + (ko ? '대진 발표 대기 중' : 'Draw not announced yet') + '</div>' +
+        '<p>' + (ko ? '대진표와 경기 일정이 나오면 이곳에 표시됩니다.' : 'The bracket and fixtures will be shown here once available.') + '</p>' +
+        '<button type="button" class="cup-back-btn" onclick="showView(\'rank\')">' + (ko ? '리그 메인으로' : 'Back to league') + '</button></div>';
+    } else {
+      rounds.forEach(function (r) {
+        html += '<section class="cup-round"><h3 class="cup-round-title">' + cupEsc(ko ? (r.labelKo || r.labelEn) : (r.labelEn || r.labelKo)) + '</h3><div class="cup-match-list">';
+        r.matches.forEach(function (m) {
+          const played = m.homeScore != null && m.awayScore != null;
+          const mid = played
+            ? '<div class="cup-score">' + m.homeScore + ' : ' + m.awayScore + (m.pso ? '<small>PSO ' + cupEsc(m.pso) + '</small>' : '') + '</div>'
+            : '<div class="cup-when">' + cupEsc(m.date || 'TBD') + (m.time ? '<br>' + cupEsc(m.time) : '') + '</div>';
+          const venue = ko ? (m.venueKo || m.venueEn) : (m.venueEn || m.venueKo);
+          html += '<div class="cup-match">' + cupTeamHtml(m.home, m.homeKo, false) + '<div class="cup-match-mid">' + mid + '</div>' +
+            cupTeamHtml(m.away, m.awayKo, true) + (venue ? '<div class="cup-venue">' + cupEsc(venue) + '</div>' : '') + '</div>';
+        });
+        html += '</div></section>';
+      });
+    }
+    root.innerHTML = html;
+  }
+
   function showView(view) {
     setArchiveMode(false); // 25/26 전용 화면에서 다른 화면으로 가면 항상 현재 시즌으로 복귀
+    setCupMode(false);     // 컵대회 화면에서 다른 화면으로 가면 컵 모드 해제
     currentView = view;
     prepareArchiveForView(view); // 작년 기록을 쓰는 화면이면 archive-2526.js를 이때 불러옵니다
     const rankView = document.getElementById('rankView');
@@ -359,6 +449,7 @@
     if (venuesView) venuesView.style.display = 'none';
     if (teamCompareView) teamCompareView.style.display = 'none';
     if (reportView) reportView.style.display = 'none';
+    { const cupViewEl = document.getElementById('cupView'); if (cupViewEl) cupViewEl.style.display = 'none'; }
     if (nextMatchStrip) nextMatchStrip.style.display = 'none';
     if (nextMatchPreviewCardEl) nextMatchPreviewCardEl.style.display = 'none';
     rankBtn.classList.remove('active');
@@ -10477,6 +10568,7 @@
   function setArchiveMode(on) {
     archiveMode = !!on;
     document.body.classList.toggle('season-archive', archiveMode);
+    if (archiveMode && typeof setCupMode === 'function') setCupMode(false);
   }
   let archiveTab = 'main';            // 'main' | 'weekly' | 'clubs'
   let archiveClubTeam = null;         // 구단정보 탭에서 보고 있는 팀 (25/26 아카이브 기준 이름)
@@ -14688,6 +14780,22 @@
   }
 
   // ===== 스쿼드 선수 통산 기록 모달 (Squad Player Career Stats Modal) =====
+  // 선수 상세 창의 리그/컵 기록 토글 상태
+  let squadPlayerCompMode = 'league';
+  let squadPlayerPaneRenderer = null;
+  function setSquadPlayerComp(comp) {
+    squadPlayerCompMode = comp === 'cup' ? 'cup' : 'league';
+    syncSquadPlayerCompToggle();
+    if (squadPlayerPaneRenderer) squadPlayerPaneRenderer(squadPlayerCompMode);
+  }
+  function syncSquadPlayerCompToggle() {
+    document.querySelectorAll('#squadPlayerCompToggle .spm-comp-btn').forEach(btn => {
+      const on = btn.getAttribute('data-comp') === squadPlayerCompMode;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
   function openSquadPlayerModal(identifier) {
     const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
     const num = parseInt(identifier, 10);
@@ -14711,12 +14819,15 @@
     const isFormerPlayer = !squadData.includes(player) && former.includes(player);
     const hasNumber = (player.number !== undefined && player.number !== null);
 
+    if (currentSquadPlayerModalNumber !== identifier) squadPlayerCompMode = 'league'; // 새 선수를 열면 리그부터 (언어 전환 재렌더는 유지)
     currentSquadPlayerModalNumber = identifier;
     const statsKey = isFormerPlayer ? 'F' + player.number : player.number;
-    const stats = (hasNumber ? squadPlayerStats[statsKey] : null) || {
-      appearances: 0, starts: 0, subApps: 0, goals: 0,
+    const emptyStats = () => ({
+      appearances: 0, starts: 0, subApps: 0, goals: 0, assists: 0,
       captainCount: 0, motmCount: 0, history: []
-    };
+    });
+    const leagueStats = (hasNumber ? squadPlayerStats[statsKey] : null) || emptyStats();
+    const cupStats = (hasNumber && typeof squadPlayerStatsCup !== 'undefined' ? squadPlayerStatsCup[statsKey] : null) || emptyStats();
 
     const photoImgEl = document.getElementById('squadPlayerModalPhoto');
     const photoFallbackEl = document.getElementById('squadPlayerModalPhotoFallback');
@@ -14825,113 +14936,130 @@
       nationalBadgeEl.innerHTML = '';
     }
 
-    animateCountUp(document.getElementById('squadPlayerModalApps'), stats.appearances);
-    animateCountUp(document.getElementById('squadPlayerModalGoals'), stats.goals, { delay: 60 });
-    animateCountUp(document.getElementById('squadPlayerModalAssists'), stats.assists || 0, { delay: 90 });
-    document.getElementById('squadPlayerModalStarts').textContent = `${stats.starts} / ${stats.subApps}`;
-    animateCountUp(document.getElementById('squadPlayerModalMotm'), stats.motmCount, { delay: 120 });
+    const renderStatsPane = (comp) => {
+      const isCup = comp === 'cup';
+      const stats = isCup ? cupStats : leagueStats;
+      animateCountUp(document.getElementById('squadPlayerModalApps'), stats.appearances);
+      animateCountUp(document.getElementById('squadPlayerModalGoals'), stats.goals, { delay: 60 });
+      animateCountUp(document.getElementById('squadPlayerModalAssists'), stats.assists || 0, { delay: 90 });
+      document.getElementById('squadPlayerModalStarts').textContent = `${stats.starts} / ${stats.subApps}`;
+      animateCountUp(document.getElementById('squadPlayerModalMotm'), stats.motmCount, { delay: 120 });
 
-    // 골키퍼는 득점 옆에 클린시트(선발 기준) 기록도 함께 보여줍니다.
-    // computeGoalkeeperRecords()는 라인업상 '선발' GK 기준으로만 집계하므로
-    // 교체 출전 클린시트는 포함되지 않습니다(선발기준 표기가 그래서 붙습니다).
-    const csStatEl = document.getElementById('squadPlayerModalCleanSheetsStat');
-    if (player.position === 'GK' && csStatEl) {
-      const gkRecords = (typeof computeGoalkeeperRecords === 'function') ? computeGoalkeeperRecords() : [];
-      const gkRecord = gkRecords.find(r => r.number === num);
-      animateCountUp(document.getElementById('squadPlayerModalCleanSheets'), gkRecord ? gkRecord.cleanSheets : 0, { delay: 90 });
-      csStatEl.style.display = '';
-    } else if (csStatEl) {
-      csStatEl.style.display = 'none';
-    }
-    // 카드 수가 홀수(골키퍼가 아닐 때)면 마지막 카드를 한 줄 전체로 늘려 균형을 맞춥니다.
-    if (csStatEl && csStatEl.parentElement) {
-      csStatEl.parentElement.classList.toggle('spm-stat-grid-odd', player.position !== 'GK');
-    }
+      // 골키퍼는 득점 옆에 클린시트(선발 기준) 기록도 함께 보여줍니다.
+      // computeGoalkeeperRecords()는 라인업상 '선발' GK 기준으로만 집계하므로
+      // 교체 출전 클린시트는 포함되지 않습니다(선발기준 표기가 그래서 붙습니다).
+      const csStatEl = document.getElementById('squadPlayerModalCleanSheetsStat');
+      if (player.position === 'GK' && csStatEl && !isCup) {
+        const gkRecords = (typeof computeGoalkeeperRecords === 'function') ? computeGoalkeeperRecords() : [];
+        const gkRecord = gkRecords.find(r => r.number === num);
+        animateCountUp(document.getElementById('squadPlayerModalCleanSheets'), gkRecord ? gkRecord.cleanSheets : 0, { delay: 90 });
+        csStatEl.style.display = '';
+      } else if (csStatEl) {
+        csStatEl.style.display = 'none';
+      }
+      // 카드 수가 홀수(골키퍼가 아닐 때)면 마지막 카드를 한 줄 전체로 늘려 균형을 맞춥니다.
+      if (csStatEl && csStatEl.parentElement) {
+        csStatEl.parentElement.classList.toggle('spm-stat-grid-odd', !(player.position === 'GK' && !isCup));
+      }
 
-    // 주장 선발 출전 횟수 + 이달의 선수/이달의 골/MOTM 수상 경력을 하나의 칩 목록으로 모아 보여줍니다.
-    const awardsRowEl = document.getElementById('squadPlayerModalAwardsRow');
-    const potmCount = stats.potmCount || 0;
-    const gotmCount = stats.gotmCount || 0;
-    const motmCount = stats.motmCount || 0;
-    const awardChips = [];
-    if (stats.captainCount > 0) {
-      awardChips.push(isKorean
-        ? `🎖️ 주장 선발 출전 <b>${stats.captainCount}</b>회`
-        : `🎖️ Started as captain <b>${stats.captainCount}</b> time(s)`);
-    }
-    if (potmCount > 0) {
-      awardChips.push(isKorean
-        ? `🏅 이달의 선수 <b>${potmCount}</b>회`
-        : `🏅 Player of the Month <b>${potmCount}</b> time(s)`);
-    }
-    if (gotmCount > 0) {
-      awardChips.push(isKorean
-        ? `⚽ 이달의 골 <b>${gotmCount}</b>회`
-        : `⚽ Goal of the Month <b>${gotmCount}</b> time(s)`);
-    }
-    if (motmCount > 0) {
-      awardChips.push(isKorean
-        ? `🎗️ MOTM <b>${motmCount}</b>회`
-        : `🎗️ MOTM <b>${motmCount}</b> time(s)`);
-    }
-    if (awardChips.length > 0) {
-      awardsRowEl.style.display = '';
-      awardsRowEl.innerHTML = awardChips.map(chip => `<span class="spm-award-chip">${chip}</span>`).join('');
-    } else {
-      awardsRowEl.style.display = 'none';
-      awardsRowEl.innerHTML = '';
-    }
+      // 주장 선발 출전 횟수 + 이달의 선수/이달의 골/MOTM 수상 경력을 하나의 칩 목록으로 모아 보여줍니다.
+      const awardsRowEl = document.getElementById('squadPlayerModalAwardsRow');
+      const potmCount = isCup ? 0 : (stats.potmCount || 0);
+      const gotmCount = isCup ? 0 : (stats.gotmCount || 0);
+      const motmCount = stats.motmCount || 0;
+      const awardChips = [];
+      if (stats.captainCount > 0) {
+        awardChips.push(isKorean
+          ? `🎖️ 주장 선발 출전 <b>${stats.captainCount}</b>회`
+          : `🎖️ Started as captain <b>${stats.captainCount}</b> time(s)`);
+      }
+      if (potmCount > 0) {
+        awardChips.push(isKorean
+          ? `🏅 이달의 선수 <b>${potmCount}</b>회`
+          : `🏅 Player of the Month <b>${potmCount}</b> time(s)`);
+      }
+      if (gotmCount > 0) {
+        awardChips.push(isKorean
+          ? `⚽ 이달의 골 <b>${gotmCount}</b>회`
+          : `⚽ Goal of the Month <b>${gotmCount}</b> time(s)`);
+      }
+      if (motmCount > 0) {
+        awardChips.push(isKorean
+          ? `🎗️ MOTM <b>${motmCount}</b>회`
+          : `🎗️ MOTM <b>${motmCount}</b> time(s)`);
+      }
+      if (awardChips.length > 0) {
+        awardsRowEl.style.display = '';
+        awardsRowEl.innerHTML = awardChips.map(chip => `<span class="spm-award-chip">${chip}</span>`).join('');
+      } else {
+        awardsRowEl.style.display = 'none';
+        awardsRowEl.innerHTML = '';
+      }
 
-    renderSquadPlayerSeasonChart(stats, player.number, hasNumber, isFormerPlayer);
-    renderSquadPlayerAssistRelations(statsKey, hasNumber);
+      if (isCup) {
+        // 시즌 흐름 막대·도움 관계는 리그 기록 기준이라 컵 탭에서는 숨깁니다.
+        ['squadPlayerModalForm', 'squadPlayerModalFormTitle', 'squadPlayerModalAssistTitle', 'squadPlayerModalAssistBody'].forEach(id => {
+          const el = document.getElementById(id); if (el) el.style.display = 'none';
+        });
+      } else {
+        renderSquadPlayerSeasonChart(stats, player.number, hasNumber, isFormerPlayer);
+        renderSquadPlayerAssistRelations(statsKey, hasNumber);
+      }
 
-    const listEl = document.getElementById('squadPlayerTimeline');
-    listEl.innerHTML = '';
+      const listEl = document.getElementById('squadPlayerTimeline');
+      listEl.innerHTML = '';
 
-    stats.history.slice().reverse().forEach(entry => {
-      const weekLabel = isKorean ? `${wkKo(entry.weekNum)}` : `${wkEn(entry.weekNum, 'Week', ' ')}`;
-      const roleLabel = entry.wasStarter
-        ? (isKorean ? '선발' : 'Start')
-        : (isKorean ? '교체' : 'Sub');
-      const goalsTag = entry.goals > 0
-        ? `<span class="timeline-goals-badge">${isKorean ? entry.goals + '골' : (entry.goals > 1 ? entry.goals + ' goals' : entry.goals + ' goal')}</span>`
-        : '';
-      const assistsTag = entry.assists > 0
-        ? `<span class="timeline-assists-badge">${isKorean ? '도움 ' + entry.assists : (entry.assists > 1 ? entry.assists + ' assists' : entry.assists + ' assist')}</span>`
-        : '';
-      const capTag = entry.isCaptain ? `<span class="timeline-pk-tag">${isKorean ? 'C' : 'C'}</span>` : '';
-      const motmTag = entry.wasMotm ? `<span class="timeline-pk-tag timeline-motm-tag">MOTM</span>` : '';
+      stats.history.slice().reverse().forEach(entry => {
+        const weekLabel = isCup
+          ? (isKorean ? (entry.roundLabelKo || `컵 ${entry.weekNum}라운드`) : (entry.roundLabelEn || `Cup R${entry.weekNum}`))
+          : (isKorean ? `${wkKo(entry.weekNum)}` : `${wkEn(entry.weekNum, 'Week', ' ')}`);
+        const roleLabel = entry.wasStarter
+          ? (isKorean ? '선발' : 'Start')
+          : (isKorean ? '교체' : 'Sub');
+        const goalsTag = entry.goals > 0
+          ? `<span class="timeline-goals-badge">${isKorean ? entry.goals + '골' : (entry.goals > 1 ? entry.goals + ' goals' : entry.goals + ' goal')}</span>`
+          : '';
+        const assistsTag = entry.assists > 0
+          ? `<span class="timeline-assists-badge">${isKorean ? '도움 ' + entry.assists : (entry.assists > 1 ? entry.assists + ' assists' : entry.assists + ' assist')}</span>`
+          : '';
+        const capTag = entry.isCaptain ? `<span class="timeline-pk-tag">${isKorean ? 'C' : 'C'}</span>` : '';
+        const motmTag = entry.wasMotm ? `<span class="timeline-pk-tag timeline-motm-tag">MOTM</span>` : '';
 
-      const oppTeam = leagueData.find(t => t.nameKo === entry.opponentKo);
-      const opponentName = oppTeam ? (isKorean ? oppTeam.nameKo : oppTeam.nameEn) : entry.opponentKo;
-      const resultDisplay = isKorean
-        ? entry.result
-        : entry.result.replace('승', 'W').replace('무', 'D').replace('패', 'L');
+        const oppTeam = leagueData.find(t => t.nameKo === entry.opponentKo);
+        const opponentName = oppTeam ? (isKorean ? oppTeam.nameKo : oppTeam.nameEn) : entry.opponentKo;
+        const resultDisplay = isKorean
+          ? entry.result
+          : entry.result.replace('승', 'W').replace('무', 'D').replace('패', 'L');
 
-      const row = document.createElement('div');
-      row.className = 'timeline-row';
-      row.innerHTML = `
-        <div class="timeline-round">
-          <span class="timeline-round-label">${weekLabel}</span>
-        </div>
-        <div class="timeline-match">
-          <span class="ha-badge ${entry.wasStarter ? 'ha-home' : 'ha-away'}">${roleLabel}</span>
-          <span class="timeline-opp-name">vs ${opponentName}</span>
-          <span class="timeline-score">${resultDisplay}</span>
-        </div>
-        <div class="timeline-goals">
-          ${goalsTag}
-          ${assistsTag}
-          ${capTag}
-          ${motmTag}
-        </div>
-      `;
-      listEl.appendChild(row);
-    });
+        const row = document.createElement('div');
+        row.className = 'timeline-row';
+        row.innerHTML = `
+          <div class="timeline-round">
+            <span class="timeline-round-label">${weekLabel}</span>
+          </div>
+          <div class="timeline-match">
+            <span class="ha-badge ${entry.wasStarter ? 'ha-home' : 'ha-away'}">${roleLabel}</span>
+            <span class="timeline-opp-name">vs ${opponentName}</span>
+            <span class="timeline-score">${resultDisplay}</span>
+          </div>
+          <div class="timeline-goals">
+            ${goalsTag}
+            ${assistsTag}
+            ${capTag}
+            ${motmTag}
+          </div>
+        `;
+        listEl.appendChild(row);
+      });
 
-    if (stats.history.length === 0) {
-      listEl.innerHTML = `<div class="timeline-empty">${isKorean ? '출전 기록이 없습니다.' : 'No appearance records.'}</div>`;
-    }
+      if (stats.history.length === 0) {
+        listEl.innerHTML = `<div class="timeline-empty">${isCup ? (isKorean ? '컵대회 출전 기록이 없습니다.' : 'No cup appearances yet.') : (isKorean ? '출전 기록이 없습니다.' : 'No appearance records.')}</div>`;
+      }
+
+    };
+    squadPlayerPaneRenderer = renderStatsPane;
+    syncSquadPlayerCompToggle();
+    renderStatsPane(squadPlayerCompMode);
 
     attachImageFallback();
     showModalAnimated(document.getElementById('squadPlayerModal'));
@@ -14939,6 +15067,7 @@
 
   function closeSquadPlayerModal() {
     currentSquadPlayerModalNumber = null;
+    squadPlayerCompMode = 'league';
     closeModalAnimated(document.getElementById('squadPlayerModal'));
   }
 
@@ -17119,6 +17248,8 @@
       renderRoundResultReport();
     } else if (currentView === 'teamCompare') {
       renderTeamCompareView();
+    } else if (currentView === 'cup') {
+      renderCupView();
     } else if (currentView === 'venues') {
       renderVenuesView();
       const venueModal = document.getElementById('venueMapModal');
@@ -17634,7 +17765,7 @@
   //   #/                       메인            #/league                 리그 순위
   //   #/rounds  #/rounds/5     리그 일정(5주차) #/stats  #/scorers      리그 기록 / 득점 순위
   //   #/predict                리그 예측        #/compare/<팀A>/<팀B>    팀 비교
-  //   #/venues  #/report       구단 위치 / 리포트
+  //   #/venues  #/report       구단 위치 / 리포트        #/cup  컵대회(음벨와컵)
   //   #/club/<팀>  #/club/<팀>/squad|honors|results|predict   구단 정보(우리 팀은 탭까지)
   //   #/archive  #/archive/weekly|clubs                       25/26 시즌 아카이브
   // <팀>은 영문 팀명을 소문자-하이픈으로 바꾼 값입니다. 예) chizumulu-united-fc
@@ -17646,7 +17777,7 @@
 
     const VIEW_PATH = {
       rank: '', leagueRank: 'league', rounds: 'rounds', stats: 'stats', scorers: 'scorers',
-      predict: 'predict', teamCompare: 'compare', squad: 'club', venues: 'venues', report: 'report'
+      predict: 'predict', teamCompare: 'compare', squad: 'club', venues: 'venues', report: 'report', cup: 'cup'
     };
     const PATH_VIEW = {};
     Object.keys(VIEW_PATH).forEach(v => { if (VIEW_PATH[v]) PATH_VIEW[VIEW_PATH[v]] = v; });
@@ -17740,6 +17871,8 @@
           currentTeamInfoTab = TEAM_INFO_TABS.indexOf(tab) !== -1 ? tab : 'overview';
           showView('squad');
           applyTeamInfoTab(currentTeamInfoTab);
+        } else if (head === 'cup') {
+          showCupView();
         } else {
           showView(PATH_VIEW[head] || 'rank');
         }
@@ -17752,7 +17885,7 @@
     }
 
     // 기존 함수 래핑: 원본을 먼저 실행한 뒤 주소 동기화를 예약합니다.
-    ['showView', 'showTeamInfoForKey', 'applyTeamInfoTab', 'renderRoundsView',
+    ['showView', 'showCupView', 'showTeamInfoForKey', 'applyTeamInfoTab', 'renderRoundsView',
      'renderTeamCompareView', 'setArchiveTab', 'openSeasonArchive'].forEach(name => {
       const orig = window[name];
       if (typeof orig !== 'function') return;
