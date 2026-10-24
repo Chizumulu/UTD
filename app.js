@@ -2857,6 +2857,47 @@
 
   // ===== 다음 경기 미니 스트립 (메뉴 바 ~ 순위표 사이) =====
 
+  // ===== 컵대회 다음 경기 (data.js cupTournament 연동) =====
+  // cupTournament.rounds[].matches[] 중 우리 팀이 낀 경기에서, 점수가 아직 없고 날짜(date)가 있는 것 가운데
+  // 킥오프가 가장 빠른 경기를 리그 nextMatch와 같은 모양으로 돌려줍니다. 컵 데이터가 비어 있으면 null.
+  function cupKickoffKey(x) { return (x.kickoffDate || '9999-12-31') + ' ' + (x.kickoffTime || '99:99'); }
+
+  function listMyCupFixtures() {
+    const out = [];
+    if (typeof cupTournament === 'undefined' || !cupTournament || !Array.isArray(cupTournament.rounds)) return out;
+    cupTournament.rounds.forEach(function (r) {
+      ((r && r.matches) || []).forEach(function (m) {
+        if (!m || !m.home || !m.away || !m.date) return;
+        if (m.homeScore != null && m.awayScore != null) return; // 이미 끝난 경기
+        const iAmHome = isMyTeamName(m.home, m.homeKo);
+        if (!iAmHome && !isMyTeamName(m.away, m.awayKo)) return;
+        const oppEn = iAmHome ? m.away : m.home;
+        const oppTeam = leagueData.find(function (x) { return x.nameEn === oppEn; });
+        out.push({
+          isBye: false, comp: 'cup', homeAway: iAmHome ? 'H' : 'A',
+          oppEn: oppEn, oppKo: (iAmHome ? m.awayKo : m.homeKo) || (oppTeam && oppTeam.nameKo) || oppEn,
+          oppLogo: oppTeam ? oppTeam.logoSrc : undefined,
+          kickoffDate: m.date, kickoffTime: m.time,
+          homeEn: m.home, homeKo: m.homeKo || (iAmHome ? '치주물루 유나이티드 FC' : ((oppTeam && oppTeam.nameKo) || m.home)),
+          awayEn: m.away, awayKo: m.awayKo || (iAmHome ? ((oppTeam && oppTeam.nameKo) || m.away) : '치주물루 유나이티드 FC'),
+          roundLabelKo: r.labelKo || r.labelEn || '', roundLabelEn: r.labelEn || r.labelKo || '',
+          venueKo: m.venueKo, venueEn: m.venueEn,
+          compKo: (cupTournament.nameKo || '컵대회'), compEn: (cupTournament.nameEn || 'Cup')
+        });
+      });
+    });
+    out.sort(function (a, b) { return cupKickoffKey(a) < cupKickoffKey(b) ? -1 : cupKickoffKey(a) > cupKickoffKey(b) ? 1 : 0; });
+    return out;
+  }
+
+  // 상단 다음경기 카드용: 리그 다음 경기와 컵 다음 경기 중 킥오프가 빠른 쪽이 primary, 다른 쪽은 secondary.
+  function pickNextMatchesForStrip(team) {
+    const lg = (team && team.nextMatch && !team.nextMatch.isBye) ? Object.assign({ comp: 'league' }, team.nextMatch) : null;
+    const cup = listMyCupFixtures()[0] || null;
+    if (lg && cup) return cupKickoffKey(cup) < cupKickoffKey(lg) ? { primary: cup, secondary: lg } : { primary: lg, secondary: cup };
+    return { primary: lg || cup, secondary: null };
+  }
+
   function renderNextMatchStripInner() {
     const el = document.getElementById('nextMatchStrip');
     if (!el) return;
@@ -2872,39 +2913,60 @@
       : (sortedRoundKeys().length + 1);
     const weekLbl = isKorean ? `${wkKo(nextWeek)}` : `${wkEn(nextWeek, 'WK', ' ')}`;
 
-    if (t.nextMatch.isBye) {
+    const sel = pickNextMatchesForStrip(t);
+    const nmx = sel.primary;           // 화면에 크게 보여줄 다음 경기(리그 또는 컵)
+    const isCupNext = !!(nmx && nmx.comp === 'cup');
+
+    if (!nmx) {
       el.classList.remove('nms-matchday');
-      el.innerHTML = `
+      const liveBarNone = document.getElementById('nextMatchLiveBar');
+      if (liveBarNone) liveBarNone.removeAttribute('data-kickoff-utc');
+      if (t.nextMatch && t.nextMatch.isBye) {
+        el.innerHTML = `
         <div class="nmh-eyebrow lbl" data-en="Next" data-ko="다음경기">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</div>
         <div class="nmh-bye lbl" data-en="Bye week — no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week — no match this round'}</div>`;
-      const liveBarBye = document.getElementById('nextMatchLiveBar');
-      if (liveBarBye) liveBarBye.removeAttribute('data-kickoff-utc');
+      } else {
+        // 남은 일정이 아직 등록되지 않았으면(nextMatch === null) 에러 대신 안내 문구를 보여줍니다.
+        const tbdKo = '후반기 리그 일정이 아직 발표되지 않았습니다<br>일정이 정해지는 대로 반영하겠습니다.';
+        const tbdEn = 'Second-half league fixtures have not been announced yet.<br>We will update as soon as the schedule is set.';
+        el.innerHTML = `
+        <div class="nmh-eyebrow lbl" data-en="Next" data-ko="다음경기">${isKorean ? '다음경기' : 'Next'}</div>
+        <div class="nmh-bye lbl" data-en="${tbdEn}" data-ko="${tbdKo}">${isKorean ? tbdKo : tbdEn}</div>`;
+      }
       updateNextMatchLiveBar();
       return;
     }
 
+    // 카드 머리말: 리그면 "N주차", 컵이면 "컵대회 · 라운드명"
+    const cupRoundLbl = isCupNext ? (isKorean ? nmx.roundLabelKo : nmx.roundLabelEn) : '';
+    const stripWeekLbl = isCupNext
+      ? (isKorean ? `컵대회${cupRoundLbl ? ' · ' + cupRoundLbl : ''}` : `Cup${cupRoundLbl ? ' · ' + cupRoundLbl : ''}`)
+      : weekLbl;
+
     const ranked = getRankedTeams('all');
-    const oppIdx = ranked.findIndex(rt => rt.nameEn === t.nextMatch.oppEn);
+    const oppIdx = ranked.findIndex(rt => rt.nameEn === nmx.oppEn);
     const oppRank = oppIdx !== -1 ? oppIdx + 1 : null;
     const oppRankTxt = oppRank ? (isKorean ? `${oppRank}위` : `#${oppRank}`) : '';
     const myRankTxt = info.rank ? (isKorean ? `${info.rank}위` : `#${info.rank}`) : '';
-    const haClass = t.nextMatch.homeAway === 'H' ? 'ha-home' : 'ha-away';
-    const haLabel = t.nextMatch.homeAway === 'H' ? (isKorean ? '홈' : 'HOME') : (isKorean ? '원정' : 'AWAY');
-    const oppNameFull = isKorean ? t.nextMatch.oppKo : t.nextMatch.oppEn;
+    const haClass = nmx.homeAway === 'H' ? 'ha-home' : 'ha-away';
+    const haLabel = nmx.homeAway === 'H' ? (isKorean ? '홈' : 'HOME') : (isKorean ? '원정' : 'AWAY');
+    const oppNameFull = isKorean ? nmx.oppKo : nmx.oppEn;
     const myNameFull = isKorean ? t.nameKo : t.nameEn;
     const oppName = oppNameFull.split(' ')[0];
     const myName = myNameFull.split(' ')[0];
-    const kickoffTxt = formatKickoff(t.nextMatch);
-    const nextMatchHomeEn = t.nextMatch.homeAway === 'H' ? t.nameEn : t.nextMatch.oppEn;
-    const nextMatchVenue = getTeamVenue(nextMatchHomeEn, nextWeek);
-    const nextMatchVenueName = nextMatchVenue ? (isKorean ? nextMatchVenue.nameKo : nextMatchVenue.nameEn) : '';
+    const kickoffTxt = formatKickoff(nmx);
+    const nextMatchHomeEn = nmx.homeAway === 'H' ? t.nameEn : nmx.oppEn;
+    const nextMatchVenue = isCupNext ? null : getTeamVenue(nextMatchHomeEn, nextWeek);
+    const nextMatchVenueName = isCupNext
+      ? ((isKorean ? (nmx.venueKo || nmx.venueEn) : (nmx.venueEn || nmx.venueKo)) || '')
+      : (nextMatchVenue ? (isKorean ? nextMatchVenue.nameKo : nextMatchVenue.nameEn) : '');
     const weatherHtml = matchWeatherPlaceholderHtml(
       nextMatchHomeEn,
-      t.nextMatch.kickoffDate, t.nextMatch.kickoffTime,
+      nmx.kickoffDate, nmx.kickoffTime,
       'nms-weather', true
     );
     const kickoffMs = (typeof kickoffUTCMillis === 'function')
-      ? kickoffUTCMillis(t.nextMatch.kickoffDate, t.nextMatch.kickoffTime) : null;
+      ? kickoffUTCMillis(nmx.kickoffDate, nmx.kickoffTime) : null;
     // KST 달력 기준 날짜 차이로 계산합니다(예: 킥오프가 "내일"이면 지금이 몇 시든 항상 D-1).
     const daysLeft = kickoffMs
       ? Math.max(0, Math.round((kstMidnightUTCMillis(kickoffMs) - kstMidnightUTCMillis(Date.now())) / 86400000))
@@ -2923,15 +2985,15 @@
         </div>`;
     const oppTeamHtml = `
         <div class="nmh-team">
-          <img class="team-logo nmh-crest opp-logo" data-en-name="${t.nextMatch.oppEn}" data-ko-name="${t.nextMatch.oppKo}" title="${oppNameFull}" src="${t.nextMatch.oppLogo}" alt="${t.nextMatch.oppEn}">
+          ${nmx.oppLogo ? `<img class="team-logo nmh-crest opp-logo" data-en-name="${nmx.oppEn}" data-ko-name="${nmx.oppKo}" title="${oppNameFull}" src="${nmx.oppLogo}" alt="${nmx.oppEn}">` : `<span class="team-logo nmh-crest opp-logo nmh-crest-fallback" title="${oppNameFull}">${String(nmx.oppEn || '?').trim().charAt(0).toUpperCase()}</span>`}
           <span title="${oppNameFull}">${oppName}</span>
           ${oppRankTxt ? `<span class="nms-opp-rank">${oppRankTxt}</span>` : ''}
         </div>`;
-    const leftTeamHtml = t.nextMatch.homeAway === 'H' ? myTeamHtml : oppTeamHtml;
-    const rightTeamHtml = t.nextMatch.homeAway === 'H' ? oppTeamHtml : myTeamHtml;
+    const leftTeamHtml = nmx.homeAway === 'H' ? myTeamHtml : oppTeamHtml;
+    const rightTeamHtml = nmx.homeAway === 'H' ? oppTeamHtml : myTeamHtml;
 
     el.innerHTML = `
-      <div class="nmh-eyebrow"><span class="lbl" data-en="Next · ${weekLbl}" data-ko="다음경기 · ${weekLbl}">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</span>${ddayTxt ? `<span class="nmh-eyebrow-dday">${ddayTxt}</span>` : ''}</div>
+      <div class="nmh-eyebrow"><span class="lbl" data-en="Next · ${stripWeekLbl}" data-ko="다음경기 · ${stripWeekLbl}">${isKorean ? '다음경기' : 'Next'} · ${stripWeekLbl}</span>${ddayTxt ? `<span class="nmh-eyebrow-dday">${ddayTxt}</span>` : ''}</div>
       <div class="nmh-top">
         ${leftTeamHtml}
         <div class="nmh-center">
@@ -2942,6 +3004,16 @@
         </div>
         ${rightTeamHtml}
       </div>
+      ${sel.secondary ? (() => {
+        const o = sel.secondary;
+        const oc = o.comp === 'cup';
+        const oOpp = isKorean ? o.oppKo : o.oppEn;
+        const oLbl = oc
+          ? (isKorean ? `컵대회${o.roundLabelKo ? ' · ' + o.roundLabelKo : ''}` : `Cup${o.roundLabelEn ? ' · ' + o.roundLabelEn : ''}`)
+          : (isKorean ? '리그' : 'League');
+        const oWhen = formatKickoff(o).replace(/<br>\s*/g, ' · ');
+        return `<div class="nmh-also"><span class="nmh-also-tag">${isKorean ? '이어서' : 'Then'} · ${oLbl}</span><span class="nmh-also-text">vs ${oOpp}${oWhen ? ' · ' + oWhen : ''}</span></div>`;
+      })() : ''}
       <div class="nmh-bottom">
         <span class="ha-badge ${haClass} nms-ha">${haLabel}</span>
         ${weatherHtml}
@@ -2960,7 +3032,7 @@
 
     const liveBar = document.getElementById('nextMatchLiveBar');
     if (liveBar) {
-      const kickoffMs = kickoffUTCMillis(t.nextMatch.kickoffDate, t.nextMatch.kickoffTime);
+      const kickoffMs = kickoffUTCMillis(nmx.kickoffDate, nmx.kickoffTime);
       if (kickoffMs) liveBar.setAttribute('data-kickoff-utc', kickoffMs);
       else liveBar.removeAttribute('data-kickoff-utc');
     }
@@ -3036,14 +3108,16 @@
   // 우리 팀(치주물루)의 다음 경기 정보를 공유합니다.
   function shareNextMatch() {
     const info = getMyRankedTeam();
-    if (!info || !info.team.nextMatch || info.team.nextMatch.isBye) return;
-    const nm = info.team.nextMatch;
+    if (!info) return;
+    const nm = pickNextMatchesForStrip(info.team).primary;
+    if (!nm) return;
     const oppName = isKorean ? nm.oppKo : nm.oppEn;
     const haTxt = nm.homeAway === 'H' ? (isKorean ? '홈' : 'Home') : (isKorean ? '원정' : 'Away');
     const kickoffTxt = formatKickoff(nm).replace(/<br>\s*/g, ' / ');
+    const compTxt = nm.comp === 'cup' ? (isKorean ? `[${nm.compKo}${nm.roundLabelKo ? ' ' + nm.roundLabelKo : ''}] ` : `[${nm.compEn}${nm.roundLabelEn ? ' ' + nm.roundLabelEn : ''}] `) : '';
     const text = isKorean
-      ? `⚽ 치주물루 유나이티드 FC 다음 경기\n${haTxt} vs ${oppName}\n${kickoffTxt}`
-      : `⚽ Chizumulu United FC — Next Match\n${haTxt} vs ${oppName}\n${kickoffTxt}`;
+      ? `⚽ 치주물루 유나이티드 FC 다음 경기\n${compTxt}${haTxt} vs ${oppName}\n${kickoffTxt}`
+      : `⚽ Chizumulu United FC — Next Match\n${compTxt}${haTxt} vs ${oppName}\n${kickoffTxt}`;
     shareContent(isKorean ? '치주물루 다음 경기' : 'Chizumulu Next Match', text);
   }
 
@@ -3079,13 +3153,14 @@
     const iAmHome = isMyTeamName(m.homeEn, m.homeKo);
     const oppName = iAmHome ? (isKorean ? m.awayKo : m.awayEn) : (isKorean ? m.homeKo : m.homeEn);
     const haTxt = iAmHome ? (isKorean ? '홈' : 'Home') : (isKorean ? '원정' : 'Away');
+    const compTag = isKorean ? (m.compKo || 'NRFA') : (m.compEn || 'NRFA');
     const summary = isKorean
-      ? `[NRFA] 치주물루 유나이티드 FC vs ${oppName} (${haTxt})`
-      : `[NRFA] Chizumulu United FC vs ${oppName} (${haTxt})`;
+      ? `[${compTag}] 치주물루 유나이티드 FC vs ${oppName} (${haTxt})`
+      : `[${compTag}] Chizumulu United FC vs ${oppName} (${haTxt})`;
     const description = isKorean
       ? '치주물루 유나이티드 FC 팬사이트에서 등록한 일정입니다.'
       : 'Added from the Chizumulu United FC fan site.';
-    const uid = `chizumulu-${m.homeEn}-vs-${m.awayEn}`.replace(/\s+/g, '').toLowerCase();
+    const uid = `chizumulu-${m.compEn ? 'cup-' : ''}${m.homeEn}-vs-${m.awayEn}`.replace(/\s+/g, '').toLowerCase();
     const venue = getTeamVenue(m.homeEn, roundPos);
     const lines = [
       'BEGIN:VEVENT',
@@ -3124,13 +3199,15 @@
 
   function downloadNextMatchICS() {
     const info = getMyRankedTeam();
-    if (!info || !info.team.nextMatch || info.team.nextMatch.isBye) return;
-    const nm = info.team.nextMatch;
+    if (!info) return;
+    const nm = pickNextMatchesForStrip(info.team).primary;
+    if (!nm) return;
     const iAmHome = nm.homeAway === 'H';
     const ev = buildMatchVEvent({
       homeEn: iAmHome ? 'Chizumulu United FC' : nm.oppEn, homeKo: iAmHome ? '치주물루 유나이티드 FC' : nm.oppKo,
       awayEn: iAmHome ? nm.oppEn : 'Chizumulu United FC', awayKo: iAmHome ? nm.oppKo : '치주물루 유나이티드 FC',
-      kickoffDate: nm.kickoffDate, kickoffTime: nm.kickoffTime
+      kickoffDate: nm.kickoffDate, kickoffTime: nm.kickoffTime,
+      compKo: nm.comp === 'cup' ? nm.compKo : undefined, compEn: nm.comp === 'cup' ? nm.compEn : undefined
     });
     if (!ev) {
       showShareToast(isKorean ? '경기 일정을 아직 알 수 없어요' : 'Kickoff time not confirmed yet');
@@ -3157,6 +3234,14 @@
         const ev = buildMatchVEvent(m, pos);
         if (ev) events.push(ev); else undated++;
       });
+    });
+    // 컵대회(cupTournament) 예정 경기도 함께 담습니다. 데이터가 없으면 아무것도 추가되지 않습니다.
+    listMyCupFixtures().forEach(c => {
+      const ev = buildMatchVEvent({
+        homeEn: c.homeEn, homeKo: c.homeKo, awayEn: c.awayEn, awayKo: c.awayKo,
+        kickoffDate: c.kickoffDate, kickoffTime: c.kickoffTime, compKo: c.compKo, compEn: c.compEn
+      });
+      if (ev) events.push(ev); else undated++;
     });
     if (!events.length) {
       showShareToast(isKorean ? '캘린더에 담을 확정 일정이 아직 없어요' : 'No confirmed upcoming fixtures yet');
@@ -3327,6 +3412,7 @@
         const oppEn = isHome ? found.awayEn : found.homeEn;
         const oppKo = isHome ? found.awayKo : found.homeKo;
         out.push({
+          comp: 'league',
           oppEn, oppKo,
           oppLogo: getTeamLogo(oppEn),
           homeAway: isHome ? 'H' : 'A',
@@ -3336,7 +3422,16 @@
         });
       });
     });
-    return out;
+    // 컵대회(cupTournament) 예정 경기를 합치고, 대회 구분 없이 킥오프 순으로 정렬합니다.
+    // 컵 데이터가 없으면 위의 리그 목록을 그대로 돌려줍니다.
+    const cups = listMyCupFixtures();
+    if (!cups.length) return out;
+    cups.forEach(c => out.push({
+      comp: 'cup', oppEn: c.oppEn, oppKo: c.oppKo, oppLogo: c.oppLogo, homeAway: c.homeAway,
+      kickoffDate: c.kickoffDate, kickoffTime: c.kickoffTime, roundKey: null,
+      cupRoundKo: c.roundLabelKo, cupRoundEn: c.roundLabelEn
+    }));
+    return out.sort((x, y) => cupKickoffKey(x) < cupKickoffKey(y) ? -1 : cupKickoffKey(x) > cupKickoffKey(y) ? 1 : 0).slice(0, n);
   }
 
   function shortDateLabel(dateStr) {
@@ -3391,11 +3486,18 @@
         const oppName = homeMatchTeamName(m.oppEn, m.oppKo);
         const haClass = m.homeAway === 'H' ? 'home' : 'away';
         const haLabel = m.homeAway === 'H' ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A');
-        const weekNum = parseInt(String(m.roundKey).replace('round', ''), 10);
-        const weekTxt = isKorean ? `${wkKo(weekNum)}` : `${wkEn(weekNum, 'WK', '')}`;
+        const isCup = m.comp === 'cup';
+        const weekNum = isCup ? NaN : parseInt(String(m.roundKey).replace('round', ''), 10);
+        const weekTxt = isCup
+          ? (isKorean ? (m.cupRoundKo || '') : (m.cupRoundEn || ''))
+          : (isKorean ? `${wkKo(weekNum)}` : `${wkEn(weekNum, 'WK', '')}`);
+        // 경기 성격 배지: 홈/원정 오른쪽에 리그/컵을 표시합니다.
+        const compClass = isCup ? 'cup' : 'league';
+        const compLabel = isCup ? (isKorean ? '컵' : 'Cup') : (isKorean ? '리그' : 'League');
         // 누르면 두 팀의 '전적 비교' 상세 창이 열립니다. (홈/원정 순서는 실제 경기 기준)
+        // 컵 경기는 라운드 키가 없어서 상세 창 대신 클릭 없이 보여줍니다.
         let openAttrs = '';
-        if (myInfo) {
+        if (myInfo && !isCup) {
           const me = myInfo.team;
           const isH = m.homeAway === 'H';
           const hEn = isH ? me.nameEn : m.oppEn, hKo = isH ? me.nameKo : m.oppKo;
@@ -3406,12 +3508,12 @@
         }
         return `
           <div class="home-match-item${openAttrs}">
-            <img class="team-logo home-match-crest" src="${m.oppLogo}" alt="${m.oppEn}" title="${oppName}">
+            ${m.oppLogo ? `<img class="team-logo home-match-crest" src="${m.oppLogo}" alt="${m.oppEn}" title="${oppName}">` : `<span class="team-logo home-match-crest crest-fallback" title="${oppName}">${String(m.oppEn || '?').trim().charAt(0).toUpperCase()}</span>`}
             <span class="home-match-name" title="${oppName}">${oppName}</span>
-            <span class="home-match-ha ${haClass}">${haLabel}</span>
+            <span class="home-match-badges"><span class="home-match-ha ${haClass}">${haLabel}</span><span class="home-match-comp ${compClass}">${compLabel}</span></span>
             <span class="home-match-date">${weekTxt}</span>
           </div>`;
-      }).join('') || `<div class="home-match-empty lbl" data-en="No upcoming fixtures" data-ko="예정된 경기가 없습니다">${isKorean ? '예정된 경기가 없습니다' : 'No upcoming fixtures'}</div>`;
+      }).join('') || `<div class="home-match-empty lbl" data-en="Second-half league fixtures have not been announced yet." data-ko="후반기 리그 일정이 아직 발표되지 않았습니다.">${isKorean ? '후반기 리그 일정이 아직 발표되지 않았습니다.' : 'Second-half league fixtures have not been announced yet.'}</div>`;
       animateEntranceIn(upcomingEl, '.home-match-item');
     }
   }
@@ -5923,7 +6025,13 @@
             const scorerName = (scorerEv.players && scorerEv.players[0] && scorerEv.players[0].name) || '';
             // 골은 팀·분·선수별로 중복을 제거합니다. 골이 아닌 이벤트는
             // 종류·설명까지 키에 넣어 서로 다른 이벤트가 합쳐지지 않게 합니다.
-            let dedupeKey = `${(scorerEv.team || '').trim().toLowerCase()}|${scorerEv.minuteText || ''}|${scorerName.trim().toLowerCase()}`;
+            // 같은 골이 "49'"(속보)와 "49th-minute"(요약)처럼 다르게 적혀 들어오므로, 득점 시각은
+            // 숫자(+추가시간)만 뽑아 비교합니다. 숫자가 없으면 원문 그대로 비교합니다.
+            const goalMinuteKey = (txt) => {
+              const mm = String(txt || '').match(/(\d+)\s*(?:\+\s*(\d+))?/);
+              return mm ? (mm[2] ? `${mm[1]}+${mm[2]}` : mm[1]) : String(txt || '').trim();
+            };
+            let dedupeKey = `${(scorerEv.team || '').trim().toLowerCase()}|${goalMinuteKey(scorerEv.minuteText)}|${scorerName.trim().toLowerCase()}`;
             if (scorerEv.type !== 'goal') {
               const allNames = (Array.isArray(scorerEv.players) ? scorerEv.players : []).map(p => (p && p.name || '').trim().toLowerCase()).join(',');
               const descKey = String(scorerEv.description || scorerEv.text || scorerEv.detail || scorerEv.note || '').trim().toLowerCase();
@@ -5936,7 +6044,7 @@
               for (const [k, g] of goalMap) {
                 if (g.type !== 'goal') continue;
                 if ((g.team || '').trim().toLowerCase() !== myTeam) continue;
-                if ((g.minuteText || '') !== (scorerEv.minuteText || '')) continue;
+                if (goalMinuteKey(g.minuteText) !== goalMinuteKey(scorerEv.minuteText)) continue;
                 const gn = (g.players && g.players[0] && g.players[0].name) || '';
                 if (leagueSimilarScorerKeys(leagueScorerNameKey(gn), myKey)) { dedupeKey = k; break; }
               }
@@ -7444,50 +7552,6 @@
       }
       requestAnimationFrame(tick);
     });
-  }
-
-  function renderTeamSponsors() {
-    const el = document.getElementById('teamSponsorsCard');
-    if (!el) return;
-    if (typeof sponsorData === 'undefined') { el.innerHTML = ''; return; }
-
-    const main = (sponsorData.main || [])[0];
-    const kit = (sponsorData.kit || [])[0];
-    const general = sponsorData.general || [];
-
-    if (!main && !kit && !general.length) { el.innerHTML = ''; return; }
-
-    const mainHtml = main ? `
-      <div class="team-sponsor-block main">
-        <span class="team-sponsor-tag lbl" data-en="Main Sponsor" data-ko="메인 스폰서">${isKorean ? '메인 스폰서' : 'Main Sponsor'}</span>
-        <img class="team-sponsor-logo-img main" src="${main.logo}" alt="${main.name || (isKorean ? '메인 스폰서' : 'Main Sponsor')}" loading="lazy">
-        ${main.name ? `<span class="team-sponsor-name">${main.name}</span>` : ''}
-      </div>` : '';
-
-    const kitHtml = kit ? `
-      <div class="team-sponsor-block kit">
-        <span class="team-sponsor-tag lbl" data-en="Kit Sponsor" data-ko="키트 스폰서">${isKorean ? '키트 스폰서' : 'Kit Sponsor'}</span>
-        <img class="team-sponsor-logo-img kit" src="${kit.logo}" alt="${kit.name || (isKorean ? '키트 스폰서' : 'Kit Sponsor')}" loading="lazy">
-        ${kit.name ? `<span class="team-sponsor-name">${kit.name}</span>` : ''}
-      </div>` : '';
-
-    const generalHtml = general.length ? `
-      <div class="team-sponsor-general-section">
-        <div class="team-sponsor-general-label lbl" data-en="Sponsors" data-ko="일반 스폰서">${isKorean ? '일반 스폰서' : 'Sponsors'}</div>
-        <div class="team-sponsor-general-grid">
-          ${general.map(g => `<img class="team-sponsor-general-logo" src="${g.logo}" alt="${g.name || ''}" loading="lazy">`).join('')}
-        </div>
-      </div>` : '';
-
-    el.innerHTML = `
-      <div class="team-sponsors-title lbl" data-en="Sponsors" data-ko="스폰서">${isKorean ? '스폰서' : 'Sponsors'}</div>
-      <div class="team-sponsor-top-row">
-        ${mainHtml}
-        ${kitHtml}
-      </div>
-      ${generalHtml}
-    `;
-    attachImageFallback();
   }
 
   function renderTeamInfoView() {

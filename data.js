@@ -1586,15 +1586,15 @@ const scheduledRounds = {
   // 화면에는 "연기경기주차"로 표시되고(MAKEUP_ROUND_KEYS 참고), 정규 16주차 일정은 round17 키에 입력해주세요.
   //  - 치주물루 vs 루비리: 9주차에서 연기
   //  - 칠룸바 vs 치하메: 12주차에서 연기 (치하메 사유로 칠룸바의 3:0 몰수승 처리)
-  //  - 치주물루 vs 비전 S: 13주차에서 일정 변경
+  //  - 치주물루 vs 비전 S: 13주차에서 일정 변경 (비전 사유로 치주물루의 3:0 몰수승 처리)
   //  - 마푸 vs 칠룸바: 13주차에서 연기
   //  - 치하메 vs 친테체: 15주차에서 일정 변경
   round16: [
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-20", kickoffTime: "15:00", movedFromWeek: 9, homeScore: 4, awayScore: 0, scorersHome: "HARRY BARTON, TIMOTHY KATAPA (3골)", scorersAway: "없음" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-21", kickoffTime: "15:00", movedFromWeek: 12, homeScore: 3, awayScore: 0, forfeit: true },
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13, changed: true },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13, changed: true, homeScore: 3, awayScore: 0, forfeit: true },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-25", kickoffTime: "15:00", movedFromWeek: 13 },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 15, changed: true }
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 15, changed: true, homeScore: 1, awayScore: 0, scorersHome: "ACKIM KAMANGA", scorersAway: "없음" }
   ]
 };
 
@@ -2833,6 +2833,7 @@ const playerDirectory = {
   "JOMO PHIRI": { nameKo: "조모 피리", nameEn: "Jomo Phiri" },
   "ROBIN CHIOKO": { nameKo: "로빈 치오코", nameEn: "Robin Chioko" },
   "ACKIM GOMIRE": { nameKo: "아킴 고미레", nameEn: "Ackim Gomire" },
+  "ACKIM KAMANGA": { nameKo: "아킴 카망가", nameEn: "Ackim Kamanga" },
   "BABA NKHOMA": { nameKo: "바바 은코마", nameEn: "Baba Nkhoma" },
   "DANIEL CHISOKWE": { nameKo: "다니엘 치소크웨", nameEn: "Daniel Chisokwe" },
   "KINGSLEY MVULA": { nameKo: "킹슬리 음불라", nameEn: "Kingsley Mvula" },

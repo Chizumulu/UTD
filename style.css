@@ -4650,131 +4650,6 @@
       font-size: var(--fs-xs);
     }
   }
-  /* ===== 스폰서 카드 (팀 표어 배너 바로 아래, 유니폼 카드 위) ===== */
-  .team-sponsors-card {
-    background: var(--color-surface);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--card-shadow);
-    padding: var(--card-padding);
-    margin: 0 0 14px;
-    transition: var(--theme-transition);
-  }
-  .team-sponsors-title {
-    font-size: 13px;
-    font-weight: 800;
-    color: var(--color-teal-dark);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 12px;
-  }
-  .team-sponsor-top-row {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .team-sponsor-block {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    text-align: center;
-    border-radius: var(--radius-lg);
-    background: var(--color-bg-table-alt);
-    padding: 8px 14px;
-  }
-  .team-sponsor-logo-img {
-    display: block;
-    width: auto;
-    object-fit: contain;
-  }
-  .team-sponsor-logo-img.main {
-    height: 72px;
-    max-width: 220px;
-  }
-  .team-sponsor-logo-img.kit {
-    height: 58px;
-    max-width: 190px;
-  }
-  .team-sponsor-text {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 0;
-  }
-  .team-sponsor-tag {
-    font-size: var(--fs-2xs);
-    font-weight: 800;
-    letter-spacing: 0.3px;
-  }
-  .team-sponsor-block.main .team-sponsor-tag {
-    color: var(--color-gold-strong);
-  }
-  .team-sponsor-block.kit .team-sponsor-tag {
-    color: var(--color-teal-dark);
-  }
-  .team-sponsor-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--color-text-darkest);
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .team-sponsor-block.kit .team-sponsor-name {
-    font-size: 13px;
-  }
-  .team-sponsor-general-section {
-    margin-top: 10px;
-  }
-  .team-sponsor-general-label {
-    font-size: var(--fs-2xs);
-    font-weight: 800;
-    color: var(--color-text-faint);
-    letter-spacing: 0.3px;
-    margin: 0 0 8px;
-  }
-  .team-sponsor-general-grid {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    flex-wrap: wrap;
-  }
-  .team-sponsor-general-logo {
-    display: block;
-    height: 32px;
-    width: auto;
-    max-width: 110px;
-    object-fit: contain;
-  }
-  @media (max-width: 600px) {
-    .team-sponsor-logo-img.main {
-      height: 52px;
-      max-width: 150px;
-    }
-    .team-sponsor-logo-img.kit {
-      height: 42px;
-      max-width: 130px;
-    }
-    .team-sponsor-name {
-      font-size: 12px;
-    }
-    .team-sponsor-general-logo {
-      height: 26px;
-      max-width: 90px;
-    }
-  }
-  @media (min-width: 721px) {
-    .team-sponsor-top-row {
-      flex-direction: row;
-      gap: 14px;
-    }
-    .team-sponsor-block {
-      flex: 1 1 0;
-    }
-  }
-
   /* ===== 26/27 시즌 유니폼 카드 (팀 표어 배너 바로 아래) ===== */
   .team-kits-card {
     background: var(--color-surface);
@@ -10450,6 +10325,32 @@
   border-top: 1px solid var(--color-border-light);
   flex-wrap: wrap;
 }
+.nmh-also {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+.nmh-also-tag {
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.nmh-also-text { font-weight: 500; }
+.nmh-crest-fallback.team-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-border-light);
+  color: var(--color-text-faint);
+  font-weight: 800;
+  font-size: 16px;
+}
+
 .nmh-bye {
   font-size: 13.5px;
   font-weight: 600;
@@ -10654,6 +10555,31 @@
 }
 .home-match-ha.home { background: rgba(var(--color-teal-rgb),.12); color: var(--color-teal-dark); }
 .home-match-ha.away { background: rgba(var(--color-navy-rgb),.1); color: var(--color-navy); }
+.home-match-badges {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.home-match-comp {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+}
+.home-match-comp.league { background: rgba(120,130,150,.14); color: var(--color-text-faint); }
+.home-match-comp.cup { background: rgba(214,158,46,.18); color: #9a6a0c; }
+.home-match-crest.crest-fallback.team-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-border-light);
+  color: var(--color-text-faint);
+  font-weight: 800;
+  font-size: 13px;
+}
 .home-match-date {
   font-size: var(--fs-xs);
   color: var(--color-text-faint);
