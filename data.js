@@ -557,22 +557,6 @@ const teamStory = {
   ]
 };
 
-// ===== 스폰서 정보 (메인 / 키트 / 일반) =====
-const sponsorData = {
-  main: [
-    { name: "", logo: "./스폰서2.webp" }
-  ],
-  kit: [
-    { name: "", logo: "./스폰서1.webp" }
-  ],
-  general: [
-    { name: "", logo: "./스폰서3.png" },
-    { name: "", logo: "./스폰서4.webp" },
-    { name: "", logo: "./스폰서5.png" },
-    { name: "", logo: "./스폰서6.png" }
-  ]
-};
-
 // ===== 26/27 시즌 유니폼 이미지 =====
 const kitData = {
   home:   "./2627홈.webp",
@@ -1598,7 +1582,7 @@ const upcomingMatchHistory = {
 const scheduledRounds = {
   // 15주차는 전체 라운드가 종료되어 roundsData.round15로 옮겨졌습니다.
   // (치하메 vs 친테체는 연기경기주차로 이동 — 아래 round16 참고)
-  // ── 연기경기주차 (정규 15주차와 정규 16주차 사이, 10월 20일~24일) ──
+  // ── 연기경기주차 (정규 15주차와 정규 16주차 사이, 10월 20일~25일) ──
   // 화면에는 "연기경기주차"로 표시되고(MAKEUP_ROUND_KEYS 참고), 정규 16주차 일정은 round17 키에 입력해주세요.
   //  - 치주물루 vs 루비리: 9주차에서 연기
   //  - 칠룸바 vs 치하메: 12주차에서 연기 (치하메 사유로 칠룸바의 3:0 몰수승 처리)
@@ -1609,7 +1593,7 @@ const scheduledRounds = {
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-20", kickoffTime: "15:00", movedFromWeek: 9, homeScore: 4, awayScore: 0, scorersHome: "HARRY BARTON, TIMOTHY KATAPA (3골)", scorersAway: "없음" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-21", kickoffTime: "15:00", movedFromWeek: 12, homeScore: 3, awayScore: 0, forfeit: true },
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13, changed: true },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13 },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-25", kickoffTime: "15:00", movedFromWeek: 13 },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 15, changed: true }
   ]
 };
@@ -2863,7 +2847,6 @@ const playerDirectory = {
   "ESSAU DOBIE": { nameKo: "에사우 도비", nameEn: "Essau Dobie" },
   "BENJAMIN MAPUNDA": { nameKo: "벤자민 마푼다", nameEn: "Benjamin Mapunda" },
   "MPHATSO KUMWENDA": { nameKo: "음파초 쿰웬다", nameEn: "Mphatso Kumwenda" },
-  "DANIEL CHISOKWE": { nameKo: "다니엘 치소크웨", nameEn: "Daniel Chisokwe" },
   "KENNEDY SEME": { nameKo: "케네디 세메", nameEn: "Kennedy Seme" },
   "GUMBIKANI BANDA": { nameKo: "감비카니 반다", nameEn: "Gumbikani Banda" },
   "CHIKONDI SAKA": { nameKo: "치콘디 사카", nameEn: "Chikondi Saka" },
@@ -2915,7 +2898,6 @@ const playerDirectory = {
   "BENJAMIN NYIRENDA": { nameKo: "벤자민 니렌다", nameEn: "Benjamin Nyirenda" },
   "JAMES HERMES": { nameKo: "제임스 헤르메스", nameEn: "James Hermes" },
   "KUMBUKANI BANYA": { nameKo: "쿰부카니 바냐", nameEn: "Kumbukani Banya" },
-  "BABA NKHOMA": { nameKo: "바바 은코마", nameEn: "Baba Nkhoma" },
   "SAMANI NYIRENDA": { nameKo: "사마니 니렌다", nameEn: "Samani Nyirenda" },
   "TAIMON GOMEKA": { nameKo: "타이몬 고메카", nameEn: "Taimon Gomeka" },
   "FRANK MWALE": { nameKo: "프랭크 므왈레", nameEn: "Frank Mwale" },
