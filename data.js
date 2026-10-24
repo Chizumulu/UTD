@@ -436,8 +436,8 @@ const matchLineups = {
     opponentKo: "루비리 FC",
     result: "4 : 0 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["35'", "45+3'", "53'"], assists: [11, null, null] },
-      { pos: "LW", number: 11, nameKo: "해리 바튼", goals: ["3'"], assists: [null], outMin: "후반" },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["35'", "45+3'", "53'"], assists: [11, 11, 7] },
+      { pos: "LW", number: 11, nameKo: "해리 바튼", goals: ["3'"], assists: [22], outMin: "후반" },
       { pos: "CAM", number: 7, nameKo: "디킨스 니렌다", outMin: "후반" },
       { pos: "RW", number: 6, nameKo: "벤자민 니렌다", outMin: "후반" },
       { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
