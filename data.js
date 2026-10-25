@@ -1551,6 +1551,35 @@ const matchDetails = {
     { match: "젠다 3 : 치폴로폴로 2", scorersHome: "WYSON NYIRENDA (3골)", scorersAway: "TYSON KAUNDA, ZIKANI KASAMBALA" },
     { match: "마푸 5 : 비전 1", scorersHome: "NORMAN NDLOVU (4골), PRECIOUS MWANZA", scorersAway: "BENJAMIN KALINGA" },
     { match: "루베 0 : 칠룸바 0", scorersHome: "없음", scorersAway: "없음" }
+  ],
+  // 연기경기주차(round16)도 전체 경기가 종료되어 roundsData.round16으로 옮겨졌으므로 matchDetails.round16을 추가했습니다.
+  // (칠룸바 vs 치하메, 치주물루 vs 비전, 마푸 vs 칠룸바는 몰수승이라 득점자는 "없음"입니다. 순서는 roundsData.round16과 같습니다.)
+  round16: [
+    {
+      match: "치주물루 4 : 루비리 0",
+      scorersHome: "HARRY BARTON, TIMOTHY KATAPA (3골)",
+      scorersAway: "없음"
+    },
+    {
+      match: "칠룸바 3 : 치하메 0",
+      scorersHome: "없음",
+      scorersAway: "없음"
+    },
+    {
+      match: "치주물루 3 : 비전 0",
+      scorersHome: "없음",
+      scorersAway: "없음"
+    },
+    {
+      match: "마푸 3 : 칠룸바 0",
+      scorersHome: "없음",
+      scorersAway: "없음"
+    },
+    {
+      match: "치하메 1 : 친테체 0",
+      scorersHome: "ACKIM KAMANGA",
+      scorersAway: "없음"
+    }
   ]
 };
 
@@ -1581,21 +1610,9 @@ const upcomingMatchHistory = {
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
 const scheduledRounds = {
   // 15주차는 전체 라운드가 종료되어 roundsData.round15로 옮겨졌습니다.
-  // (치하메 vs 친테체는 연기경기주차로 이동 — 아래 round16 참고)
-  // ── 연기경기주차 (정규 15주차와 정규 16주차 사이, 10월 20일~25일) ──
-  // 화면에는 "연기경기주차"로 표시되고(MAKEUP_ROUND_KEYS 참고), 정규 16주차 일정은 round17 키에 입력해주세요.
-  //  - 치주물루 vs 루비리: 9주차에서 연기
-  //  - 칠룸바 vs 치하메: 12주차에서 연기 (치하메 사유로 칠룸바의 3:0 몰수승 처리)
-  //  - 치주물루 vs 비전 S: 13주차에서 일정 변경 (비전 사유로 치주물루의 3:0 몰수승 처리)
-  //  - 마푸 vs 칠룸바: 13주차에서 연기
-  //  - 치하메 vs 친테체: 15주차에서 일정 변경
-  round16: [
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-20", kickoffTime: "15:00", movedFromWeek: 9, homeScore: 4, awayScore: 0, scorersHome: "HARRY BARTON, TIMOTHY KATAPA (3골)", scorersAway: "없음" },
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-21", kickoffTime: "15:00", movedFromWeek: 12, homeScore: 3, awayScore: 0, forfeit: true },
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13, changed: true, homeScore: 3, awayScore: 0, forfeit: true },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-25", kickoffTime: "15:00", movedFromWeek: 13 },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 15, changed: true, homeScore: 1, awayScore: 0, scorersHome: "ACKIM KAMANGA", scorersAway: "없음" }
-  ]
+  // (치하메 vs 친테체는 연기경기주차로 이동 — roundsData.round16 참고)
+  // 연기경기주차(round16)는 모든 경기가 끝나 roundsData.round16으로 옮겨졌습니다.
+  // 정규 16주차 일정은 round17 키에 입력해주세요.
 };
 
 
@@ -1816,6 +1833,20 @@ const roundsData = {
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", postponed: true, movedToWeek: 16, changed: true },
     // 치주물루 유나이티드 FC는 15주차 휴식(bye)입니다.
     { byeKo: "치주물루 유나이티드 FC", byeEn: "Chizumulu United FC" }
+  ],
+  // ── 연기경기주차 (정규 15주차와 정규 16주차 사이, 10월 20일~25일) — 전 경기 종료, scheduledRounds에서 옮겨옴 ──
+  // 화면에는 "연기경기주차"로 표시되고(MAKEUP_ROUND_KEYS 참고), 정규 16주차 일정은 round17 키에 입력해주세요.
+  //  - 치주물루 vs 루비리: 9주차에서 연기
+  //  - 칠룸바 vs 치하메: 12주차에서 연기 (치하메 사유로 칠룸바의 3:0 몰수승 처리)
+  //  - 치주물루 vs 비전 S: 13주차에서 일정 변경 (비전 사유로 치주물루의 3:0 몰수승 처리)
+  //  - 마푸 vs 칠룸바: 13주차에서 연기
+  //  - 치하메 vs 친테체: 15주차에서 일정 변경
+  round16: [
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-20", kickoffTime: "15:00", movedFromWeek: 9, homeScore: 4, awayScore: 0, scorersHome: "HARRY BARTON, TIMOTHY KATAPA (3골)", scorersAway: "없음" },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-21", kickoffTime: "15:00", movedFromWeek: 12, homeScore: 3, awayScore: 0, forfeit: true },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13, changed: true, homeScore: 3, awayScore: 0, forfeit: true },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-25", kickoffTime: "15:00", movedFromWeek: 13, homeScore: 3, awayScore: 0, forfeit: true },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 15, changed: true, homeScore: 1, awayScore: 0, scorersHome: "ACKIM KAMANGA", scorersAway: "없음" }
   ]
 };
 
@@ -2895,6 +2926,7 @@ const playerDirectory = {
   "DUNCAN MPOHA": { nameKo: "던컨 음포하", nameEn: "Duncan Mpoha" },
   "HARRY BARTON": { nameKo: "해리 바튼", nameEn: "Harry Barton" },
   "TIMOTHY KATAPA": { nameKo: "티모시 카타파", nameEn: "Timothy Katapa" },
+  "STEVE PHIRI": { nameKo: "스티브 피리", nameEn: "Steve Phiri" }, // squadData 의 aliasesEn("Steven Phiri")이 nameAliases 로 합쳐지면 이 키로 조회됩니다
   "STEVEN PHIRI": { nameKo: "스티브 피리", nameEn: "Steve Phiri" },
   "BENJAMIN NYIRENDA": { nameKo: "벤자민 니렌다", nameEn: "Benjamin Nyirenda" },
   "JAMES HERMES": { nameKo: "제임스 헤르메스", nameEn: "James Hermes" },
