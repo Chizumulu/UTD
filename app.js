@@ -3194,7 +3194,9 @@
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // 사파리(특히 iOS)는 클릭 직후 바로 revoke하면 다운로드/캘린더 추가 창이 취소되는 경우가 있어
+    // 잠깐 뒤에 해제합니다. (아래 PNG 저장 함수들과 같은 방식)
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
   function downloadNextMatchICS() {
