@@ -19,6 +19,8 @@
     return true;
   }
   let isKorean = getInitialLangIsKorean();
+  function syncLangAttr() { document.documentElement.setAttribute('data-lang', isKorean ? 'ko' : 'en'); }
+  syncLangAttr();
   let currentView = 'rank';
   let currentTeamInfoTab = 'overview';
   let statsData = {};
@@ -17332,6 +17334,7 @@
   // ===== 언어 전환 (Language Toggle) =====
   function toggleLang() {
     isKorean = !isKorean;
+    syncLangAttr();
     document.querySelectorAll('.lbl').forEach(el => {
       el.innerHTML = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');
     });

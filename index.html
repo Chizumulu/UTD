@@ -23,7 +23,7 @@
   window.ASSET_VERSIONS = {
     style: '003',
     data: '002',
-    app: '002',
+    app: '003',
     archive: '200',
     predictWorker: '200',
     pathfinderEngine: '200',
@@ -472,64 +472,64 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <div class="scroll-fade-wrap" id="viewToggleFade">
   <nav class="view-toggle-wrap" id="viewToggleWrap">
-    <button type="button" class="view-toggle-btn archive-nav-btn" id="archiveNavMain" data-en="MAIN" data-ko="메인" onclick="setArchiveTab('main')">
+    <button type="button" class="view-toggle-btn archive-nav-btn" id="archiveNavMain" data-en="Main" data-ko="메인" onclick="setArchiveTab('main')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 9.5V19C6 19.552 6.448 20 7 20H17C17.552 20 18 19.552 18 19V9.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="lbl" data-en="MAIN" data-ko="메인">메인</span>
+      <span class="lbl" data-en="Main" data-ko="메인">메인</span>
     </button>
-    <button type="button" class="view-toggle-btn archive-nav-btn" id="archiveNavWeekly" data-en="WEEKLY STANDINGS" data-ko="주별순위" onclick="setArchiveTab('weekly')">
+    <button type="button" class="view-toggle-btn archive-nav-btn" id="archiveNavWeekly" data-en="Weekly Standings" data-ko="주별순위" onclick="setArchiveTab('weekly')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-      <span class="lbl" data-en="WEEKLY STANDINGS" data-ko="주별순위">주별순위</span>
+      <span class="lbl" data-en="Weekly Standings" data-ko="주별순위">주별순위</span>
     </button>
-    <button type="button" class="view-toggle-btn archive-nav-btn" id="archiveNavClubs" data-en="CLUB INFO" data-ko="구단정보" onclick="setArchiveTab('clubs')">
+    <button type="button" class="view-toggle-btn archive-nav-btn" id="archiveNavClubs" data-en="Club Info" data-ko="구단정보" onclick="setArchiveTab('clubs')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.7"/><path d="M4.5 20c1.3-4 4-6 7.5-6s6.2 2 7.5 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <span class="lbl" data-en="CLUB INFO" data-ko="구단정보">구단정보</span>
+      <span class="lbl" data-en="Club Info" data-ko="구단정보">구단정보</span>
     </button>
-    <button class="view-toggle-btn active" id="viewRankBtn" data-en="MAIN" data-ko="메인" onclick="showView('rank')">
+    <button class="view-toggle-btn active" id="viewRankBtn" data-en="Main" data-ko="메인" onclick="showView('rank')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 9.5V19C6 19.552 6.448 20 7 20H17C17.552 20 18 19.552 18 19V9.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="lbl" data-en="MAIN" data-ko="메인">메인</span>
+      <span class="lbl" data-en="Main" data-ko="메인">메인</span>
     </button>
-    <button class="view-toggle-btn" id="viewLeagueRankBtn" data-en="LEAGUE RANKING" data-ko="리그 순위" onclick="showView('leagueRank')">
+    <button class="view-toggle-btn" id="viewLeagueRankBtn" data-en="League Ranking" data-ko="리그 순위" onclick="showView('leagueRank')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-      <span class="lbl" data-en="LEAGUE RANKING" data-ko="리그 순위">리그 순위</span>
+      <span class="lbl" data-en="League Ranking" data-ko="리그 순위">리그 순위</span>
     </button>
-    <button class="view-toggle-btn" id="viewRoundsBtn" data-en="LEAGUE SCHEDULE" data-ko="리그 일정" onclick="showView('rounds')">
+    <button class="view-toggle-btn" id="viewRoundsBtn" data-en="League Schedule" data-ko="리그 일정" onclick="showView('rounds')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="M3 9h18M8 2v5M16 2v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <span class="lbl" data-en="LEAGUE SCHEDULE" data-ko="리그 일정">리그 일정</span>
+      <span class="lbl" data-en="League Schedule" data-ko="리그 일정">리그 일정</span>
     </button>
-    <button class="view-toggle-btn" id="viewStatsBtn" data-en="LEAGUE RECORDS" data-ko="리그 기록" onclick="showView('stats')">
+    <button class="view-toggle-btn" id="viewStatsBtn" data-en="League Records" data-ko="리그 기록" onclick="showView('stats')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 3l2.6 5.8 6.4.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20l1.4-6.3L3 9.4l6.4-.6L12 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-      <span class="lbl" data-en="LEAGUE RECORDS" data-ko="리그 기록">리그 기록</span>
+      <span class="lbl" data-en="League Records" data-ko="리그 기록">리그 기록</span>
     </button>
-    <button class="view-toggle-btn" id="viewPredictBtn" data-en="MATCH PROJECTIONS" data-ko="리그 예측" onclick="showView('predict')">
+    <button class="view-toggle-btn" id="viewPredictBtn" data-en="Match Projections" data-ko="리그 예측" onclick="showView('predict')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l10-2v13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18.5" r="2.3" stroke="currentColor" stroke-width="1.7"/><circle cx="16.5" cy="16.5" r="2.3" stroke="currentColor" stroke-width="1.7"/></svg>
-      <span class="lbl view-toggle-label-full" data-en="MATCH PROJECTIONS" data-ko="리그 예측">리그 예측</span>
-      <span class="lbl view-toggle-label-short" data-en="PREDICT" data-ko="리그 예측">리그 예측</span>
+      <span class="lbl view-toggle-label-full" data-en="Match Projections" data-ko="리그 예측">리그 예측</span>
+      <span class="lbl view-toggle-label-short" data-en="Predict" data-ko="리그 예측">리그 예측</span>
     </button>
-    <button class="view-toggle-btn" id="viewScorersBtn" data-en="TOP SCORERS" data-ko="득점 순위" onclick="showView('scorers')">
+    <button class="view-toggle-btn" id="viewScorersBtn" data-en="Top Scorers" data-ko="득점 순위" onclick="showView('scorers')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <span class="lbl" data-en="TOP SCORERS" data-ko="득점 순위">득점 순위</span>
+      <span class="lbl" data-en="Top Scorers" data-ko="득점 순위">득점 순위</span>
     </button>
-    <button class="view-toggle-btn" id="viewTeamCompareBtn" data-en="TEAM COMPARE" data-ko="팀 비교" onclick="showView('teamCompare')">
+    <button class="view-toggle-btn" id="viewTeamCompareBtn" data-en="Team Compare" data-ko="팀 비교" onclick="showView('teamCompare')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M8 4v16M16 4v16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M4.5 8L8 4.5L11.5 8M12.5 16L16 19.5L19.5 16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="lbl" data-en="TEAM COMPARE" data-ko="팀 비교">팀 비교</span>
+      <span class="lbl" data-en="Team Compare" data-ko="팀 비교">팀 비교</span>
     </button>
-    <button class="view-toggle-btn" id="viewSquadBtn" data-en="CLUB INFO" data-ko="구단 정보" onclick="showView('squad')">
+    <button class="view-toggle-btn" id="viewSquadBtn" data-en="Club Info" data-ko="구단 정보" onclick="showView('squad')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.7"/><path d="M4.5 20c1.3-4 4-6 7.5-6s6.2 2 7.5 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <span class="lbl" data-en="CLUB INFO" data-ko="구단 정보">구단 정보</span>
+      <span class="lbl" data-en="Club Info" data-ko="구단 정보">구단 정보</span>
     </button>
-    <button class="view-toggle-btn" id="viewVenuesBtn" data-en="CLUB VENUES" data-ko="구단 위치" onclick="showView('venues')">
+    <button class="view-toggle-btn" id="viewVenuesBtn" data-en="Club Venues" data-ko="구단 위치" onclick="showView('venues')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 21s-6.5-5.6-8.6-9.4C1.6 8.2 3.4 4.7 6.9 4.7c2 0 3.4 1.1 5.1 3 1.7-1.9 3.1-3 5.1-3 3.5 0 5.3 3.5 3.5 6.9C18.5 15.4 12 21 12 21z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-      <span class="lbl" data-en="CLUB VENUES" data-ko="구단 위치">구단 위치</span>
+      <span class="lbl" data-en="Club Venues" data-ko="구단 위치">구단 위치</span>
     </button>
-    <button class="view-toggle-btn" id="viewReportBtn" data-en="WEEKLY REPORT" data-ko="주차별 리포트" onclick="showView('report')">
+    <button class="view-toggle-btn" id="viewReportBtn" data-en="Weekly Report" data-ko="주차별 리포트" onclick="showView('report')">
       <svg class="side-nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 5h16M4 12h10M4 19h13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <span class="lbl view-toggle-label-full" data-en="WEEKLY REPORT" data-ko="주차별 리포트">주차별 리포트</span>
-      <span class="lbl view-toggle-label-short" data-en="REPORT" data-ko="리포트">리포트</span>
+      <span class="lbl view-toggle-label-full" data-en="Weekly Report" data-ko="주차별 리포트">주차별 리포트</span>
+      <span class="lbl view-toggle-label-short" data-en="Report" data-ko="리포트">리포트</span>
     </button>
     <span class="view-toggle-sep"></span>
     <a class="view-toggle-btn view-toggle-community" href="https://gall.dcinside.com/mgallery/board/lists/?id=chizumuluunitedfc" target="_blank" rel="noopener noreferrer">
       <svg class="view-toggle-community-icon side-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 14L20 4M20 4H14M20 4V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 13V18C18 19.105 17.105 20 16 20H6C4.895 20 4 19.105 4 18V8C4 6.895 4.895 6 6 6H11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="lbl" data-en="COMMUNITY" data-ko="커뮤니티">커뮤니티</span>
+      <span class="lbl" data-en="Community" data-ko="커뮤니티">커뮤니티</span>
     </a>
   </nav>
   </div>

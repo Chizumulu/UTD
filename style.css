@@ -14092,19 +14092,17 @@ summary.ti-bye-flow-toggle,
 
 
 /* ============================================================
-   [수정] 모바일 헤더: 리그/컵대회 전환 시 제목 줄바꿈 차이 방지
-   - 원인: 토글 라벨이 "컵대회"(리그 화면)일 때 "리그"(컵 화면)보다 넓어서
-           flex 한 줄에서 제목 영역이 좁아져 줄바꿈이 발생
-   - 해결: ① 제목 줄은 줄바꿈 금지 ② 토글 너비를 고정해 두 상태가 같은 폭
-           ③ 토글/주차 배지 여백을 살짝 줄여 제목이 들어갈 자리를 확보
+   [수정] 모바일 헤더: 리그/컵대회 전환 + 영문 모드에서 겹침 방지
+   - 원인 1: 토글 라벨이 "컵대회"(리그 화면)일 때 "리그"(컵 화면)보다 넓어
+             제목 영역이 좁아져 줄바꿈 발생
+   - 원인 2: 영문은 대문자 라벨이 한글보다 훨씬 넓어 제목/메뉴/하단 버튼이 넘침
+   - html[data-lang="en"]은 app.js의 syncLangAttr()가 붙입니다.
    ============================================================ */
 @media (max-width: 880px) {
+  /* 공통: 토글 폭 고정(두 상태 동일), 여백 축소 */
   .side-crest-text { flex: 0 1 auto; min-width: 0; }
-  .side-crest-text h1 .sponsor-line,
-  .side-crest-text h1 .main-line { white-space: nowrap; }
-
   .cup-toggle-mobile {
-    min-width: 76px;            /* "컵대회" / "리그" 어느 쪽이든 같은 폭 */
+    min-width: 76px;
     justify-content: center;
     padding: 7px 9px;
     gap: 4px;
@@ -14112,10 +14110,50 @@ summary.ti-bye-flow-toggle,
   }
   .side-crest-row { gap: 8px; }
   .side-week-badge { padding-left: 10px; padding-right: 8px; }
+
+  /* 한글: 제목 두 줄 모두 한 줄 유지 */
+  html[data-lang="ko"] .side-crest-text h1 .sponsor-line,
+  html[data-lang="ko"] .side-crest-text h1 .main-line { white-space: nowrap; }
+
+  /* ---------- 영문 전용 ---------- */
+  /* 제목: 폰트/자간을 줄여 토글과 겹치지 않게 (필요하면 줄바꿈 허용) */
+  html[data-lang="en"] .side-crest-text h1 .sponsor-line {
+    font-size: 10px; letter-spacing: -0.2px; white-space: nowrap;
+  }
+  html[data-lang="en"] .side-crest-text h1 .main-line {
+    font-size: 13.5px; letter-spacing: -0.3px; white-space: nowrap;
+  }
+  /* 토글: 영문에서는 아이콘을 빼고 글자만 (폭 절약) */
+  html[data-lang="en"] .cup-toggle-mobile { min-width: 0; padding: 7px 10px; }
+  html[data-lang="en"] .cup-toggle-icon { display: none; }
+  /* 주차 배지: "MU"/"WK" 폭 줄이기 */
+  html[data-lang="en"] .side-week-badge { padding-left: 8px; padding-right: 6px; }
+  html[data-lang="en"] .side-week-badge-num { font-size: 24px; }
+
+  /* 메뉴 타일: 고정 높이 대신 내용만큼, 글자 작게 */
+  html[data-lang="en"] .view-toggle-btn,
+  html[data-lang="en"] .view-toggle-community {
+    aspect-ratio: auto;
+    min-height: 58px;
+    padding: 6px 2px;
+    font-size: 11px;
+    letter-spacing: -0.1px;
+    line-height: 1.15;
+    overflow: visible;
+    word-break: keep-all;
+  }
+  html[data-lang="en"] .view-toggle-btn .side-nav-icon { width: 16px; height: 16px; }
+
+  /* 하단 버튼 줄: "한국어로 보기"가 줄바꿈되지 않게 */
+  html[data-lang="en"] .app-sidebar .side-controls { gap: 5px; }
+  html[data-lang="en"] .side-community-btn { padding-left: 10px; padding-right: 10px; gap: 5px; font-size: 12.5px; white-space: nowrap; }
+  html[data-lang="en"] .lang-btn { padding-left: 8px; padding-right: 8px; gap: 5px; font-size: 12.5px; white-space: nowrap; }
+  html[data-lang="en"] .lang-btn #langBtnText { white-space: nowrap; }
 }
 @media (max-width: 380px) {
-  .cup-toggle-mobile { min-width: 0; padding: 7px 8px; }
-  .cup-toggle-icon { display: none; }   /* 아주 좁은 화면에서는 아이콘을 빼서 공간 확보 */
-  .side-crest-text h1 .sponsor-line { font-size: 10.5px; }
-  .side-crest-text h1 .main-line { font-size: 14.5px; }
+  html[data-lang="ko"] .cup-toggle-mobile { min-width: 0; padding: 7px 8px; }
+  html[data-lang="ko"] .cup-toggle-icon { display: none; }
+  html[data-lang="ko"] .side-crest-text h1 .sponsor-line { font-size: 10.5px; }
+  html[data-lang="ko"] .side-crest-text h1 .main-line { font-size: 14.5px; }
+  html[data-lang="en"] .side-crest-text h1 .main-line { font-size: 12.5px; }
 }
