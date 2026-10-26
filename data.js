@@ -2430,7 +2430,8 @@ function computeFormGuide(nameEn, nameKo) {
         homeAway: isHome ? 'H' : 'A',
         oppKo: isHome ? m.awayKo : m.homeKo,
         oppEn: isHome ? m.awayEn : m.homeEn,
-        myGoals, oppGoals
+        myGoals, oppGoals,
+        forfeit: !!m.forfeit
       });
     });
   });

@@ -3398,6 +3398,16 @@
   }
 
   // ===== 홈: 최근 5경기 / 예정 5경기 미니 카드 =====
+  // 경기 상세보기(라인업)·하이라이트는 라운드 키(roundN) 하나에 하나씩만 저장돼 있습니다.
+  // 한 라운드에 우리 경기가 둘 이상(예: 연기경기주차의 루비리전 + 비전 S전)이면 다른 경기를 눌러도
+  // 같은 라인업이 열리므로, ① 몰수 경기는 열지 않고 ② 라인업의 상대팀과 이 경기의 상대팀이 같을 때만 엽니다.
+  function isMatchDetailAvailable(roundKey, oppKo, forfeit) {
+    if (forfeit) return false;
+    if (typeof matchLineups === 'undefined' || !matchLineups[roundKey]) return false;
+    const lu = matchLineups[roundKey];
+    return !oppKo || !lu.opponentKo || lu.opponentKo === oppKo;
+  }
+
   function getMyRecentMatches(n) {
     const info = getMyRankedTeam();
     if (!info) return [];
@@ -3412,7 +3422,8 @@
       roundKey: m.roundKey,
       myGoals: m.myGoals,
       oppGoals: m.oppGoals,
-      result: m.result
+      result: m.result,
+      forfeit: m.forfeit
     }));
   }
 
@@ -3490,7 +3501,7 @@
         const weekTxt = isKorean ? `${wkKo(m.weekNum)}` : `${wkEn(m.weekNum, 'WK', '')}`;
         // 라인업 기록(matchLineups)이 있는 경기만 눌러서 경기 상세보기를 열 수 있습니다.
         // (경기 결과 탭의 '상세보기' 버튼과 같은 조건)
-        const canOpen = !!(m.roundKey && typeof matchLineups !== 'undefined' && matchLineups[m.roundKey]);
+        const canOpen = !!(m.roundKey && isMatchDetailAvailable(m.roundKey, m.oppKo, m.forfeit));
         const detailHint = isKorean ? '경기 상세보기' : 'Match details';
         const openAttrs = canOpen
           ? ` is-clickable" role="button" tabindex="0" title="${detailHint}" aria-label="${oppName} ${m.myGoals}-${m.oppGoals} ${detailHint}" onclick="openMatchDetail('${m.roundKey}', ${roundKeyPos(m.roundKey)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMatchDetail('${m.roundKey}', ${roundKeyPos(m.roundKey)});}`
@@ -6926,7 +6937,15 @@
       const teamMatches = matches.filter(m => !m.isBye && (
         (m.homeEn === teamEn || m.homeKo === teamKo) ||
         (m.awayEn === teamEn || m.awayKo === teamKo)
-      )).sort((a, b) => (a.isScheduled ? 1 : 0) - (b.isScheduled ? 1 : 0));
+      )).sort((a, b) => {
+        const sa = a.isScheduled ? 1 : 0, sb = b.isScheduled ? 1 : 0;
+        if (sa !== sb) return sa - sb;                 // 끝난 경기가 위, 연기/예정 경기가 아래
+        if (sa || !a.kickoffDate || !b.kickoffDate) return 0;
+        // 끝난 경기끼리는 최신 경기가 위로 오도록 킥오프 날짜·시간 내림차순 (이 목록은 최신 주차가 위)
+        const ka = a.kickoffDate + ' ' + (a.kickoffTime || '00:00');
+        const kb = b.kickoffDate + ' ' + (b.kickoffTime || '00:00');
+        return ka < kb ? 1 : (ka > kb ? -1 : 0);
+      });
       const teamBye = matches.find(m => m.isBye && (m.teamEn === teamEn || m.teamKo === teamKo));
       if (!teamMatches.length && !teamBye) return;
 
@@ -6983,6 +7002,8 @@
       const noneLabel = isKorean ? '득점자 없음' : 'No scorers';
       const scorersHomeText = (m.scorersHome === '없음' || !m.scorersHome) ? noneLabel : renderScorerNamesHtml(m.scorersHome, isKorean);
       const scorersAwayText = (m.scorersAway === '없음' || !m.scorersAway) ? noneLabel : renderScorerNamesHtml(m.scorersAway, isKorean);
+      // 몰수 경기이거나, 이 라운드에 저장된 라인업/하이라이트가 다른 경기 것이면 상세보기·하이라이트 버튼을 숨깁니다.
+      const detailOk = !m.forfeit && (!matchLineups[key] || isMatchDetailAvailable(key, isHomeTeam ? m.awayKo : m.homeKo, m.forfeit));
 
       html += `
         <div class="round-match-card${isMine ? ' my-team' : ''}">
@@ -7014,13 +7035,17 @@
             </div>
           </div>
           ${venueCaptionHtml(m.homeEn, weekNum)}
-          ${(isMine && (matchLineups[key] || matchHighlights[key])) ? `
+          ${(isMine && detailOk && (matchLineups[key] || matchHighlights[key])) ? `
           <div class="rmc-btn-row">
             ${matchLineups[key] ? `<button class="rmc-detail-btn lbl" data-en="View Details" data-ko="상세보기" onclick="openMatchDetail('${key}', ${weekNum})">${isKorean ? '상세보기' : 'View Details'}</button>` : ''}
             ${matchHighlights[key] ? `<a class="rmc-highlight-btn lbl" data-en="Watch Highlights" data-ko="하이라이트 보기" href="${matchHighlights[key]}" target="_blank" rel="noopener noreferrer">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
               ${isKorean ? '하이라이트 보기' : 'Watch Highlights'}
             </a>` : ''}
+          </div>` : ''}
+          ${m.forfeit ? `
+          <div class="rmc-btn-row">
+            <span class="rmc-forfeit-badge ${result === 'W' ? 'rmc-forfeit-win' : 'rmc-forfeit-loss'} lbl" data-en="${result === 'W' ? 'Forfeit win (3-0 awarded) · no match record' : 'Forfeit loss (0-3 awarded) · no match record'}" data-ko="${result === 'W' ? '몰수승 (3:0 처리) · 경기 기록 없음' : '몰수패 (0:3 처리) · 경기 기록 없음'}">${isKorean ? (result === 'W' ? '몰수승 (3:0 처리) · 경기 기록 없음' : '몰수패 (0:3 처리) · 경기 기록 없음') : (result === 'W' ? 'Forfeit win (3-0 awarded) · no match record' : 'Forfeit loss (0-3 awarded) · no match record')}</span>
           </div>` : ''}
         </div>`;
       });

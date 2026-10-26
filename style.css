@@ -10521,6 +10521,8 @@
   gap: 6px;
   flex: 1;
   min-width: 0;
+  /* 눌러서 상세보기를 여는 항목(.is-clickable)과 안 열리는 항목(몰수·컵 등)의 세로 위치가 어긋나지 않게 같은 여백을 줍니다 */
+  padding: 6px 2px;
 }
 .home-match-crest.team-logo {
   width: 32px;
