@@ -14089,3 +14089,33 @@ summary.ti-bye-flow-toggle,
   margin-top: 8px;
 }
 
+
+
+/* ============================================================
+   [수정] 모바일 헤더: 리그/컵대회 전환 시 제목 줄바꿈 차이 방지
+   - 원인: 토글 라벨이 "컵대회"(리그 화면)일 때 "리그"(컵 화면)보다 넓어서
+           flex 한 줄에서 제목 영역이 좁아져 줄바꿈이 발생
+   - 해결: ① 제목 줄은 줄바꿈 금지 ② 토글 너비를 고정해 두 상태가 같은 폭
+           ③ 토글/주차 배지 여백을 살짝 줄여 제목이 들어갈 자리를 확보
+   ============================================================ */
+@media (max-width: 880px) {
+  .side-crest-text { flex: 0 1 auto; min-width: 0; }
+  .side-crest-text h1 .sponsor-line,
+  .side-crest-text h1 .main-line { white-space: nowrap; }
+
+  .cup-toggle-mobile {
+    min-width: 76px;            /* "컵대회" / "리그" 어느 쪽이든 같은 폭 */
+    justify-content: center;
+    padding: 7px 9px;
+    gap: 4px;
+    margin-right: 0;
+  }
+  .side-crest-row { gap: 8px; }
+  .side-week-badge { padding-left: 10px; padding-right: 8px; }
+}
+@media (max-width: 380px) {
+  .cup-toggle-mobile { min-width: 0; padding: 7px 8px; }
+  .cup-toggle-icon { display: none; }   /* 아주 좁은 화면에서는 아이콘을 빼서 공간 확보 */
+  .side-crest-text h1 .sponsor-line { font-size: 10.5px; }
+  .side-crest-text h1 .main-line { font-size: 14.5px; }
+}
