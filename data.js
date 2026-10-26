@@ -1608,6 +1608,16 @@ const upcomingMatchHistory = {
 
 // ===== 예정된(아직 안 치른) 라운드 일정 =====
 // 결과가 확정되면 이 라운드를 roundsData로 옮기고 스코어를 채워주세요.
+// ★ 임시 안내: 후반기 리그 개막 D-day (최상단 "다음경기" 카드에 다음 경기 일정이 없을 때만 표시됩니다).
+//   - date: 개막일(한국 달력 기준, YYYY-MM-DD). 이 날이 지나면 기본 안내 문구로 자동 복귀합니다.
+//   - 후반기 일정이 scheduledRounds에 들어오면 자동으로 평소 다음경기 카드로 바뀝니다.
+//   - 더 이상 필요 없으면 아래 const 한 덩어리를 통째로 지우셔도 됩니다.
+const seasonOpeningNotice = {
+  date: '2026-11-07',
+  labelKo: '후반기 리그 개막',
+  labelEn: 'Second-half league kickoff'
+};
+
 const scheduledRounds = {
   // 15주차는 전체 라운드가 종료되어 roundsData.round15로 옮겨졌습니다.
   // (치하메 vs 친테체는 연기경기주차로 이동 — roundsData.round16 참고)

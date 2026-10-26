@@ -2929,9 +2929,36 @@
         // 남은 일정이 아직 등록되지 않았으면(nextMatch === null) 에러 대신 안내 문구를 보여줍니다.
         const tbdKo = '후반기 리그 일정이 아직 발표되지 않았습니다<br>일정이 정해지는 대로 반영하겠습니다.';
         const tbdEn = 'Second-half league fixtures have not been announced yet.<br>We will update as soon as the schedule is set.';
-        el.innerHTML = `
+        // [임시] data.js의 seasonOpeningNotice(후반기 개막일)가 있고 아직 지나지 않았으면 D-day를 크게 보여줍니다.
+        // 개막일 기준은 한국 달력 날짜(KST)입니다. 날짜가 지나면 위 기본 안내 문구로 자동 복귀합니다.
+        let openDays = null, openDate = null;
+        if (typeof seasonOpeningNotice !== 'undefined' && seasonOpeningNotice && seasonOpeningNotice.date) {
+          const mm = String(seasonOpeningNotice.date).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+          if (mm) {
+            const openMs = Date.UTC(+mm[1], +mm[2] - 1, +mm[3]) - 9 * 3600000; // 그날 KST 0시
+            openDays = Math.round((kstMidnightUTCMillis(openMs) - kstMidnightUTCMillis(Date.now())) / 86400000);
+            openDate = new Date(+mm[1], +mm[2] - 1, +mm[3]);
+          }
+        }
+        if (openDays !== null && openDays >= 0) {
+          const od = openDate;
+          const dateKo = `${od.getMonth() + 1}월 ${od.getDate()}일 (${WEEKDAY_KO[od.getDay()]})`;
+          const dateEn = od.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const eyeKo = seasonOpeningNotice.labelKo || '후반기 리그 개막';
+          const eyeEn = seasonOpeningNotice.labelEn || 'Second-half league kickoff';
+          const ddTxt = openDays === 0 ? 'D-DAY' : `D-${openDays}`;
+          const subKo = '상세 경기 일정은 정해지는 대로 반영하겠습니다.';
+          const subEn = 'Match schedule will be added as soon as it is set.';
+          el.innerHTML = `
+        <div class="nmh-eyebrow lbl" data-en="${eyeEn}" data-ko="${eyeKo}">${isKorean ? eyeKo : eyeEn}</div>
+        <div class="nmh-opening-dday">${ddTxt}</div>
+        <div class="nmh-opening-date lbl" data-en="${dateEn}" data-ko="${dateKo}">${isKorean ? dateKo : dateEn}</div>
+        <div class="nmh-opening-sub lbl" data-en="${subEn}" data-ko="${subKo}">${isKorean ? subKo : subEn}</div>`;
+        } else {
+          el.innerHTML = `
         <div class="nmh-eyebrow lbl" data-en="Next" data-ko="다음경기">${isKorean ? '다음경기' : 'Next'}</div>
         <div class="nmh-bye lbl" data-en="${tbdEn}" data-ko="${tbdKo}">${isKorean ? tbdKo : tbdEn}</div>`;
+        }
       }
       updateNextMatchLiveBar();
       return;
