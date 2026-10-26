@@ -1861,6 +1861,75 @@ const roundsData = {
 };
 
 // ============================================================
+// 순위 동률 처리 공용 함수
+// ------------------------------------------------------------
+// 기준: 승점 > 골득실 > 다득점 > 승자승 (> 그래도 같으면 팀명 알파벳순)
+//  - 승자승: 위 세 가지가 모두 같은 팀들끼리만 따로 '미니 리그'를 만들어
+//    그 팀들 사이의 맞대결 결과(승점 > 골득실 > 다득점)로 순서를 정합니다.
+//    동률 팀이 둘이면 둘의 맞대결 결과, 셋 이상이면 서로 간 경기만 모은 미니 순위표입니다.
+//  - rows    : 정렬할 행 배열 (원본은 건드리지 않고 새 배열을 돌려줍니다)
+//  - matches : 확정된 경기 [{ homeEn, awayEn, homeScore, awayScore }]
+//  - acc     : 행에서 값을 꺼내는 함수 { id, pts, gf, ga }  (id 는 matches 의 팀명(nameEn)과 같아야 함)
+// ============================================================
+function rankByTiebreakers(rows, matches, acc) {
+  const base = rows.map(r => ({
+    r: r, id: acc.id(r), pts: acc.pts(r), gf: acc.gf(r), gd: acc.gf(r) - acc.ga(r)
+  }));
+  base.sort((a, b) => (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf));
+
+  const out = [];
+  let i = 0;
+  while (i < base.length) {
+    let j = i + 1;
+    while (j < base.length && base[j].pts === base[i].pts && base[j].gd === base[i].gd && base[j].gf === base[i].gf) j++;
+    const group = base.slice(i, j);
+    if (group.length > 1) {
+      const mini = {};
+      group.forEach(g => { mini[g.id] = { pts: 0, gf: 0, ga: 0 }; });
+      (matches || []).forEach(m => {
+        const h = mini[m.homeEn], a = mini[m.awayEn];
+        if (!h || !a || m.homeEn === m.awayEn) return;
+        h.gf += m.homeScore; h.ga += m.awayScore;
+        a.gf += m.awayScore; a.ga += m.homeScore;
+        if (m.homeScore > m.awayScore) h.pts += 3;
+        else if (m.homeScore < m.awayScore) a.pts += 3;
+        else { h.pts += 1; a.pts += 1; }
+      });
+      group.sort((a, b) => {
+        const x = mini[a.id], y = mini[b.id];
+        return (y.pts - x.pts) || ((y.gf - y.ga) - (x.gf - x.ga)) || (y.gf - x.gf) ||
+          (a.id < b.id ? -1 : (a.id > b.id ? 1 : 0));
+      });
+    }
+    group.forEach(g => out.push(g.r));
+    i = j;
+  }
+  return out;
+}
+
+// 승자승 계산에 쓰는 '스코어가 확정된 리그 경기' 목록 (roundsData + scheduledRounds 중 스코어가 채워진 경기).
+// applyComputedLeagueStats()가 순위표 수치를 만들 때 쓰는 경기와 같은 범위입니다.
+function getLeagueMatchesForTiebreak() {
+  const out = [];
+  const seen = {};
+  [typeof roundsData !== 'undefined' ? roundsData : null,
+   typeof scheduledRounds !== 'undefined' ? scheduledRounds : null].forEach(src => {
+    if (!src) return;
+    Object.keys(src).forEach(k => {
+      if (seen[k]) return; // 같은 라운드가 roundsData 에 있으면 그쪽을 우선
+      seen[k] = true;
+      (src[k] || []).forEach(m => {
+        if (m.byeKo || m.byeEn) return;
+        if (!m.homeEn || !m.awayEn) return;
+        if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+        out.push({ homeEn: m.homeEn, awayEn: m.awayEn, homeScore: m.homeScore, awayScore: m.awayScore });
+      });
+    });
+  });
+  return out;
+}
+
+// ============================================================
 // 주차별 순위 히스토리 계산
 // ------------------------------------------------------------
 // roundsData(라운드별 홈/원정 결과)를 순서대로 누적 적용해서
@@ -1879,6 +1948,7 @@ function computeStandingsHistory() {
     return na - nb;
   });
 
+  const playedMatches = []; // 승자승 계산용: 지금까지 반영된 경기
   const history = []; // [{ week, ranks: { nameEn: rank }, points: { nameEn: pts }, played: { nameEn: 경기수 } }]
 
   function applyMatches(matches) {
@@ -1892,6 +1962,7 @@ function computeStandingsHistory() {
 
       home.pl += 1;
       away.pl += 1;
+      playedMatches.push({ homeEn: m.homeEn, awayEn: m.awayEn, homeScore: m.homeScore, awayScore: m.awayScore });
       home.gf += m.homeScore;
       home.ga += m.awayScore;
       away.gf += m.awayScore;
@@ -1904,18 +1975,16 @@ function computeStandingsHistory() {
   }
 
   function pushSnapshot(week) {
-    const standings = leagueData
-      .map(t => ({
+    const standings = rankByTiebreakers(
+      leagueData.map(t => ({
         nameEn: t.nameEn,
         pts: state[t.nameEn].pts,
-        gd: state[t.nameEn].gf - state[t.nameEn].ga,
-        gf: state[t.nameEn].gf
-      }))
-      .sort((a, b) => {
-        if (b.pts !== a.pts) return b.pts - a.pts;
-        if (b.gd !== a.gd) return b.gd - a.gd;
-        return b.gf - a.gf;
-      });
+        gf: state[t.nameEn].gf,
+        ga: state[t.nameEn].ga
+      })),
+      playedMatches,
+      { id: r => r.nameEn, pts: r => r.pts, gf: r => r.gf, ga: r => r.ga }
+    );
 
     const ranks = {};
     standings.forEach((s, i) => { ranks[s.nameEn] = i + 1; });
@@ -3768,6 +3837,7 @@ function computeTitleProbabilityHistory(iterations) {
   const playedState = {};
   teams.forEach(t => { playedState[t.nameEn] = { pts: 0, gf: 0, ga: 0, played: 0 }; });
   const playedFixtureKeys = new Set(); // "홈||원정" — 이미 치른 경기(방향까지 일치)
+  const playedH2H = []; // 승자승 계산용: 이 시점까지 치른 경기
 
   const history = [];
 
@@ -3785,6 +3855,7 @@ function computeTitleProbabilityHistory(iterations) {
       else if (m.homeScore < m.awayScore) away.pts += 3;
       else { home.pts += 1; away.pts += 1; }
       playedFixtureKeys.add(m.homeEn + '||' + m.awayEn);
+      playedH2H.push({ homeEn: m.homeEn, awayEn: m.awayEn, homeScore: m.homeScore, awayScore: m.awayScore });
     });
 
     // 그 시점까지의 득실만으로 공수 지수 산출 — 표본이 적은 시즌 초반엔
@@ -3815,9 +3886,12 @@ function computeTitleProbabilityHistory(iterations) {
     for (let sim = 0; sim < N; sim++) {
       const simPts = {};
       const simGd = {};
+      const simGf = {};
+      const simH2H = [];
       teams.forEach(t => {
         simPts[t.nameEn] = playedState[t.nameEn].pts;
         simGd[t.nameEn] = playedState[t.nameEn].gf - playedState[t.nameEn].ga;
+        simGf[t.nameEn] = playedState[t.nameEn].gf;
       });
 
       remaining.forEach(fx => {
@@ -3828,19 +3902,21 @@ function computeTitleProbabilityHistory(iterations) {
         const ag = poissonRandom(aExp);
         simGd[fx.homeEn] += hg - ag;
         simGd[fx.awayEn] += ag - hg;
+        simGf[fx.homeEn] += hg;
+        simGf[fx.awayEn] += ag;
+        simH2H.push({ homeEn: fx.homeEn, awayEn: fx.awayEn, homeScore: hg, awayScore: ag });
         if (hg > ag) simPts[fx.homeEn] += 3;
         else if (hg < ag) simPts[fx.awayEn] += 3;
         else { simPts[fx.homeEn] += 1; simPts[fx.awayEn] += 1; }
       });
 
-      let bestTeam = teams[0].nameEn, bestPts = -Infinity, bestGd = -Infinity;
-      teams.forEach(t => {
-        const p = simPts[t.nameEn], g = simGd[t.nameEn];
-        if (p > bestPts || (p === bestPts && g > bestGd)) {
-          bestPts = p; bestGd = g; bestTeam = t.nameEn;
-        }
-      });
-      champCount[bestTeam] += 1;
+      // 우승팀 = 승점 > 골득실 > 다득점 > 승자승 기준 1위
+      const champ = rankByTiebreakers(
+        teams.map(t => ({ nameEn: t.nameEn, pts: simPts[t.nameEn], gf: simGf[t.nameEn], ga: simGf[t.nameEn] - simGd[t.nameEn] })),
+        playedH2H.concat(simH2H),
+        { id: r => r.nameEn, pts: r => r.pts, gf: r => r.gf, ga: r => r.ga }
+      )[0];
+      champCount[champ.nameEn] += 1;
     }
 
     const pct = {};
@@ -4928,7 +5004,11 @@ function runMonteCarloSimulation(iterations, overrides) {
   // 대진별(고정) 보정 계수를 시뮬레이션 반복(iteration) 밖에서 한 번만 계산해둡니다.
   const fixtureCorrections = fixtures.map(fx => correctionForFixture(fx.home.nameEn, fx.away.nameEn));
 
+  // 승자승 계산용: 이미 확정된 경기(시뮬레이션 시작 시점) + 반복마다 새로 뽑은 남은 경기 결과
+  const baseH2HMatches = getLeagueMatchesForTiebreak();
+
   for (let sim = 0; sim < N; sim++) {
+    const simH2HMatches = [];
     const state = {};
     teams.forEach(t => {
       state[t.nameEn] = {
@@ -4992,6 +5072,7 @@ function runMonteCarloSimulation(iterations, overrides) {
       homeState.ga += awayGoals;
       awayState.gf += awayGoals;
       awayState.ga += homeGoals;
+      simH2HMatches.push({ homeEn: fx.home.nameEn, awayEn: fx.away.nameEn, homeScore: homeGoals, awayScore: awayGoals });
 
       if (homeGoals > awayGoals) {
         homeState.pts += 3;
@@ -5003,18 +5084,17 @@ function runMonteCarloSimulation(iterations, overrides) {
       }
     });
 
-    const standings = teams
-      .map(t => ({
+    // 승점 > 골득실 > 다득점 > 승자승 (순위표와 같은 기준)
+    const standings = rankByTiebreakers(
+      teams.map(t => ({
         nameEn: t.nameEn,
         pts: state[t.nameEn].pts,
-        gd: state[t.nameEn].gf - state[t.nameEn].ga,
-        gf: state[t.nameEn].gf
-      }))
-      .sort((a, b) => {
-        if (b.pts !== a.pts) return b.pts - a.pts;
-        if (b.gd !== a.gd) return b.gd - a.gd;
-        return b.gf - a.gf;
-      });
+        gf: state[t.nameEn].gf,
+        ga: state[t.nameEn].ga
+      })),
+      baseH2HMatches.concat(simH2HMatches),
+      { id: r => r.nameEn, pts: r => r.pts, gf: r => r.gf, ga: r => r.ga }
+    );
 
     standings.forEach((s, idx) => {
       const rank = idx + 1;

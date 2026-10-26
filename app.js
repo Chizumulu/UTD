@@ -5428,9 +5428,15 @@
     const byName = {};
     rows.forEach(r => { byName[r.nameEn] = r; });
 
+    const h2hList = getLeagueMatchesForTiebreak(); // 승자승 계산용 (라이브 스코어를 더하고 빼며 갱신)
     const apply = (homeEn, awayEn, h, a, sign) => {
       const home = byName[homeEn], away = byName[awayEn];
       if (!home || !away) return;
+      if (sign > 0) h2hList.push({ homeEn: homeEn, awayEn: awayEn, homeScore: h, awayScore: a });
+      else {
+        const at = h2hList.findIndex(m => m.homeEn === homeEn && m.awayEn === awayEn && m.homeScore === h && m.awayScore === a);
+        if (at >= 0) h2hList.splice(at, 1);
+      }
       home.gf += sign * h; home.ga += sign * a;
       away.gf += sign * a; away.ga += sign * h;
       if (h > a) home.won += sign;
@@ -5438,13 +5444,8 @@
       else { home.drawn += sign; away.drawn += sign; }
     };
     const rankMap = () => {
-      const sorted = rows.slice().sort((a, b) => {
-        const pa = a.won * 3 + a.drawn, pb = b.won * 3 + b.drawn;
-        if (pb !== pa) return pb - pa;
-        const ga = a.gf - a.ga, gb = b.gf - b.ga;
-        if (gb !== ga) return gb - ga;
-        if (b.gf !== a.gf) return b.gf - a.gf;
-        return teamMineFirst(a, b);
+      const sorted = rankByTiebreakers(rows, h2hList, {
+        id: r => r.nameEn, pts: r => r.won * 3 + r.drawn, gf: r => r.gf, ga: r => r.ga
       });
       const r = {};
       sorted.forEach((x, i) => { r[x.nameEn] = i + 1; });
@@ -7125,9 +7126,14 @@
       return s;
     });
 
-    const table = list.slice().sort((a, b) =>
-      (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf) || teamMineFirst(a.team, b.team) ||
-      (a.team.nameEn < b.team.nameEn ? -1 : 1));
+    // 승자승은 전반기 경기끼리만 따집니다 (홈 경기 기록만 모으면 모든 경기가 한 번씩 잡힘)
+    const halfMatches = [];
+    list.forEach(s => s.games.forEach(x => {
+      if (x.home) halfMatches.push({ homeEn: s.team.nameEn, awayEn: x.opp.nameEn, homeScore: x.gf, awayScore: x.ga });
+    }));
+    const table = rankByTiebreakers(list, halfMatches, {
+      id: s => s.team.nameEn, pts: s => s.pts, gf: s => s.gf, ga: s => s.ga
+    });
     table.forEach((s, i) => { s.rank = i + 1; });
 
     const active = list.filter(s => s.p > 0);
@@ -10491,16 +10497,10 @@
       gd: team.goalsFor - team.goalsAgainst
     }));
 
-    processedData.sort((a, b) => {
-      if (b.pts !== a.pts) return b.pts - a.pts;
-      if (b.gd !== a.gd) return b.gd - a.gd;
-      if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-      // 승점·득실차·득점까지 완전히 동률이면, 그 동률 그룹 안에서는
-      // 치주물루 유나이티드를 맨 위로 올려줍니다.
-      return teamMineFirst(a, b);
+    // 승점 > 골득실 > 다득점 > 승자승(시즌 맞대결) > 팀명. (홈/원정/폼 필터에서도 승자승은 시즌 전체 맞대결 기준)
+    return rankByTiebreakers(processedData, getLeagueMatchesForTiebreak(), {
+      id: r => r.nameEn, pts: r => r.pts, gf: r => r.goalsFor, ga: r => r.goalsAgainst
     });
-
-    return processedData;
   }
 
   // ===== 순위 변동(전주 대비) 계산 =====
@@ -13047,6 +13047,148 @@
 
     renderScatterPlot(teams);
     renderLuckChangeCard(teams);
+    renderForfeitMatchesCard();
+  }
+
+  // ===== 몰수승/패 경기 모아보기 카드 (리그 기록) =====
+  // data.js의 roundsData/scheduledRounds에서 forfeit: true 가 붙은 "끝난" 경기만 자동으로 모읍니다.
+  // 몰수패 처리된 팀 = 점수가 낮은 쪽(경기 카드의 몰수 배지와 같은 규칙, 무승부 몰수는 없다고 가정).
+  // 새 몰수 경기는 data.js에 forfeit: true만 붙이면 여기에도 자동으로 나타납니다.
+  function collectForfeitMatches() {
+    const out = [];
+    allRoundKeysIncludingScheduled().forEach(function(roundKey) {
+      const list = roundsData[roundKey] || (scheduledRounds && scheduledRounds[roundKey]) || [];
+      list.forEach(function(m) {
+        if (!m || m.byeKo || m.byeEn || m.postponed || !m.forfeit) return;
+        if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
+        if (m.homeScore === m.awayScore) return;
+        out.push({ pos: roundKeyPos(roundKey), m: m, homeWon: m.homeScore > m.awayScore });
+      });
+    });
+    // 최신 주차가 위로
+    out.sort(function(a, b) {
+      return (b.pos - a.pos) || String(b.m.kickoffDate || '').localeCompare(String(a.m.kickoffDate || ''));
+    });
+    return out;
+  }
+
+  function forfeitDateText(dateStr) {
+    const mt = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''));
+    if (!mt) return '';
+    const mo = parseInt(mt[2], 10), da = parseInt(mt[3], 10);
+    const en = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return isKorean ? `${mo}월 ${da}일` : `${en[mo - 1]} ${da}`;
+  }
+
+  function renderForfeitMatchesCard() {
+    const host = document.getElementById('forfeitMatchesCard');
+    if (!host) return;
+    const items = collectForfeitMatches();
+    if (!items.length) { host.innerHTML = ''; return; }
+
+    const lbl = (ko, en) => `<span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`;
+    const MINE = 'Chizumulu United FC';
+
+    // 팀별 몰수승/몰수패 집계
+    const recMap = {};
+    const bump = function(en, ko, key) {
+      const r = recMap[en] || (recMap[en] = { nameEn: en, nameKo: ko, w: 0, l: 0 });
+      r[key] += 1;
+    };
+    items.forEach(function(it) {
+      bump(it.m.homeEn, it.m.homeKo, it.homeWon ? 'w' : 'l');
+      bump(it.m.awayEn, it.m.awayKo, it.homeWon ? 'l' : 'w');
+    });
+    const recs = Object.keys(recMap).map(function(k) { return recMap[k]; })
+      .sort(function(a, b) { return (b.l - a.l) || (b.w - a.w) || a.nameEn.localeCompare(b.nameEn); });
+
+    // 요약 3칸: 총 몰수 경기 / 몰수패 팀 수 / 전체 경기 중 비율
+    const totalPlayed = (typeof computeSeasonFactSummary === 'function') ? computeSeasonFactSummary().totalMatches : 0;
+    const forfeitedTeams = recs.filter(function(r) { return r.l > 0; }).length;
+    const shareTxt = totalPlayed ? (items.length / totalPlayed * 100).toFixed(1) + '%' : '-';
+    const quick = `
+      <div class="sfs-quickstats forf-quickstats">
+        <div class="sfs-quickstat"><b>${items.length}</b>${lbl('몰수 경기', 'Forfeited Matches')}</div>
+        <div class="sfs-quickstat"><b>${forfeitedTeams}</b>${lbl('몰수패 한 팀', 'Teams Forfeiting')}</div>
+        <div class="sfs-quickstat"><b>${shareTxt}</b>${lbl('전체 경기 중 비율', 'Share of All Matches')}</div>
+      </div>`;
+
+    const teamRows = recs.map(function(r) {
+      const name = isKorean ? r.nameKo : r.nameEn;
+      const logoSrc = getTeamLogo(r.nameEn);
+      const logo = logoSrc ? `<img class="team-logo team-logo-sm" src="${logoSrc}" alt="${name}">` : '';
+      const mine = r.nameEn === MINE ? ' class="my-team"' : '';
+      return `<tr${mine}>
+        <td class="luck-team">${logo}<span class="lbl" data-en="${r.nameEn}" data-ko="${r.nameKo}">${name}</span></td>
+        <td class="${r.w ? 'stat-val-pos' : ''}">${r.w}</td>
+        <td class="${r.l ? 'stat-val-neg' : ''}">${r.l}</td>
+      </tr>`;
+    }).join('');
+
+    const teamSide = function(en, ko, won, side) {
+      const name = isKorean ? ko : en;
+      const logoSrc = getTeamLogo(en);
+      const logo = logoSrc ? `<img class="team-logo team-logo-sm" src="${logoSrc}" alt="${name}">` : '';
+      const badge = won
+        ? `<span class="forf-badge forf-badge-win">${lbl('몰수승', 'Forfeit Win')}</span>`
+        : `<span class="forf-badge forf-badge-loss">${lbl('몰수패', 'Forfeit Loss')}</span>`;
+      return `<div class="forf-team forf-team-${side}${won ? ' is-win' : ' is-loss'}">
+        ${logo}<span class="forf-team-name lbl" data-en="${en}" data-ko="${ko}">${name}</span>${badge}
+      </div>`;
+    };
+
+    const matchRows = items.map(function(it) {
+      const m = it.m;
+      const weekTxt = isKorean ? wkKo(it.pos) : wkEn(it.pos, 'Week', ' ');
+      const dateTxt = forfeitDateText(m.kickoffDate);
+      let movedTxt = '';
+      if (m.movedFromWeek) {
+        const ko = m.changed ? `${wkKo(m.movedFromWeek)}에서 변경` : `${wkKo(m.movedFromWeek)}에서 연기`;
+        const en = m.changed ? `Changed from ${wkEn(m.movedFromWeek, 'Week', ' ')}` : `Rescheduled from ${wkEn(m.movedFromWeek, 'Week', ' ')}`;
+        movedTxt = `<span class="forf-match-moved">${lbl(ko, en)}</span>`;
+      }
+      const mine = (m.homeEn === MINE || m.awayEn === MINE) ? ' forf-match-mine' : '';
+      return `
+        <button type="button" class="forf-match${mine}" onclick="goToRoundWeek(${it.pos})">
+          <div class="forf-match-meta">
+            <span class="forf-match-week">${weekTxt}</span>
+            ${dateTxt ? `<span class="forf-match-date">${dateTxt}</span>` : ''}
+            ${movedTxt}
+          </div>
+          <div class="forf-match-teams">
+            ${teamSide(m.homeEn, m.homeKo, it.homeWon, 'home')}
+            <div class="forf-score">${m.homeScore} : ${m.awayScore}</div>
+            ${teamSide(m.awayEn, m.awayKo, !it.homeWon, 'away')}
+          </div>
+        </button>`;
+    }).join('');
+
+    const titleKo = '몰수승 · 몰수패 경기', titleEn = 'Forfeit Wins & Losses';
+    const noteKo = '몰수 경기는 순위표(승점·득실)에는 정식 결과로 반영되지만, 득점자·라인업 같은 경기 기록은 없어요. 경기를 누르면 해당 주차 일정으로 이동합니다.';
+    const noteEn = 'Forfeits count as official results in the standings (points and goal difference), but have no match record such as scorers or lineups. Tap a match to jump to that week\'s schedule.';
+
+    host.innerHTML = `
+      <div class="scatter-card forf-card">
+        <div class="stats-title"><span class="lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</span></div>
+        <div class="forf-body">
+          ${quick}
+          <div class="forf-subtitle">${lbl('팀별 몰수 기록', 'By Team')}</div>
+          <div class="luck-table-wrap">
+            <table class="luck-table forf-table">
+              <thead><tr>
+                <th>${lbl('팀', 'TEAM')}</th>
+                <th>${lbl('몰수승', 'FORFEIT W')}</th>
+                <th>${lbl('몰수패', 'FORFEIT L')}</th>
+              </tr></thead>
+              <tbody>${teamRows}</tbody>
+            </table>
+          </div>
+          <div class="forf-subtitle">${lbl('몰수 경기 목록 (최신순)', 'Matches (newest first)')}</div>
+          <div class="forf-match-list">${matchRows}</div>
+          <div class="luck-note lbl" data-en="${noteEn}" data-ko="${noteKo}">${isKorean ? noteKo : noteEn}</div>
+        </div>
+      </div>`;
+    attachImageFallback();
   }
 
   // ===== 두 시즌 리그 환경 비교 카드 (25/26 vs 26/27) =====
