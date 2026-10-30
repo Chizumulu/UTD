@@ -13,7 +13,7 @@
     try {
       const params = new URLSearchParams(window.location.search);
       const lang = (params.get('lang') || '').toLowerCase();
-      if (lang === 'en' || lang === 'english') return false;
+      if (lang === 'en' || lang === 'english' || lang === 'ny' || lang === 'chichewa') return false; // ny: 영문 모드로 그린 뒤 lang-ny.js가 치체와어로 치환
       if (lang === 'ko' || lang === 'kr' || lang === 'korean') return true;
     } catch (e) {}
     return true;
@@ -10417,13 +10417,13 @@
       const headTr = document.createElement('tr');
       headTr.className = 'scorers-team-group-row' + (isMine ? ' my-team' : '') + (isCollapsed ? ' collapsed' : '');
       headTr.innerHTML = `
-        <td colspan="3" class="scorers-team-group-head">
+        <td colspan="3"><div class="scorers-team-group-head">
           <span class="scorers-team-group-toggle" aria-hidden="true">&#9656;</span>
           ${g.teamLogo ? `<img class="team-logo" src="${g.teamLogo}" alt="${g.teamEn}">` : ''}
           <span class="lbl" data-en="${g.teamEn}" data-ko="${g.teamKo}">${teamName}</span>
           <span class="scorers-team-group-total lbl" data-en="${totalLabelEn}" data-ko="${totalLabelKo}">${isKorean ? totalLabelKo : totalLabelEn}</span>
           <span class="scorers-team-group-toggle-label lbl" data-en="${toggleLabelEn}" data-ko="${toggleLabelKo}">${isKorean ? toggleLabelKo : toggleLabelEn}</span>
-        </td>`;
+        </div></td>`;
       headTr.style.cursor = 'pointer';
       headTr.addEventListener('click', () => toggleScorersTeamGroup(teamKey));
       tbody.appendChild(headTr);
@@ -15900,6 +15900,30 @@
     const full = sq ? (isKorean ? sq.nameKo : (sq.nameEn || sq.nameKo)) : String(ref);
     return full.split(' ')[0];
   }
+  // 경기 상세에서 선수 이름을 언어에 맞게: 영문 모드에서는 선수단 명단(squadData/formerSquadData)의 영문 이름을 우선 사용합니다.
+  function lineupPlayerFullName(p) {
+    if (isKorean) return p.nameKo;
+    const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+    const sq = (typeof p.statKey === 'string' && /^F\d+$/.test(p.statKey))
+      ? former.find(x => x.number === parseInt(p.statKey.slice(1), 10))
+      : squadData.find(x => x.number === p.number);
+    return (sq && sq.nameEn) || p.nameEn || p.nameKo;
+  }
+  // 교체 시간 표기("전반"/"후반")를 영문 모드에서 영어로
+  function lineupMinLabel(m) {
+    const t = String(m == null ? '' : m);
+    if (isKorean) return t;
+    return t.replace('전반', '1st half').replace('후반', '2nd half');
+  }
+  // "최근 3경기 전적 2승 1무 0패로 우세" → "Last 3 matches: 2W 1D 0L · In favor"
+  function translateHistSummary(txt) {
+    const t = String(txt || '');
+    if (isKorean) return t;
+    const m = t.trim().match(/^최근\s*(\d+)경기\s*전적\s*(?:\d+전\s*)?(?:(\d+)승\s*)?(?:(\d+)무\s*)?(?:(\d+)패)?\s*로\s*(우세|열세|백중세)$/);
+    if (!m) return t;
+    const verdict = { '우세': 'In favor', '열세': 'Trailing', '백중세': 'Evenly matched' }[m[5]];
+    return `Last ${m[1]} matches: ${m[2] || 0}W ${m[3] || 0}D ${m[4] || 0}L · ${verdict}`;
+  }
   function lineupGoalAssistNote(ev) {
     const names = (ev.assists || []).filter(x => x !== null && x !== undefined).map(lineupAssisterName);
     if (!names.length) return '';
@@ -16003,8 +16027,8 @@
               ${ev.injury ? '<span class="lineup-sub-injury">🩹</span>' : ''}
             </div>`;
         } else {
-          const rawTime = ev.inMin || '';
-          const timeText = rawTime ? (rawTime.endsWith("'") ? rawTime : rawTime + "'") : '';
+          const rawTime = lineupMinLabel(ev.inMin || '');
+          const timeText = rawTime ? ((rawTime.endsWith("'") || (!isKorean && !/^\d/.test(rawTime))) ? rawTime : rawTime + "'") : '';
           linesHtml += `
             <div class="lineup-sub-line lineup-sub-line-in">
               <span class="lineup-sub-arrow">▲</span>
@@ -16184,7 +16208,7 @@
           `<span class="pp-badge pp-badge-in" title="${isKo ? '교체 투입' : 'Subbed on'}">▲</span>`,
           inSub.outMin ? `<span class="pp-badge pp-badge-out" title="${isKo ? '교체 아웃' : 'Subbed off'}">▼</span>` : ''
         ].join('');
-        const inMinTxt = inSub.inMin && inSub.inMin !== '-' ? inSub.inMin : '';
+        const inMinTxt = inSub.inMin && inSub.inMin !== '-' ? lineupMinLabel(inSub.inMin) : '';
         backHtml = `
           <div class="pp-card pp-card-in lineup-squad-link" data-player-number="${iLink}">
             <div class="pp-card-id"><b class="pp-card-num">${inSub.number != null ? inSub.number : ''}</b><span class="pp-card-pos">${inSub.pos || st.pos}</span></div>
@@ -16353,7 +16377,7 @@
           const goalsHtml = (s.goals && s.goals.length)
             ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>${lineupGoalAssistNote(s)}`
             : '';
-          return `<span class="lineup-sub-chip lineup-sub-chip-in">▲ ${s.inMin && s.inMin !== '-' ? s.inMin + ' ' : ''}${s.number} <span class="player-name-link lineup-squad-link" data-player-number="${s.statKey || s.number}">${s.nameKo}</span>${goalsHtml}</span>`;
+          return `<span class="lineup-sub-chip lineup-sub-chip-in">▲ ${s.inMin && s.inMin !== '-' ? lineupMinLabel(s.inMin) + ' ' : ''}${s.number} <span class="player-name-link lineup-squad-link" data-player-number="${s.statKey || s.number}">${lineupPlayerFullName(s)}</span>${goalsHtml}</span>`;
         }).join('')
       : `<span class="lineup-sub-empty">${isKo ? '교체 없음' : 'No substitutions'}</span>`;
 
@@ -16402,7 +16426,7 @@
         const hasAssist = a !== null && a !== undefined && a !== '-';
         events.push({
           min: g, key: minuteKey(g), order: order++,
-          scorer: (isKo ? p.nameKo : (p.nameEn || p.nameKo)).split(' ')[0],
+          scorer: lineupPlayerFullName(p).split(' ')[0],
           scorerRef: p.statKey || p.number,
           assist: hasAssist ? refName(a) : '',
           assistRef: hasAssist ? a : null
@@ -16434,8 +16458,8 @@
     const rows = list.map(h => `
       <tr>
         <td class="h2h-comp">${formatCompLabel(h.comp)}</td>
-        <td class="h2h-score">${h.score}</td>
-        <td class="h2h-result">${h.result}</td>
+        <td class="h2h-score">${translateHistScore(h.score)}</td>
+        <td class="h2h-result">${translateHistResult(h.result)}</td>
       </tr>`).join('');
     return `
       <div class="lineup-history-section">
@@ -16449,7 +16473,7 @@
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
-          <div class="h2h-summary">${history.summary || ''}</div>
+          <div class="h2h-summary">${translateHistSummary(history.summary || '')}</div>
         </div>
       </div>`;
   }
@@ -16459,16 +16483,66 @@
   // 리그 이름을 빼고 "25/26 시즌 24주차" 형태로 줄여서 표시합니다.
   // "2025-26 시즌 카스텔컵 지역 단계 3라운드"처럼 "주차" 표기가 없는 컵대회 등은
   // 원래 문구 그대로(대회명 포함) 표시합니다.
+  // 영문 모드에서 상대전적 표의 한글 대회명·팀명·결과를 영어로 바꾸는 도우미입니다.
+  // 새 대회/팀이 data.js에 추가되면 아래 사전에 한 줄만 보태면 됩니다.
+  const HIST_TEAM_EN = {
+    '치주물루': 'Chizumulu', '치바비': 'Chibavi', '젠다': 'Jenda', '친테체': 'Chintheche', '칠룸바': 'Chilumba',
+    '마푸': 'Mafu', '심보웨': 'Simbowe', '음벨와': "M\u2019mbelwa", '치폴로폴로': 'Chipolopolo', '에크웬데니': 'Ekwendeni',
+    '루베': 'Lube', '치하메': 'Chihame', '라이플리': 'Raiply', '에우티니': 'Euthini', '루비리': 'Luviri', '비전': 'Vision S'
+  };
+  const HIST_COMP_EN = [
+    ['음벨와 노던 리전 풋볼 리그', "M\u2019mbelwa Northern Region Football League"],
+    ['NRFA 리그 원', 'NRFA League One'],
+    ['심소 프리미어 리그', 'Simso Premier League'],
+    ['카스텔 챌린지컵', 'Castel Challenge Cup'],
+    ['카스텔컵', 'Castel Cup'],
+    ['FDH 뱅크컵', 'FDH Bank Cup'],
+    ['북부 지역 예선', 'Northern Region Qualifiers'],
+    ['지역 단계', 'Regional Stage']
+  ];
+  const HIST_MONTH_EN = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function histTeamEn(ko) {
+    const k = String(ko || '').trim();
+    return HIST_TEAM_EN[k] || k;
+  }
+  // "치바비 2 : 0 치주물루 (PSO 4:2)" → "Chibavi 2 : 0 Chizumulu (PSO 4:2)"
+  function translateHistScore(score) {
+    const text = String(score || '');
+    if (isKorean) return text;
+    return text.replace(/[가-힣]+/g, m => HIST_TEAM_EN[m] || m);
+  }
+  // "치주물루 승" → "Chizumulu win", "무승부" → "Draw", "치주물루 승(몰수승)" → "Chizumulu win (forfeit)"
+  function translateHistResult(result) {
+    const text = String(result || '');
+    if (isKorean) return text;
+    const t = text.trim();
+    if (t === '무승부') return 'Draw';
+    const m = t.match(/^(.+?)\s*승\s*(\(몰수승\))?$/);
+    if (m) return `${histTeamEn(m[1])} win${m[2] ? ' (forfeit)' : ''}`;
+    return translateHistScore(t);
+  }
+  function translateCompEn(text) {
+    let out = String(text || '');
+    HIST_COMP_EN.forEach(([ko, en]) => { out = out.split(ko).join(en); });
+    out = out.replace(/(\d{4})-(\d{2})\s*시즌/g, '$1-$2 Season')
+             .replace(/(^|\s)(\d{2})\s*시즌/g, (_, a, y) => `${a}20${y} Season`)
+             .replace(/(\d+)\s*라운드/g, 'Round $1')
+             .replace(/(\d+)\s*주차/g, 'Week $1')
+             .replace(/\s*\((\d{1,2})월\s*(\d{1,2})일\)/g, (_, mo, d) => ` (${HIST_MONTH_EN[+mo] || mo} ${d})`);
+    return out;
+  }
+
   function formatCompLabel(comp) {
     const text = String(comp || '');
     const weekMatch = text.match(/(\d+)\s*주차/);
-    if (!weekMatch) return text;
+    if (!weekMatch) return isKorean ? text : translateCompEn(text);
     const seasonMatch = text.match(/(\d{4})-(\d{2})/) || text.match(/(\d{2})\/(\d{2})/);
-    if (!seasonMatch) return text;
+    if (!seasonMatch) return isKorean ? text : translateCompEn(text);
     const seasonShort = seasonMatch[0].length === 7
       ? `${seasonMatch[1].slice(2)}/${seasonMatch[2]}`
       : seasonMatch[0];
-    return `${seasonShort} 시즌 ${weekMatch[1]}주차`;
+    return isKorean ? `${seasonShort} 시즌 ${weekMatch[1]}주차` : `${seasonShort} Season · Week ${weekMatch[1]}`;
   }
 
   // 결과 문자열("3 : 1 승" 등) 끝의 승/패/무 표기를 언어에 맞게 변환
@@ -16660,7 +16734,7 @@
           <span class="mc-prior-badge mc-prior-badge-${r.toLowerCase()}">${wdlLabel[r]}</span>
           <div class="mc-prior-row-main">
             <span class="mc-prior-comp">${formatCompLabel(h.comp) || ''}</span>
-            <span class="mc-prior-score">${h.score || ''}${forfeitTag}</span>
+            <span class="mc-prior-score">${translateHistScore(h.score || '')}${forfeitTag}</span>
           </div>
         </div>`;
     }).join('');
@@ -17695,9 +17769,31 @@
 
 
   // ===== 언어 전환 (Language Toggle) =====
+  // title(마우스 툴팁)·aria-label·alt 처럼 .lbl 로 바뀌지 않는 속성도 언어에 맞춥니다.
+  // index.html 에서 data-title-ko/en, data-aria-ko/en, data-alt-ko/en 을 달아 두면 자동으로 적용됩니다.
+  function applyAttrLang() {
+    const pick = (el, key) => el.getAttribute('data-' + key + (isKorean ? '-ko' : '-en'));
+    document.querySelectorAll('[data-title-ko][data-title-en]').forEach(el => { const v = pick(el, 'title'); if (v != null) el.title = v; });
+    document.querySelectorAll('[data-aria-ko][data-aria-en]').forEach(el => { const v = pick(el, 'aria'); if (v != null) el.setAttribute('aria-label', v); });
+    document.querySelectorAll('[data-alt-ko][data-alt-en]').forEach(el => { const v = pick(el, 'alt'); if (v != null) el.setAttribute('alt', v); });
+    // 다크 모드 버튼의 툴팁/라벨은 applyTheme()가 언어별로 정하므로 한 번 더 호출해 맞춥니다.
+    try { if (typeof applyTheme === 'function' && typeof isDarkTheme === 'function') applyTheme(isDarkTheme() ? 'dark' : 'light'); } catch (e) {}
+  }
+  // 한/영 전환 시 주소창도 같이 바꿉니다. (영문 = ?lang=en, 한국어 = 파라미터 제거)
+  // replaceState라서 새로고침·뒤로가기 기록 없이 주소만 바뀌고, 그 주소를 복사/공유하면
+  // 받는 사람도 처음부터 같은 언어로 열립니다. #/league 같은 해시 경로는 그대로 유지됩니다.
+  function syncLangUrl() {
+    try {
+      if (!window.history || !history.replaceState) return;
+      const u = new URL(window.location.href);
+      if (isKorean) u.searchParams.delete('lang'); else u.searchParams.set('lang', 'en');
+      history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+    } catch (e) {}
+  }
   function toggleLang() {
     isKorean = !isKorean;
     syncLangAttr();
+    syncLangUrl();
     document.querySelectorAll('.lbl').forEach(el => {
       el.innerHTML = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');
     });
@@ -17705,6 +17801,7 @@
       el.title = isKorean ? el.getAttribute('data-ko-name') : el.getAttribute('data-en-name');
     });
     document.getElementById('langBtnText').textContent = isKorean ? 'View in English' : '한국어로 보기';
+    applyAttrLang();
     updateSeasonInfo();
     equalizeTitleLines();
     { const frm = document.getElementById('fullRecordModal'); if (frm && frm.style.display !== 'none') renderFullRecordModal(); }
@@ -18096,6 +18193,7 @@
       el.title = isKorean ? el.getAttribute('data-ko-name') : el.getAttribute('data-en-name');
     });
     document.getElementById('langBtnText').textContent = isKorean ? 'View in English' : '한국어로 보기';
+    applyAttrLang();
 
     applyTheme(isDarkTheme() ? 'dark' : 'light');
     

@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '008',
-    data: '005',
-    app: '008',
+    style: '001',
+    data: '001',
+    app: '001',
     archive: '200',
     predictWorker: '200',
     pathfinderEngine: '200',
@@ -449,7 +449,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 
   <div class="side-season-row" id="sideSeasonRow" role="group" aria-label="Season">
-    <button type="button" class="side-season-seg side-season-prev lbl" data-ko="‹ 이전 시즌" data-en="‹ Prev season" title="25/26 시즌 보기" onclick="openSeasonArchive()">‹ 이전 시즌</button>
+    <button type="button" class="side-season-seg side-season-prev lbl" data-ko="‹ 이전 시즌" data-en="‹ Prev season" title="25/26 시즌 보기" data-title-ko="25/26 시즌 보기" data-title-en="View 25/26 season" onclick="openSeasonArchive()">‹ 이전 시즌</button>
     <span class="side-season-seg side-season-active side-season-arch lbl" data-ko="25/26 시즌" data-en="25/26 Season">25/26 시즌</span>
     <span class="side-season-seg side-season-active side-season-cur lbl" data-ko="26/27 시즌" data-en="26/27 Season">26/27 시즌</span>
     <button type="button" class="side-season-seg side-season-back lbl" data-ko="26/27 시즌 ›" data-en="26/27 Season ›" onclick="exitSeasonArchive()">26/27 시즌 ›</button>
@@ -627,7 +627,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <tbody id="archiveMiniBody"></tbody>
         </table>
         <div class="mini-rank-more-wrap">
-          <button type="button" class="mini-rank-more-btn" data-en="View weekly standings" data-ko="주별 순위 자세히 보기" onclick="setArchiveTab('weekly')">주별 순위 자세히 보기</button>
+          <button type="button" class="mini-rank-more-btn lbl" data-en="View weekly standings" data-ko="주별 순위 자세히 보기" onclick="setArchiveTab('weekly')">주별 순위 자세히 보기</button>
         </div>
       </div>
     </div>
@@ -695,11 +695,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="home-match-card home-match-card--upcoming">
     <div class="home-match-card-title lbl" data-en="Upcoming Fixtures" data-ko="예정 경기">예정 경기</div>
     <div class="home-match-strip" id="homeUpcomingStrip"></div>
-    <button type="button" class="home-match-more-btn" data-en="See more" data-ko="자세히 보기" onclick="showView('rounds')">자세히 보기</button>
+    <button type="button" class="home-match-more-btn lbl" data-en="See more" data-ko="자세히 보기" onclick="showView('rounds')">자세히 보기</button>
   </div>
 </div>
 <!-- 승격 레이스: 1위와 승점 차 · 남은 경기 · 우승 확률(지난주 대비) · 다음 경기 승/무/패별 우승 확률. PC 전용 슬림 한 줄. app.js의 renderPromoRaceStrip()이 채웁니다. -->
-<section class="promo-race-strip" id="promoRaceStrip" aria-label="승격 레이스" aria-live="polite" hidden></section>
+<section class="promo-race-strip" id="promoRaceStrip" aria-label="승격 레이스" data-aria-ko="승격 레이스" data-aria-en="Promotion race" aria-live="polite" hidden></section>
 <div class="content-row">
 <div class="mini-rank-wrap" id="mainMiniRankWrap">
 <div class="table-card-head">
@@ -865,7 +865,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </tbody>
 </table>
 <div class="mini-rank-more-wrap">
-  <button type="button" class="mini-rank-more-btn" data-en="View full standings" data-ko="순위표 자세히 보기" onclick="showView('leagueRank')">순위표 자세히 보기</button>
+  <button type="button" class="mini-rank-more-btn lbl" data-en="View full standings" data-ko="순위표 자세히 보기" onclick="showView('leagueRank')">순위표 자세히 보기</button>
 </div>
 </div>
 </div>
@@ -882,7 +882,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <button class="rank-filter-btn lbl" data-filter="form" data-en="FORM 5" data-ko="최근5" onclick="setRankFilter('form')">최근5</button>
 </div>
 <div class="rank-filter-actions">
-  <button class="share-btn lbl" data-en="Share" data-ko="공유하기" onclick="shareRankTable()" aria-label="Share standings" title="순위표 공유">
+  <button class="share-btn lbl" data-en="Share" data-ko="공유하기" onclick="shareRankTable()" aria-label="Share standings" title="순위표 공유" data-title-ko="순위표 공유" data-title-en="Share standings">
     <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>
     <span class="lbl" data-en="Share" data-ko="공유">공유</span>
   </button>
@@ -1002,7 +1002,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="ti-section-title lbl" data-en="Squad" data-ko="선수단">선수단</div>
     <div id="teamInfoStaffTab" class="team-info-tab-content"></div>
     <div class="squad-view-toolbar">
-      <div class="squad-view-toggle" role="group" aria-label="선수단 보기 방식">
+      <div class="squad-view-toggle" role="group" aria-label="선수단 보기 방식" data-aria-ko="선수단 보기 방식" data-aria-en="Squad view mode">
         <button type="button" class="squad-view-toggle-btn is-active" data-squad-mode="card" aria-pressed="true"><span class="lbl" data-en="Cards" data-ko="카드">카드</span></button>
         <button type="button" class="squad-view-toggle-btn" data-squad-mode="table" aria-pressed="false"><span class="lbl" data-en="Table" data-ko="표">표</span></button>
       </div>
@@ -1051,11 +1051,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="round-half-bar" id="roundHalfBar" role="tablist"></div>
   <div class="round-toolbar">
     <div class="round-tab-bar" id="roundTabBar"></div>
-    <button class="share-btn round-share-btn lbl" id="roundShareBtn" data-en="Share" data-ko="공유하기" onclick="shareRoundResults()" aria-label="Share round results" title="이번 라운드 결과 공유">
+    <button class="share-btn round-share-btn lbl" id="roundShareBtn" data-en="Share" data-ko="공유하기" onclick="shareRoundResults()" aria-label="Share round results" title="이번 라운드 결과 공유" data-title-ko="이번 라운드 결과 공유" data-title-en="Share round results">
       <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>
       <span class="lbl" data-en="Share" data-ko="공유">공유</span>
     </button>
-    <button class="share-btn round-share-btn postponed-btn lbl" data-en="Postponed Matches" data-ko="연기된 경기보기" onclick="openPostponedMatchesModal()" aria-label="View postponed matches" title="연기된 경기 보기">
+    <button class="share-btn round-share-btn postponed-btn lbl" data-en="Postponed Matches" data-ko="연기된 경기보기" onclick="openPostponedMatchesModal()" aria-label="View postponed matches" title="연기된 경기 보기" data-title-ko="연기된 경기 보기" data-title-en="View postponed matches">
       <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="4.5" width="17" height="16" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.2H20.5" stroke="currentColor" stroke-width="1.8"/><path d="M7.3 2.6V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.7 2.6V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.2 16.2L11.6 12.8M11.6 12.8L15 16.2M11.6 12.8V16.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span class="lbl" data-en="Postponed" data-ko="연기된 경기보기">연기된 경기보기</span>
     </button>
@@ -1447,7 +1447,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="modal-content fullrec-modal-content" role="dialog" aria-modal="true" aria-labelledby="fullRecordTitle">
     <div class="modal-header">
       <h2 id="fullRecordTitle"></h2>
-      <button class="close-btn" type="button" onclick="closeFullRecordModal()" aria-label="닫기">&times;</button>
+      <button class="close-btn" type="button" onclick="closeFullRecordModal()" aria-label="닫기" data-aria-ko="닫기" data-aria-en="Close">&times;</button>
     </div>
     <div class="modal-body fullrec-modal-body" id="fullRecordBody"></div>
   </div>
@@ -1656,7 +1656,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="newsPopupModal" class="modal-overlay" style="display: none;">
   <div class="modal-content disclaimer-modal-content news-popup-content">
     <button class="close-btn news-popup-close-x" onclick="closeNewsPopup()">&times;</button>
-    <img class="news-popup-image" src="https://i.imgur.com/AxV1PSB.png" alt="마야미코 치우시와">
+    <img class="news-popup-image" src="https://i.imgur.com/AxV1PSB.png" alt="마야미코 치우시와" data-alt-ko="마야미코 치우시와" data-alt-en="Mayamiko Chiusiwa">
     <div class="modal-body disclaimer-modal-body news-popup-body">
       <p class="disclaimer-text news-popup-text lbl news-popup-player-link" data-en="Mayamiko Chiuswa<br>called up to Malawi U-23 national team" data-ko="마야미코 치우시와<br>말라위 U-23 국가대표팀 발탁" onclick="openPlayerFromNewsPopup(90)" role="button" tabindex="0">마야미코 치우시와<br>말라위 U-23 국가대표팀 발탁</p>
       <label class="disclaimer-dontshow">
@@ -1718,6 +1718,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
   document.write('<script src="poster.js?v=' + window.ASSET_VERSIONS.poster + '"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
+  document.write('<script src="lang-ny.js?v=001"><\/script>');
 </script>
 </body>
 </html>
