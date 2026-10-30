@@ -14192,3 +14192,77 @@ summary.ti-bye-flow-toggle,
   .forf-score { font-size: 18px; }
   .forf-team-name { font-size: 12.5px; }
 }
+
+
+/* ===== 메인: 승격 레이스 슬림 스트립 (PC 전용 · 한 줄) ===== */
+.promo-race-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 0;
+  width: calc(100% - 32px);
+  margin: 8px 16px 4px;
+  padding: 9px 16px;
+  min-height: 44px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  font-size: 13px;
+  color: var(--color-text-dark);
+  transition: var(--theme-transition);
+}
+.promo-race-strip[hidden] { display: none; }
+/* PC/태블릿(721px↑): 순위표·위쪽 카드들과 좌우 끝선을 맞추기 위해 좌우 여백과 폭 축소를 없앱니다. */
+@media (min-width: 721px) {
+  .promo-race-strip { width: 100%; margin-left: 0; margin-right: 0; }
+}
+@media (max-width: 720px) { .promo-race-strip { display: none; } }
+
+/* 칸 간격 규칙: 모든 칸(제목·항목·다음 경기)이 남는 가로 공간을 똑같이 나눠 갖고(flex: 1 1 auto)
+   내용은 칸 가운데(justify-content: center)에 둡니다. 구분선은 각 칸의 왼쪽 경계에 있으므로
+   구분선 좌우 여백이 항상 같아집니다. */
+.prs-title { flex: 1 1 auto; justify-content: center; padding: 0 18px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--color-text-muted); white-space: nowrap; }
+.prs-title svg { color: var(--color-teal); flex: none; }
+.prs-rank { font-size: var(--fs-2xs); font-weight: 800; padding: 2px 8px; border-radius: 999px; background: rgba(var(--color-tint-rgb), .10); color: var(--color-brand-text); }
+.prs-item { flex: 1 1 auto; justify-content: center; display: inline-flex; align-items: baseline; gap: 7px; white-space: nowrap; padding: 0 18px; position: relative; }
+.prs-item::before { content: ''; position: absolute; left: 0; top: 50%; width: 1px; height: 16px; transform: translateY(-50%); background: rgba(var(--color-tint-rgb), .16); }
+.prs-k { font-size: var(--fs-xs); color: var(--color-text-muted); font-weight: 600; }
+.prs-v { font-size: 15px; font-weight: 800; color: var(--color-text-darkest); font-variant-numeric: tabular-nums; }
+.prs-v.is-lead { color: var(--color-green-text); }
+.prs-v.is-out { color: var(--color-red-text); }
+.prs-sub { font-size: var(--fs-2xs); color: var(--color-text-faint); }
+
+.prs-delta { font-style: normal; font-size: var(--fs-xs); font-weight: 800; font-variant-numeric: tabular-nums; }
+.prs-delta.up { color: var(--color-green-text); }
+.prs-delta.down { color: var(--color-red-text); }
+.prs-delta.flat { color: var(--color-text-muted); }
+
+.prs-next { flex: 1 1 auto; justify-content: center; padding: 0 18px; position: relative; display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
+.prs-next::before { content: ''; position: absolute; left: 0; top: 50%; width: 1px; height: 16px; transform: translateY(-50%); background: rgba(var(--color-tint-rgb), .16); }
+.prs-next-lbl { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-xs); font-weight: 600; color: var(--color-text-muted); }
+.prs-next-opp { font-weight: 800; color: var(--color-text-darkest); }
+.prs-scs { display: inline-flex; align-items: center; gap: 6px; }
+.prs-sc { display: inline-flex; align-items: baseline; gap: 5px; padding: 3px 9px; border-radius: 999px; background: rgba(var(--color-tint-rgb), .06); }
+.prs-sc i { font-style: normal; font-size: var(--fs-2xs); font-weight: 800; }
+.prs-sc.is-W i { color: var(--color-teal-dark); }
+.prs-sc.is-D i { color: var(--color-text-muted); }
+.prs-sc.is-L i { color: var(--color-red-text); }
+.prs-sc b { font-size: 13px; font-weight: 800; color: var(--color-text-darkest); font-variant-numeric: tabular-nums; }
+:root[data-theme="dark"] .prs-sc.is-W i { color: var(--color-teal-light); }
+
+/* 계산 중 자리표시자 */
+.prs-skel { display: inline-block; width: 54px; height: 12px; border-radius: 6px; align-self: center;
+  background: linear-gradient(90deg, rgba(var(--color-tint-rgb), .08), rgba(var(--color-tint-rgb), .20), rgba(var(--color-tint-rgb), .08));
+  background-size: 200% 100%; animation: prs-shimmer 1.2s linear infinite; }
+.prs-skel-sm { width: 34px; }
+@keyframes prs-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .prs-skel { animation: none; } }
+.prs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* 좁은 PC 화면(721~1040px): 다음 경기 시나리오는 아래 줄로 내려 한 줄 높이를 유지 */
+@media (min-width: 721px) and (max-width: 1040px) {
+  .prs-next { flex-basis: 100%; justify-content: flex-start; padding: 0; }
+  .prs-next::before { display: none; }
+}
+
+.prs-next-tbd { font-size: var(--fs-xs); color: var(--color-text-faint); font-weight: 600; }

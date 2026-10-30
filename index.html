@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '006',
+    style: '008',
     data: '005',
-    app: '006',
+    app: '008',
     archive: '200',
     predictWorker: '200',
     pathfinderEngine: '200',
@@ -698,6 +698,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button type="button" class="home-match-more-btn" data-en="See more" data-ko="자세히 보기" onclick="showView('rounds')">자세히 보기</button>
   </div>
 </div>
+<!-- 승격 레이스: 1위와 승점 차 · 남은 경기 · 우승 확률(지난주 대비) · 다음 경기 승/무/패별 우승 확률. PC 전용 슬림 한 줄. app.js의 renderPromoRaceStrip()이 채웁니다. -->
+<section class="promo-race-strip" id="promoRaceStrip" aria-label="승격 레이스" aria-live="polite" hidden></section>
 <div class="content-row">
 <div class="mini-rank-wrap" id="mainMiniRankWrap">
 <div class="table-card-head">

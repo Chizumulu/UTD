@@ -3476,6 +3476,227 @@
     return out.sort((x, y) => cupKickoffKey(x) < cupKickoffKey(y) ? -1 : cupKickoffKey(x) > cupKickoffKey(y) ? 1 : 0).slice(0, n);
   }
 
+  // ===== 메인: 승격 레이스 슬림 스트립 (PC 전용 · 한 줄) =====
+  // 새 계산 로직은 없습니다. 기존 getTeamMagicNumbers / runMonteCarloSimulation(Async) /
+  // ensureTitleProbabilityHistory 결과를 이어 붙여서 보여줍니다.
+  //  - 1위와의 승점 차, 남은 경기 : 즉시 계산(동기)
+  //  - 우승 확률 + 지난주 대비 변화 : 몬테카를로 기본 결과 + 우승확률 추이(워커)
+  //  - 다음 경기 승/무/패별 우승 확률 : '만약에 시뮬레이터'와 같은 overrides 방식으로 3번 더 시뮬레이션(워커)
+  // 워커 계산은 비용이 있으므로 화면에 먼저 즉시 계산분만 그리고, 비동기 값이 도착하면 다시 그립니다.
+  // 결과는 (승점·경기수·다음 경기·data 버전)이 같은 동안 localStorage에 캐시해서, 재방문 시 재계산하지 않습니다.
+  const PRS_CACHE_KEY = 'prs-cache-v2';
+  const prsState = { model: null, running: false, timer: null, failedSig: null };
+
+  function prsSignature(ranked, fx) {
+    const teams = ranked.map(t => [t.nameEn, t.pts, t.played, t.goalsFor || 0, t.goalsAgainst || 0].join(':')).join('|');
+    return [ASSET_VERSIONS.data || '', fx ? fx.id : 'none', teams].join('#');
+  }
+
+  function prsNextLeagueFixture(myEn) {
+    const nm = getMyUpcomingMatches(8).find(m => m.comp === 'league');
+    if (!nm) return null;
+    const homeEn = nm.homeAway === 'H' ? myEn : nm.oppEn;
+    const awayEn = nm.homeAway === 'H' ? nm.oppEn : myEn;
+    const id = whatIfFixtureId(homeEn, awayEn);
+    // 남은 경기 목록에 없는 대진(재편성 중 등)은 결과 고정이 불가능하므로 제외
+    if (!wiFixtures().some(f => f.id === id)) return null;
+    return { id, homeEn, awayEn, oppEn: nm.oppEn, oppKo: nm.oppKo, homeAway: nm.homeAway };
+  }
+
+  function prsLoadCache(sig) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(PRS_CACHE_KEY) || 'null');
+      return raw && raw.sig === sig ? raw : null;
+    } catch (e) { return null; }
+  }
+  function prsSaveCache(model) {
+    try { localStorage.setItem(PRS_CACHE_KEY, JSON.stringify(model)); } catch (e) {}
+  }
+
+  let prsBasePromise = null;
+  function prsEnsureBase() {
+    if (predictionCache) return Promise.resolve(predictionCache);
+    if (!prsBasePromise) {
+      prsBasePromise = runMonteCarloSimulationAsync(4000)
+        .then(r => { if (!predictionCache) predictionCache = r; return predictionCache; })
+        .catch(err => { console.warn('승격 레이스: 기본 시뮬레이션 실패', err); return null; })
+        .then(r => { prsBasePromise = null; return r; });
+    }
+    return prsBasePromise;
+  }
+
+  function prsChampPct(data, teamEn) {
+    const row = data && data.results ? data.results.find(r => r.nameEn === teamEn) : null;
+    return row ? row.championPct : null;
+  }
+
+  function prsCompute(sig, myEn, fx) {
+    if (prsState.running) return;
+    prsState.running = true;
+    (async function () {
+      try {
+        const base = await prsEnsureBase();
+        const basePct = prsChampPct(base, myEn);
+        if (basePct === null) { prsState.failedSig = sig; return; }
+
+        // 지난주 대비: 화면에 보이는 현재 값(정식 몬테카를로) − 직전 라운드 값(추이 차트의 간이 모델).
+        // 우승확률 추이 차트도 마지막 점을 정식 값으로 덮어쓰므로, 차트의 마지막 선 방향과 항상 일치합니다.
+        // (간이 모델 마지막 두 점끼리 빼면 정식 값과 모델이 달라 부호까지 어긋날 수 있었습니다.)
+        let delta = null;
+        const hist = await ensureTitleProbabilityHistory();
+        if (hist && hist.length >= 2) {
+          const prev = hist[hist.length - 2].championPct[myEn];
+          if (typeof prev === 'number') delta = basePct - prev;
+        }
+
+        // 다음 경기 승/무/패별 우승 확률 (내 팀 기준 W/D/L → 홈/원정 H/D/A로 변환)
+        let scen = null;
+        if (fx) {
+          scen = {};
+          for (const view of ['W', 'D', 'L']) {
+            const picks = {};
+            picks[fx.id] = wiPickFromView(fx, myEn, view);
+            const data = await requestPredictWorker(
+              { iterations: WHATIF_ITERATIONS, overrides: picks },
+              () => runMonteCarloSimulation(WHATIF_ITERATIONS, picks)
+            );
+            const p = prsChampPct(data, myEn);
+            scen[view] = p === null ? 0 : p;
+          }
+        }
+        prsState.model = { sig, base: basePct, delta, scen };
+        prsSaveCache(prsState.model);
+      } catch (err) {
+        console.warn('승격 레이스 계산 실패', err);
+        prsState.failedSig = sig;
+      } finally {
+        prsState.running = false;
+        renderPromoRaceStrip();
+      }
+    })();
+  }
+
+  function prsDeltaHtml(d, unitSuffix) {
+    if (d === null || d === undefined) return '';
+    const unit = isKorean ? '%p' : 'pp';
+    if (Math.abs(d) < 0.05) return `<em class="prs-delta flat">–${unitSuffix || ''}</em>`;
+    const up = d > 0;
+    return `<em class="prs-delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'}${Math.abs(d).toFixed(1)}${unit}</em>`;
+  }
+
+  function renderPromoRaceStrip() {
+    const el = document.getElementById('promoRaceStrip');
+    if (!el) return;
+    const hide = () => { el.hidden = true; el.innerHTML = ''; };
+    try {
+      const info = getMyRankedTeam();
+      const ranked = getRankedTeams('all');
+      const ctx = getMagicNumberContext(ranked);
+      if (!info || !ctx || ranked.length < 2) { hide(); return; }
+      const t = info.team;
+      const mn = getTeamMagicNumbers(t, ranked, ctx);
+      if (mn.remainingGames <= 0) { hide(); return; } // 시즌 종료 후에는 숨깁니다
+
+      // --- 1) 즉시 계산: 1위와의 승점 차 / 남은 경기 ---
+      const leader = ranked[0];
+      let gapKey, gapVal, gapCls, gapTip;
+      if (info.rank === 1) {
+        const d = t.pts - ranked[1].pts;
+        gapKey = isKorean ? '2위와 승점차' : 'Lead over 2nd';
+        gapVal = String(d);
+        gapCls = 'is-lead';
+        gapTip = isKorean ? `2위 ${ranked[1].nameKo}와 ${d}점 차 선두` : `${d} pts clear of ${ranked[1].nameEn}`;
+      } else {
+        const d = leader.pts - t.pts;
+        gapKey = isKorean ? '1위와 승점차' : 'Behind 1st';
+        gapVal = String(d);
+        gapCls = '';
+        gapTip = isKorean ? `1위 ${leader.nameKo}와 ${d}점 차` : `${d} pts behind ${leader.nameEn}`;
+      }
+      const rankTxt = isKorean ? `${info.rank}위` : `${info.rank}${['th','st','nd','rd'][(info.rank % 100 > 10 && info.rank % 100 < 14) ? 0 : Math.min(info.rank % 10, 4) % 4] || 'th'}`;
+
+      // --- 2) 비동기 모델 (캐시 → 없으면 워커 계산 예약) ---
+      const fx = prsNextLeagueFixture(t.nameEn);
+      const sig = prsSignature(ranked, fx);
+      let model = (prsState.model && prsState.model.sig === sig) ? prsState.model : null;
+      if (!model) {
+        model = prsLoadCache(sig);
+        if (model) prsState.model = model;
+      }
+      const alive = mn.title.status === 'alive';
+      const needsModel = alive && !model;
+      if (needsModel && !prsState.running && !prsState.timer && prsState.failedSig !== sig) {
+        // 워커 생성을 시도만 해 둡니다. 실패해도 requestPredictWorker가 메인 스레드 계산으로 폴백하므로
+        // getPredictWorker()의 반환값(null)으로 계산 예약 자체를 막지 않습니다.
+        getPredictWorker();
+        // 첫 화면 렌더/다른 카드 로딩과 겹치지 않도록 살짝 미뤄서 시작
+        prsState.timer = setTimeout(() => { prsState.timer = null; prsCompute(sig, t.nameEn, fx); }, 700);
+      }
+      const pendingHtml = '<span class="prs-skel" aria-hidden="true"></span><span class="prs-sr">' + (isKorean ? '계산 중' : 'Calculating') + '</span>';
+      // 같은 데이터로 계산이 실패했을 때만 '–'로 고정합니다(무한 재시도 방지).
+      const noWorker = alive && needsModel && prsState.failedSig === sig;
+
+      // --- 3) 우승 확률 + 지난주 대비 ---
+      let probHtml;
+      if (mn.title.status === 'clinched') {
+        probHtml = `<b class="prs-v is-lead">${isKorean ? '우승 확정' : 'Clinched'}</b>`;
+      } else if (mn.title.status === 'eliminated') {
+        probHtml = `<b class="prs-v is-out">${isKorean ? '탈락' : 'Out'}</b>`;
+      } else if (model) {
+        probHtml = `<b class="prs-v">${model.base.toFixed(1)}%</b>${prsDeltaHtml(model.delta)}${model.delta !== null && model.delta !== undefined ? `<span class="prs-sub">${isKorean ? '지난주 대비' : 'vs last wk'}</span>` : ''}`;
+      } else {
+        probHtml = noWorker ? '<b class="prs-v">–</b>' : pendingHtml;
+      }
+      const probTip = isKorean
+        ? '몬테카를로 4,000회 시뮬레이션 기준 1위(승격) 확률. 증감은 직전 라운드 시점 확률(추이 차트의 간이 모델) 대비이며, 추이 차트의 마지막 선과 같은 기준입니다.'
+        : 'Chance of finishing 1st (promotion) from 4,000 Monte Carlo runs. Change is vs. the previous round in the trend chart (simplified model), matching the last segment of that chart.';
+
+      // --- 4) 다음 경기 승/무/패별 우승 확률 ---
+      let nextHtml = '';
+      if (fx && alive) {
+        const oppName = homeMatchTeamName(fx.oppEn, fx.oppKo);
+        const haTxt = fx.homeAway === 'H' ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A');
+        const labels = { W: isKorean ? '승' : 'W', D: isKorean ? '무' : 'D', L: isKorean ? '패' : 'L' };
+        const chips = ['W', 'D', 'L'].map(k => {
+          if (model && model.scen) {
+            const p = model.scen[k];
+            return `<span class="prs-sc is-${k}"><i>${labels[k]}</i><b>${p.toFixed(1)}%</b>${prsDeltaHtml(p - model.base)}</span>`;
+          }
+          return `<span class="prs-sc is-${k}"><i>${labels[k]}</i>${noWorker ? '<b>–</b>' : '<span class="prs-skel prs-skel-sm" aria-hidden="true"></span>'}</span>`;
+        }).join('');
+        const scTip = isKorean
+          ? `다음 경기(vs ${oppName})를 이기거나 비기거나 졌을 때의 우승 확률과, 현재 확률 대비 변화입니다.`
+          : `Title chance if the next match (vs ${oppName}) is won, drawn or lost, and the change from the current chance.`;
+        nextHtml = `
+          <span class="prs-next" title="${scTip}">
+            <span class="prs-next-lbl">${isKorean ? '다음 경기' : 'Next'} <span class="prs-next-opp">vs ${oppName}</span> <span class="nmp-ha ${fx.homeAway === 'H' ? 'home' : 'away'}">${haTxt}</span></span>
+            <span class="prs-scs">${chips}</span>
+          </span>`;
+      }
+
+      // 다음 리그 경기 일정이 아직 없을 때(라운드 사이): 추측으로 보여주지 않고 안내만 남깁니다.
+      if (!fx && alive) {
+        nextHtml = `<span class="prs-next prs-next-tbd">${isKorean ? '다음 경기 일정이 정해지면 승·무·패별 우승 확률을 보여드려요' : 'Win/draw/loss title odds appear once the next fixture is scheduled'}</span>`;
+      }
+
+      el.hidden = false;
+      el.setAttribute('aria-busy', String(needsModel && !noWorker));
+      el.innerHTML = `
+        <span class="prs-title">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M5 21V4m0 0h12l-2.5 4L17 12H5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>${isKorean ? '승격 레이스' : 'Promotion Race'}</span>
+          <span class="prs-rank">${rankTxt}</span>
+        </span>
+        <span class="prs-item" title="${gapTip}"><span class="prs-k">${gapKey}</span><b class="prs-v ${gapCls}">${gapVal}</b></span>
+        <span class="prs-item"><span class="prs-k">${isKorean ? '남은 경기' : 'Games left'}</span><b class="prs-v">${mn.remainingGames}</b></span>
+        <span class="prs-item" title="${probTip}"><span class="prs-k">${isKorean ? '우승 확률' : 'Title odds'}</span>${probHtml}</span>
+        ${nextHtml}`;
+    } catch (e) {
+      console.warn('renderPromoRaceStrip failed', e);
+      hide();
+    }
+  }
+
   function shortDateLabel(dateStr) {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -17493,6 +17714,7 @@
     renderMainMiniTable();
     renderNextMatchStrip();
     renderHomeMatchCards();
+    renderPromoRaceStrip();
     renderNextMatchPreviewCard();
     renderLeagueLiveTicker(leagueLiveRenderedCache);
     
@@ -17855,6 +18077,7 @@
     renderMainMiniTable();
     renderNextMatchStrip();
     renderHomeMatchCards();
+    renderPromoRaceStrip();
     renderNextMatchPreviewCard();
     initSpotlightCards();
     startLeagueLiveTicker();
