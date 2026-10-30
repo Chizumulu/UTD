@@ -4725,7 +4725,10 @@
   }
 
   // ===== 팀 기록실 (기록·수상 탭) =====
-  // 우리 팀의 끝난 경기(몰수승 제외)를 라운드 순으로 모아서 시즌 베스트 기록을 자동 계산합니다.
+  // 우리 팀의 끝난 경기를 라운드 순으로 모아서 시즌 베스트 기록을 자동 계산합니다.
+  // 몰수승은 리그 순위·통계(buildTeamMatchLog)와 똑같이 정식 결과로 보고 연승·무패·연속 무실점·
+  // 연속 득점 같은 "연속" 기록에는 포함하지만, 실제로 뛴 경기가 아니므로 최다 점수차/최다 골 같은
+  // "경기 내용" 기록에서는 제외합니다(renderTeamRecordRoomTab의 Lplayed).
   // 연승·무패·연속 무실점·연속 득점, 최다 점수차 승/패, 최다 골 경기가 대상이며
   // 경기를 추가하면 자동으로 갱신됩니다. (시즌 합계는 개요 탭의 "구단 기록" 카드가 담당)
   function collectMyTeamResults() {
@@ -4733,7 +4736,7 @@
     completedRoundKeysIncludingScheduled().forEach(key => {
       const wk = roundKeyPos(key);
       buildRoundMatches(key).forEach(m => {
-        if (m.isBye || m.isScheduled || m.forfeit) return;
+        if (m.isBye || m.isScheduled) return;
         if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
         const isHome = isMyTeamName(m.homeEn, m.homeKo);
         const isAway = isMyTeamName(m.awayEn, m.awayKo);
@@ -4741,7 +4744,7 @@
         const gf = isHome ? m.homeScore : m.awayScore;
         const ga = isHome ? m.awayScore : m.homeScore;
         list.push({
-          wk, gf, ga, isHome,
+          wk, gf, ga, isHome, forfeit: !!m.forfeit,
           oppEn: isHome ? m.awayEn : m.homeEn, oppKo: isHome ? m.awayKo : m.homeKo,
           res: gf > ga ? 'W' : gf < ga ? 'L' : 'D'
         });
@@ -4770,6 +4773,8 @@
     if (!el) return;
     const L = collectMyTeamResults();
     if (!L.length) { el.innerHTML = ''; return; }
+    // 몰수승은 연속 기록(L)에만 포함하고, 점수차·골 수 기록은 실제로 치른 경기(Lplayed)만 대상으로 합니다.
+    const Lplayed = L.filter(m => !m.forfeit);
 
     const wkBoth = (wk) => ({ ko: wkKo(wk), en: wkEn(wk, 'Wk', ' ') });
     const lblSpan = (ko, en) => `<span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`;
@@ -4789,7 +4794,7 @@
       const range = r.from === r.to ? lblSpan(a.ko, a.en) : `${lblSpan(a.ko, a.en)} ~ ${lblSpan(b.ko, b.en)}`;
       return item(ico, ko, en, `${r.len}<small>${lblSpan('경기', isKorean ? '경기' : (r.len === 1 ? 'game' : 'games'))}</small>`, range, r.live);
     };
-    const pick = (cmp) => L.reduce((best, m) => (!best || cmp(m, best) >= 0) ? m : best, null);
+    const pick = (cmp) => Lplayed.reduce((best, m) => (!best || cmp(m, best) >= 0) ? m : best, null);
     const matchSub = (m) => {
       const w = wkBoth(m.wk);
       const venueKo = m.isHome ? '홈' : '원정', venueEn = m.isHome ? 'H' : 'A';
@@ -4803,7 +4808,7 @@
     const biggestLoss = pick((a, b) => (a.ga - a.gf) - (b.ga - b.gf));
     // 홈/원정 베스트 승리: 전체 최다 점수차 승리와 같은 경기면 중복이라 숨깁니다.
     const bestWinAt = (home) => {
-      const sub = L.filter(m => m.isHome === home && m.gf > m.ga);
+      const sub = Lplayed.filter(m => m.isHome === home && m.gf > m.ga);
       return sub.reduce((best, m) => (!best || (m.gf - m.ga) - (best.gf - best.ga) >= 0) ? m : best, null);
     };
     const notDup = (m) => !(m && biggestWin && m.wk === biggestWin.wk && m.gf === biggestWin.gf && m.ga === biggestWin.ga);
