@@ -13407,7 +13407,14 @@ body {
   .wi-ha-away { background: rgba(var(--color-navy-rgb), 0.08); color: var(--color-text-legend); }
   .wi-date { color: var(--color-teal-dark); font-size: var(--fs-xs); font-weight: 700; white-space: nowrap; }
   .wi-date-tbd { color: var(--color-text-legend); font-weight: 500; }
-  .wi-btns { display: inline-flex; flex: none; gap: 4px; }
+  .wi-btns { display: inline-flex; flex: none; align-items: flex-start; gap: 4px; }
+  .wi-cell { display: flex; flex-direction: column; align-items: stretch; gap: 2px; min-width: 38px; text-align: center; }
+  .wi-cell .wi-btn { width: 100%; }
+  .wi-cell .wi-delta { white-space: nowrap; }
+  .wi-impact-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 8px; }
+  .wi-impact-note { flex: 1 1 200px; color: var(--color-text-legend); font-size: var(--fs-xs); line-height: 1.4; }
+  .wi-row.is-key { border-color: var(--color-gold, #d4a017); box-shadow: 0 0 0 1px var(--color-gold, #d4a017) inset; }
+  .wi-key-tag { padding: 1px 7px; border-radius: var(--radius-pill); background: rgba(212, 160, 23, 0.16); color: var(--color-brand-text); font-size: var(--fs-2xs); font-weight: 800; white-space: nowrap; }
   .wi-btn { min-width: 38px; padding: 6px 0; border: 1px solid var(--color-border-light); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-legend); font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }
   .wi-btn.is-on.wi-btn-w { background: var(--color-teal); border-color: var(--color-teal); color: #fff; }
   .wi-btn.is-on.wi-btn-d { background: var(--color-text-legend); border-color: var(--color-text-legend); color: #fff; }
@@ -13440,7 +13447,8 @@ body {
     .whatif-section { padding: 12px 10px; }
     .wi-row { flex-direction: column; align-items: stretch; gap: 8px; }
     .wi-btns { width: 100%; }
-    .wi-btn { flex: 1; padding: 8px 0; }
+    .wi-cell { flex: 1; }
+    .wi-btn { padding: 8px 0; }
     .wi-select { max-width: 150px; }
     .wi-result-wrap { overflow-x: hidden; }
     .wi-result-table th, .wi-result-table td { padding: 5px 3px; font-size: 11.5px; }
@@ -14602,3 +14610,10 @@ body {
     padding: 4px 1px;
   }
 }
+
+  /* ===== 승점 6점짜리 경기 ===== */
+  .six-tag { display: inline-block; padding: 1px 7px; border-radius: var(--radius-pill); background: rgba(var(--color-red-rgb), 0.1); color: var(--color-red-text); font-size: var(--fs-2xs); font-weight: 800; white-space: nowrap; cursor: help; }
+  .nmp-six-note { margin: 0 0 10px; padding: 7px 10px; border-radius: var(--radius-sm); background: rgba(var(--color-red-rgb), 0.07); color: var(--color-brand-text); font-size: var(--fs-xs); line-height: 1.45; }
+  .mc-six-banner { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 12px; padding: 8px 10px; border-radius: var(--radius-sm); background: rgba(var(--color-red-rgb), 0.07); }
+  .mc-six-banner .six-tag { flex: none; cursor: default; }
+  .mc-six-text { color: var(--color-brand-text); font-size: var(--fs-xs); line-height: 1.45; }

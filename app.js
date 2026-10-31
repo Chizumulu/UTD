@@ -695,6 +695,7 @@
     renderScenarioTable();
     renderRankLines();
     renderWhatIf();
+    try { renderNextMatchPreviewCard(); } catch (e) {}
     attachImageFallback();
     refreshScrollFadeHints();
   }
@@ -835,9 +836,59 @@
   const WHATIF_FLAT_PTS = 0.5;
   const whatIfState = { teamEn: WHATIF_MY_TEAM_EN, picks: {}, result: null, running: false, failed: false, wired: false };
   let whatIfFixturesCache = null;
+  // 경기별 '결과 → 우승확률 변화' 미리보기. 경기 ID(H/D/A 저장값 기준)로 캐시해서 팀을 바꿔도 겹치는 경기는 재사용합니다.
+  // cache[fxId] = { H: {팀영문명: 우승%}, D: {...}, A: {...} } — 기준은 predictionCache(기본 예측)이고, 그것이 새로 계산되면 캐시를 버립니다.
+  const whatIfImpact = { cache: {}, baseRef: null, running: false, done: 0, total: 0, failed: false };
 
   function wiEsc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+
+  // ===== 승점 6점짜리 경기 판정 (다음 경기 카드 / 경기 비교 창 / 만약에 시뮬레이터가 같은 기준을 씁니다) =====
+  // 두 팀의 승점 차가 SIX_PT_GAP 이하이고, 같은 목표선(상위 3위 또는 하위 3위)을 다투는 경기.
+  //  - 시뮬레이션 결과(predictionCache)가 있으면: 두 팀 모두 그 선에 들 확률이 5~95% 사이일 때
+  //  - 아직 없으면: 두 팀 모두 상위 6위 이내(상위권) / 하위 6위 이내(강등권)일 때
+  const SIX_PT_GAP = 3;
+  const SIX_PCT_MIN = 5, SIX_PCT_MAX = 95;
+  function sixPointerInfo(homeEn, awayEn) {
+    try {
+      const ranked = getRankedTeams('all');
+      const n = ranked.length;
+      if (n < 4) return null;
+      const ia = ranked.findIndex(t => t.nameEn === homeEn);
+      const ib = ranked.findIndex(t => t.nameEn === awayEn);
+      if (ia < 0 || ib < 0) return null;
+      const gap = Math.abs(ranked[ia].pts - ranked[ib].pts);
+      if (gap > SIX_PT_GAP) return null;
+      const rows = predictionCache && predictionCache.results;
+      const ra = rows && rows.find(r => r.nameEn === homeEn);
+      const rb = rows && rows.find(r => r.nameEn === awayEn);
+      const inBand = v => typeof v === 'number' && v >= SIX_PCT_MIN && v <= SIX_PCT_MAX;
+      let zone = null;
+      if (ra && rb) {
+        if (inBand(ra.top3Pct) && inBand(rb.top3Pct)) zone = 'top';
+        else if (inBand(ra.bottom3Pct) && inBand(rb.bottom3Pct)) zone = 'bottom';
+      } else {
+        if (ia < 6 && ib < 6) zone = 'top';
+        else if (ia >= n - 6 && ib >= n - 6) zone = 'bottom';
+      }
+      return zone ? { zone, gap } : null;
+    } catch (e) { return null; }
+  }
+  function sixTagHtml(info) {
+    if (!info) return '';
+    const tip = sixNoteText(info);
+    return `<span class="six-tag" title="${wiEsc(tip)}">⚔️ ${isKorean ? '6점짜리' : '6-pointer'}</span>`;
+  }
+  function sixNoteText(info) {
+    const gapTxt = info.gap === 0 ? (isKorean ? '승점 동률' : 'level on points') : (isKorean ? `승점 차 ${info.gap}점` : `${info.gap} pt${info.gap === 1 ? '' : 's'} apart`);
+    if (isKorean) {
+      const zone = info.zone === 'top' ? '상위 3위 경쟁' : '강등권(하위 3위) 경쟁';
+      return `${zone}을 하는 팀끼리의 맞대결이에요 (${gapTxt}). 이기면 내가 +3점, 상대는 +0점이라 결과에 따라 두 팀의 승점 차가 최대 6점 달라져요.`;
+    }
+    const zone = info.zone === 'top' ? 'the top-3 race' : 'the relegation (bottom-3) race';
+    return `Both teams are in ${zone} (${gapTxt}). A win is +3 for you and +0 for them, so the result can swing the gap between them by up to 6 points.`;
   }
 
   function wiFixtures() {
@@ -963,6 +1014,73 @@
       </div>`;
   }
 
+  function wiImpactValid() {
+    if (whatIfImpact.baseRef !== predictionCache) {
+      whatIfImpact.cache = {};
+      whatIfImpact.baseRef = predictionCache;
+    }
+    return !!predictionCache;
+  }
+
+  // 선택한 팀 기준 승/무/패 각각의 우승확률 변화(%p). 캐시가 없으면 null.
+  function wiImpactDeltas(fx, teamEn) {
+    if (!wiImpactValid()) return null;
+    const c = whatIfImpact.cache[fx.id];
+    const baseRow = predictionCache.results.find(r => r.nameEn === teamEn);
+    if (!c || !baseRow) return null;
+    const out = {};
+    for (const view of ['W', 'D', 'L']) {
+      const v = c[wiPickFromView(fx, teamEn, view)][teamEn];
+      out[view] = (typeof v === 'number' ? v : 0) - baseRow.championPct;
+    }
+    return out;
+  }
+
+  function runWiImpact() {
+    if (whatIfImpact.running || !wiImpactValid()) return;
+    const teamEn = whatIfState.teamEn;
+    const todo = wiTeamFixtures(teamEn).filter(fx => !whatIfImpact.cache[fx.id]);
+    if (!todo.length) { renderWhatIf(); return; }
+    const baseRef = predictionCache;
+    whatIfImpact.running = true;
+    whatIfImpact.failed = false;
+    whatIfImpact.done = 0;
+    whatIfImpact.total = todo.length;
+    renderWhatIf();
+    const toMap = data => {
+      const m = {};
+      data.results.forEach(r => { m[r.nameEn] = r.championPct; });
+      return m;
+    };
+    (async function () {
+      try {
+        // 스피너가 먼저 그려진 뒤에 계산을 시작합니다(워커를 못 쓰는 환경 대비).
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 30)));
+        for (const fx of todo) {
+          const entry = {};
+          for (const pick of ['H', 'D', 'A']) {
+            const picks = {}; picks[fx.id] = pick;
+            const data = await requestPredictWorker(
+              { iterations: WHATIF_ITERATIONS, overrides: picks },
+              () => runMonteCarloSimulation(WHATIF_ITERATIONS, picks)
+            );
+            entry[pick] = toMap(data);
+          }
+          if (whatIfImpact.baseRef !== baseRef) break; // 계산 도중 기본 예측이 새로 계산됨 → 낡은 값은 버림
+          whatIfImpact.cache[fx.id] = entry;
+          whatIfImpact.done++;
+          renderWhatIf();
+        }
+      } catch (err) {
+        console.error('경기별 우승확률 영향 계산 중 오류:', err);
+        whatIfImpact.failed = true;
+      } finally {
+        whatIfImpact.running = false;
+        renderWhatIf();
+      }
+    })();
+  }
+
   function renderWhatIf() {
     const body = document.getElementById('whatIfBody');
     if (!body) return;
@@ -976,6 +1094,7 @@
 
     const teamEn = whatIfState.teamEn;
     const teamFx = wiTeamFixtures(teamEn);
+    const teamNameTxt = wiTeamName(teamEn);
     const picks = whatIfState.picks;
     const totalPicks = Object.keys(picks).length;
     const teamPicks = teamFx.filter(fx => picks[fx.id]).length;
@@ -985,20 +1104,50 @@
       `<option value="${wiEsc(t.nameEn)}"${t.nameEn === teamEn ? ' selected' : ''}>${isKorean ? t.nameKo : t.nameEn}</option>`
     ).join('');
 
+    // 경기별 우승확률 영향(캐시된 것만): 가장 크게 갈리는 경기를 '승부처'로 표시
+    const impactMap = {};
+    let keyId = null, keySwing = WHATIF_FLAT_PCT;
+    teamFx.forEach(fx => {
+      const d = wiImpactDeltas(fx, teamEn);
+      if (!d) return;
+      impactMap[fx.id] = d;
+      const swing = Math.max(d.W, d.D, d.L) - Math.min(d.W, d.D, d.L);
+      if (swing >= keySwing) { keySwing = swing; keyId = fx.id; }
+    });
+    const impactCached = teamFx.filter(fx => impactMap[fx.id]).length;
+    const impactAll = impactCached === teamFx.length && teamFx.length > 0;
+    const impactLabel = whatIfImpact.running
+      ? (isKorean ? `계산 중... ${whatIfImpact.done}/${whatIfImpact.total}` : `Calculating... ${whatIfImpact.done}/${whatIfImpact.total}`)
+      : (impactAll ? (isKorean ? '경기별 영향 계산 완료' : 'Impact calculated')
+        : (isKorean ? '🔮 경기별 우승확률 영향 보기' : '🔮 Show title-chance impact per game'));
+    const impactCanRun = !!predictionCache && !whatIfImpact.running && !impactAll;
+    const impactBar = `<div class="wi-impact-bar">
+        <button type="button" class="wi-chip" data-wi-action="impact"${impactCanRun ? '' : ' disabled'}>${impactLabel}</button>
+        <span class="wi-impact-note">${whatIfImpact.failed
+          ? (isKorean ? '계산에 실패했어요. 다시 시도해 주세요.' : 'Calculation failed. Please try again.')
+          : (impactCached
+            ? (isKorean ? `각 버튼 아래 숫자는 그 경기만 고정했을 때 ${teamNameTxt}의 우승 확률 변화(기본 예측 대비)예요. 다른 경기를 이미 골랐어도 값은 그대로예요.` : `Numbers under each button show the change in ${teamNameTxt}'s title chance if only that game is fixed (vs. the base forecast), regardless of your other picks.`)
+            : (isKorean ? '경기당 3번씩 시뮬레이션해서 시간이 조금 걸려요(처음 한 번만).' : 'Runs 3 simulations per game, so it takes a moment (first time only).'))}</span>
+      </div>`;
+
     const rowsHtml = teamFx.map(fx => {
       const isHome = fx.homeEn === teamEn;
       const oppEn = isHome ? fx.awayEn : fx.homeEn;
       const oppLogo = isHome ? fx.awayLogo : fx.homeLogo;
       const cur = picks[fx.id] ? wiViewFromPick(fx, teamEn, picks[fx.id]) : null;
       const dateTxt = wiDateText(fx);
+      const dl = impactMap[fx.id] || null;
       const btn = (view, labelKo, labelEn, cls) =>
-        `<button type="button" class="wi-btn ${cls}${cur === view ? ' is-on' : ''}" data-wi-id="${wiEsc(fx.id)}" data-wi-view="${view}" aria-pressed="${cur === view}">${isKorean ? labelKo : labelEn}</button>`;
-      return `<div class="wi-row${cur ? ' is-picked' : ''}">
+        `<div class="wi-cell"><button type="button" class="wi-btn ${cls}${cur === view ? ' is-on' : ''}" data-wi-id="${wiEsc(fx.id)}" data-wi-view="${view}" aria-pressed="${cur === view}">${isKorean ? labelKo : labelEn}</button>${dl ? wiDeltaChip(dl[view], false, false) : ''}</div>`;
+      const isKey = !!dl && fx.id === keyId;
+      return `<div class="wi-row${cur ? ' is-picked' : ''}${isKey ? ' is-key' : ''}">
         <div class="wi-match">
           <img class="team-logo team-logo-sm" src="${wiEsc(oppLogo)}" alt="">
           <span class="wi-opp">${wiTeamName(oppEn)}</span>
           <span class="wi-ha ${isHome ? 'wi-ha-home' : 'wi-ha-away'}">${isHome ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A')}</span>
           <span class="wi-date${dateTxt ? '' : ' wi-date-tbd'}">${dateTxt || (isKorean ? '일정 미정' : 'TBD')}</span>
+          ${sixTagHtml(sixPointerInfo(fx.homeEn, fx.awayEn))}
+          ${isKey ? `<span class="wi-key-tag">${isKorean ? '🔥 승부처' : '🔥 Key game'}</span>` : ''}
         </div>
         <div class="wi-btns" role="group">
           ${btn('W', '승', 'W', 'wi-btn-w')}${btn('D', '무', 'D', 'wi-btn-d')}${btn('L', '패', 'L', 'wi-btn-l')}
@@ -1014,7 +1163,6 @@
     const hint = !predictionCache
       ? (isKorean ? '기본 예측 계산이 끝나면 사용할 수 있어요.' : 'Available once the base forecast finishes.')
       : (totalPicks === 0 ? (isKorean ? '경기 결과를 하나 이상 골라 주세요.' : 'Pick at least one result.') : '');
-    const teamNameTxt = wiTeamName(teamEn);
 
     body.innerHTML = `
       <div class="wi-controls">
@@ -1031,6 +1179,7 @@
       <p class="wi-sub">${isKorean
         ? `${teamNameTxt} 남은 ${teamFx.length}경기 · 결과는 ${teamNameTxt} 기준이에요. 고르지 않은 경기는 시뮬레이션에 맡겨요.`
         : `${teamNameTxt}: ${teamFx.length} remaining games · results are from ${teamNameTxt}'s side. Unpicked games are simulated as usual.`}</p>
+      ${impactBar}
       <div class="wi-list">${rowsHtml}</div>
       <div class="wi-actions">
         <span class="wi-count">${isKorean
@@ -1096,6 +1245,9 @@
           break;
         case 'run':
           runWhatIfSimulation();
+          return;
+        case 'impact':
+          runWiImpact();
           return;
         default:
           return;
@@ -4066,6 +4218,7 @@
       const weekTxt = isKorean ? wkKo(weekNum) : wkEn(weekNum, 'WK', ' ');
 
       let headHtml;
+      let sixNoteHtml = '';
       if (nm.isBye) {
         headHtml = `
           <div class="nmp-head">
@@ -4084,6 +4237,8 @@
           ? Math.max(0, Math.round((kstMidnightUTCMillis(kickoffMs) - kstMidnightUTCMillis(Date.now())) / 86400000))
           : null;
         const ddayTxt = daysLeft === null ? '' : (daysLeft === 0 ? 'D-DAY' : `D-${daysLeft}`);
+        const sixInfo = sixPointerInfo(t.nameEn, nm.oppEn);
+        sixNoteHtml = sixInfo ? `<p class="nmp-six-note">${sixNoteText(sixInfo)}</p>` : '';
         const oppName = isKorean ? nm.oppKo : nm.oppEn;
         const ha = nm.homeAway === 'H' ? (isKorean ? '홈' : 'HOME') : (isKorean ? '원정' : 'AWAY');
         headHtml = `
@@ -4094,6 +4249,7 @@
               <span class="nmp-opp-text"><span class="nmp-opp-wk">${weekTxt} · vs </span><span class="nmp-opp-full">${oppName}</span><span class="nmp-opp-short">${nmpFirstName(oppName)}</span></span>
               <span class="nmp-ha ${nm.homeAway === 'H' ? 'home' : 'away'}">${ha}</span>
               ${ddayTxt ? `<span class="nmp-dday">${ddayTxt}</span>` : ''}
+              ${sixTagHtml(sixInfo)}
             </span>
             ${dots ? `<span class="nmp-form"><span class="nmp-form-lbl">${isKorean ? '상대 최근' : 'Opp. form'}</span>${dots}</span>` : ''}
           </div>`;
@@ -4113,6 +4269,7 @@
           <span class="nmp-toggle-hint"><span class="nmp-toggle-txt">${nmpToggleText(open)}</span><svg class="nmp-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </div>
         <div class="nmp-body" id="nmpBody"><div class="nmp-body-inner">
+          ${sixNoteHtml}
           <div class="nmp-grid${lineup && right ? '' : ' is-single'}">
             ${lineup ? `<div class="nmp-col nmp-col-left">${lineup}</div>` : ''}
             ${right ? `<div class="nmp-col nmp-col-right">${right}</div>` : ''}
@@ -17073,6 +17230,7 @@
           <span class="mc-team-rank">${rankTxt(away.rank)}</span>
         </div>
       </div>
+      ${(!played && sixPointerInfo(homeEn, awayEn)) ? `<div class="mc-six-banner"><span class="six-tag">⚔️ ${isKorean ? '6점짜리 경기' : '6-pointer'}</span><span class="mc-six-text">${sixNoteText(sixPointerInfo(homeEn, awayEn))}</span></div>` : ''}
       <div class="mc-compare-layout">
         ${played ? '' : `<div class="mc-compare-right">
           ${aiPredictionBlockHtml(homeEn, homeKo, awayEn, awayKo, home, away)}
