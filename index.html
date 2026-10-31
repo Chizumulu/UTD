@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '011',
+    style: '017',
     data: '002',
-    app: '011',
+    app: '017',
     archive: '200',
     predictWorker: '200',
     pathfinderEngine: '200',
@@ -1080,47 +1080,62 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 <div id="statsView" style="display:none;">
-<div id="seasonFactSummary"></div>
+  <div class="predict-tabs stats-tabs" id="statsTabs" role="tablist">
+    <button type="button" role="tab" class="predict-tab active" data-stats-tab="rank" aria-selected="true" onclick="setStatsTab('rank')"><span class="lbl" data-en="Rankings" data-ko="순위">순위</span></button>
+    <button type="button" role="tab" class="predict-tab" data-stats-tab="analysis" aria-selected="false" onclick="setStatsTab('analysis')"><span class="lbl" data-en="Analysis" data-ko="분석">분석</span></button>
+    <button type="button" role="tab" class="predict-tab" data-stats-tab="compare" aria-selected="false" onclick="setStatsTab('compare')"><span class="lbl" data-en="vs Last Season" data-ko="작년 비교">작년 비교</span></button>
+  </div>
 
-<div class="stat-cat-scroll" id="statCatNav"></div>
+  <div class="stats-panel active" data-stats-panel="rank" role="tabpanel">
+    <div class="stat-cat-scroll" id="statCatNav"></div>
 
-<div class="stat-board" id="statBoard">
-  <div class="stat-board-head">
-    <div class="stat-board-title">
-      <span id="statBoardTitleText"></span><span class="stat-board-unit" id="statBoardUnitText"></span>
+    <div class="stat-board" id="statBoard">
+      <div class="stat-board-head">
+        <div class="stat-board-title">
+          <span id="statBoardTitleText"></span><span class="stat-board-unit" id="statBoardUnitText"></span>
+        </div>
+        <span class="info-icon-btn" id="statBoardInfoBtn" style="display:none;" onclick="toggleInfoTooltip(event, 'statBoardInfo')">ⓘ</span>
+        <div class="info-tooltip" id="statBoardInfo" onclick="event.stopPropagation()">
+          <span class="lbl" id="statBoardInfoText"></span>
+        </div>
+      </div>
+      <div class="stat-board-desc lbl" id="statBoardDesc"></div>
+      <div id="statBoardRows"></div>
+      <div class="stat-board-foot">
+        <span class="more-link lbl" data-en="View Full Ranking" data-ko="전체 순위 더보기" id="statBoardMoreBtn" onclick="toggleStatBoardExpand()">전체 순위 더보기</span>
+      </div>
     </div>
-    <span class="info-icon-btn" id="statBoardInfoBtn" style="display:none;" onclick="toggleInfoTooltip(event, 'statBoardInfo')">ⓘ</span>
-    <div class="info-tooltip" id="statBoardInfo" onclick="event.stopPropagation()">
-      <span class="lbl" id="statBoardInfoText"></span>
-    </div>
-  </div>
-  <div id="statBoardRows"></div>
-  <div class="stat-board-foot">
-    <span class="more-link lbl" data-en="View Full Ranking" data-ko="전체 순위 더보기" id="statBoardMoreBtn" onclick="toggleStatBoardExpand()">전체 순위 더보기</span>
-  </div>
-</div>
 
-<div class="scatter-card">
-  <div class="stats-title">
-    <span class="lbl" data-en="ATTACK vs DEFENSE (Goals For vs Goals Against per Game)" data-ko="공격 vs 수비 (경기당 득점 vs 경기당 실점)">공격 vs 수비 (경기당 득점 vs 경기당 실점)</span>
-    <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'scatterInfo')">ⓘ</span>
-    <div class="info-tooltip" id="scatterInfo" onclick="event.stopPropagation()">
-      <span class="lbl" data-ko="X축은 경기당 실점(오른쪽일수록 적음), Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줍니다: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하). 흐린 점과 옅은 선은 이전 라운드까지의 위치 변화(궤적)를 팀마다 다른 색으로 보여줍니다. 팀 로고를 클릭하면 그 팀의 궤적만 크게 강조되고, 다시 클릭하면 해제돼요." data-en="X-axis is goals conceded per game (fewer toward the right), Y-axis is goals scored per game. Teams are split into four zones based on the league average: Strong (above average at both ends), Attacking (scores a lot but concedes a lot too), Defensive (low scoring, low conceding), and Weak (below average at both ends). The faded dots and trail line, shown in a distinct color per team, show how each team's position has moved round by round. Click a team's logo to highlight just that team's trail — click again to clear it.">X축은 경기당 실점(오른쪽일수록 적음), Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줍니다: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하). 흐린 점과 옅은 선은 이전 라운드까지의 위치 변화(궤적)를 팀마다 다른 색으로 보여줍니다. 팀 로고를 클릭하면 그 팀의 궤적만 크게 강조되고, 다시 클릭하면 해제돼요.</span>
+    <div id="seasonFactSummary"></div>
+  </div>
+
+  <div class="stats-panel" data-stats-panel="analysis" role="tabpanel">
+    <div class="scatter-card">
+      <div class="stats-title">
+        <span class="lbl" data-en="ATTACK vs DEFENSE (Goals For vs Goals Against per Game)" data-ko="공격 vs 수비 (경기당 득점 vs 경기당 실점)">공격 vs 수비 (경기당 득점 vs 경기당 실점)</span>
+        <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'scatterInfo')">ⓘ</span>
+        <div class="info-tooltip" id="scatterInfo" onclick="event.stopPropagation()">
+          <span class="lbl" data-ko="X축은 경기당 실점(오른쪽일수록 적음), Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줍니다: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하). 흐린 점과 옅은 선은 이전 라운드까지의 위치 변화(궤적)를 팀마다 다른 색으로 보여줍니다. 팀 로고를 클릭하면 그 팀의 궤적만 크게 강조되고, 다시 클릭하면 해제돼요." data-en="X-axis is goals conceded per game (fewer toward the right), Y-axis is goals scored per game. Teams are split into four zones based on the league average: Strong (above average at both ends), Attacking (scores a lot but concedes a lot too), Defensive (low scoring, low conceding), and Weak (below average at both ends). The faded dots and trail line, shown in a distinct color per team, show how each team's position has moved round by round. Click a team's logo to highlight just that team's trail — click again to clear it.">X축은 경기당 실점(오른쪽일수록 적음), Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줍니다: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하). 흐린 점과 옅은 선은 이전 라운드까지의 위치 변화(궤적)를 팀마다 다른 색으로 보여줍니다. 팀 로고를 클릭하면 그 팀의 궤적만 크게 강조되고, 다시 클릭하면 해제돼요.</span>
+        </div>
+      </div>
+      <div class="scatter-compare-bar">
+        <button type="button" id="scatterCompareBtn" class="scatter-compare-btn" aria-pressed="false" onclick="toggleScatterCompare()">
+          <span class="lbl" data-en="Compare with last season" data-ko="직전 시즌과 비교하기">직전 시즌과 비교하기</span>
+        </button>
+        <span id="scatterCompareNote" class="scatter-compare-note lbl" style="display:none;" data-en="Faded dot = last season's final position (25/26); arrow = move to this season's current position. Teams without a 25/26 record are not shown." data-ko="흐린 점은 작년(25/26) 최종 위치, 화살표는 올해 현재 위치로의 이동이에요. 작년 기록이 없는 팀은 표시되지 않아요.">흐린 점은 작년(25/26) 최종 위치, 화살표는 올해 현재 위치로의 이동이에요. 작년 기록이 없는 팀은 표시되지 않아요.</span>
+      </div>
+      <div class="scatter-body">
+        <svg id="scatterSvg" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
     </div>
+    <div id="forfeitMatchesCard"></div>
   </div>
-  <div class="scatter-compare-bar">
-    <button type="button" id="scatterCompareBtn" class="scatter-compare-btn" aria-pressed="false" onclick="toggleScatterCompare()">
-      <span class="lbl" data-en="Compare with last season" data-ko="직전 시즌과 비교하기">직전 시즌과 비교하기</span>
-    </button>
-    <span id="scatterCompareNote" class="scatter-compare-note lbl" style="display:none;" data-en="Faded dot = last season's final position (25/26); arrow = move to this season's current position. Teams without a 25/26 record are not shown." data-ko="흐린 점은 작년(25/26) 최종 위치, 화살표는 올해 현재 위치로의 이동이에요. 작년 기록이 없는 팀은 표시되지 않아요.">흐린 점은 작년(25/26) 최종 위치, 화살표는 올해 현재 위치로의 이동이에요. 작년 기록이 없는 팀은 표시되지 않아요.</span>
+
+  <div class="stats-panel" data-stats-panel="compare" role="tabpanel">
+    <div id="seasonCompareCard"></div>
+    <div id="prevCompareBoards"></div>
+    <div id="luckChangeCard"></div>
   </div>
-  <div class="scatter-body">
-    <svg id="scatterSvg" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg"></svg>
-  </div>
-</div>
-<div id="luckChangeCard"></div>
-<div id="seasonCompareCard"></div>
-<div id="forfeitMatchesCard"></div>
 </div>
 <div class="content-row" id="scorersView" style="display:none;">
 <div class="scroll-fade-wrap" id="scorersTableFade">
@@ -1150,14 +1165,29 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 <div id="predictView" style="display:none;">
-  <div class="predict-intro">
-    <span class="lbl" data-en="Monte Carlo season simulation — every remaining fixture is played out thousands of times using each team's current attack/defense rate (Poisson-based), plus a home advantage factor, to estimate title, top-3, and bottom-3 (relegation zone) probabilities." data-ko="몬테카를로 시즌 시뮬레이션 — 각 팀의 현재 공격력/수비력 지표(포아송 분포 기반)와 홈 어드밴티지를 적용해 남은 모든 경기를 수천 번 반복 시뮬레이션한 뒤, 우승·상위 3위·하위 3위(강등권) 진입 확률을 계산합니다.">몬테카를로 시즌 시뮬레이션 — 각 팀의 현재 공격력/수비력 지표(포아송 분포 기반)와 홈 어드밴티지를 적용해 남은 모든 경기를 수천 번 반복 시뮬레이션한 뒤, 우승·상위 3위·하위 3위(강등권) 진입 확률을 계산합니다.</span>
-    <div class="predict-meta">
-      <span id="predictMetaRuns"></span>
-      <span id="predictMetaFixtures"></span>
-    </div>
-    <button class="predict-refresh-btn lbl" id="predictRefreshBtn" data-en="Re-run Simulation" data-ko="시뮬레이션 다시 돌리기" onclick="renderPredictions(true)">시뮬레이션 다시 돌리기</button>
+  <div class="predict-tabs" id="predictTabs" role="tablist">
+    <button type="button" role="tab" class="predict-tab active" data-predict-tab="outlook" aria-selected="true" onclick="setPredictTab('outlook')"><span class="lbl" data-en="Outlook" data-ko="전망">전망</span></button>
+    <button type="button" role="tab" class="predict-tab" data-predict-tab="trend" aria-selected="false" onclick="setPredictTab('trend')"><span class="lbl" data-en="Trends" data-ko="추이">추이</span></button>
+    <button type="button" role="tab" class="predict-tab" data-predict-tab="race" aria-selected="false" onclick="setPredictTab('race')"><span class="lbl" data-en="Scenarios" data-ko="경우의 수">경우의 수</span></button>
+    <button type="button" role="tab" class="predict-tab" data-predict-tab="model" aria-selected="false" onclick="setPredictTab('model')"><span class="lbl" data-en="Model Record" data-ko="모델 성적">모델 성적</span></button>
   </div>
+
+  <div class="predict-panel active" data-predict-panel="outlook" role="tabpanel">
+    <div class="predict-my-summary" id="predictMySummary"></div>
+    <div class="predict-intro">
+      <div class="predict-intro-row">
+        <span class="predict-intro-lead lbl" data-en="Every remaining fixture is simulated thousands of times to estimate title, top-3 and relegation odds." data-ko="남은 경기를 수천 번 시뮬레이션해서 우승·상위 3위·강등권 확률을 계산해요.">남은 경기를 수천 번 시뮬레이션해서 우승·상위 3위·강등권 확률을 계산해요.</span>
+        <button class="predict-refresh-btn lbl" id="predictRefreshBtn" data-en="Re-run Simulation" data-ko="시뮬레이션 다시 돌리기" onclick="renderPredictions(true)">시뮬레이션 다시 돌리기</button>
+      </div>
+      <div class="predict-meta">
+        <span id="predictMetaRuns"></span>
+        <span id="predictMetaFixtures"></span>
+      </div>
+      <details class="predict-howto">
+        <summary class="lbl" data-en="How it's calculated" data-ko="계산 방법 보기">계산 방법 보기</summary>
+        <p class="lbl" data-en="Monte Carlo season simulation — every remaining fixture is played out thousands of times using each team's current attack/defense rate (Poisson-based), plus a home advantage factor, to estimate title, top-3, and bottom-3 (relegation zone) probabilities." data-ko="몬테카를로 시즌 시뮬레이션 — 각 팀의 현재 공격력/수비력 지표(포아송 분포 기반)와 홈 어드밴티지를 적용해 남은 모든 경기를 수천 번 반복 시뮬레이션한 뒤, 우승·상위 3위·하위 3위(강등권) 진입 확률을 계산합니다.">몬테카를로 시즌 시뮬레이션 — 각 팀의 현재 공격력/수비력 지표(포아송 분포 기반)와 홈 어드밴티지를 적용해 남은 모든 경기를 수천 번 반복 시뮬레이션한 뒤, 우승·상위 3위·하위 3위(강등권) 진입 확률을 계산합니다.</p>
+      </details>
+    </div>
   <div class="predict-table-wrap">
     <div class="scroll-fade-wrap" id="predictTableFade">
     <div class="predict-table-scroller" id="predictTableScroller">
@@ -1187,14 +1217,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <section class="whatif-section" id="whatIfSection" aria-live="polite">
     <div class="stats-title advanced">
-      <span class="advanced-tag lbl" data-en="WHAT IF" data-ko="시나리오">시나리오</span>
       <span class="lbl" data-en="WHAT-IF SIMULATOR" data-ko="만약에 시뮬레이터">만약에 시뮬레이터</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'whatIfInfo')">ⓘ</span>
+      <div class="info-tooltip" id="whatIfInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-en="Fix the result of any remaining game (win / draw / loss) and re-run the season simulation to see how the title, top-3 and bottom-3 chances change. Second-half games have no dates yet, so they are listed by opponent; scheduled games show their kickoff." data-ko="남은 경기의 결과(승/무/패)를 직접 정하고 시즌 시뮬레이션을 다시 돌려서 우승·상위 3위·하위 3위 확률이 어떻게 달라지는지 확인해 보세요. 후반기 경기는 아직 날짜가 없어 상대 팀 기준으로 보여주고, 일정이 정해진 경기는 킥오프 날짜가 함께 표시돼요.">남은 경기의 결과(승/무/패)를 직접 정하고 시즌 시뮬레이션을 다시 돌려서 우승·상위 3위·하위 3위 확률이 어떻게 달라지는지 확인해 보세요. 후반기 경기는 아직 날짜가 없어 상대 팀 기준으로 보여주고, 일정이 정해진 경기는 킥오프 날짜가 함께 표시돼요.</span>
+      </div>
     </div>
-    <p class="whatif-note lbl" data-en="Fix the result of any remaining game (win / draw / loss) and re-run the season simulation to see how the title, top-3 and bottom-3 chances change. Second-half games have no dates yet, so they are listed by opponent; scheduled games show their kickoff." data-ko="남은 경기의 결과(승/무/패)를 직접 정하고 시즌 시뮬레이션을 다시 돌려서 우승·상위 3위·하위 3위 확률이 어떻게 달라지는지 확인해 보세요. 후반기 경기는 아직 날짜가 없어 상대 팀 기준으로 보여주고, 일정이 정해진 경기는 킥오프 날짜가 함께 표시돼요.">남은 경기의 결과(승/무/패)를 직접 정하고 시즌 시뮬레이션을 다시 돌려서 우승·상위 3위·하위 3위 확률이 어떻게 달라지는지 확인해 보세요. 후반기 경기는 아직 날짜가 없어 상대 팀 기준으로 보여주고, 일정이 정해진 경기는 킥오프 날짜가 함께 표시돼요.</p>
     <div id="whatIfBody"></div>
   </section>
+  </div>
 
-  <div class="scatter-card" style="margin-top:20px;">
+  <div class="predict-panel" data-predict-panel="trend" role="tabpanel">
+  <div class="scatter-card">
     <div class="stats-title">
       <span class="lbl" data-en="RANK PROGRESSION BY WEEK" data-ko="주차별 순위 변동">주차별 순위 변동</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'rankHistInfo')">ⓘ</span>
@@ -1207,7 +1241,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div class="rank-hist-legend" id="rankHistLegend"></div>
   </div>
-  <div class="scatter-card" style="margin-top:20px;">
+  <div class="scatter-card">
     <div class="stats-title">
       <span class="lbl" data-en="CUMULATIVE POINTS BY ROUND" data-ko="라운드별 누적 승점 추이">라운드별 누적 승점 추이</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'pointsHistInfo')">ⓘ</span>
@@ -1218,7 +1252,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="scatter-body"><svg id="pointsHistorySvg" viewBox="0 0 820 410" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <div class="rank-hist-legend" id="pointsHistLegend"></div>
   </div>
-  <div class="scatter-card" style="margin-top:20px;">
+  <div class="scatter-card">
     <div class="stats-title">
       <span class="lbl" data-en="TITLE PROBABILITY TREND" data-ko="우승확률 추이">우승확률 추이</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'titleProbHistInfo')">ⓘ</span>
@@ -1229,7 +1263,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="scatter-body"><svg id="titleProbHistorySvg" viewBox="0 0 820 410" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <div class="rank-hist-legend" id="titleProbHistLegend"></div>
   </div>
-  <div class="scatter-card rpm-card" style="margin-top:20px;">
+  </div>
+
+  <div class="predict-panel" data-predict-panel="race" role="tabpanel">
+  <div class="scatter-card rpm-card">
     <div class="stats-title">
       <span class="lbl" data-en="FINAL RANK PROBABILITY" data-ko="순위별 확률표">순위별 확률표</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'rankProbMatrixInfo')">ⓘ</span>
@@ -1248,7 +1285,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span><span class="rpm-chip rpm-chip-heat"></span><span class="lbl" data-en="Number = probability (%) — darker is likelier" data-ko="숫자: 확률(%) · 진할수록 높음">숫자: 확률(%) · 진할수록 높음</span></span>
     </div>
   </div>
-  <div class="scatter-card sc-card" style="margin-top:20px;">
+  <div class="scatter-card sc-card">
     <div class="stats-title">
       <span class="lbl" data-en="SCENARIO TABLE" data-ko="경우의 수 표">경우의 수 표</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'scenarioInfo')">ⓘ</span>
@@ -1268,7 +1305,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span><span class="sc-chip sc-chip-danger"></span><span class="lbl" data-en="Below the safety line (relegation risk)" data-ko="잔류선 미만 (강등 위험)">잔류선 미만 (강등 위험)</span></span>
     </div>
   </div>
-  <div class="scatter-card rl-card" style="margin-top:20px;">
+  <div class="scatter-card rl-card">
     <div class="stats-title">
       <span class="lbl" data-en="TITLE & SAFETY POINT LINES" data-ko="우승·잔류 라인 예상 승점">우승·잔류 라인 예상 승점</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'rankLinesInfo')">ⓘ</span>
@@ -1280,10 +1317,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
   <section class="magic-number-stats-section" aria-live="polite">
     <div class="stats-title advanced">
-      <span class="advanced-tag lbl" data-en="RACE" data-ko="레이스">레이스</span>
       <span class="lbl" data-en="TITLE & SAFETY MAGIC NUMBERS" data-ko="우승·잔류 확정 매직넘버">우승·잔류 확정 매직넘버</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'magicInfo')">ⓘ</span>
+      <div class="info-tooltip" id="magicInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-en="A conservative figure based on each rival's maximum possible points. All 15 teams are shown. Teams already out of the title race or relegated show a status instead of a number." data-ko="각 상대의 이론상 최대 승점을 기준으로 한 보수적 수치이며, 15개 팀 전체를 보여줍니다. 이미 우승 경쟁에서 탈락했거나 강등이 확정된 팀은 숫자 대신 상태로 표시됩니다.">각 상대의 이론상 최대 승점을 기준으로 한 보수적 수치이며, 15개 팀 전체를 보여줍니다. 이미 우승 경쟁에서 탈락했거나 강등이 확정된 팀은 숫자 대신 상태로 표시됩니다.</span>
+      </div>
     </div>
-    <p class="magic-number-stats-note lbl" data-en="A conservative figure based on each rival's maximum possible points. All 15 teams are shown. Teams already out of the title race or relegated show a status instead of a number." data-ko="각 상대의 이론상 최대 승점을 기준으로 한 보수적 수치이며, 15개 팀 전체를 보여줍니다 이미 우승 경쟁에서 탈락했거나 강등이 확정된 팀은 숫자 대신 상태로 표시됩니다.">각 상대의 이론상 최대 승점을 기준으로 한 보수적 수치이며, 15개 팀 전체를 보여줍니다 이미 우승 경쟁에서 탈락했거나 강등이 확정된 팀은 숫자 대신 상태로 표시됩니다.</p>
     <div class="scroll-fade-wrap magic-number-stats-fade" id="magicNumberStatsFade">
       <div class="table-wrap magic-number-stats-wrap" id="magicNumberStatsScroller">
         <table class="stats-table magic-number-stats-table">
@@ -1295,10 +1334,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
     </div>
   </section>
+  </div>
 
+  <div class="predict-panel" data-predict-panel="model" role="tabpanel">
   <section class="ai-track-section" aria-live="polite">
     <div class="stats-title advanced">
-      <span class="advanced-tag lbl" data-en="TRACK RECORD" data-ko="트랙레코드">트랙레코드</span>
       <span class="lbl" data-en="AI PREDICTION ACCURACY" data-ko="AI 예측 성적표">AI 예측 성적표</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'aiTrackInfo')">ⓘ</span>
       <div class="info-tooltip" id="aiTrackInfo" onclick="event.stopPropagation()">
@@ -1390,6 +1430,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     </details>
   </section>
+  </div>
 </div>
 
 <div id="venuesView" style="display:none;">
