@@ -5264,9 +5264,12 @@
 
   const MONTH_LABELS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
+  // 'YYYY-MM' → 단일 월, 'YYYY-MM~MM' → 두 달 통합(예: 9-10월 / September–October)
   function formatAwardMonth(ymKey) {
-    const [y, m] = ymKey.split('-').map(Number);
-    return isKorean ? `${m}월` : MONTH_LABELS_EN[m - 1];
+    const [, mPart] = ymKey.split('-');
+    const [m1, m2] = mPart.split('~').map(Number);
+    if (m2) return isKorean ? `${m1}-${m2}월` : `${MONTH_LABELS_EN[m1 - 1]}–${MONTH_LABELS_EN[m2 - 1]}`;
+    return isKorean ? `${m1}월` : MONTH_LABELS_EN[m1 - 1];
   }
 
   // 골키퍼 개인 무실점(클린시트) 기록 카드 마크업 — 독립된 카드로, 스태프 카드 위에 노출합니다.
@@ -5327,15 +5330,13 @@
 
     const potmKeys = Object.keys(teamAwards.playerOfTheMonth || {}).sort().reverse();
     const potmHtml = potmKeys.map(ymKey => {
-      const [, mNum] = ymKey.split('-').map(Number);
-      const monthLabel = isKorean ? `${mNum}월` : MONTH_LABELS_EN[mNum - 1];
+      const monthLabel = formatAwardMonth(ymKey);
       return awardPlayerHtml(teamAwards.playerOfTheMonth[ymKey], monthLabel);
     }).join('');
 
     const gotmKeys = Object.keys(teamAwards.goalOfTheMonth || {}).sort().reverse();
     const gotmHtml = gotmKeys.map(ymKey => {
-      const [, mNum] = ymKey.split('-').map(Number);
-      const monthLabel = isKorean ? `${mNum}월` : MONTH_LABELS_EN[mNum - 1];
+      const monthLabel = formatAwardMonth(ymKey);
       return awardPlayerHtml(teamAwards.goalOfTheMonth[ymKey], monthLabel);
     }).join('');
 

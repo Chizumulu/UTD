@@ -569,6 +569,7 @@ const kitData = {
 // motm: 라운드별 맨 오브 더 매치 수상자. 값은 squadData의 등번호(number) 배열 (공동 수상 가능)
 // playerOfTheMonth: 'YYYY-MM' 형식의 월별 이달의 선수 수상자. 값은 squadData의 등번호(number)
 // goalOfTheMonth: 'YYYY-MM' 형식의 월별 이달의 골 수상자. 값은 squadData의 등번호(number)
+//   (두 달 통합 수상은 'YYYY-MM~MM' 형식, 예: '2026-09~10' → 화면에는 "9-10월"로 표시)
 const teamAwards = {
   motm: {
     round1: [13, 7],
@@ -581,11 +582,13 @@ const teamAwards = {
   },
   playerOfTheMonth: {
     '2026-07': 90,
-    '2026-08': 13
+    '2026-08': 13,
+    '2026-10': 90
   },
   goalOfTheMonth: {
     '2026-07': 7,
-    '2026-08': 7
+    '2026-08': 7,
+    '2026-09~10': 7  // 9-10월 통합 수상 (디킨스)
   }
 };
 
@@ -2908,7 +2911,7 @@ const nameAliases = {
   "ZAKALIA MPHAMBA": "ZAKARIA MPHAMBA",
   "CLEMENT MUNTHALI": "CLEMENT KASEKA",
   "CLEMENT MTHALI": "CLEMENT KASEKA",
-  "CHISOMO MYEGHA": "CHISOMO MYGHA",
+  "CHISOMO MYGHA": "CHISOMO MYEGHA", // 젠다 명단 기준 철자(Myegha)로 통일
   // 2026-09-22: 득점 순위표에서 같은 팀 내 철자 1~2자 차이로 갈려 있던 선수들을 통일
   "KINGLEY MVULA": "KINGSLEY MVULA",
   "JOMO PHIRI": "JOMOLE PHIRI",
@@ -2916,7 +2919,35 @@ const nameAliases = {
   "SAMAN NYIRENDA": "SAMANI NYIRENDA",
   "FORTUNE CHILAMBO": "FORTUNE CHIRAMBO",
   // 2026-10-11: 같은 마푸 선수의 철자 차이 통일
-  "NORMAN NDHLOVU": "NORMAN NDLOVU"
+  "NORMAN NDHLOVU": "NORMAN NDLOVU",
+  // 친테체 선수단 명단 기준 철자로 통일
+  "ESSAU DOBIE": "ESAU DOBBIE",
+  // 루비리 선수단 명단 기준 철자로 통일
+  "PHILIMON PHIRI": "PHILLIMON PHIRI",
+  "TYSON SOKO": "TYSON LUSO SOKO",
+  // 젠다 선수단 명단 기준 통일
+  "ALICK CHAVULA": "ALEXANDER CHAVULA",
+  // 치폴로폴로 명단 기준 통일
+  "TYSON KAUNDA": "TRYSON KAUNDA",
+  "RODRICK KASUDZA": "RHODRICK KASUDZE ZANDIGWERA",
+  // 친테체 명단 기준 통일
+  "SIMEONE PHIRI": "SEMEON PHIRI",
+  "STUART LONGWE": "STEWARD LONGWE",
+  // 치바비 명단 기준 통일
+  "ISSA HASSAN": "ISSAH HASSAN",
+  "AUSTINE NGOMA": "AUSTIN NGOMA",
+  "ADJOY SHABANI": "ADJOY SHABAN",
+  "THOMPSON MKANDAWIRE": "THAPSON MKANDAWIRE",
+  "SAM SALE": "SAMUEL SALE",
+  "OVERTON NGULUBE": "OVERTON NGULUBE MHONE",
+  // 음벨와 명단 기준 통일
+  "MLEZA NYIRONGO": "MLEZA LUKE NYIRONGO",
+  "BENSON KACHALI": "BENSON VIN KACHALI",
+  "LOTTIE BANDA": "LOTTIE BANDA JUMA",
+  "TAWONGA CHIHANA": "TAONGA CHIHANA",
+  "MASSA PEREKANI": "MASAUTSO PELEKANI", // 동일인 (Massa = Masautso)
+  "SHAIBU JALAH": "SHAIBU JAHALI", // 동일인 (철자 차이)
+  "KONDE NYIRENDA": "EDWIN NYIRENDA" // 동일인 (명단상 Edwin Konde Nyirenda)
 };
 
 // 우리 선수단(squadData)의 aliasesEn(영문 별칭)을 위 nameAliases 에 자동으로 합칩니다.
@@ -2934,11 +2965,10 @@ squadData.forEach(p => {
 // 영문 이름(대문자) -> 한글/영문 표기 사전. matchDetails 에 새 득점자가
 // 나오면 이 사전에 한 줄만 추가하면 나머지는 자동으로 계산됩니다.
 const playerDirectory = {
-  "OVERTON NGULUBE": { nameKo: "오버턴 은굴루베", nameEn: "Overton Ngulube" },
-  "KONDE NYIRENDA": { nameKo: "콘데 니렌다", nameEn: "Konde Nyirenda" },
+  "OVERTON NGULUBE MHONE": { nameKo: "오버턴 은굴루베", nameEn: "Overton Ngulube Mhone" },
   "RICHARD SAKALA": { nameKo: "리처드 사칼라", nameEn: "Richard Sakala" },
   "BORNFACE MWANDIRA": { nameKo: "본페이스 므완디라", nameEn: "Bornface Mwandira" },
-  "SIMEONE PHIRI": { nameKo: "시메온 피리", nameEn: "Simeone Phiri" },
+  "SEMEON PHIRI": { nameKo: "시메온 피리", nameEn: "Semeon Phiri" },
   "MATHEWS NUNDWE": { nameKo: "매튜스 눈드웨", nameEn: "Mathews Nundwe" },
   "GIVEN MWANDIRA": { nameKo: "기븐 므완디라", nameEn: "Given Mwandira" },
   "JOMO PHIRI": { nameKo: "조모 피리", nameEn: "Jomo Phiri" },
@@ -2949,14 +2979,13 @@ const playerDirectory = {
   "DANIEL CHISOKWE": { nameKo: "다니엘 치소크웨", nameEn: "Daniel Chisokwe" },
   "KINGSLEY MVULA": { nameKo: "킹슬리 음불라", nameEn: "Kingsley Mvula" },
   "DANIEL SIWALE": { nameKo: "다니엘 시왈레", nameEn: "Daniel Siwale" },
-  "SHAIBU JALAH": { nameKo: "샤이부 잘라", nameEn: "Shaibu Jalah" },
   "HENDERSON KANYIKA": { nameKo: "헨더슨 칸이카", nameEn: "Henderson Kanyika" },
   "ZAKARIA MPHAMBA": { nameKo: "자카리아 음팜바", nameEn: "Zakaria Mphamba" },
   "NATHAN MSISKA": { nameKo: "네이단 음시스카", nameEn: "Nathan Msiska" },
   "JOMOLE PHIRI": { nameKo: "조몰레 피리", nameEn: "Jomole Phiri" },
   "KONDWANI CHIRWA": { nameKo: "콘드와니 치르와", nameEn: "Kondwani Chirwa" },
   "TEMWA NDHLOVU": { nameKo: "템와 은들로부", nameEn: "Temwa Ndhlovu" },
-  "ESSAU DOBIE": { nameKo: "에사우 도비", nameEn: "Essau Dobie" },
+  "ESAU DOBBIE": { nameKo: "에사우 도비", nameEn: "Esau Dobbie" },
   "BENJAMIN MAPUNDA": { nameKo: "벤자민 마푼다", nameEn: "Benjamin Mapunda" },
   "MPHATSO KUMWENDA": { nameKo: "음파초 쿰웬다", nameEn: "Mphatso Kumwenda" },
   "KENNEDY SEME": { nameKo: "케네디 세메", nameEn: "Kennedy Seme" },
@@ -2969,17 +2998,17 @@ const playerDirectory = {
   "MAPALO GUMBO": { nameKo: "마팔로 굼보", nameEn: "Mapalo Gumbo" },
   "EDWIN NYIRENDA": { nameKo: "에드윈 니렌다", nameEn: "Edwin Nyirenda" },
   "CLIFFORD CHISALE": { nameKo: "클리포드 치살레", nameEn: "Clifford Chisale" },
-  "ADJOY SHABANI": { nameKo: "아조이 샤바니", nameEn: "Adjoy Shabani" },
-  "THOMPSON MKANDAWIRE": { nameKo: "톰슨 음칸다위레", nameEn: "Thompson Mkandawire" },
-  "SAM SALE": { nameKo: "샘 세일", nameEn: "Sam Sale" },
+  "ADJOY SHABAN": { nameKo: "아조이 샤바니", nameEn: "Adjoy Shaban" },
+  "THAPSON MKANDAWIRE": { nameKo: "톰슨 음칸다위레", nameEn: "Thapson Mkandawire" },
+  "SAMUEL SALE": { nameKo: "샘 세일", nameEn: "Samuel Sale" },
   "KINGLEY MVULA": { nameKo: "킹슬리 음불라", nameEn: "Kingley Mvula" },
   "SYDNEY MHONE": { nameKo: "시드니 모네", nameEn: "Sydney Mhone" },
-  "ISSA HASSAN": { nameKo: "이사 하산", nameEn: "Issa Hassan" },
-  "AUSTINE NGOMA": { nameKo: "오스틴 응고마", nameEn: "Austine Ngoma" },
+  "ISSAH HASSAN": { nameKo: "이사 하산", nameEn: "Issah Hassan" },
+  "AUSTIN NGOMA": { nameKo: "오스틴 응고마", nameEn: "Austin Ngoma" },
   "GRACIOUS YASIN": { nameKo: "그레이셔스 야신", nameEn: "Gracious Yasin" },
   "LIMBANI KAMANGA": { nameKo: "림바니 카망가", nameEn: "Limbani Kamanga" },
   "JIMMY KALANJE": { nameKo: "지미 칼란제", nameEn: "Jimmy Kalanje" },
-  "STUART LONGWE": { nameKo: "스튜어트 롱웨", nameEn: "Stuart Longwe" },
+  "STEWARD LONGWE": { nameKo: "스튜어트 롱웨", nameEn: "Steward Longwe" },
   "ESSAU NGWIRA": { nameKo: "에사우 응위라", nameEn: "Essau Ngwira" },
   "HERAND PHIRI": { nameKo: "헤란드 피리", nameEn: "Herand Phiri" },
   "WONGANI KAMANGA": { nameKo: "웡가니 카망가", nameEn: "Wongani Kamanga" },
@@ -2991,17 +3020,17 @@ const playerDirectory = {
   "DAVIE MWANZA": { nameKo: "데이비 므완자", nameEn: "Davie Mwanza" },
   "DAVIE NGOMA": { nameKo: "데이비 응고마", nameEn: "Davie Ngoma" },
   "SHAIBU JAHALI": { nameKo: "샤이부 자할리", nameEn: "Shaibu Jahali" },
-  "MASSA PEREKANI": { nameKo: "마사 페레카니", nameEn: "Massa Perekani" },
+  "MASAUTSO PELEKANI": { nameKo: "마사 페레카니", nameEn: "Masautso Pelekani" },
   "MASSA YOLLAM": { nameKo: "마사 욜람", nameEn: "Massa Yollam" },
   "LUKE JERE": { nameKo: "루크 제레", nameEn: "Luke Jere" },
   "JASTON MOYO": { nameKo: "재스톤 모요", nameEn: "Jaston Moyo" },
   "JONATHAN PHIRI": { nameKo: "조나단 피리", nameEn: "Jonathan Phiri" },
   "LEMA MAKATO": { nameKo: "레마 마카토", nameEn: "Lema Makato" },
-  "LOTTIE BANDA": { nameKo: "로티 반다", nameEn: "Lottie Banda" },
-  "TAWONGA CHIHANA": { nameKo: "타웡가 치하나", nameEn: "Tawonga Chihana" },
+  "LOTTIE BANDA JUMA": { nameKo: "로티 반다", nameEn: "Lottie Banda Juma" },
+  "TAONGA CHIHANA": { nameKo: "타웡가 치하나", nameEn: "Taonga Chihana" },
   "WYSON NYIRENDA": { nameKo: "와이슨 니렌다", nameEn: "Wyson Nyirenda" },
   "KELVIN GONDWE": { nameKo: "켈빈 곤드웨", nameEn: "Kelvin Gondwe" },
-  "CHISOMO MYGHA": { nameKo: "치소모 미그하", nameEn: "Chisomo Mygha" },
+  "CHISOMO MYEGHA": { nameKo: "치소모 미그하", nameEn: "Chisomo Myegha" },
   "CHIKONDI NYIRENDA": { nameKo: "치콘디 니렌다", nameEn: "Chikondi Nyirenda" },
   "DUNCAN MPOHA": { nameKo: "던컨 음포하", nameEn: "Duncan Mpoha" },
   "HARRY BARTON": { nameKo: "해리 바튼", nameEn: "Harry Barton" },
@@ -3016,13 +3045,13 @@ const playerDirectory = {
   "FRANK MWALE": { nameKo: "프랭크 므왈레", nameEn: "Frank Mwale" },
   "MIKE LUHANGA": { nameKo: "마이크 루항가", nameEn: "Mike Luhanga" },
   "KING NYASULU": { nameKo: "킹 니야술루", nameEn: "King Nyasulu" },
-  "TYSON KAUNDA": { nameKo: "타이슨 카운다", nameEn: "Tyson Kaunda" },
+  "TRYSON KAUNDA": { nameKo: "타이슨 카운다", nameEn: "Tryson Kaunda" },
   "CLEMENT KASEKA": { nameKo: "클레멘트 카세카", nameEn: "Clement Kaseka" },
   "JERPHASON KANYENDA": { nameKo: "제르파손 칸옌다", nameEn: "Jerphason Kanyenda" },
   "GOMEZGANI SIBALE": { nameKo: "고메즈가니 시발레", nameEn: "Gomezgani Sibale" },
-  "RODRICK KASUDZA": { nameKo: "로드릭 카수자", nameEn: "Rodrick Kasudza" },
+  "RHODRICK KASUDZE ZANDIGWERA": { nameKo: "로드릭 카수자", nameEn: "Rhodrick Kasudze Zandigwera" },
   "GEORGE MASEWO": { nameKo: "조지 마세워", nameEn: "George Masewo" },
-  "TYSON SOKO": { nameKo: "타이슨 소코", nameEn: "Tyson Soko" },
+  "TYSON LUSO SOKO": { nameKo: "타이슨 루소 소코", nameEn: "Tyson Luso Soko" },
   "KINGSLEY MKANDAWIRE": { nameKo: "킹슬리 음칸다위레", nameEn: "Kingsley Mkandawire" },
   "ABRAHAM MVULA": { nameKo: "아브라함 음불라", nameEn: "Abraham Mvula" },
   "JOSEPH BANDA": { nameKo: "조셉 반다", nameEn: "Joseph Banda" },
@@ -3030,11 +3059,11 @@ const playerDirectory = {
   "CHARLES KAMANGA": { nameKo: "찰스 카망가", nameEn: "Charles Kamanga" },
   "WANANGWA GAMA": { nameKo: "와낭과 가마", nameEn: "Wanangwa Gama" },
   "WATIPA NYIRENDA": { nameKo: "와티파 니렌다", nameEn: "Watipa Nyirenda" },
-  "PHILIMON PHIRI": { nameKo: "필리몬 피리", nameEn: "Philimon Phiri" },
+  "PHILLIMON PHIRI": { nameKo: "필리몬 피리", nameEn: "Phillimon Phiri" },
   "SOLOMON MANDA": { nameKo: "솔로몬 만다", nameEn: "Solomon Manda" },
   "THURASON SHABA": { nameKo: "투라손 샤바", nameEn: "Thurason Shaba" },
   "BLESSINGS NYASULU": { nameKo: "블레싱스 니야술루", nameEn: "Blessings Nyasulu" },
-  "ALICK CHAVULA": { nameKo: "앨릭 차불라", nameEn: "Alick Chavula" },
+  "ALEXANDER CHAVULA": { nameKo: "앨릭 차불라", nameEn: "Alexander Chavula" },
   "OFFICIAL PHIRI": { nameKo: "오피셜 피리", nameEn: "Official Phiri" },
   "MWAYI SIMKONDA": { nameKo: "음와이 심콘다", nameEn: "Mwayi Simkonda" },
   "HEBERT CHIRAMBO": { nameKo: "헤버트 치람보", nameEn: "Hebert Chirambo" },
@@ -3048,7 +3077,7 @@ const playerDirectory = {
   "AZIZI PINDANI": { nameKo: "아지지 핀다니", nameEn: "Azizi Pindani" },
   "SAMAN NYIRENDA": { nameKo: "사만 니렌다", nameEn: "Saman Nyirenda" },
   "ZIKANI KASAMBALA": { nameKo: "지카니 카삼발라", nameEn: "Zikani Kasambala" },
-  "MLEZA NYIRONGO": { nameKo: "믈레자 니롱고", nameEn: "Mleza Nyirongo" },
+  "MLEZA LUKE NYIRONGO": { nameKo: "믈레자 니롱고", nameEn: "Mleza Luke Nyirongo" },
   "ANDREW KAMANGA": { nameKo: "앤드류 카망가", nameEn: "Andrew Kamanga" },
   "NORMAN NDLOVU": { nameKo: "노먼 은들로부", nameEn: "Norman Ndlovu" },
   "GLYN MSOWOYA": { nameKo: "글린 음소워야", nameEn: "Glyn Msowoya" },
@@ -3060,7 +3089,7 @@ const playerDirectory = {
   "MUSA PHIRI": { nameKo: "무사 피리", nameEn: "Musa Phiri" },
   "FRANK KAUNDA": { nameKo: "프랭크 카운다", nameEn: "Frank Kaunda" },
   "LEVISON SILUNGWE": { nameKo: "레비슨 실룽웨", nameEn: "Levison Silungwe" },
-  "BENSON KACHALI": { nameKo: "벤슨 카찰리", nameEn: "Benson Kachali" },
+  "BENSON VIN KACHALI": { nameKo: "벤슨 카찰리", nameEn: "Benson Vin Kachali" },
   "PRECIOUS MWANZA": { nameKo: "프레셔스 므완자", nameEn: "Precious Mwanza" },
   "MISHECK SILVESTER": { nameKo: "미셰크 실베스터", nameEn: "Misheck Silvester" },
   "ALBERT KAUNDA": { nameKo: "앨버트 카운다", nameEn: "Albert Kaunda" },
