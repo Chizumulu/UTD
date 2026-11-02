@@ -1786,12 +1786,22 @@
     }
     .rank-filter-wrap > .rank-filter-btn,
     .rank-filter-wrap > .scorers-mode-btn {
-      flex: 1 1 0;
+      flex: 1 1 auto;
       min-width: 0;
       padding-left: 6px;
       padding-right: 6px;
       text-align: center;
     }
+    /* 영문 라벨(MULTI-GOAL GAMES 등)이 길어 버튼끼리 겹치던 문제:
+       득점 모드 버튼만 줄바꿈을 허용하고 글자를 살짝 줄입니다. */
+    .rank-filter-wrap > .scorers-mode-btn {
+      white-space: normal;
+      line-height: 1.2;
+      font-size: 11.5px;
+      overflow-wrap: anywhere;
+    }
+    .rank-filter-wrap:has(> .scorers-mode-btn) { align-items: stretch; }
+    .rank-filter-wrap > .scorers-mode-btn { display: flex; align-items: center; justify-content: center; }
     /* 공유/이미지 저장은 별도 줄에서 같은 폭의 버튼 2개 */
     .rank-filter-actions {
       width: 100%;
@@ -14162,6 +14172,15 @@ summary.ti-bye-flow-toggle,
     word-break: keep-all;
   }
   html[data-lang="en"] .view-toggle-btn .side-nav-icon { width: 16px; height: 16px; }
+  /* 영문: 모바일 공통 규칙(.app-sidebar ... height: 42px 고정)이 2줄 라벨 타일을 눌러
+     아이콘/글자가 타일 밖으로 튀어나왔음 → 영문에서는 높이 고정을 풀고 내용만큼 늘어나게 */
+  html[data-lang="en"] .app-sidebar .view-toggle-wrap .view-toggle-btn {
+    height: auto;
+    min-height: 58px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    overflow: hidden;
+  }
 
   /* 하단 버튼 줄: "한국어로 보기"가 줄바꿈되지 않게 */
   html[data-lang="en"] .app-sidebar .side-controls { gap: 5px; }
@@ -14989,3 +15008,42 @@ button.rmd-status-link {
   .stat-sub-head { padding: 8px 14px; }
 }
 .stats-panel .sfs-card { margin-bottom: 0; }
+
+/* =====================================================================
+   영문 모드 넘침 보정 (모바일)
+   - 다득점 카드: width:100% + padding-left 가 content-box 라 카드 밖으로 삐져나옴 → border-box
+   - 320px급 초소형 화면: 제목 영역 / 메뉴 타일 / 보충 경기 카드 줄이 몇 px씩 넘침
+   ===================================================================== */
+@media (max-width: 600px) {
+  .multigoal-card-match { box-sizing: border-box; max-width: 100%; min-width: 0; flex-wrap: wrap; }
+}
+@media (max-width: 400px) {
+  .ti-impact-avg-row { flex-wrap: wrap; row-gap: 4px; }
+  .ti-impact-avg-item span { white-space: normal; text-align: center; }
+}
+@media (max-width: 340px) {
+  html[data-lang="en"] .side-crest-text h1 .sponsor-line { font-size: 9px; letter-spacing: -0.3px; }
+  html[data-lang="en"] .side-crest-text h1 .main-line { font-size: 10.5px; letter-spacing: -0.4px; }
+  html[data-lang="en"] .app-sidebar .view-toggle-wrap .view-toggle-btn { font-size: 10px; padding-left: 1px; padding-right: 1px; }
+  .rmd-meta { flex-wrap: wrap; overflow-wrap: anywhere; }
+}
+
+/* =====================================================================
+   선수 상세창 - 최근 출전 기록 행 (모바일)
+   골/도움/C/MOTM 배지가 많으면 한 줄에서 상대 팀명이 "Ch…"로 잘렸음.
+   → 좁은 화면에서는 2단 구성: [주차 | 선발·상대팀명] / [      | 배지들]
+     배지가 없는 행은 기존처럼 한 줄 그대로, 팀명은 항상 전체 폭 사용.
+   ===================================================================== */
+@media (max-width: 480px) {
+  .timeline-row {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 7px;
+    align-items: center;
+  }
+  .timeline-round { grid-column: 1; grid-row: 1; width: auto; }
+  .timeline-match { grid-column: 2; grid-row: 1; }
+  .timeline-goals { grid-column: 2; grid-row: 2; flex-wrap: wrap; justify-content: flex-start; gap: 6px; }
+  .timeline-goals:not(:has(*)) { display: none; }
+}
