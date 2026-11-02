@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '009',
-    data: '009',
-    app: '009',
+    style: '020',
+    data: '020',
+    app: '020',
     report: '001',
     archive: '200',
     predictWorker: '200',
@@ -1450,6 +1450,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div id="venueLeafletMap" class="venue-leaflet-map"></div>
     </div>
   </div>
+  <div class="venue-sort-wrap" role="group" aria-label="정렬">
+    <button type="button" class="venue-sort-btn active lbl" data-sort="name" data-en="By Name" data-ko="이름순" onclick="setVenueSort('name')">이름순</button>
+    <button type="button" class="venue-sort-btn lbl" data-sort="straight" data-en="Straight Distance" data-ko="직선거리순" onclick="setVenueSort('straight')">직선거리순</button>
+    <button type="button" class="venue-sort-btn lbl" data-sort="road" data-en="Road Distance" data-ko="육로거리순" onclick="setVenueSort('road')">육로거리순</button>
+    <button type="button" class="venue-sort-btn lbl" data-sort="time" data-en="Travel Time" data-ko="소요시간순" onclick="setVenueSort('time')">소요시간순</button>
+  </div>
   <div class="venue-list" id="venuesList"></div>
 </div>
 
@@ -1760,6 +1766,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
   document.write('<script src="poster.js?v=' + window.ASSET_VERSIONS.poster + '"><\/script>');
   document.write('<script src="report.js?v=' + window.ASSET_VERSIONS.report + '"><\/script>');
+  document.write('<script src="venue-routes.js?v=002"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
   document.write('<script src="lang-ny.js?v=001"><\/script>');
 </script>

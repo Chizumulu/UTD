@@ -13945,6 +13945,8 @@
   let venueMarkersByIdx = {};
   let venueLeafletMapLarge = null;
   let venueMarkersByIdxLarge = {};
+  // 구단 위치 목록 정렬 기준: 'name'(이름순) | 'straight'(직선거리순) | 'road'(육로거리순) | 'time'(소요시간순)
+  let venueSortMode = 'name';
 
   // 두 좌표 간 직선거리 (Haversine, km 단위)
   function haversineDistanceKm(lat1, lng1, lat2, lng2) {
@@ -13967,6 +13969,58 @@
     if (!homeVenue || !team.venue) return '';
     const km = haversineDistanceKm(homeVenue.lat, homeVenue.lng, team.venue.lat, team.venue.lng);
     return `${Math.round(km).toLocaleString()}km`;
+  }
+
+  // ===== 실제 이동 경로 (치주물루 → 배 → 은카타베이 항구 → 도로 → 구장) =====
+  // venue-routes.js(scripts/fetch-venue-routes.js가 생성)의 venueRoutes를 읽습니다.
+  // 파일이 없거나 해당 구장 값이 없으면 null을 돌려주고, 화면에는 기존 직선거리만 표시됩니다.
+  // - 도로 거리/시간은 은카타베이 항구 기준(OSRM 최단시간 경로 = 간선도로 우선)
+  // - 총 소요시간 = 배편(boatHours) + 도로 소요시간 × roadTimeFactor (비포장 도로 보정)
+  function formatHoursFromMin(min) {
+    const h = Math.round(min / 30) / 2; // 0.5시간 단위 반올림
+    return String(h);
+  }
+
+  // 분 단위 범위(lo~hi)를 "10~15분" 또는 "1.5~2시간"처럼 읽기 쉽게 만듭니다.
+  // 상한이 60분 미만이면 5분 단위 '분', 아니면 0.5시간 단위 '시간'으로 표시합니다.
+  function formatDurationRange(loMin, hiMin) {
+    if (hiMin < 60) {
+      const a = Math.max(5, Math.round(loMin / 5) * 5), b = Math.max(5, Math.round(hiMin / 5) * 5);
+      const r = a === b ? String(a) : `${a}~${b}`;
+      return isKorean ? `${r}분` : `${r} min`;
+    }
+    const a = Math.max(0.5, Math.round(loMin / 30) / 2), b = Math.round(hiMin / 30) / 2;
+    const r = a === b ? String(a) : `${a}~${b}`;
+    return isKorean ? `${r}시간` : `${r} h`;
+  }
+
+  function getVenueRouteInfo(venue) {
+    if (typeof venueRoutes === 'undefined' || !venueRoutes || !venueRoutes.routes || !venue) return null;
+    const r = venueRoutes.routes[venue.lat.toFixed(5) + ',' + venue.lng.toFixed(5)];
+    if (!r) return null;
+    const boat = venueRoutes.boatHours || [4, 6];
+    const f = venueRoutes.roadTimeFactor || [1.2, 1.5];
+    // 현지에서 확인한 실제 육로 소요시간(realMin: [최소, 최대] 분)이 있으면 그 값을 우선 쓰고,
+    // 없으면 OSRM 시간 × 보정계수 범위를 씁니다.
+    const hasReal = Array.isArray(r.realMin) && r.realMin.length === 2;
+    const roadLo = hasReal ? r.realMin[0] : r.roadMin * f[0];
+    const roadHi = hasReal ? r.realMin[1] : r.roadMin * f[1];
+    const lowMin = boat[0] * 60 + roadLo;
+    const highMin = boat[1] * 60 + roadHi;
+    const lo = formatHoursFromMin(lowMin), hi = formatHoursFromMin(highMin);
+    const range = lo === hi ? lo : `${lo}~${hi}`;
+    const roadKm = Math.round(r.roadKm).toLocaleString();
+    return {
+      roadKm,
+      roadKmNum: r.roadKm,           // 정렬용 숫자 값
+      totalMinLow: lowMin,           // 정렬용(소요시간 하한/상한, 분)
+      totalMinHigh: highMin,
+      boatTime: formatDurationRange(boat[0] * 60, boat[1] * 60),
+      roadTime: formatDurationRange(roadLo, roadHi),
+      totalTime: isKorean ? `약 ${range}시간` : `~${range} h`,
+      roadText: isKorean ? `항구에서 도로 ${roadKm}km` : `${roadKm} km by road from port`,
+      portName: isKorean ? '은카타베이 항구' : 'Nkhata Bay Port'
+    };
   }
 
   function renderVenuesView() {
@@ -14038,8 +14092,12 @@
       });
 
       const marker = L.marker([team.venue.lat, team.venue.lng], { icon }).addTo(mapInstance);
+      const routeInfo = (!isMine) ? getVenueRouteInfo(team.venue) : null;
       const distPopupLine = (!isMine && homeVenue)
-        ? `<br><span class="venue-popup-distance">${isKorean ? '치주물루로부터 ' : 'From Chizumulu: '}${distLabel}</span>`
+        ? `<br><span class="venue-popup-distance">${isKorean ? '치주물루로부터 직선 ' : 'From Chizumulu (straight line): '}${distLabel}</span>` +
+          (routeInfo
+            ? `<br><span class="venue-popup-route">${isKorean ? '실제 이동: 배 → ' : 'Actual trip: boat → '}${routeInfo.portName}${isKorean ? ' → 도로 ' : ' → road '}${routeInfo.roadKm}km<br>${isKorean ? '총 ' : 'Total '}<strong>${routeInfo.totalTime}</strong><br>${isKorean ? '배 ' : 'Boat '}${routeInfo.boatTime} · ${isKorean ? '육로 ' : 'Road '}${routeInfo.roadTime}</span>`
+            : '')
         : '';
       marker.bindPopup(
         `<div class="venue-popup"><strong>${teamName}</strong><br>${venueName}${team.isCurrent ? ` <span class="venue-current-tag venue-current-tag-inline">${isKorean ? '현구장' : 'Current'}</span>` : ''}<br>` +
@@ -14118,16 +14176,40 @@
     }
   }
 
+  function setVenueSort(mode) {
+    venueSortMode = mode;
+    renderVenuesList();
+  }
+
   function renderVenuesList() {
     const wrap = document.getElementById('venuesList');
     if (!wrap) return;
     wrap.innerHTML = '';
 
     const homeVenue = getHomeVenue();
+    // 정렬 값: 홈(치주물루)은 항상 맨 앞, 값이 없는 구장(도로 데이터 없음)은 맨 뒤, 같으면 이름순
+    const sortValue = (e) => {
+      if (e.isMine) return -1;
+      if (venueSortMode === 'straight') {
+        return homeVenue ? haversineDistanceKm(homeVenue.lat, homeVenue.lng, e.venue.lat, e.venue.lng) : Infinity;
+      }
+      const info = getVenueRouteInfo(e.venue);
+      if (!info) return Infinity;
+      if (venueSortMode === 'road') return info.roadKmNum;
+      if (venueSortMode === 'time') return (info.totalMinLow + info.totalMinHigh) / 2;
+      return 0;
+    };
     const teams = getVenueEntries().slice().sort((a, b) => {
+      if (venueSortMode !== 'name') {
+        const d = sortValue(a) - sortValue(b);
+        if (d !== 0 && !Number.isNaN(d)) return d;
+      }
       const an = isKorean ? a.nameKo : a.nameEn;
       const bn = isKorean ? b.nameKo : b.nameEn;
       return an.localeCompare(bn);
+    });
+    document.querySelectorAll('.venue-sort-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-sort') === venueSortMode);
     });
 
     teams.forEach(team => {
@@ -14139,6 +14221,7 @@
       const venueName = isKorean ? team.venue.nameKo : team.venue.nameEn;
       const isMine = team.isMine;
       const distLabel = formatDistanceLabel(team, homeVenue, isMine);
+      const listRoute = isMine ? null : getVenueRouteInfo(team.venue);
       row.innerHTML = `
         <img class="team-logo venue-list-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}">
         <div class="venue-list-text">
@@ -14150,7 +14233,8 @@
         </div>
         <div class="venue-list-meta">
           <span class="venue-list-coords">${team.venue.lat.toFixed(4)}, ${team.venue.lng.toFixed(4)}</span>
-          ${distLabel ? `<span class="venue-list-distance${isMine ? ' venue-list-distance-mine' : ''}">${distLabel}</span>` : ''}
+          ${distLabel ? `<span class="venue-list-distance${isMine ? ' venue-list-distance-mine' : ''}">${isMine ? '' : (isKorean ? '직선 ' : 'Straight ')}${distLabel}</span>` : ''}
+          ${listRoute ? `<span class="venue-list-route venue-list-route-road" title="${listRoute.portName}">${isKorean ? '항구에서 도로 ' : 'Road from port '}${listRoute.roadKm}km</span><span class="venue-list-route">${isKorean ? '총 ' : 'Total '}<strong>${listRoute.totalTime}</strong></span><span class="venue-list-route venue-list-route-split">${isKorean ? '배 ' : 'Boat '}${listRoute.boatTime} · ${isKorean ? '육로 ' : 'Road '}${listRoute.roadTime}</span>` : ''}
         </div>
       `;
       row.addEventListener('click', () => highlightVenueMarker(idx, 'list'));

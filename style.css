@@ -2892,6 +2892,49 @@
     font-weight: 700;
     color: var(--color-teal-dark);
   }
+  .venue-popup-route {
+    font-size: 12px;
+    color: var(--color-text-secondary, #555);
+    line-height: 1.5;
+  }
+  .venue-list-route {
+    display: block;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    opacity: 0.8;
+    white-space: nowrap;
+  }
+  .venue-sort-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 0 12px;
+  }
+  .venue-sort-btn {
+    background: var(--color-surface);
+    color: var(--color-text-toggle);
+    border: 1px solid var(--color-border-chip);
+    padding: 7px 14px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+  }
+  .venue-sort-btn:hover {
+    background: var(--color-bg-btn-hover);
+    color: var(--color-brand-text);
+  }
+  .venue-sort-btn.active {
+    background: rgba(var(--color-teal-rgb), 0.15);
+    border-color: var(--color-teal-dark);
+    color: var(--color-teal-dark);
+  }
+  .venue-list-route-split {
+    font-weight: 500;
+    opacity: 0.65;
+  }
   .venue-leaflet-icon {
     background: transparent !important;
     border: none !important;
