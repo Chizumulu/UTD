@@ -21,9 +21,10 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '002',
-    data: '001',
-    app: '001',
+    style: '009',
+    data: '009',
+    app: '009',
+    report: '001',
     archive: '200',
     predictWorker: '200',
     pathfinderEngine: '200',
@@ -1758,6 +1759,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.write('<script src="pathfinder-engine.js?v=' + window.ASSET_VERSIONS.pathfinderEngine + '"><\/script>');
   document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
   document.write('<script src="poster.js?v=' + window.ASSET_VERSIONS.poster + '"><\/script>');
+  document.write('<script src="report.js?v=' + window.ASSET_VERSIONS.report + '"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
   document.write('<script src="lang-ny.js?v=001"><\/script>');
 </script>
