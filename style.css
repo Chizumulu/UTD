@@ -15387,3 +15387,10 @@ button.rmd-status-link {
 @media (max-width: 600px) {
   .venue-route-legend { min-width: 130px; max-width: 170px; font-size: 11px; }
 }
+
+/* 모바일(≤720px): 메인 다음경기 카드의 "이 경기 결과별 우승 확률"은 숨기고 PC에서만 보여줍니다.
+   (되돌리고 싶으면 이 블록만 지우면 됩니다.) */
+@media (max-width: 720px) {
+  .nms-impact,
+  .nms-impact[hidden] { display: none !important; }
+}
