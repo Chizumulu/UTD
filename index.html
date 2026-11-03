@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '020',
-    data: '021',
-    app: '020',
+    style: '001',
+    data: '001',
+    app: '001',
     report: '001',
     archive: '200',
     predictWorker: '200',
@@ -688,6 +688,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 <div id="rankView">
+<!-- 승격 레이스: 1위와 승점 차 · 남은 경기 · 우승 확률(지난주 대비) (다음 경기 승/무/패별 우승 확률은 다음경기 카드 하단 #nmsImpact에 표시). PC 전용 슬림 한 줄. app.js의 renderPromoRaceStrip()이 채웁니다. -->
+<section class="promo-race-strip" id="promoRaceStrip" aria-label="승격 레이스" data-aria-ko="승격 레이스" data-aria-en="Promotion race" aria-live="polite" hidden></section>
 <div class="home-matches-row">
   <div class="home-match-card">
     <div class="home-match-card-title lbl" data-en="Recent Matches" data-ko="최근 경기">최근 경기</div>
@@ -699,8 +701,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button type="button" class="home-match-more-btn lbl" data-en="See more" data-ko="자세히 보기" onclick="showView('rounds')">자세히 보기</button>
   </div>
 </div>
-<!-- 승격 레이스: 1위와 승점 차 · 남은 경기 · 우승 확률(지난주 대비) · 다음 경기 승/무/패별 우승 확률. PC 전용 슬림 한 줄. app.js의 renderPromoRaceStrip()이 채웁니다. -->
-<section class="promo-race-strip" id="promoRaceStrip" aria-label="승격 레이스" data-aria-ko="승격 레이스" data-aria-en="Promotion race" aria-live="polite" hidden></section>
 <div class="content-row">
 <div class="mini-rank-wrap" id="mainMiniRankWrap">
 <div class="table-card-head">
@@ -1436,7 +1436,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <div id="venuesView" style="display:none;">
   <div class="predict-intro">
-    <span class="lbl" data-en="Home grounds of all 15 clubs in NRFA League One, plotted by coordinates. Tap a marker or a team in the list below to see its venue." data-ko="NRFA 리그 원 15개 구단의 홈 경기장을 좌표 기준으로 지도에 표시했습니다. 마커나 아래 목록의 팀을 탭하면 해당 구장을 확인할 수 있어요.">NRFA 리그 원 15개 구단의 홈 경기장을 좌표 기준으로 지도에 표시했습니다. 마커나 아래 목록의 팀을 탭하면 해당 구장을 확인할 수 있어요.</span>
+    <span class="lbl" data-en="Home grounds of all 15 clubs in NRFA League One, plotted by coordinates. Tap a marker or a team in the list below to see its venue. Tap a venue in the list to see the route from Chizumulu (boat → road) on the map." data-ko="NRFA 리그 원 15개 구단의 홈 경기장을 좌표 기준으로 지도에 표시했습니다. 마커나 아래 목록의 팀을 탭하면 해당 구장을 확인할 수 있어요. 목록에서 구장을 누르면 치주물루에서 그 구장까지 가는 길(배 → 육로)이 지도에 표시돼요.">NRFA 리그 원 15개 구단의 홈 경기장을 좌표 기준으로 지도에 표시했습니다. 마커나 아래 목록의 팀을 탭하면 해당 구장을 확인할 수 있어요. 목록에서 구장을 누르면 치주물루에서 그 구장까지 가는 길(배 → 육로)이 지도에 표시돼요.</span>
   </div>
   <div class="scatter-card venue-map-card">
     <div class="stats-title">
@@ -1766,7 +1766,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
   document.write('<script src="poster.js?v=' + window.ASSET_VERSIONS.poster + '"><\/script>');
   document.write('<script src="report.js?v=' + window.ASSET_VERSIONS.report + '"><\/script>');
-  document.write('<script src="venue-routes.js?v=002"><\/script>');
+  document.write('<script src="venue-routes.js?v=009"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
   document.write('<script src="lang-ny.js?v=001"><\/script>');
 </script>

@@ -2610,6 +2610,7 @@
       <div class="nmh-bottom">
         <span class="ha-badge ${haClass} nms-ha">${haLabel}</span>
         ${weatherHtml}
+        <div class="nms-impact" id="nmsImpact" hidden></div>
         <span class="nms-action-group">
           <button class="nms-action-btn" onclick="downloadNextMatchICS()" aria-label="Add to calendar" title="${isKorean ? '캘린더에 추가' : 'Add to calendar'}">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21M7 3V5M17 3V5M6.2 5H17.8C19 5 20 6 20 7.2V18.8C20 20 19 21 17.8 21H6.2C5 21 4 20 4 18.8V7.2C4 6 5 5 6.2 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
@@ -3151,7 +3152,9 @@
   function renderPromoRaceStrip() {
     const el = document.getElementById('promoRaceStrip');
     if (!el) return;
-    const hide = () => { el.hidden = true; el.innerHTML = ''; };
+    const impactSlot = document.getElementById('nmsImpact');
+    const setImpact = (html) => { if (impactSlot) { impactSlot.innerHTML = html || ''; impactSlot.hidden = !html; } };
+    const hide = () => { el.hidden = true; el.innerHTML = ''; setImpact(''); };
     try {
       const info = getMyRankedTeam();
       const ranked = getRankedTeams('all');
@@ -3231,17 +3234,21 @@
         const scTip = isKorean
           ? `다음 경기(vs ${oppName})를 이기거나 비기거나 졌을 때의 우승 확률과, 현재 확률 대비 변화입니다.`
           : `Title chance if the next match (vs ${oppName}) is won, drawn or lost, and the change from the current chance.`;
+        // 위 카드가 이 리그 경기를 보여주고 있으면 "이 경기", 컵 경기가 먼저면 상대 이름을 붙여서 구분합니다.
+        const heroPrimary = pickNextMatchesForStrip(t).primary;
+        const heroIsThis = !heroPrimary || heroPrimary.comp !== 'cup';
+        const lbl = heroIsThis
+          ? (isKorean ? '이 경기 결과별 우승 확률' : 'Title odds by result')
+          : (isKorean ? `다음 리그 경기 vs ${oppName} 결과별 우승 확률` : `Title odds by result · next league match vs ${oppName}`);
         nextHtml = `
           <span class="prs-next" title="${scTip}">
-            <span class="prs-next-lbl">${isKorean ? '다음 경기' : 'Next'} <span class="prs-next-opp">vs ${oppName}</span> <span class="nmp-ha ${fx.homeAway === 'H' ? 'home' : 'away'}">${haTxt}</span></span>
+            <span class="prs-next-lbl">${lbl}</span>
             <span class="prs-scs">${chips}</span>
           </span>`;
       }
 
       // 다음 리그 경기 일정이 아직 없을 때(라운드 사이): 추측으로 보여주지 않고 안내만 남깁니다.
-      if (!fx && alive) {
-        nextHtml = `<span class="prs-next prs-next-tbd">${isKorean ? '다음 경기 일정이 정해지면 승·무·패별 우승 확률을 보여드려요' : 'Win/draw/loss title odds appear once the next fixture is scheduled'}</span>`;
-      }
+      // (다음 리그 경기 일정이 없으면 다음경기 카드 하단 칸은 비워 둡니다)
 
       el.hidden = false;
       el.setAttribute('aria-busy', String(needsModel && !noWorker));
@@ -3253,8 +3260,8 @@
         </span>
         <span class="prs-item" title="${gapTip}"><span class="prs-k">${gapKey}</span><b class="prs-v ${gapCls}">${gapVal}</b></span>
         <span class="prs-item"><span class="prs-k">${isKorean ? '남은 경기' : 'Games left'}</span><b class="prs-v">${mn.remainingGames}</b></span>
-        <span class="prs-item" title="${probTip}"><span class="prs-k">${isKorean ? '우승 확률' : 'Title odds'}</span>${probHtml}</span>
-        ${nextHtml}`;
+        <span class="prs-item" title="${probTip}"><span class="prs-k">${isKorean ? '우승 확률' : 'Title odds'}</span>${probHtml}</span>`;
+      setImpact(nextHtml);
     } catch (e) {
       console.warn('renderPromoRaceStrip failed', e);
       hide();
@@ -3591,7 +3598,8 @@
     const strip = document.getElementById('nextMatchStrip');
     const card = document.getElementById('nextMatchPreviewCard');
     if (!strip || !card) return;
-    const wantMerged = !!(NMP_MOBILE_MQ && NMP_MOBILE_MQ.matches);
+    // 데스크톱에서도 위 다음경기 카드 안의 접이식 영역으로 합칩니다(같은 상대·주차·홈/원정 정보가 따로 한 번 더 나오던 것을 없앰).
+    const wantMerged = true;
     const stripHasContent = Array.prototype.some.call(strip.children, c => c !== card);
     if (wantMerged && stripHasContent) {
       if (card.parentNode !== strip) strip.appendChild(card);
@@ -3611,6 +3619,7 @@
   function renderNextMatchStrip() {
     nmpDetachCard();
     try { renderNextMatchStripInner(); } finally { nmpPlaceCard(); }
+    try { renderPromoRaceStrip(); } catch (e) {}   // 다음경기 카드 하단의 '결과별 우승 확률'은 이 함수가 채웁니다
   }
   function renderNextMatchPreviewCard() {
     try { renderNextMatchPreviewCardInner(); } finally { nmpPlaceCard(); }
@@ -9159,12 +9168,21 @@
       actions.appendChild(chip);
       const share = document.getElementById('roundShareBtn');
       const postponed = host.querySelector('.postponed-btn');
+      // '치주물루에 유리한 예측 보기' 토글 버튼: 공유하기 왼쪽
+      const favor = document.createElement('button');
+      favor.type = 'button';
+      favor.id = 'roundFavorBtn';
+      favor.className = 'round-mode-chip round-favor-btn';
+      favor.setAttribute('onclick', 'toggleRoundFavor()');
+      favor.setAttribute('aria-controls', 'roundFavorPanel');
+      actions.appendChild(favor);
       if (share) actions.appendChild(share);
       if (postponed) actions.appendChild(postponed);
       bar.appendChild(actions);
     }
     const segBtn = (mode, ko, en) => `<button type="button" role="tab" aria-selected="${roundViewMode === mode}" class="round-mode-btn${roundViewMode === mode ? ' active' : ''}" onclick="setRoundViewMode('${mode}')"><span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span></button>`;
     document.getElementById('roundModeSeg').innerHTML = segBtn('week', '주차별', 'By Week') + segBtn('month', '월별', 'By Month');
+    rfvSyncButton();
     const chipEl = document.getElementById('roundMineChip');
     if (chipEl) {
       chipEl.style.display = roundViewMode === 'month' ? '' : 'none';
@@ -9262,6 +9280,7 @@
         <div class="rmd-venue">
           ${venue ? `<span class="rmd-venue-name lbl" data-en="${venueEn}" data-ko="${venueKo}">${isKorean ? venueKo : venueEn}</span>` : ''}
           ${m.movedFromWeek ? `<span class="rmd-moved">${movedFromBadgeHtml(m, isKorean)}</span>` : ''}
+          ${(mine && !played) ? matchWeatherPlaceholderHtml(m.homeEn, m.kickoffDate, m.kickoffTime, 'rmd-weather', true) : ''}
         </div>
         </div>
         <div class="rmd-team rmd-home${homeWin ? ' is-winner' : ''}"${teamLinkAttrs(m.homeEn)}>
@@ -9280,7 +9299,6 @@
           </div>
         </div>
         <div class="rmd-end">
-          ${(mine && !played) ? matchWeatherPlaceholderHtml(m.homeEn, m.kickoffDate, m.kickoffTime, 'rmd-weather', true) : ''}
           ${hasSc ? `<button type="button" class="rmd-toggle" aria-expanded="false"><span class="lbl" data-en="Goals" data-ko="득점">${isKorean ? '득점' : 'Goals'}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''}
           ${pvEligible ? `<button type="button" class="rmd-pvbtn" aria-expanded="false"><span class="lbl" data-en="Preview" data-ko="프리뷰">${isKorean ? '프리뷰' : 'Preview'}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''}
           <button type="button" class="rmd-btn lbl" data-en="Compare" data-ko="전적 비교">${isKorean ? '전적 비교' : 'Compare'}</button>
@@ -9341,6 +9359,7 @@
     const tabBar = document.getElementById('roundTabBar');
     const shareBtn = document.getElementById('roundShareBtn');
     if (shareBtn) shareBtn.style.display = 'none';
+    rfvSetVisible(false);
     const { months, before, tbd } = collectRoundMonthData();
     const monthOnly = Array.from(months.keys()).sort();
     const tabKeys = (before.length ? ['before'] : []).concat(monthOnly, tbd.length ? ['tbd'] : []);
@@ -9526,6 +9545,7 @@
       tabBar.innerHTML = '';
       tabBar.style.display = 'none';
       if (shareBtn) shareBtn.style.display = 'none';
+      rfvSetVisible(false);
       const per = seasonHalfWeeks();
       const fromWk = currentRoundHalf === 1 ? 1 : per + 1;
       const toWk = currentRoundHalf === 1 ? per : per * 2;
@@ -9543,6 +9563,7 @@
     }
     tabBar.style.display = '';
     if (shareBtn) shareBtn.style.display = '';
+    rfvSetVisible(true);
 
     tabBar.innerHTML = '';
     let activeBtn = null;
@@ -9764,6 +9785,7 @@
 
     attachImageFallback();
     hydrateWeatherWidgets();
+    rfvOnScheduleRender();
   }
 
 
@@ -13945,6 +13967,11 @@
   let venueMarkersByIdx = {};
   let venueLeafletMapLarge = null;
   let venueMarkersByIdxLarge = {};
+  // 구장 목록에서 누른 구장의 이동 경로(치주물루 → 배 → 은카타베이 항구 → 도로 → 구장)를 지도에 겹쳐 그립니다.
+  // activeVenueRouteIdx: 지금 경로를 보여주는 구장의 idx(문자열), null이면 경로 없음
+  // venueRouteLayers: 지도 인스턴스별로 그린 레이어/범례 컨트롤 보관 { top: {...}, large: {...} }
+  let activeVenueRouteIdx = null;
+  const venueRouteLayers = { top: null, large: null };
   // 구단 위치 목록 정렬 기준: 'name'(이름순) | 'straight'(직선거리순) | 'road'(육로거리순) | 'time'(소요시간순)
   let venueSortMode = 'name';
 
@@ -14126,6 +14153,7 @@
     }
 
     populateVenueMap(venueLeafletMap, venueMarkersByIdx);
+    redrawActiveVenueRoute();
 
     // 탭이 숨겨진 상태에서 초기화됐을 수 있으므로, 보여진 뒤 크기를 다시 계산
     setTimeout(() => { if (venueLeafletMap) venueLeafletMap.invalidateSize(); }, 60);
@@ -14145,6 +14173,9 @@
     }
 
     populateVenueMap(venueLeafletMapLarge, venueMarkersByIdxLarge);
+    // 보고 있던 경로가 있으면 크게 보기 지도에도 같이 그림 (크기가 확정된 뒤 openVenueMapModal에서 맞춤)
+    const activeEntry = activeVenueRouteIdx !== null ? getVenueEntryByIdx(activeVenueRouteIdx) : null;
+    if (activeEntry) drawVenueRouteOn('large', venueLeafletMapLarge, activeEntry, false);
   }
 
   function openVenueMapModal() {
@@ -14152,12 +14183,189 @@
     if (!modal) return;
     showModalAnimated(modal);
     renderVenueLeafletMapLarge();
-    setTimeout(() => { if (venueLeafletMapLarge) venueLeafletMapLarge.invalidateSize(); }, 80);
+    setTimeout(() => {
+      if (!venueLeafletMapLarge) return;
+      venueLeafletMapLarge.invalidateSize();
+      fitVenueRouteOn('large');
+    }, 80);
   }
 
   function closeVenueMapModal() {
     const modal = document.getElementById('venueMapModal');
     if (modal) closeModalAnimated(modal);
+  }
+
+  // ===== 구장 이동 경로 표시 =====
+  // venue-routes.js 의 line(polyline 압축 문자열, 정밀도 5)을 [위도, 경도] 배열로 풉니다.
+  function decodeRoutePolyline(str) {
+    const pts = [];
+    let i = 0, lat = 0, lng = 0;
+    while (i < str.length) {
+      let b, shift = 0, result = 0;
+      do { b = str.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = 0; result = 0;
+      do { b = str.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+      pts.push([lat / 1e5, lng / 1e5]);
+    }
+    return pts;
+  }
+
+  function clearVenueRouteOn(slot) {
+    const st = venueRouteLayers[slot];
+    if (!st) return;
+    if (st.map) {
+      if (st.group) st.map.removeLayer(st.group);
+      if (st.ctrl) st.map.removeControl(st.ctrl);
+    }
+    venueRouteLayers[slot] = null;
+  }
+
+  // 한 지도(top: 기본 지도 / large: 크게 보기 모달)에 경로를 그립니다. fit=true면 경로 전체가 보이게 지도를 맞춥니다.
+  function drawVenueRouteOn(slot, mapInstance, entry, fit) {
+    clearVenueRouteOn(slot);
+    const home = getHomeVenue();
+    if (!mapInstance || !home || !entry || !entry.venue || entry.isMine) return;
+
+    const rd = (typeof venueRoutes !== 'undefined' && venueRoutes && venueRoutes.routes)
+      ? venueRoutes.routes[entry.venue.lat.toFixed(5) + ',' + entry.venue.lng.toFixed(5)] : null;
+    const port = (typeof venueRoutes !== 'undefined' && venueRoutes && venueRoutes.port) ? venueRoutes.port : null;
+    const info = getVenueRouteInfo(entry.venue);
+    const group = L.layerGroup();
+    const allPts = [[home.lat, home.lng], [entry.venue.lat, entry.venue.lng]];
+    let legendKind = 'straight';
+
+    if (rd && port) {
+      // 1) 배편: 치주물루 → 은카타베이 항구 (점선)
+      const boatPts = [[home.lat, home.lng], [port.lat, port.lng]];
+      L.polyline(boatPts, { color: '#ffffff', weight: 7, opacity: 0.85, lineCap: 'round', interactive: false }).addTo(group);
+      L.polyline(boatPts, { color: '#1f6fb2', weight: 3.5, opacity: 0.95, dashArray: '2 9', lineCap: 'round' })
+        .bindTooltip(info ? (isKorean ? `배편 ${info.boatTime}` : `Boat ${info.boatTime}`) : (isKorean ? '배편' : 'Boat'), { sticky: true, className: 'venue-route-tip' })
+        .addTo(group);
+      allPts.push([port.lat, port.lng]);
+
+      // 2) 육로: 항구 → 구장 (실선, 도로 경로선이 있으면 그 모양대로)
+      let roadPts;
+      if (rd.line) {
+        roadPts = [[port.lat, port.lng]].concat(decodeRoutePolyline(rd.line), [[entry.venue.lat, entry.venue.lng]]);
+        legendKind = 'road';
+      } else {
+        roadPts = [[port.lat, port.lng], [entry.venue.lat, entry.venue.lng]];
+        legendKind = 'roadStraight';   // 경로선 데이터 없음 → 직선으로 대체 (fetch-venue-routes.js 다시 실행하면 해결)
+      }
+      L.polyline(roadPts, { color: '#ffffff', weight: 8, opacity: 0.85, lineJoin: 'round', interactive: false }).addTo(group);
+      L.polyline(roadPts, {
+        color: legendKind === 'road' ? '#0f8a8a' : '#6b8f8f', weight: 4.5, opacity: 0.95, lineJoin: 'round',
+        dashArray: legendKind === 'road' ? null : '8 8'
+      }).bindTooltip(info ? (isKorean ? `육로 ${info.roadKm}km · ${info.roadTime}` : `Road ${info.roadKm} km · ${info.roadTime}`) : (isKorean ? '육로' : 'Road'), { sticky: true, className: 'venue-route-tip' })
+        .addTo(group);
+      if (legendKind === 'road') roadPts.forEach(pt => allPts.push(pt));
+
+      // 항구 지점 표시
+      L.circleMarker([port.lat, port.lng], { radius: 6, color: '#fff', weight: 2, fillColor: '#1f6fb2', fillOpacity: 1 })
+        .bindTooltip(isKorean ? port.nameKo : port.nameEn, { permanent: true, direction: 'bottom', offset: [0, 4], className: 'venue-route-port-label' })
+        .addTo(group);
+    } else {
+      // 도로 데이터가 아예 없는 구장: 치주물루 → 구장 직선 (점선)
+      const pts = [[home.lat, home.lng], [entry.venue.lat, entry.venue.lng]];
+      L.polyline(pts, { color: '#ffffff', weight: 7, opacity: 0.85, interactive: false }).addTo(group);
+      L.polyline(pts, { color: '#6b8f8f', weight: 3.5, opacity: 0.95, dashArray: '8 8' }).addTo(group);
+    }
+    group.addTo(mapInstance);
+
+    // 범례 + 닫기 버튼 (지도 왼쪽 아래)
+    const ctrl = L.control({ position: 'bottomleft' });
+    ctrl.onAdd = function () {
+      const div = L.DomUtil.create('div', 'venue-route-legend');
+      const teamName = isKorean ? entry.nameKo : entry.nameEn;
+      const venueName = isKorean ? entry.venue.nameKo : entry.venue.nameEn;
+      let body = '';
+      if (rd && port && info) {
+        body =
+          `<div class="vrl-row"><i class="vrl-line vrl-boat"></i><span>${isKorean ? '배' : 'Boat'} ${info.boatTime}</span></div>` +
+          `<div class="vrl-row"><i class="vrl-line ${legendKind === 'road' ? 'vrl-road' : 'vrl-road-straight'}"></i><span>${isKorean ? '육로' : 'Road'} ${info.roadKm}km · ${info.roadTime}</span></div>` +
+          `<div class="vrl-total">${isKorean ? '총 ' : 'Total '}<strong>${info.totalTime}</strong></div>` +
+          (legendKind === 'roadStraight' ? `<div class="vrl-note">${isKorean ? '도로 경로선 데이터가 없어 직선으로 표시' : 'No road line data — shown as a straight line'}</div>` : '');
+      } else {
+        const km = haversineDistanceKm(home.lat, home.lng, entry.venue.lat, entry.venue.lng);
+        body = `<div class="vrl-row"><i class="vrl-line vrl-road-straight"></i><span>${isKorean ? '직선 ' : 'Straight '}${Math.round(km).toLocaleString()}km</span></div>` +
+          `<div class="vrl-note">${isKorean ? '이동 경로 데이터 없음' : 'No route data'}</div>`;
+      }
+      div.innerHTML =
+        `<button type="button" class="vrl-close" aria-label="${isKorean ? '경로 닫기' : 'Hide route'}">✕</button>` +
+        `<div class="vrl-title">${teamName}</div><div class="vrl-sub">${venueName}</div>${body}`;
+      L.DomEvent.disableClickPropagation(div);
+      div.querySelector('.vrl-close').addEventListener('click', () => clearVenueRoute());
+      return div;
+    };
+    ctrl.addTo(mapInstance);
+
+    venueRouteLayers[slot] = { map: mapInstance, group, ctrl, pts: allPts };
+    if (fit) fitVenueRouteOn(slot);
+  }
+
+  function fitVenueRouteOn(slot) {
+    const st = venueRouteLayers[slot];
+    if (st && st.map && st.pts && st.pts.length > 1) {
+      st.map.fitBounds(st.pts, { padding: [40, 40], maxZoom: 13 });
+    }
+  }
+
+  function getVenueEntryByIdx(idx) {
+    return getVenueEntries().find(e => String(e.idx) === String(idx)) || null;
+  }
+
+  function syncVenueListActive() {
+    document.querySelectorAll('.venue-list-item.active').forEach(el => el.classList.remove('active'));
+    if (activeVenueRouteIdx === null) return;
+    const row = document.querySelector('.venue-list-item[data-venue-idx="' + activeVenueRouteIdx + '"]');
+    if (row) row.classList.add('active');
+  }
+
+  function clearVenueRoute() {
+    activeVenueRouteIdx = null;
+    clearVenueRouteOn('top');
+    clearVenueRouteOn('large');
+    syncVenueListActive();
+  }
+
+  // 언어 전환·정렬 변경으로 지도/목록이 다시 그려진 뒤, 보고 있던 경로를 그대로 다시 그립니다(지도 위치는 유지).
+  function redrawActiveVenueRoute() {
+    if (activeVenueRouteIdx === null) return;
+    const entry = getVenueEntryByIdx(activeVenueRouteIdx);
+    if (!entry) { clearVenueRoute(); return; }
+    if (venueLeafletMap) drawVenueRouteOn('top', venueLeafletMap, entry, false);
+    const modal = document.getElementById('venueMapModal');
+    if (venueLeafletMapLarge && modal && modal.style.display === 'flex') {
+      drawVenueRouteOn('large', venueLeafletMapLarge, entry, false);
+    }
+  }
+
+  // 구장 목록의 행을 눌렀을 때: 그 구장까지의 이동 경로를 위쪽 지도에 표시(같은 행을 다시 누르면 닫기)
+  function onVenueListClick(idx) {
+    const entry = getVenueEntryByIdx(idx);
+    if (!entry || entry.isMine || !venueLeafletMap) {
+      // 홈구장(치주물루)이거나 지도를 쓸 수 없으면 기존처럼 마커만 강조
+      clearVenueRoute();
+      highlightVenueMarker(idx, 'list');
+      return;
+    }
+    if (activeVenueRouteIdx === String(idx)) { clearVenueRoute(); return; }
+
+    activeVenueRouteIdx = String(idx);
+    syncVenueListActive();
+    drawVenueRouteOn('top', venueLeafletMap, entry, true);
+    const modal = document.getElementById('venueMapModal');
+    if (venueLeafletMapLarge && modal && modal.style.display === 'flex') {
+      drawVenueRouteOn('large', venueLeafletMapLarge, entry, true);
+    }
+    // 지도가 목록 위쪽에 있으니, 화면 밖이면 지도가 보이도록 부드럽게 스크롤
+    const mapEl = document.getElementById('venueLeafletMap');
+    if (mapEl) {
+      const r = mapEl.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > window.innerHeight) mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   function highlightVenueMarker(idx, source, markerStore, mapInstance) {
@@ -14237,7 +14445,8 @@
           ${listRoute ? `<span class="venue-list-route venue-list-route-road" title="${listRoute.portName}">${isKorean ? '항구에서 도로 ' : 'Road from port '}${listRoute.roadKm}km</span><span class="venue-list-route">${isKorean ? '총 ' : 'Total '}<strong>${listRoute.totalTime}</strong></span><span class="venue-list-route venue-list-route-split">${isKorean ? '배 ' : 'Boat '}${listRoute.boatTime} · ${isKorean ? '육로 ' : 'Road '}${listRoute.roadTime}</span>` : ''}
         </div>
       `;
-      row.addEventListener('click', () => highlightVenueMarker(idx, 'list'));
+      if (activeVenueRouteIdx !== null && String(idx) === activeVenueRouteIdx) row.classList.add('active');
+      row.addEventListener('click', () => onVenueListClick(idx));
       wrap.appendChild(row);
     });
 
@@ -17391,6 +17600,283 @@
     trackEvent('title_impact_run', { home_team: lastMatchCompareArgs[0], away_team: lastMatchCompareArgs[2], round_key: lastMatchCompareArgs[4] || '' }, 'title_impact_run');
     mcStartTitleImpact(lastMatchCompareArgs[0], lastMatchCompareArgs[2]);
   });
+
+  // ===================================================================
+  // ===== 리그 일정 > "치주물루에 유리한 예측 보기" (주차별 보기 전용) =====
+  // 버튼을 누르면 일정 아래에, 그 주차의 아직 안 치른 경기마다 "어느 팀이 이기고/비기면"
+  // 치주물루 우승 확률이 현재보다 몇 %p 달라지는지 보여주고, 다시 누르면 접습니다.
+  // - 경기 결과 하나만 고정(만약에 시뮬레이터와 같은 overrides)하고 몬테카를로를 다시 돌리는
+  //   전적 비교 창의 '이 경기 결과별 우승 확률'과 같은 방식이며, 같은 워커(requestPredictWorker)를 씁니다.
+  // - 경기마다 5가지(2골 차+ 승 / 1골 차 승 / 무 / 1골 차 패 / 2골 차+ 패) 계산해서 fixtureId로 캐시합니다(주차를 오가거나 껐다 켜도 재계산 없음).
+  // - 계산은 버튼을 눌렀을 때만 시작하고, 한 경기씩 끝날 때마다 화면을 갱신합니다.
+  // - 우승 경쟁과 무관한 경기(두 팀 모두 현재 우승 확률 0.5% 미만, 치주물루 경기 아님)는
+  //   결과가 치주물루에 줄 영향이 오차보다 작아서 계산을 건너뛰고 '영향 거의 없음'으로 표시합니다.
+  // ===================================================================
+  const RFV_ITERATIONS = 5000;
+  const RFV_SKIP_PCT = 0.5;
+  const RFV_PICKS = ['H2', 'H1', 'D', 'A1', 'A2'];
+  let roundFavorOpen = false;
+  let roundFavorToken = 0;                 // 주차를 바꾸거나 껐을 때 진행 중이던 계산 루프를 끊기 위한 표식
+  const roundFavorCache = {};              // fixtureId -> { H, D, A } (치주물루 우승 %)
+  const roundFavorSkipped = {};            // fixtureId -> true (계산 생략된 경기)
+  const roundFavorState = { running: false, failed: false, runningKey: null, done: 0, total: 0 };
+  let roundFavorOwnBase = null;            // 예측표가 없을 때 직접 돌린 기준 시뮬레이션 결과
+
+  function rfvBase() { return predictionCache || roundFavorOwnBase; }
+
+  function rfvSyncButton() {
+    const btn = document.getElementById('roundFavorBtn');
+    if (!btn) return;
+    const ko = '🔮 치주물루에 유리한 예측 보기', en = '🔮 Results that help Chizumulu';
+    btn.innerHTML = `<span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`;
+    btn.classList.toggle('active', roundFavorOpen);
+    btn.setAttribute('aria-pressed', String(roundFavorOpen));
+    btn.setAttribute('aria-expanded', String(roundFavorOpen));
+  }
+
+  function rfvSetVisible(on) {
+    const btn = document.getElementById('roundFavorBtn');
+    if (btn) btn.style.display = on ? '' : 'none';
+    const panel = document.getElementById('roundFavorPanel');
+    if (panel && !on) panel.style.display = 'none';
+  }
+
+  function rfvPanelEl() {
+    let panel = document.getElementById('roundFavorPanel');
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.id = 'roundFavorPanel';
+      panel.className = 'rfv-panel';
+      panel.setAttribute('aria-live', 'polite');
+      const list = document.getElementById('roundMatchList');
+      list.parentNode.insertBefore(panel, list.nextSibling);
+    }
+    return panel;
+  }
+
+  function toggleRoundFavor() {
+    roundFavorOpen = !roundFavorOpen;
+    if (!roundFavorOpen) { roundFavorToken++; roundFavorState.running = false; }   // 접으면 진행 중이던 계산도 멈춥니다(끝난 경기 결과는 캐시에 남음)
+    rfvSyncButton();
+    if (roundFavorOpen) {
+      trackEvent('round_favor_open', { round_key: currentRoundKey || '' }, 'round_favor_open');
+    }
+    rfvRender();
+    if (roundFavorOpen) rfvStart();
+    if (roundFavorOpen) {
+      const panel = document.getElementById('roundFavorPanel');
+      if (panel) panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
+  // 이 주차에서 아직 안 치른, 시뮬레이션에 들어 있는 경기들
+  function rfvMatches() {
+    return buildRoundMatches(currentRoundKey)
+      .filter(m => !m.isBye && m.isScheduled && !m.movedToWeek && mcTitleImpactApplicable(m.homeEn, m.awayEn, false));
+  }
+
+  function rfvEntry(m) {
+    const id = whatIfFixtureId(m.homeEn, m.awayEn);
+    const mine = m.homeEn === WHATIF_MY_TEAM_EN || m.awayEn === WHATIF_MY_TEAM_EN;
+    return { id, mine, data: roundFavorCache[id] || null, skipped: !!roundFavorSkipped[id] };
+  }
+
+  function rfvPct(results, en) {
+    const r = results && results.find(x => x.nameEn === en);
+    return r ? r.championPct : 0;
+  }
+
+  // 한 경기의 H/D/A 결과를 치주물루 기준으로 정리
+  function rfvAnalyze(m, entry) {
+    const MY = WHATIF_MY_TEAM_EN;
+    const base = rfvBase();
+    if (!base || !entry.data) return null;
+    const basePct = rfvPct(base.results, MY);
+    const shortName = (en) => wiTeamName(en).split(' ')[0];
+    // 점수차까지: H2/H1 = 홈팀 2골 차 이상/1골 차 승, A1/A2 = 원정팀 1골 차/2골 차 이상 승 (시뮬레이션 overrides 값 그대로)
+    const opts = RFV_PICKS.map(pick => {
+      const pct = entry.data[pick];
+      const isHome = pick[0] === 'H';
+      const margin = pick === 'D' ? 0 : Number(pick[1]);
+      let label;
+      if (pick === 'D') {
+        label = isKorean ? '무승부' : 'Draw';
+      } else if (entry.mine) {
+        const myWin = isHome === (m.homeEn === MY);
+        label = isKorean
+          ? (myWin ? (margin === 2 ? '2골 차+ 승' : '1골 차 승') : (margin === 2 ? '2골 차+ 패' : '1골 차 패'))
+          : (myWin ? (margin === 2 ? 'Win by 2+' : 'Win by 1') : (margin === 2 ? 'Loss by 2+' : 'Loss by 1'));
+      } else {
+        const who = shortName(isHome ? m.homeEn : m.awayEn);
+        label = isKorean ? `${who} ${margin === 2 ? '2골+' : '1골'} 승` : `${who} win by ${margin === 2 ? '2+' : '1'}`;
+      }
+      return { pick, label, pct, delta: pct - basePct };
+    });
+    // 내 경기는 '대승 → 대패' 순서로 보여줍니다(원정이면 좌우를 뒤집음).
+    if (entry.mine && m.awayEn === MY) opts.reverse();
+    const vals = opts.map(o => o.pct);
+    const swing = Math.max(...vals) - Math.min(...vals);
+    // 가장 좋은 결과도 현재 대비 오차 범위(±1%p) 안이면 '유리한 결과'로 강조하지 않습니다(다섯 갈래 중 우연히 높게 나온 값 방지).
+    const maxIdx = vals.indexOf(Math.max(...vals));
+    const bestIdx = (swing < WHATIF_FLAT_PCT || opts[maxIdx].delta < WHATIF_FLAT_PCT) ? -1 : maxIdx;
+    return { opts, swing, bestIdx, basePct };
+  }
+
+  function rfvRowHtml(m, entry, an) {
+    const homeLogo = getTeamLogo(m.homeEn), awayLogo = getTeamLogo(m.awayEn);
+    const hName = wiTeamName(m.homeEn), aName = wiTeamName(m.awayEn);
+    const when = wiDateText(m);
+    const head = `
+      <div class="rfv-match">
+        ${homeLogo ? `<img class="rfv-logo" src="${homeLogo}" alt="">` : ''}
+        <span class="rfv-team">${hName}</span>
+        <span class="rfv-vs">vs</span>
+        <span class="rfv-team">${aName}</span>
+        ${awayLogo ? `<img class="rfv-logo" src="${awayLogo}" alt="">` : ''}
+        ${entry.mine ? `<span class="rfv-tag">${isKorean ? '내 경기' : 'Our match'}</span>` : ''}
+        ${when ? `<span class="rfv-when">${when}</span>` : ''}
+      </div>`;
+    let body;
+    if (entry.skipped) {
+      body = `<div class="rfv-note">${isKorean ? '우승 경쟁과 거리가 먼 경기라 결과가 치주물루 우승 확률에 거의 영향을 주지 않아요' : 'Far from the title race, so the result barely affects Chizumulu'}</div>`;
+    } else if (!an) {
+      const waiting = roundFavorState.failed
+        ? (isKorean ? '계산에 실패했어요' : 'Calculation failed')
+        : (isKorean ? '계산 대기 중…' : 'Waiting to calculate…');
+      body = `<div class="rfv-note">${roundFavorState.running && !roundFavorState.failed ? '<span class="predict-spinner"></span>' : ''}<span>${waiting}</span></div>`;
+    } else {
+      body = `<div class="rfv-opts">${an.opts.map((o, i) => `
+        <div class="rfv-opt${i === an.bestIdx ? ' is-best' : ''}">
+          <span class="rfv-opt-label">${o.label}</span>
+          <span class="rfv-opt-pct">${o.pct.toFixed(1)}%</span>
+          ${wiDeltaChip(o.delta, false, false)}
+        </div>`).join('')}</div>`;
+    }
+    return `<div class="rfv-item${an && an.bestIdx >= 0 ? '' : ' is-flat'}">${head}${body}</div>`;
+  }
+
+  function rfvRender() {
+    const panel = rfvPanelEl();
+    if (!roundFavorOpen || roundViewMode !== 'week') { panel.style.display = 'none'; return; }
+    panel.style.display = '';
+
+    const wk = roundKeyPos(currentRoundKey);
+    const titleKo = `🔮 ${wkKo(wk)}, 치주물루에 유리한 결과`;
+    const titleEn = `🔮 ${wkEn(wk, 'Week', ' ')}: results that help Chizumulu`;
+    const title = `<h3 class="rfv-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</h3>`;
+    const matches = rfvMatches();
+
+    if (!matches.length) {
+      panel.innerHTML = `${title}<div class="rfv-empty">${isKorean ? '이 주차에는 남은 경기가 없어요. 이미 모두 끝났거나, 우승 확률 계산에 들어가는 예정 경기가 없는 주차예요.' : 'No upcoming matches left in this week.'}</div>`;
+      return;
+    }
+
+    const rows = matches.map(m => {
+      const entry = rfvEntry(m);
+      return { m, entry, an: rfvAnalyze(m, entry) };
+    });
+    const allDone = rows.every(r => r.entry.skipped || r.an);
+
+    // 모두 끝나면 영향이 큰 경기부터 정렬, 계산 중에는 일정 순서 그대로(자리가 계속 바뀌지 않게)
+    const ordered = allDone
+      ? rows.slice().sort((a, b) => (b.an ? b.an.swing : -1) - (a.an ? a.an.swing : -1))
+      : rows;
+
+    let summary = '';
+    const base = rfvBase();
+    const basePct = base ? rfvPct(base.results, WHATIF_MY_TEAM_EN) : null;
+    if (roundFavorState.running && roundFavorState.runningKey === currentRoundKey) {
+      summary = `<div class="rfv-progress"><span class="predict-spinner"></span><span>${isKorean
+        ? `시뮬레이션 계산 중… (${roundFavorState.done}/${roundFavorState.total}경기) — 경기당 몇 초씩 걸려요`
+        : `Simulating… (${roundFavorState.done}/${roundFavorState.total} matches)`}</span></div>`;
+    } else if (allDone) {
+      const top = rows.filter(r => r.an && r.an.bestIdx >= 0).sort((a, b) => b.an.swing - a.an.swing)[0];
+      if (!top) {
+        summary = `<p class="rfv-headline">${isKorean ? '이 주차 결과는 치주물루 우승 확률에 거의 영향이 없어요.' : "This week's results barely move Chizumulu's title chance."}</p>`;
+      } else {
+        const best = top.an.opts[top.an.bestIdx];
+        const gain = best.delta;
+        const gainTxt = (gain >= 0 ? '+' : '−') + Math.abs(gain).toFixed(1) + '%p';
+        const nm = `${wiTeamName(top.m.homeEn).split(' ')[0]} vs ${wiTeamName(top.m.awayEn).split(' ')[0]}`;
+        summary = `<p class="rfv-headline">${isKorean
+          ? `가장 영향이 큰 경기는 <strong>${nm}</strong> — <strong>${best.label}</strong>이면 치주물루 우승 확률 <strong>${gainTxt}</strong> (결과에 따라 최대 ${top.an.swing.toFixed(1)}%p 차이)`
+          : `Biggest swing: <strong>${nm}</strong> — <strong>${best.label}</strong> gives <strong>${gainTxt}</strong> (up to ${top.an.swing.toFixed(1)}%p apart)`}</p>`;
+      }
+    }
+    const basis = basePct == null ? '' : `<span class="rfv-base">${isKorean ? `현재 우승 확률 <b>${basePct.toFixed(1)}%</b>` : `Title chance now <b>${basePct.toFixed(1)}%</b>`}</span>`;
+
+    panel.innerHTML = `
+      <div class="rfv-head">${title}${basis}</div>
+      ${summary}
+      <div class="rfv-list">${ordered.map(r => rfvRowHtml(r.m, r.entry, r.an)).join('')}</div>
+      <p class="rfv-foot">${isKorean
+        ? `각 경기 결과(승·무·패와 1골 차/2골 차 이상)만 고정하고 ${RFV_ITERATIONS.toLocaleString()}회씩 시뮬레이션했어요. 점수차는 승점이 같을 때 득실차로만 순위를 가르기 때문에 대개 영향이 작아요. 큰 글씨는 그 결과일 때 치주물루 우승 확률, 작은 숫자는 현재 대비 변화이고, ±${WHATIF_FLAT_PCT.toFixed(0)}%p 안쪽(≈)은 오차 범위예요. 초록 테두리가 치주물루에 가장 유리한 결과예요.`
+        : `Each result (win/draw/loss, by 1 or 2+ goals) is fixed alone and simulated ${RFV_ITERATIONS.toLocaleString()} times. Big figure = Chizumulu title chance in that case; small = change vs. now; within ±${WHATIF_FLAT_PCT.toFixed(0)}%p (≈) is noise. The green outline marks the best result for Chizumulu.`}</p>
+      ${roundFavorState.failed ? `<button type="button" class="wi-run rfv-retry" onclick="rfvStart(true)">${isKorean ? '다시 시도' : 'Retry'}</button>` : ''}`;
+  }
+
+  function rfvStart(force) {
+    if (!roundFavorOpen || roundViewMode !== 'week') return;
+    const key = currentRoundKey;
+    if (roundFavorState.running && roundFavorState.runningKey === key && !force) return;
+    const myToken = ++roundFavorToken;
+    const matches = rfvMatches();
+    const todo = matches.filter(m => !roundFavorCache[whatIfFixtureId(m.homeEn, m.awayEn)] && !roundFavorSkipped[whatIfFixtureId(m.homeEn, m.awayEn)]);
+    roundFavorState.failed = false;
+    if (!todo.length && rfvBase()) { roundFavorState.running = false; rfvRender(); return; }
+
+    roundFavorState.running = true;
+    roundFavorState.runningKey = key;
+    roundFavorState.done = matches.length - todo.length;
+    roundFavorState.total = matches.length;
+    rfvRender();
+
+    const stale = () => myToken !== roundFavorToken;
+    const afterPaint = new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 30)));
+    const basePromise = afterPaint.then(() => predictionCache
+      ? predictionCache
+      : (roundFavorOwnBase ? roundFavorOwnBase : mcGetOwnBaseline().then(r => (roundFavorOwnBase = r))));
+
+    basePromise.then(async (base) => {
+      const MY = WHATIF_MY_TEAM_EN;
+      for (const m of todo) {
+        if (stale()) return;
+        const id = whatIfFixtureId(m.homeEn, m.awayEn);
+        const mine = m.homeEn === MY || m.awayEn === MY;
+        const contender = rfvPct(base.results, m.homeEn) >= RFV_SKIP_PCT || rfvPct(base.results, m.awayEn) >= RFV_SKIP_PCT;
+        if (!mine && !contender) {
+          roundFavorSkipped[id] = true;
+        } else {
+          const runOne = (pick) => {
+            const picks = {}; picks[id] = pick;
+            return requestPredictWorker({ iterations: RFV_ITERATIONS, overrides: picks }, () => runMonteCarloSimulation(RFV_ITERATIONS, picks))
+              .then(res => rfvPct(res.results, MY));
+          };
+          const vals = await Promise.all(RFV_PICKS.map(runOne));
+          const rec = {}; RFV_PICKS.forEach((k, i) => { rec[k] = vals[i]; });
+          roundFavorCache[id] = rec;
+        }
+        if (stale()) return;
+        roundFavorState.done++;
+        rfvRender();
+      }
+      if (stale()) return;
+      roundFavorState.running = false;
+      rfvRender();
+    }).catch(err => {
+      console.error('치주물루에 유리한 예측 계산 중 오류:', err);
+      if (stale()) return;
+      roundFavorState.running = false;
+      roundFavorState.failed = true;
+      rfvRender();
+    });
+  }
+
+  // 주차를 바꾸거나 언어를 바꿔 일정이 다시 그려질 때: 패널을 갱신하고, 아직 계산 안 된 경기가 있으면 이어서 계산합니다.
+  function rfvOnScheduleRender() {
+    rfvRender();
+    if (roundFavorOpen && roundViewMode === 'week') rfvStart();
+  }
 
   function closeMatchCompareModal() {
     lastMatchCompareArgs = null;

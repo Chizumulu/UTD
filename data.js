@@ -352,7 +352,7 @@ const matchLineups = {
   },
   round12: {
     formation: "4-2-3-1",
-    opponentKo: "치바비 리얼 스타스 FC",
+    opponentKo: "치바비 리얼 스타즈 FC",
     result: "1 : 2 패",
     starters: [
       { pos: "ST", number: 22, nameKo: "티모시 카타파" },
@@ -1631,7 +1631,7 @@ const scheduledRounds = {
   round17: [
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-07", kickoffTime: "15:00" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-07", kickoffTime: "15:00" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-07", kickoffTime: "15:00" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-07", kickoffTime: "15:00" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
@@ -1643,7 +1643,7 @@ const scheduledRounds = {
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-11-14", kickoffTime: "15:00" },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-11-14", kickoffTime: "15:00" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-11-14", kickoffTime: "15:00" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-11-14", kickoffTime: "15:00" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-11-14", kickoffTime: "15:00" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-11-15", kickoffTime: "15:00" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-11-15", kickoffTime: "15:00" },
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-11-17", kickoffTime: "15:00" },
@@ -1655,7 +1655,7 @@ const scheduledRounds = {
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-21", kickoffTime: "15:00" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-21", kickoffTime: "15:00" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { byeKo: "루비리 FC", byeEn: "Luviri FC" }
@@ -1664,7 +1664,7 @@ const scheduledRounds = {
   round20: [
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-11-29", kickoffTime: "15:00" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-11-29", kickoffTime: "15:00" },
@@ -1678,14 +1678,14 @@ const scheduledRounds = {
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-12-05", kickoffTime: "15:00" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-12-06", kickoffTime: "15:00" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-12-06", kickoffTime: "15:00" },
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-12-06", kickoffTime: "15:00" },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-12-06", kickoffTime: "15:00" },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-12-06", kickoffTime: "15:00" },
     { byeKo: "음벨와 워리어스 FC", byeEn: "M'mbelwa Warriors FC" }
   ],
   // ── 정규 21주차 (엑셀 "Week 21") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round22: [
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-12-12", kickoffTime: "15:00" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-12-12", kickoffTime: "15:00" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-12-12", kickoffTime: "15:00" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-12-12", kickoffTime: "15:00" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-12-12", kickoffTime: "15:00" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-12-13", kickoffTime: "15:00" },
@@ -1701,12 +1701,12 @@ const scheduledRounds = {
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-12-20", kickoffTime: "15:00" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-12-20", kickoffTime: "15:00" },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-12-20", kickoffTime: "15:00" },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-12-20", kickoffTime: "15:00" },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-12-20", kickoffTime: "15:00" },
     { byeKo: "칠룸바 배럭스 FC", byeEn: "Chilumba Barracks FC" }
   ],
   // ── 정규 23주차 (엑셀 "Week 23") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round24: [
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-12-26", kickoffTime: "15:00" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-12-26", kickoffTime: "15:00" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-12-26", kickoffTime: "15:00" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-12-26", kickoffTime: "15:00" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-12-27", kickoffTime: "15:00" },
@@ -1724,11 +1724,11 @@ const scheduledRounds = {
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2027-01-03", kickoffTime: "15:00" },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2027-01-03", kickoffTime: "15:00" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2027-01-03", kickoffTime: "15:00" },
-    { byeKo: "치바비 리얼 스타스 FC", byeEn: "Chibavi Real Stars FC" }
+    { byeKo: "치바비 리얼 스타즈 FC", byeEn: "Chibavi Real Stars FC" }
   ],
   // ── 정규 25주차 (엑셀 "Week 25") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round26: [
-    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2027-01-09", kickoffTime: "15:00" },
+    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2027-01-09", kickoffTime: "15:00" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2027-01-09", kickoffTime: "15:00" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2027-01-09", kickoffTime: "15:00" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2027-01-10", kickoffTime: "15:00" },
@@ -1745,7 +1745,7 @@ const scheduledRounds = {
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2027-01-17", kickoffTime: "15:00" },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2027-01-17", kickoffTime: "15:00" },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2027-01-17", kickoffTime: "15:00" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2027-01-17", kickoffTime: "15:00" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2027-01-17", kickoffTime: "15:00" },
     { byeKo: "비전 S 아카데미", byeEn: "Vision S Academy" }
   ],
   // ── 정규 27주차 (엑셀 "Week 27") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
@@ -1756,7 +1756,7 @@ const scheduledRounds = {
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2027-01-24", kickoffTime: "15:00" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2027-01-24", kickoffTime: "15:00" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2027-01-24", kickoffTime: "15:00" },
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2027-01-26", kickoffTime: "15:00" },
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2027-01-26", kickoffTime: "15:00" },
     { byeKo: "에우티니 베테랑스 FC", byeEn: "Euthini Veterans FC" }
   ],
   // ── 정규 28주차 (엑셀 "Week 28") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
@@ -1766,14 +1766,14 @@ const scheduledRounds = {
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2027-01-30", kickoffTime: "15:00" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2027-01-31", kickoffTime: "15:00" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2027-01-31", kickoffTime: "15:00" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2027-01-31", kickoffTime: "15:00" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2027-01-31", kickoffTime: "15:00" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2027-01-31", kickoffTime: "15:00" },
     { byeKo: "친테체 유나이티드 FC", byeEn: "Chintheche United FC" }
   ],
   // ── 정규 29주차 (엑셀 "Week 29") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round30: [
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2027-02-06", kickoffTime: "15:00" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2027-02-06", kickoffTime: "15:00" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2027-02-06", kickoffTime: "15:00" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2027-02-06", kickoffTime: "15:00" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2027-02-07", kickoffTime: "15:00" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2027-02-07", kickoffTime: "15:00" },
@@ -1783,7 +1783,7 @@ const scheduledRounds = {
   ],
   // ── 정규 30주차 (엑셀 "Week 30") — 일정 미정: 대진은 1차전 홈/원정을 뒤집어 입력, 킥오프 15:00 임시, 날짜(kickoffDate)는 확정되면 추가 ──
   round31: [
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffTime: "15:00" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffTime: "15:00" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffTime: "15:00" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffTime: "15:00" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffTime: "15:00" },
@@ -1797,7 +1797,7 @@ const scheduledRounds = {
 
 const roundsData = {
   round1: [
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", homeScore: 3, awayScore: 0 },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", homeScore: 3, awayScore: 0 },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "라이플리 FC", awayEn: "Raiply FC", homeScore: 4, awayScore: 3 },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", homeScore: 2, awayScore: 2 },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", homeScore: 2, awayScore: 1 },
@@ -1807,7 +1807,7 @@ const roundsData = {
     { byeKo: "치폴로폴로 보이즈 FC", byeEn: "Chipolopolo Boys FC" }
   ],
   round2: [
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", homeScore: 1, awayScore: 2 },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", homeScore: 1, awayScore: 2 },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", homeScore: 0, awayScore: 0 },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루비리 FC", awayEn: "Luviri FC", homeScore: 3, awayScore: 1 },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", homeScore: 1, awayScore: 1 },
@@ -1820,7 +1820,7 @@ const roundsData = {
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", homeScore: 0, awayScore: 3 },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", homeScore: 0, awayScore: 0 },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", homeScore: 3, awayScore: 0 },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", homeScore: 6, awayScore: 0 },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", homeScore: 6, awayScore: 0 },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", homeScore: 0, awayScore: 0 },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", homeScore: 1, awayScore: 1 },
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", homeScore: 1, awayScore: 0 },
@@ -1829,7 +1829,7 @@ const roundsData = {
   round4: [
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", homeScore: 0, awayScore: 0 },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", homeScore: 7, awayScore: 0 },
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", homeScore: 1, awayScore: 0 },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", homeScore: 1, awayScore: 0 },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", homeScore: 1, awayScore: 0 },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", homeScore: 0, awayScore: 0 },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", homeScore: 2, awayScore: 1 },
@@ -1840,7 +1840,7 @@ const roundsData = {
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", homeScore: 1, awayScore: 1 },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "루비리 FC", awayEn: "Luviri FC", homeScore: 1, awayScore: 0 },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", homeScore: 2, awayScore: 0 },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", homeScore: 4, awayScore: 1 },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", homeScore: 4, awayScore: 1 },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", homeScore: 2, awayScore: 4 },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", homeScore: 4, awayScore: 2 },
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", homeScore: 2, awayScore: 0 },
@@ -1848,7 +1848,7 @@ const roundsData = {
   ],
   round6: [
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", homeScore: 0, awayScore: 0 },
-    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", homeScore: 3, awayScore: 0 },
+    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", homeScore: 3, awayScore: 0 },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", homeScore: 2, awayScore: 1 },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", homeScore: 1, awayScore: 1 },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", homeScore: 1, awayScore: 0 },
@@ -1888,11 +1888,11 @@ const roundsData = {
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-08-22", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "ROBIN CHIOKO, ACKIM GOMIRE, BABA NKHOMA", scorersAway: "DANIEL CHISOKWE" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "TEMWA NDHLOVU", scorersAway: "KING NYASULU, MIKE LUHANGA" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "GIVEN MWANDIRA, JOMO PHIRI", scorersAway: "없음" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "KINGSLEY MVULA, DANIEL SIWALE", scorersAway: "SHAIBU JALAH" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-08-23", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "KINGSLEY MVULA, DANIEL SIWALE", scorersAway: "SHAIBU JALAH" },
     { byeKo: "칠룸바 배럭스 FC", byeEn: "Chilumba Barracks FC" }
   ],
   round8: [
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-08-29", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "BENJAMIN MAPUNDA", scorersAway: "없음" },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-08-29", kickoffTime: "14:30", homeScore: 1, awayScore: 0, scorersHome: "BENJAMIN MAPUNDA", scorersAway: "없음" },
     // 비전 S 아카데미 측 사유로 인한 실격 처리 — 음벨와 워리어스 FC에 2:0 몰수승 부여(경기 자체는 열리지 않음).
     // 승점/골득실/폼가이드는 applyComputedLeagueStats()·computeFormGuide()가 이 스코어를 그대로
     // 정식 경기 결과처럼 반영합니다(국제 축구 관행과 동일). matchDetails.round8에 대응하는
@@ -1917,14 +1917,14 @@ const roundsData = {
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FORTUNE CHIRAMBO, AUSTIN MPAWEMI", scorersAway: "DAVIE MWANZA, BEYADI CHIRAMBO, MUWEMI MWALE" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 0, awayScore: 1, scorersHome: "없음", scorersAway: "MLEZA NYIRONGO" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-09-06", kickoffTime: "14:30", homeScore: 0, awayScore: 1, scorersHome: "없음", scorersAway: "AZIZI PINDANI" },
-    { byeKo: "치바비 리얼 스타스 FC", byeEn: "Chibavi Real Stars FC" }
+    { byeKo: "치바비 리얼 스타즈 FC", byeEn: "Chibavi Real Stars FC" }
   ],
   // 10주차는 전체 라운드가 종료되어 roundsData.round10으로 옮겨졌습니다.
   // 단, 에우티니 베테랑스 FC vs 루베 마스터즈 FC 경기는 연기(postponed)되어 스코어가 아직 없습니다.
   // (round7의 마푸 vs 에크웬데니와 동일한 패턴 — 새 날짜가 확정되고 스코어가
   // 채워지면 postponed를 지우고 matchDetails.round10 목록 맨 뒤에 추가해주세요.)
   round10: [
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "HENDERSON KANYIKA (2골)", scorersAway: "없음" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "HENDERSON KANYIKA (2골)", scorersAway: "없음" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", postponed: true, movedToWeek: 12 },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-09-12", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "THURASON SHABA (3골)", scorersAway: "BLESSINGS NYASULU" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-09-13", kickoffTime: "14:30", homeScore: 1, awayScore: 1, scorersHome: "ZIKANI KASAMBALA", scorersAway: "NORMAN NDLOVU" },
@@ -1947,7 +1947,7 @@ const roundsData = {
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 5, awayScore: 0, scorersHome: "YAMIKANI NYIRENDA, JASON ZIMBA, JONATHAN MGUNTHA, KONDWANI CHIRWA, MOFFAT MVULA", scorersAway: "없음" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-09-19", kickoffTime: "14:30", homeScore: 3, awayScore: 1, scorersHome: "NORMAN NDLOVU (2골), PRECIOUS MWANZA", scorersAway: "MISHECK SILVESTER" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-09-19", kickoffTime: "14:30", homeScore: 3, awayScore: 5, scorersHome: "FRANK KAUNDA (3골)", scorersAway: "LUKE JERE (3골), LEVISON SILUNGWE, BENSON KACHALI" },
-    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "JIMMY KALANJE", scorersAway: "ISSA HASSAN, MARKO PHIRI (자책골)" },
+    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "JIMMY KALANJE", scorersAway: "ISSA HASSAN, MARKO PHIRI (자책골)" },
     { byeKo: "비전 S 아카데미", byeEn: "Vision S Academy" },
     // 10주차에서 연기됐던 에우티니 vs 루베 마스터즈 경기가 11주차 경기로 확정되었습니다.
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-16", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 5, awayScore: 2, scorersHome: "ELIAS BOTTOMAN, JACK GAMA (2골), MUSA PHIRI", scorersAway: "RHEMA MAKAMO, FORTUNE CHILAMBO" }
@@ -1963,7 +1963,7 @@ const roundsData = {
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "SOLOMON MANDA, JONATHAN PHIRI", scorersAway: "없음" },
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", postponed: true, movedToWeek: 13 },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 3, awayScore: 2, scorersHome: "KONDE NYIRENDA, RICHARD SAKALA, WYSON NYIRENDA", scorersAway: "WATIPA NYIRENDA, ALBERT KAUNDA" },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "OVERTON NGULUBE, HENDERSON KANYIKA", scorersAway: "JAMES HERMES" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-09-27", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "OVERTON NGULUBE, HENDERSON KANYIKA", scorersAway: "JAMES HERMES" },
     { byeKo: "에우티니 베테랑스 FC", byeEn: "Euthini Veterans FC" },
     // 10주차에서 연기됐던 칠룸바 vs 친테체 경기가 12주차 경기로 확정되었습니다.
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-09-23", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 4, awayScore: 0, scorersHome: "WANANGWA GONDWE, DEUS NKUTU, BENJAMIN MAPUNDA (2골)", scorersAway: "없음" }
@@ -1979,7 +1979,7 @@ const roundsData = {
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 2, scorersHome: "TYGO GOMEKA, ALLAN NKHONJERA", scorersAway: "TYSON NYIRONGO, ABRAHAM MVULA" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-04", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "PEARSON NYIRENDA, ZAKALIA MPHAMBA", scorersAway: "없음" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", postponed: true, movedToWeek: 16 },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FRANK KAUNDA, ROBIN CHIOKO", scorersAway: "HENDERSON KANYIKA (2골), PETER LUNGU" },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-03", kickoffTime: "14:30", homeScore: 2, awayScore: 3, scorersHome: "FRANK KAUNDA, ROBIN CHIOKO", scorersAway: "HENDERSON KANYIKA (2골), PETER LUNGU" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-04", kickoffTime: "14:30", homeScore: 1, awayScore: 3, scorersHome: "EDSON NYIRENDA", scorersAway: "WYSON NYIRENDA, CHISOMO MYEGHA (2골)" },
     { byeKo: "친테체 유나이티드 FC", byeEn: "Chintheche United FC" },
     // 11주차에서 연기됐던 치주물루 vs 칠룸바 경기가 13주차(10월 2일) 홈 경기로 확정되었습니다.
@@ -1991,7 +1991,7 @@ const roundsData = {
   // 비전 S 아카데미 vs 치하메 올스타즈는 치하메의 사유로 비전의 3:0 몰수승으로 처리되었습니다.
   round14: [
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-10-11", kickoffTime: "14:30", homeScore: 3, awayScore: 0, forfeit: true },
-    { homeKo: "치바비 리얼 스타스 FC", homeEn: "Chibavi Real Stars FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-10-10", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "AUSTINE NGOMA, HENDERSON KANYIKA", scorersAway: "NORMAN NDLOVU" },
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-10-10", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "AUSTINE NGOMA, HENDERSON KANYIKA", scorersAway: "NORMAN NDLOVU" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-10-10", kickoffTime: "14:30", homeScore: 2, awayScore: 0, scorersHome: "GLYN MSOWOYA, FOSTER SICHALI", scorersAway: "없음" },
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-10-11", kickoffTime: "14:30", homeScore: 4, awayScore: 1, scorersHome: "LOTTIE BANDA, MLEZA NYIRONGO, TAWONGA CHIHANA (2골)", scorersAway: "LEMA MAKATO" },
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-10-11", kickoffTime: "14:30", homeScore: 2, awayScore: 1, scorersHome: "THURASON SHABA, JONATHAN PHIRI", scorersAway: "WATIPA NYIRENDA" },
@@ -2004,7 +2004,7 @@ const roundsData = {
   round15: [
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-10-15", kickoffTime: "15:00", movedFromWeek: 11, homeScore: 2, awayScore: 3, scorersHome: "KELVIN GONDWE (2골)", scorersAway: "CHISOMO MYEGHA (2골), WYSON NYIRENDA" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타스 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 2, awayScore: 1, scorersHome: "BLESSINGS CHINYAMA, PEARSON NYIRENDA", scorersAway: "CLIFFORD CHISALE" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 2, awayScore: 1, scorersHome: "BLESSINGS CHINYAMA, PEARSON NYIRENDA", scorersAway: "CLIFFORD CHISALE" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-17", kickoffTime: "15:00", homeScore: 2, awayScore: 3, scorersHome: "MAVUTO SHABA, JACK GAMA", scorersAway: "THURASON SHABA, SILVESTER SMART, KING MKANDAWIRE" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 3, awayScore: 2, scorersHome: "WYSON NYIRENDA (3골)", scorersAway: "TYSON KAUNDA, ZIKANI KASAMBALA" },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 5, awayScore: 1, scorersHome: "NORMAN NDLOVU (4골), PRECIOUS MWANZA", scorersAway: "BENJAMIN KALINGA" },
@@ -2196,7 +2196,7 @@ function computeStandingsHistory() {
 // 승점/득실/폼/다음 경기 정보는 이 파일을 저장하는 순간 자동으로 갱신됩니다.
 const leagueData = [
   {
-    nameKo: "치바비 리얼 스타스 FC", nameEn: "Chibavi Real Stars FC", logoSrc: "치바비.webp",
+    nameKo: "치바비 리얼 스타즈 FC", nameEn: "Chibavi Real Stars FC", logoSrc: "치바비.webp",
     venue: { nameKo: "치바비 그라운드", nameEn: "Chibavi Ground", lat: -11.443131740663798, lng: 34.00202271076014 },
     prevSeasonFinal: { season: "25/26", rank: 3, played: 30, gd: 27, pts: 57 }
   },
