@@ -5528,7 +5528,7 @@ function buildAiPredictionNarrative(params) {
   if (isDrawFav) {
     lines.push(isKorean
       ? `두 팀의 전력이 팽팽해 무승부 확률(${favPctRounded}%)이 가장 높게 나옵니다.`
-      : `Both sides look evenly matched — a draw is the single most likely result (${favPctRounded}%).`);
+      : `Both sides look evenly matched, and a draw is the single most likely result (${favPctRounded}%).`);
   } else if (favPctRounded < 45) {
     lines.push(isKorean
       ? `${favName} 쪽이 근소하게 앞서지만(승률 ${favPctRounded}%) 어느 쪽으로도 기울 수 있는 접전으로 보입니다.`
@@ -5581,7 +5581,7 @@ function buildAiPredictionNarrative(params) {
     } else if (aGood && !hGood) {
       lines.push(isKorean
         ? `${awayName}은(는) 최근 ${aForm.n}경기 ${aForm.w}승으로 상승세라는 점도 변수입니다.`
-        : `${awayName} arrives in good form too, with ${aForm.w} wins in its last ${aForm.n} games — a potential upset factor.`);
+        : `${awayName} arrives in good form too, with ${aForm.w} wins in its last ${aForm.n} games, which is a potential upset factor.`);
     }
   }
 

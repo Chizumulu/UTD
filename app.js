@@ -6,6 +6,39 @@
   // data 버전을 직접 읽어옵니다.
   const ASSET_VERSIONS = window.ASSET_VERSIONS || {};
 
+  // ===== 인라인 SVG 아이콘 (이모지 대체) =====
+  // 24px viewBox, 선 스타일, currentColor — 사이드바 아이콘과 같은 규격입니다. 크기/색은 CSS(.ic)와 부모 글자 크기·색을 따라갑니다.
+  const SVG_ICONS = {
+    ball: '<circle cx="12" cy="12" r="9"/><path d="M12 7.8l3.8 2.8-1.45 4.5h-4.7L8.2 10.6z"/><path d="M12 3.2v4.6M15.8 10.6l4.4-1.4M14.35 15.1l2.7 3.7M9.65 15.1l-2.7 3.7M8.2 10.6L3.8 9.2"/>',
+    flame: '<path d="M12 3c.6 3.4 5 5.6 5 10.2A5 5 0 0 1 7 13.2c0-1.9.9-3.1 2-4 .2 1.3.9 2.1 1.9 2.4C10.6 8.6 10.9 5.6 12 3z"/>',
+    shield: '<path d="M12 3l7 3v5.5c0 4.4-2.9 7.7-7 9.5-4.1-1.8-7-5.1-7-9.5V6z"/>',
+    glove: '<path d="M8 12.5V6.5a1.5 1.5 0 0 1 3 0V11"/><path d="M11 11V5a1.5 1.5 0 0 1 3 0v6"/><path d="M14 11V6.5a1.5 1.5 0 0 1 3 0V14c0 3.6-2.4 6-5.4 6-2.2 0-3.8-1.1-4.8-3L5 13.5a1.5 1.5 0 0 1 2.6-1.5L8 12.5"/>',
+    'trend-up': '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    'trend-down': '<path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/>',
+    stadium: '<ellipse cx="12" cy="9" rx="9" ry="3.5"/><path d="M3 9v6c0 1.9 4 3.5 9 3.5s9-1.6 9-3.5V9"/><path d="M7 10.8v6.4M12 12.5v6M17 10.8v6.4"/>',
+    plane: '<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>',
+    burst: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/>',
+    user: '<circle cx="12" cy="8" r="3.6"/><path d="M4.8 20c1.2-3.8 3.9-5.8 7.2-5.8s6 2 7.2 5.8"/>',
+    calendar: '<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
+    injury: '<path d="M9.5 4h5v5.5H20v5h-5.5V20h-5v-5.5H4v-5h5.5z"/>',
+    chat: '<path d="M4 5.5h16v11H10l-4.5 3.5v-3.5H4z"/>',
+    swap: '<path d="M4 8h13"/><path d="M14 5l3 3-3 3"/><path d="M20 16H7"/><path d="M10 13l-3 3 3 3"/>',
+    flag: '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+    alert: '<path d="M12 4l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.3v.2"/>',
+    freekick: '<circle cx="15.5" cy="12" r="5.5"/><path d="M2.5 9h5M1.5 12h4.5M2.5 15h5"/>',
+    zap: '<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>',
+    tv: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    play: '<path d="M7 5l12 7-12 7z"/>',
+    pause: '<path d="M8.5 5v14M15.5 5v14"/>',
+    finish: '<path d="M5 21V4"/><path d="M5 4h14v9H5"/><path d="M10 4v9M15 4v9M5 8.5h14"/>',
+    trophy: '<path d="M7 4h10v4.5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4.5v1.2A3 3 0 0 0 7.5 10.2M17 6h2.5v1.2a3 3 0 0 1-3 3M12 13.5V17M8.5 20h7M10 17h4"/>'
+  };
+  function svgIcon(name) {
+    const body = SVG_ICONS[name];
+    return body ? `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${body}</svg>` : '';
+  }
+
   // ===== 전역 상태 (Global State) =====
   // URL에 ?lang=en 이 붙어 있으면 처음부터 영문으로 시작합니다.
   // 예: https://your-domain.com/?lang=en
@@ -238,7 +271,7 @@
     deferredInstallPrompt = null;
     updateInstallBtnVisibility();
     hideInstallBanner();
-    showShareToast(isKorean ? '✅ 앱이 설치됐어요' : '✅ App installed');
+    showShareToast(isKorean ? '앱이 설치됐어요' : 'App installed');
   });
 
   async function installApp() {
@@ -993,7 +1026,7 @@
   function sixTagHtml(info) {
     if (!info) return '';
     const tip = sixNoteText(info);
-    return `<span class="six-tag" title="${wiEsc(tip)}">⚔️ ${isKorean ? '6점짜리' : '6-pointer'}</span>`;
+    return `<span class="six-tag" title="${wiEsc(tip)}">${isKorean ? '6점짜리' : '6-pointer'}</span>`;
   }
   function sixNoteText(info) {
     const gapTxt = info.gap === 0 ? (isKorean ? '승점 동률' : 'level on points') : (isKorean ? `승점 차 ${info.gap}점` : `${info.gap} pt${info.gap === 1 ? '' : 's'} apart`);
@@ -1103,7 +1136,7 @@
     }).join('');
 
     const staleNote = stale
-      ? `<p class="wi-stale">${isKorean ? '경기 선택이 바뀌었어요. 아래 결과는 이전 선택 기준이에요 — 다시 계산해 주세요.' : 'Your picks changed. The result below reflects the previous picks — recalculate to update.'}</p>`
+      ? `<p class="wi-stale">${isKorean ? '경기 선택이 바뀌었어요. 아래 결과는 이전 선택 기준이에요 — 다시 계산해 주세요.' : 'Your picks changed. The result below reflects the previous picks, so recalculate to update.'}</p>`
       : '';
 
     return `
@@ -1233,7 +1266,7 @@
     const impactLabel = whatIfImpact.running
       ? (isKorean ? `계산 중... ${whatIfImpact.done}/${whatIfImpact.total}` : `Calculating... ${whatIfImpact.done}/${whatIfImpact.total}`)
       : (impactAll ? (isKorean ? '경기별 영향 계산 완료' : 'Impact calculated')
-        : (isKorean ? '🔮 경기별 우승확률 영향 보기' : '🔮 Show title-chance impact per game'));
+        : (isKorean ? '경기별 우승확률 영향 보기' : 'Show title-chance impact per game'));
     const impactCanRun = !!predictionCache && !whatIfImpact.running && !impactAll;
     const impactBar = `<div class="wi-impact-bar">
         <button type="button" class="wi-chip" data-wi-action="impact"${impactCanRun ? '' : ' disabled'}>${impactLabel}</button>
@@ -1261,7 +1294,7 @@
           <span class="wi-ha ${isHome ? 'wi-ha-home' : 'wi-ha-away'}">${isHome ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A')}</span>
           <span class="wi-date${dateTxt ? '' : ' wi-date-tbd'}">${dateTxt || (isKorean ? '일정 미정' : 'TBD')}</span>
           ${sixTagHtml(sixPointerInfo(fx.homeEn, fx.awayEn))}
-          ${isKey ? `<span class="wi-key-tag">${isKorean ? '🔥 승부처' : '🔥 Key game'}</span>` : ''}
+          ${isKey ? `<span class="wi-key-tag">${isKorean ? '승부처' : 'Key game'}</span>` : ''}
         </div>
         <div class="wi-btns" role="group">
           ${btn('W', '승', 'W', 'wi-btn-w')}${btn('D', '무', 'D', 'wi-btn-d')}${btn('L', '패', 'L', 'wi-btn-l')}
@@ -1757,7 +1790,7 @@
       const haTxt = isKorean ? (p.isHome ? '홈' : '원정') : (p.isHome ? 'H' : 'A');
       title.textContent = isKorean
         ? `${wkKo(p.weekNum)} · ${teamName}(${haTxt}) vs ${oppName} — 예상 ${p.expected.toFixed(2)}골 / 실제 ${p.actual}골`
-        : `${wkEn(p.weekNum, 'WK', '')} · ${teamName} (${haTxt}) vs ${oppName} — expected ${p.expected.toFixed(2)}, actual ${p.actual}`;
+        : `${wkEn(p.weekNum, 'WK', '')} · ${teamName} (${haTxt}) vs ${oppName}: expected ${p.expected.toFixed(2)}, actual ${p.actual}`;
       g.appendChild(dot);
       g.appendChild(title);
       svg.appendChild(g);
@@ -1892,10 +1925,10 @@
       </tr>`;
     }).join('');
 
-    const titleKo = '이변 지수 & 기대 승점', titleEn = 'UPSETS & EXPECTED POINTS';
+    const titleKo = '이변 지수 & 기대 승점', titleEn = 'Upsets & Expected Points';
     const topKo = '가장 의외였던 경기 (실제 결과의 경기 전 확률이 낮은 순)', topEn = 'Biggest surprises (lowest pre-match chance of the actual result)';
     const noteKo = `개막 초반 경기를 뺀 ${S.n}경기 기준이에요. 기대 승점은 경기마다 (3×승리 확률 + 무승부 확률)을 더한 값이라 상대 전력과 홈/원정이 반영돼 있어요. 차이가 +면 모델 기대보다 승점을 더 땄다는 뜻이고, 운과 모델 오차가 섞여 있어요.`;
-    const noteEn = `Based on ${S.n} matches excluding early-season games. Expected points = sum of (3 × win chance + draw chance) per match, so opponent strength and venue are included. A positive gap means more points than the model expected — a mix of luck and model error.`;
+    const noteEn = `Based on ${S.n} matches excluding early-season games. Expected points = sum of (3 × win chance + draw chance) per match, so opponent strength and venue are included. A positive gap means more points than the model expected. That gap is a mix of luck and model error.`;
     const sumKo = '팀별 실제 승점 vs 기대 승점', sumEn = 'Actual vs expected points by team';
 
     el.innerHTML = `
@@ -2171,7 +2204,7 @@
     if (!container) return;
     const roundKey = latestReportReadyRoundKey();
     if (!roundKey) {
-      container.innerHTML = `<div class="report-empty lbl" data-en="Not enough matches played yet this round — the report appears automatically once at least 6 of the 7 fixtures are in." data-ko="아직 이번 주차 결과가 충분히 모이지 않았어요. 7경기 중 6경기 이상 스코어가 채워지면 리포트가 자동으로 생성됩니다.">${isKorean ? '아직 이번 주차 결과가 충분히 모이지 않았어요. 7경기 중 6경기 이상 스코어가 채워지면 리포트가 자동으로 생성됩니다.' : 'Not enough matches played yet this round — the report appears automatically once at least 6 of the 7 fixtures are in.'}</div>`;
+      container.innerHTML = `<div class="report-empty lbl" data-en="Not enough matches played yet this round. The report appears automatically once at least 6 of the 7 fixtures are in." data-ko="아직 이번 주차 결과가 충분히 모이지 않았어요. 7경기 중 6경기 이상 스코어가 채워지면 리포트가 자동으로 생성됩니다.">${isKorean ? '아직 이번 주차 결과가 충분히 모이지 않았어요. 7경기 중 6경기 이상 스코어가 채워지면 리포트가 자동으로 생성됩니다.' : 'Not enough matches played yet this round. The report appears automatically once at least 6 of the 7 fixtures are in.'}</div>`;
       return;
     }
     const report = buildRoundResultReport(roundKey);
@@ -2195,7 +2228,7 @@
     const resultCardHtml = `
       <section class="report-card report-card-result">
         <div class="report-card-head">
-          <span class="report-kicker lbl" data-en="WEEKLY REPORT" data-ko="주차별 결과 리포트">${isKorean ? '주차별 결과 리포트' : 'WEEKLY REPORT'}</span>
+          <span class="report-kicker lbl" data-en="Weekly Report" data-ko="주차별 결과 리포트">${isKorean ? '주차별 결과 리포트' : 'Weekly Report'}</span>
           <span class="report-badge ${resultBadgeCls}">${resultBadgeText}</span>
         </div>
         <h3 class="report-headline">${isKorean ? report.headline.ko : report.headline.en}</h3>
@@ -2232,7 +2265,7 @@
     if (!pred) {
       return `<section class="report-card report-card-prediction report-card-prediction-empty">
         <div class="report-card-head">
-          <span class="report-kicker lbl" data-en="PREDICTION REPORT" data-ko="다음 주차 예측 리포트">${isKorean ? '다음 주차 예측 리포트' : 'PREDICTION REPORT'}</span>
+          <span class="report-kicker lbl" data-en="Prediction Report" data-ko="다음 주차 예측 리포트">${isKorean ? '다음 주차 예측 리포트' : 'Prediction Report'}</span>
         </div>
         <div class="report-empty-inline lbl" data-en="No upcoming fixture to preview yet." data-ko="아직 예측할 다음 경기 일정이 없어요.">${isKorean ? '아직 예측할 다음 경기 일정이 없어요.' : 'No upcoming fixture to preview yet.'}</div>
       </section>`;
@@ -2243,13 +2276,13 @@
     if (pred.isBye) {
       return `<section class="report-card report-card-prediction">
         <div class="report-card-head">
-          <span class="report-kicker lbl" data-en="PREDICTION REPORT" data-ko="다음 주차 예측 리포트">${isKorean ? '다음 주차 예측 리포트' : 'PREDICTION REPORT'}</span>
+          <span class="report-kicker lbl" data-en="Prediction Report" data-ko="다음 주차 예측 리포트">${isKorean ? '다음 주차 예측 리포트' : 'Prediction Report'}</span>
           <span class="report-badge report-badge-bye">BYE</span>
         </div>
         <h3 class="report-headline">${isKorean ? `${weekLabel}: 다음 주는 부전승 주간` : `${weekLabel}: Bye week`}</h3>
         <div class="report-body"><p class="report-paragraph">${isKorean
           ? '다음 라운드에는 치주물루의 경기가 없어요. 다른 팀들의 결과를 지켜보며 그다음 경기를 준비할 시간입니다.'
-          : 'Chizumulu have no fixture next round — a chance to rest up before the following match.'}</p></div>
+          : 'Chizumulu have no fixture next round, a chance to rest up before the following match.'}</p></div>
       </section>`;
     }
 
@@ -2273,7 +2306,7 @@
     return `
       <section class="report-card report-card-prediction">
         <div class="report-card-head">
-          <span class="report-kicker lbl" data-en="PREDICTION REPORT" data-ko="다음 주차 예측 리포트">${isKorean ? '다음 주차 예측 리포트' : 'PREDICTION REPORT'}</span>
+          <span class="report-kicker lbl" data-en="Prediction Report" data-ko="다음 주차 예측 리포트">${isKorean ? '다음 주차 예측 리포트' : 'Prediction Report'}</span>
           <span class="report-badge report-badge-predict">${haText}</span>
         </div>
         <h3 class="report-headline">${isKorean
@@ -2303,10 +2336,10 @@
 
     const noteHtml = pickSentence(mulberry32(seedFromString(pred.roundKey + ':watch')), isAbove ? [
       [`위 순위 ${koIGa(koShort(rivalNameKo))} 승점을 잃을 경우 현재 ${gap}점인 승점 차를 좁힐 수 있는 경기다.`,
-       `How ${rivalNameEn} — currently just above Chizumulu — fare here could shrink or stretch the current ${gap}-point gap.`]
+       `How ${rivalNameEn} (currently just above Chizumulu) fare here could shrink or stretch the current ${gap}-point gap.`]
     ] : [
       [`아래 순위 ${koIGa(koShort(rivalNameKo))} 승점을 쌓을 경우 현재 ${gap}점인 승점 차가 좁혀질 수 있어, 추격 흐름을 가늠할 수 있는 경기다.`,
-       `Whether ${rivalNameEn} — right behind Chizumulu — pick up points here will shape how tight the chase (currently ${gap} points) becomes.`]
+       `Whether ${rivalNameEn} (right behind Chizumulu) pick up points here will shape how tight the chase (currently ${gap} points) becomes.`]
     ]);
 
     const home = getTeamCompareSnapshot(match.homeEn, match.homeKo);
@@ -2490,7 +2523,7 @@
       if (t.nextMatch && t.nextMatch.isBye) {
         el.innerHTML = `
         <div class="nmh-eyebrow lbl" data-en="Next" data-ko="다음경기">${isKorean ? '다음경기' : 'Next'} · ${weekLbl}</div>
-        <div class="nmh-bye lbl" data-en="Bye week — no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week — no match this round'}</div>`;
+        <div class="nmh-bye lbl" data-en="Bye week: no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week: no match this round'}</div>`;
       } else {
         // 남은 일정이 아직 등록되지 않았으면(nextMatch === null) 에러 대신 안내 문구를 보여줍니다.
         const tbdKo = '후반기 리그 일정이 아직 발표되지 않았습니다<br>일정이 정해지는 대로 반영하겠습니다.';
@@ -2593,7 +2626,7 @@
           ${ddayTxt ? `<div class="nmh-dday">${ddayTxt}</div>` : ''}
           ${(daysLeft === 0 && kickoffMs) ? `<div class="nmh-dday-clock" data-kickoff-utc="${kickoffMs}">${ddayClockText(kickoffMs)}</div>` : ''}
           <div class="nmh-meta">${kickoffTxt || ''}</div>
-          ${nextMatchVenueName ? `<div class="nmh-venue">🏟️ ${nextMatchVenueName}</div>` : ''}
+          ${nextMatchVenueName ? `<div class="nmh-venue">${svgIcon('stadium')} ${nextMatchVenueName}</div>` : ''}
         </div>
         ${rightTeamHtml}
       </div>
@@ -2672,10 +2705,10 @@
     const ranked = getRankedTeams('all');
     const info = getMyRankedTeam();
     const ptsLabel = isKorean ? '점' : ' pts';
-    const lines = ranked.slice(0, 5).map((t, i) => `${i + 1}. ${isKorean ? t.nameKo : t.nameEn} — ${t.pts}${ptsLabel}`);
-    let text = (isKorean ? '📊 NRFA 리그 원 순위표 TOP 5\n' : '📊 NRFA League One — Top 5\n') + lines.join('\n');
+    const lines = ranked.slice(0, 5).map((t, i) => `${i + 1}. ${isKorean ? t.nameKo : t.nameEn} · ${t.pts}${ptsLabel}`);
+    let text = (isKorean ? '📊 NRFA 리그 원 순위표 TOP 5\n' : '📊 NRFA League One: Top 5\n') + lines.join('\n');
     if (info && info.rank > 5) {
-      text += `\n...\n${info.rank}. ${isKorean ? info.team.nameKo : info.team.nameEn} — ${info.team.pts}${ptsLabel}`;
+      text += `\n...\n${info.rank}. ${isKorean ? info.team.nameKo : info.team.nameEn} · ${info.team.pts}${ptsLabel}`;
     }
     shareContent(isKorean ? 'NRFA 리그 원 순위표' : 'NRFA League One Standings', text);
   }
@@ -2711,7 +2744,7 @@
     const compTxt = nm.comp === 'cup' ? (isKorean ? `[${nm.compKo}${nm.roundLabelKo ? ' ' + nm.roundLabelKo : ''}] ` : `[${nm.compEn}${nm.roundLabelEn ? ' ' + nm.roundLabelEn : ''}] `) : '';
     const text = isKorean
       ? `⚽ 치주물루 유나이티드 FC 다음 경기\n${compTxt}${haTxt} vs ${oppName}\n${kickoffTxt}`
-      : `⚽ Chizumulu United FC — Next Match\n${compTxt}${haTxt} vs ${oppName}\n${kickoffTxt}`;
+      : `⚽ Chizumulu United FC: Next Match\n${compTxt}${haTxt} vs ${oppName}\n${kickoffTxt}`;
     shareContent(isKorean ? '치주물루 다음 경기' : 'Chizumulu Next Match', text);
   }
 
@@ -2911,7 +2944,7 @@
   // 메인 '다음경기' 카드의 D-DAY 아래 시계 텍스트 (경기 당일에만 표시됨). 킥오프 이후에는 "킥오프!"로 바뀝니다.
   function ddayClockText(kickoffMs) {
     const diffMs = kickoffMs - Date.now();
-    if (diffMs <= 0) return `⚽ ${isKorean ? '킥오프!' : 'KICK-OFF!'}`;
+    if (diffMs <= 0) return isKorean ? '킥오프!' : 'KICK-OFF!';
     const totalSec = Math.floor(diffMs / 1000);
     const pad = (n) => String(n).padStart(2, '0');
     return `${pad(Math.floor(totalSec / 3600))}:${pad(Math.floor((totalSec % 3600) / 60))}:${pad(totalSec % 60)}`;
@@ -2944,7 +2977,7 @@
     if (!kickoffMs) return '';
     const diffMs = kickoffMs - Date.now();
     if (diffMs <= 0) {
-      return `<span class="cd-live">⚽ ${isKorean ? '킥오프!' : 'KICK-OFF!'}</span>`;
+      return `<span class="cd-live">${svgIcon('ball')} ${isKorean ? '킥오프!' : 'KICK-OFF!'}</span>`;
     }
     const totalSec = Math.floor(diffMs / 1000);
     const days = Math.floor(totalSec / 86400);
@@ -3824,7 +3857,7 @@
         </div>
         <div class="ti-next-match-predict-score lbl" data-en="${scoreLabelEn}" data-ko="${scoreLabelKo}">${isKorean ? scoreLabelKo : scoreLabelEn}</div>
         ${correctionNoteHtml}
-        <div class="ti-next-match-predict-note lbl" data-en="Based on recent form &amp; goal averages — just for fun, not a real forecast." data-ko="최근 폼과 득점 평균으로 계산한 참고용 수치예요. 통계적으로 정확하진 않아요.">${isKorean ? '최근 폼과 득점 평균으로 계산한 참고용 수치예요. 통계적으로 정확하진 않아요.' : "Based on recent form & goal averages — just for fun, not a real forecast."}</div>
+        <div class="ti-next-match-predict-note lbl" data-en="Based on recent form &amp; goal averages. Just for fun, not a real forecast." data-ko="최근 폼과 득점 평균으로 계산한 참고용 수치예요. 통계적으로 정확하진 않아요.">${isKorean ? '최근 폼과 득점 평균으로 계산한 참고용 수치예요. 통계적으로 정확하진 않아요.' : "Based on recent form & goal averages. Just for fun, not a real forecast."}</div>
       </div>`;
   }
 
@@ -3875,7 +3908,7 @@
     if (!nm || nm.isBye) {
       return `
         <div class="ti-next-match ti-next-bye">
-          <span class="lbl" data-en="Bye week — no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week — no match this round'}</span>
+          <span class="lbl" data-en="Bye week: no match this round" data-ko="이번 라운드는 휴식주입니다">${isKorean ? '이번 라운드는 휴식주입니다' : 'Bye week: no match this round'}</span>
         </div>`;
     }
     const ranked = getRankedTeams('all');
@@ -3913,7 +3946,7 @@
     const nextMatchAwayEn = nm.homeAway === 'H' ? nm.oppEn : team.nameEn;
     const nextMatchAwayKo = nm.homeAway === 'H' ? nm.oppKo : team.nameKo;
     const escAttr = (s) => String(s || '').replace(/'/g, "\\'");
-    const compareBtnHtml = `<button type="button" class="rmc-compare-btn ti-next-match-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교" onclick="openMatchCompareModal('${escAttr(nextMatchHomeEn)}', '${escAttr(nextMatchHomeKo)}', '${escAttr(nextMatchAwayEn)}', '${escAttr(nextMatchAwayKo)}', '${escAttr(nm.roundKey)}')">⚖️ ${isKorean ? '전적 비교' : 'Compare Teams'}</button>`;
+    const compareBtnHtml = `<button type="button" class="rmc-compare-btn ti-next-match-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교" onclick="openMatchCompareModal('${escAttr(nextMatchHomeEn)}', '${escAttr(nextMatchHomeKo)}', '${escAttr(nextMatchAwayEn)}', '${escAttr(nextMatchAwayKo)}', '${escAttr(nm.roundKey)}')">${isKorean ? '전적 비교' : 'Compare Teams'}</button>`;
 
     // 우리 팀(치주물루)의 다음 경기 카드에서만 킥오프 현지 날씨 예보를 함께 보여줍니다.
     const weatherHtml = isMyTeamName(team.nameEn, team.nameKo)
@@ -3942,7 +3975,7 @@
           </div>
         </div>
         ${kickoffTxt ? `<div class="ti-next-match-kickoff">${kickoffTxt}</div>` : ''}
-        ${nextMatchVenueName ? `<div class="ti-next-match-venue">🏟️ ${nextMatchVenueName}</div>` : ''}
+        ${nextMatchVenueName ? `<div class="ti-next-match-venue">${svgIcon('stadium')} ${nextMatchVenueName}</div>` : ''}
         ${weatherHtml}
         ${countdownHtml}
         ${predictHtml}
@@ -4138,7 +4171,7 @@
       if (e.type === 'bye') {
         pointsSvg += `<line x1="${x.toFixed(1)}" y1="10" x2="${x.toFixed(1)}" y2="${(top + plotH + 6).toFixed(1)}" stroke="var(--color-gold-strong)" stroke-width="1" stroke-dasharray="3 3"/>`;
         pointsSvg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="var(--color-surface)" stroke="var(--color-gold-strong)" stroke-width="2"/>`;
-        ticksSvg += `<text x="${x.toFixed(1)}" y="${(H - 8).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="var(--color-gold-strong)">${isKorean ? '휴식' : 'Bye'}</text>`;
+        ticksSvg += `<text x="${x.toFixed(1)}" y="${(H - 8).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--color-gold-strong)">${isKorean ? '휴식' : 'Bye'}</text>`;
       } else {
         pointsSvg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5.5" fill="${resultColor(e.result)}"/>`;
         ticksSvg += `<text x="${x.toFixed(1)}" y="${(H - 8).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--color-text-faint)">${isKorean ? e.round + '주' : 'R' + e.round}</text>`;
@@ -4393,15 +4426,15 @@
     const homeBest = bestWinAt(true), awayBest = bestWinAt(false);
 
     const cards = [
-      streakItem('🔥', '최다 연승', 'Longest Win Streak', m => m.res === 'W'),
-      streakItem('🛡️', '최장 무패', 'Longest Unbeaten Run', m => m.res !== 'L'),
-      streakItem('🧤', '최다 연속 무실점', 'Most Consecutive Clean Sheets', m => m.ga === 0),
-      streakItem('⚽', '최다 연속 득점', 'Longest Scoring Run', m => m.gf > 0),
-      scoreItem('💪', '최다 점수차 승리', 'Biggest Win', biggestWin, m => m.gf > m.ga),
-      scoreItem('🏟️', '홈 최다 점수차 승리', 'Biggest Home Win', homeBest, notDup),
-      scoreItem('✈️', '원정 최다 점수차 승리', 'Biggest Away Win', awayBest, notDup),
-      scoreItem('🎆', '최다 골 경기', 'Most Goals in a Match', wildest, m => m.gf + m.ga > 0),
-      scoreItem('📉', '최다 점수차 패배', 'Heaviest Defeat', biggestLoss, m => m.ga > m.gf)
+      streakItem(svgIcon('flame'), '최다 연승', 'Longest Win Streak', m => m.res === 'W'),
+      streakItem(svgIcon('shield'), '최장 무패', 'Longest Unbeaten Run', m => m.res !== 'L'),
+      streakItem(svgIcon('glove'), '최다 연속 무실점', 'Most Consecutive Clean Sheets', m => m.ga === 0),
+      streakItem(svgIcon('ball'), '최다 연속 득점', 'Longest Scoring Run', m => m.gf > 0),
+      scoreItem(svgIcon('trend-up'), '최다 점수차 승리', 'Biggest Win', biggestWin, m => m.gf > m.ga),
+      scoreItem(svgIcon('stadium'), '홈 최다 점수차 승리', 'Biggest Home Win', homeBest, notDup),
+      scoreItem(svgIcon('plane'), '원정 최다 점수차 승리', 'Biggest Away Win', awayBest, notDup),
+      scoreItem(svgIcon('burst'), '최다 골 경기', 'Most Goals in a Match', wildest, m => m.gf + m.ga > 0),
+      scoreItem(svgIcon('trend-down'), '최다 점수차 패배', 'Heaviest Defeat', biggestLoss, m => m.ga > m.gf)
     ].filter(Boolean);
 
     el.innerHTML = cards.length ? `<div class="ti-room-grid">${cards.join('')}</div>` : '';
@@ -4537,7 +4570,7 @@
     const c = [];
     if (number !== undefined && number !== null) ['png', 'webp', 'jpg'].forEach(ext => c.push(`${number}L.${ext}`));
     if (faceSrc) c.push(faceSrc);
-    if (!c.length) return `<div class="pcard-photo pcard-photo-empty">${number != null ? number : '👤'}</div>`;
+    if (!c.length) return `<div class="pcard-photo pcard-photo-empty">${number != null ? number : svgIcon('user')}</div>`;
     return `<img class="pcard-photo" src="${c[0]}" data-rest="${c.slice(1).join('|')}" alt="${alt || ''}" loading="lazy" onload="pcardPhotoLoaded(this)" onerror="pcardPhotoNext(this)">`;
   }
   // 재사용 가능한 세로 선수 카드. opts: { cls, attrs, number, pos, nameKo, nameEn, faceSrc, badgesHtml, footHtml }
@@ -4590,7 +4623,7 @@
       const sq = squadData.find(p => p.number === r.number);
       const photo = sq && sq.photoSrc
         ? `<img class="ti-gk-card-photo" src="${sq.photoSrc}" alt="${sq.nameEn || r.nameKo}">`
-        : `<div class="ti-gk-card-photo ti-gk-card-photo-placeholder">🧤</div>`;
+        : `<div class="ti-gk-card-photo ti-gk-card-photo-placeholder">${svgIcon('glove')}</div>`;
 
       return `
         <div class="ti-gk-card-item" data-player-number="${r.number}">
@@ -4768,7 +4801,7 @@
           `).join('')}
         </div>
         ${hasIndex ? `
-        <div class="ti-record-index-note lbl" data-en="Attack/Defense Index — 100% is the league average; higher is stronger" data-ko="공격/수비 지수 — 100%가 리그 평균, 높을수록 강함">${isKorean ? '공격/수비 지수 — 100%가 리그 평균, 높을수록 강함' : 'Attack/Defense Index — 100% is the league average; higher is stronger'}</div>` : ''}
+        <div class="ti-record-index-note lbl" data-en="Attack/Defense Index: 100% is the league average; higher is stronger" data-ko="공격/수비 지수 — 100%가 리그 평균, 높을수록 강함">${isKorean ? '공격/수비 지수 — 100%가 리그 평균, 높을수록 강함' : 'Attack/Defense Index: 100% is the league average; higher is stronger'}</div>` : ''}
       </div>
     `;
   }
@@ -5393,7 +5426,7 @@
         const minutes = group.goals.map(g => formatGoalMinute(g.minuteText)).filter(Boolean);
         const minuteText = minutes.length ? `${minutes.join(', ')} ` : '';
         const count = group.goals.length;
-        return `<div class="llt-goal-row">⚽ ${escapeHtml(minuteText)}${escapeHtml(localizeScorerName(group.scorer))}&nbsp;<span class="llt-goal-count">×${count}</span></div>`;
+        return `<div class="llt-goal-row">${svgIcon('ball')} ${escapeHtml(minuteText)}${escapeHtml(localizeScorerName(group.scorer))}&nbsp;<span class="llt-goal-count">×${count}</span></div>`;
       };
       const homeGoalsHtml = groupScorerGoals(goals.filter(g => g.isHome)).map(goalRowHtml).join('');
       const awayGoalsHtml = groupScorerGoals(goals.filter(g => !g.isHome)).map(goalRowHtml).join('');
@@ -5431,7 +5464,7 @@
         const LIVE_EVENTS_COLLAPSED_COUNT = 3;
         const rowsHtml = commentaryFeed.slice().reverse().map((c, i) => {
           const meta = c.type ? leagueEventMeta({ type: c.type, note: '' }) : null;
-          const icon = (meta && meta.icon && meta.icon !== '•') ? meta.icon : '💬';
+          const icon = (meta && meta.icon && meta.icon !== '•') ? meta.icon : svgIcon('chat');
           const text = isKorean ? c.ko : c.en;
           return `<div class="llt-event-row${i >= LIVE_EVENTS_COLLAPSED_COUNT ? ' is-extra' : ''}">
             <span class="llt-event-min">${escapeHtml(formatLeagueCommentaryClock(c.ts))}</span>
@@ -6367,23 +6400,23 @@
   function leagueEventMeta(ev) {
     const t = String(ev.type || '').toLowerCase();
     const note = String(ev.note || '').toLowerCase();
-    if (/red/.test(t) || (/card|book/.test(t) && /red|straight|퇴장/.test(note))) return { icon: '🟥', ko: '퇴장', en: 'Red card' };
-    if (/yellow/.test(t) || /card|book/.test(t)) return { icon: '🟨', ko: '경고', en: 'Yellow card' };
-    if (/sub/.test(t)) return { icon: '🔄', ko: '교체', en: 'Substitution' };
-    if (/corner/.test(t)) return { icon: '🚩', ko: '코너킥', en: 'Corner' };
-    if (/offside/.test(t)) return { icon: '🚩', ko: '오프사이드', en: 'Offside' };
-    if (/foul/.test(t)) return { icon: '⚠️', ko: '파울', en: 'Foul' };
-    if (/free.?kick/.test(t)) return { icon: '🦶', ko: '프리킥', en: 'Free kick' };
-    if (/own/.test(t)) return { icon: '⚽', ko: '자책골', en: 'Own goal' };
-    if (/goal/.test(t)) return { icon: '⚽', ko: '골', en: 'Goal' };
-    if (/pen/.test(t)) return { icon: '🎯', ko: '페널티', en: 'Penalty' };
-    if (/save/.test(t)) return { icon: '🧤', ko: '선방', en: 'Save' };
-    if (/miss|chance|shot|post|bar/.test(t)) return { icon: '💥', ko: '찬스', en: 'Chance' };
-    if (/injur/.test(t)) return { icon: '🩹', ko: '부상', en: 'Injury' };
-    if (/var/.test(t)) return { icon: '📺', ko: 'VAR', en: 'VAR' };
-    if (/kick/.test(t)) return { icon: '▶️', ko: '킥오프', en: 'Kick-off' };
-    if (/half/.test(t)) return { icon: '⏸️', ko: '하프타임', en: 'Half-time' };
-    if (/full|end/.test(t)) return { icon: '🏁', ko: '경기 종료', en: 'Full-time' };
+    if (/red/.test(t) || (/card|book/.test(t) && /red|straight|퇴장/.test(note))) return { icon: '<i class="ev-card ev-card-r"></i>', ko: '퇴장', en: 'Red card' };
+    if (/yellow/.test(t) || /card|book/.test(t)) return { icon: '<i class="ev-card ev-card-y"></i>', ko: '경고', en: 'Yellow card' };
+    if (/sub/.test(t)) return { icon: svgIcon('swap'), ko: '교체', en: 'Substitution' };
+    if (/corner/.test(t)) return { icon: svgIcon('flag'), ko: '코너킥', en: 'Corner' };
+    if (/offside/.test(t)) return { icon: svgIcon('flag'), ko: '오프사이드', en: 'Offside' };
+    if (/foul/.test(t)) return { icon: svgIcon('alert'), ko: '파울', en: 'Foul' };
+    if (/free.?kick/.test(t)) return { icon: svgIcon('freekick'), ko: '프리킥', en: 'Free kick' };
+    if (/own/.test(t)) return { icon: svgIcon('ball'), ko: '자책골', en: 'Own goal' };
+    if (/goal/.test(t)) return { icon: svgIcon('ball'), ko: '골', en: 'Goal' };
+    if (/pen/.test(t)) return { icon: svgIcon('target'), ko: '페널티', en: 'Penalty' };
+    if (/save/.test(t)) return { icon: svgIcon('glove'), ko: '선방', en: 'Save' };
+    if (/miss|chance|shot|post|bar/.test(t)) return { icon: svgIcon('zap'), ko: '찬스', en: 'Chance' };
+    if (/injur/.test(t)) return { icon: svgIcon('injury'), ko: '부상', en: 'Injury' };
+    if (/var/.test(t)) return { icon: svgIcon('tv'), ko: 'VAR', en: 'VAR' };
+    if (/kick/.test(t)) return { icon: svgIcon('play'), ko: '킥오프', en: 'Kick-off' };
+    if (/half/.test(t)) return { icon: svgIcon('pause'), ko: '하프타임', en: 'Half-time' };
+    if (/full|end/.test(t)) return { icon: svgIcon('finish'), ko: '경기 종료', en: 'Full-time' };
     return { icon: '•', ko: '', en: '' };
   }
 
@@ -6834,12 +6867,12 @@
           </div>
           <div class="rmc-scorers">
             <div class="rmc-scorers-col">
-              <span class="rmc-scorers-icon">⚽</span>
+              <span class="rmc-scorers-icon">${svgIcon('ball')}</span>
               <span class="rmc-scorers-text">${scorersHomeText}</span>
             </div>
             <div class="rmc-scorers-col rmc-scorers-col-away">
               <span class="rmc-scorers-text">${scorersAwayText}</span>
-              <span class="rmc-scorers-icon">⚽</span>
+              <span class="rmc-scorers-icon">${svgIcon('ball')}</span>
             </div>
           </div>
           ${venueCaptionHtml(m.homeEn, weekNum)}
@@ -7029,7 +7062,7 @@
     // --- 문단 1: 성적 ---
     const prev = T.prevSeasonFinal;
     let p1k = `${s.p}경기 ${s.w}승 ${s.d}무 ${s.l}패, 승점 ${s.pts}점으로 전반기를 ${rank}위로 마쳤습니다.`;
-    let p1e = `${s.w}W ${s.d}D ${s.l}L from ${s.p} games — ${s.pts} points, finishing the first half ${rank}${hrOrd(rank)}.`;
+    let p1e = `${s.w}W ${s.d}D ${s.l}L from ${s.p} games for ${s.pts} points, finishing the first half ${rank}${hrOrd(rank)}.`;
     if (prev && prev.rank) {
       const diff = prev.rank - rank;
       p1k += diff > 0 ? ` 지난 시즌 최종 ${prev.rank}위보다 ${diff}계단 올라선 성적입니다.`
@@ -7048,7 +7081,7 @@
     if (att && !def) { p2k += ' 득점력은 리그 최상위권입니다.'; p2e += ' Their scoring is among the league’s best.'; }
     else if (def && !att) { p2k += ' 실점이 적은 단단한 수비가 강점이었습니다.'; p2e += ' A tight defence was the strength.'; }
     else if (att && def) { p2k += ' 공격과 수비 모두 상위권이라 흠잡을 곳이 적습니다.'; p2e += ' Top-three at both ends, with few weak spots.'; }
-    else if (weakAtt && weakDef) { p2k += ' 공격과 수비 모두 하위권이라 전반적인 보강이 필요합니다.'; p2e += ' Bottom-group at both ends — a broad fix is needed.'; }
+    else if (weakAtt && weakDef) { p2k += ' 공격과 수비 모두 하위권이라 전반적인 보강이 필요합니다.'; p2e += ' Bottom-group at both ends, so a broad fix is needed.'; }
 
     // --- 문단 3: 핵심 선수 / 흐름 ---
     let p3k = '', p3e = '';
@@ -7544,7 +7577,7 @@
       const sq = squadData.find(p => p.number === r.number);
       const photo = sq && sq.photoSrc
         ? `<img class="ti-appear-mini-photo" src="${sq.photoSrc}" alt="${r.nameEn || r.nameKo}">`
-        : `<div class="ti-appear-mini-photo ti-appear-mini-photo-placeholder">👤</div>`;
+        : `<div class="ti-appear-mini-photo ti-appear-mini-photo-placeholder">${svgIcon('user')}</div>`;
       return `
         <div class="ti-appear-mini-card ${rankClass[(r.rank || idx + 1) - 1] || ''} lineup-squad-link" data-player-number="${r.number}">
           <span class="ti-appear-mini-rank">${r.rank || idx + 1}</span>
@@ -7737,7 +7770,7 @@
       const name = isKorean ? r.nameKo : (r.nameEn || r.nameKo);
       const photo = r.photoSrc
         ? `<img class="ti-club-photo" src="${r.photoSrc}" alt="${escapeHtml(r.nameEn || r.nameKo)}">`
-        : `<span class="ti-club-photo ti-club-photo-empty">👤</span>`;
+        : `<span class="ti-club-photo ti-club-photo-empty">${svgIcon('user')}</span>`;
       const badges = CLUB_TIERS.map(t => `<span class="ti-club-badge${r.reached.includes(t) ? ' is-on' : ''}">${t}-${t}</span>`).join('');
       const bar = (label, val) => {
         const pct = Math.min(100, Math.round(val / r.target * 100));
@@ -7927,7 +7960,7 @@
       const name = isKorean ? r.nameKo : (r.nameEn || r.nameKo);
       const photo = r.photoSrc
         ? `<img class="fullrec-photo" src="${r.photoSrc}" alt="${escapeHtml(r.nameEn || r.nameKo)}">`
-        : `<span class="fullrec-photo fullrec-photo-empty">👤</span>`;
+        : `<span class="fullrec-photo fullrec-photo-empty">${svgIcon('user')}</span>`;
       const hasNum = r.number !== null && r.number !== undefined && r.number !== '';
       const link = hasNum ? ` lineup-squad-link" data-player-number="${r.number}` : '';
       const isZero = type === 'goals' ? r.value === 0 : (type === 'assists' ? r.assists === 0 : (type === 'ga' ? r.ga === 0 : r.pg === 0));
@@ -8155,7 +8188,7 @@
       const isActive = c.number === selectedImpactPlayerNumber;
       const photo = c.photoSrc
         ? `<img class="ti-impact-chip-photo" src="${c.photoSrc}" alt="${c.nameEn}">`
-        : `<div class="ti-impact-chip-photo ti-impact-chip-photo-placeholder">👤</div>`;
+        : `<div class="ti-impact-chip-photo ti-impact-chip-photo-placeholder">${svgIcon('user')}</div>`;
       const scoreSign = c.impactScore > 0 ? '+' : '';
       const scoreClass = c.impactScore > 0 ? 'ti-impact-chip-score-pos' : (c.impactScore < 0 ? 'ti-impact-chip-score-neg' : '');
       return `
@@ -8169,7 +8202,7 @@
     return `
       <div class="ti-card ti-impact-card" id="teamInfoImpactCard">
         <div class="ti-card-title lbl" data-en="Key Player Impact" data-ko="핵심 선수 영향도">${isKorean ? '핵심 선수 영향도' : 'Key Player Impact'}</div>
-        <div class="ti-gk-card-note lbl" data-en="Ranked by impact — points/game with the player starting vs. not featuring at all" data-ko="영향력(선발 출전 시·결장 시 경기당 승점 차이) 높은 순">${isKorean ? '영향력(선발 출전 시·결장 시 경기당 승점 차이) 높은 순' : 'Ranked by impact — points/game with the player starting vs. not featuring at all'}</div>
+        <div class="ti-gk-card-note lbl" data-en="Ranked by impact: points/game with the player starting vs. not featuring at all" data-ko="영향력(선발 출전 시·결장 시 경기당 승점 차이) 높은 순">${isKorean ? '영향력(선발 출전 시·결장 시 경기당 승점 차이) 높은 순' : 'Ranked by impact: points/game with the player starting vs. not featuring at all'}</div>
         <div class="ti-impact-chip-row">${chipsHtml}</div>
         <div class="ti-impact-compare">
           ${impactStatColHtml('선발 출전 시', 'Starting', current.impact.with, 'ti-impact-col-with')}
@@ -8999,7 +9032,7 @@
     const venue = getTeamVenue(homeEn, weekNum);
     if (!venue) return '';
     const venueName = isKorean ? venue.nameKo : venue.nameEn;
-    return `<div class="rmc-venue">🏟️ ${venueName}</div>`;
+    return `<div class="rmc-venue">${svgIcon('stadium')} ${venueName}</div>`;
   }
 
   // ===== 경기 예정일 현지(구장) 날씨 예보 =====
@@ -9246,7 +9279,7 @@
         && leagueData.some(t => t.nameEn === m.homeEn) && leagueData.some(t => t.nameEn === m.awayEn);
 
       // 득점자 한 줄 (각 팀 이름 아래)
-      const scorerHtml = (txt) => (!txt || txt === '없음') ? '' : `<span class="rmd-sub-ico" aria-hidden="true">⚽</span>${renderScorerNamesHtml(txt, isKorean)}`;
+      const scorerHtml = (txt) => (!txt || txt === '없음') ? '' : `<span class="rmd-sub-ico" aria-hidden="true">${svgIcon('ball')}</span>${renderScorerNamesHtml(txt, isKorean)}`;
       const forfeitHtml = (win) => m.forfeit
         ? `<span class="rmd-sub-flag ${win ? 'is-win' : 'is-loss'} lbl" data-en="${win ? 'Forfeit Win' : 'Forfeit Loss'}" data-ko="${win ? '몰수승' : '몰수패'}">${isKorean ? (win ? '몰수승' : '몰수패') : (win ? 'Forfeit Win' : 'Forfeit Loss')}</span> `
         : '';
@@ -9371,7 +9404,7 @@
       tabBar.style.display = 'none';
       const ko = roundMonthMineOnly ? '표시할 치주물루 경기가 없어요' : '표시할 경기가 없어요';
       const en = roundMonthMineOnly ? 'No Chizumulu matches to show' : 'No matches to show';
-      listEl.innerHTML = `<div class="round-half-empty"><div class="rhe-icon" aria-hidden="true">🗓️</div><div class="rhe-title lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</div></div>`;
+      listEl.innerHTML = `<div class="round-half-empty"><div class="rhe-icon" aria-hidden="true">${svgIcon('calendar')}</div><div class="rhe-title lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</div></div>`;
       return;
     }
     tabBar.style.display = '';
@@ -9555,7 +9588,7 @@
       const subEn = `Weeks ${fromWk}–${toWk} will appear here once the schedule is out.`;
       listElForEmpty.innerHTML = `
         <div class="round-half-empty">
-          <div class="rhe-icon" aria-hidden="true">🗓️</div>
+          <div class="rhe-icon" aria-hidden="true">${svgIcon('calendar')}</div>
           <div class="rhe-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>
           <div class="rhe-sub lbl" data-en="${subEn}" data-ko="${subKo}">${isKorean ? subKo : subEn}</div>
         </div>`;
@@ -9646,7 +9679,7 @@
           ${venueCaptionHtml(m.homeEn)}
           ${mine ? matchWeatherPlaceholderHtml(m.homeEn, m.kickoffDate, m.kickoffTime, 'rmc-weather') : ''}
           ${matchPreviewHtml(m)}
-          <button type="button" class="rmc-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교">⚖️ ${isKorean ? '전적 비교' : 'Compare Teams'}</button>
+          <button type="button" class="rmc-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교">${isKorean ? '전적 비교' : 'Compare Teams'}</button>
         `;
         const compareBtn = card.querySelector('.rmc-compare-btn');
         if (compareBtn) {
@@ -9694,16 +9727,16 @@
         </div>
         <div class="rmc-scorers">
           <div class="rmc-scorers-col">
-            <span class="rmc-scorers-icon">⚽</span>
+            <span class="rmc-scorers-icon">${svgIcon('ball')}</span>
             <span class="rmc-scorers-text">${scorersHomeText}</span>
           </div>
           <div class="rmc-scorers-col rmc-scorers-col-away">
             <span class="rmc-scorers-text">${scorersAwayText}</span>
-            <span class="rmc-scorers-icon">⚽</span>
+            <span class="rmc-scorers-icon">${svgIcon('ball')}</span>
           </div>
         </div>
         ${venueCaptionHtml(m.homeEn, parseInt(String(currentRoundKey).replace('round', ''), 10))}
-        <button type="button" class="rmc-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교">⚖️ ${isKorean ? '전적 비교' : 'Compare Teams'}</button>
+        <button type="button" class="rmc-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교">${isKorean ? '전적 비교' : 'Compare Teams'}</button>
       `;
       const playedCompareBtn = card.querySelector('.rmc-compare-btn');
       if (playedCompareBtn) {
@@ -11079,7 +11112,7 @@
               </div>`).join('')}
             ${curBtnHtml}
           </div>
-          ${hasIdx ? `<div class="ti-record-index-note">${lbl('공격/수비 지수 — 100%가 리그 평균, 높을수록 강함', 'Attack/Defense Index — 100% is the league average; higher is stronger')}</div>` : ''}
+          ${hasIdx ? `<div class="ti-record-index-note">${lbl('공격/수비 지수 — 100%가 리그 평균, 높을수록 강함', 'Attack/Defense Index: 100% is the league average; higher is stronger')}</div>` : ''}
         </div>
       </div>`;
 
@@ -11249,7 +11282,7 @@
       return `<li class="archive-match-row">
         <span class="archive-match-date">${date}</span>
         <span class="archive-match-ha archive-match-ha-${m.ha}">${lbl(haKo, haEn)}</span>
-        <span class="archive-match-main"><b class="archive-match-opp">${opp}</b>${sub ? `<small>${sub}</small>` : ''}${goals ? `<small class="archive-match-goals">⚽ ${goals}</small>` : ''}</span>
+        <span class="archive-match-main"><b class="archive-match-opp">${opp}</b>${sub ? `<small>${sub}</small>` : ''}${goals ? `<small class="archive-match-goals">${svgIcon('ball')} ${goals}</small>` : ''}</span>
         <span class="archive-match-score"><b>${m.us} - ${m.them}</b><i class="archive-match-res archive-match-res-${m.res}">${m.forfeit ? lbl('몰수승', 'Forfeit W') : lbl(resKo[m.res], resEn[m.res])}</i></span>
       </li>`;
     }).join('');
@@ -11291,7 +11324,7 @@
     const rows = archiveFinalRows();
     grid.innerHTML = rows.map((r, i) => {
       const isCur = r.team === archiveClubTeam;
-      const tag = r.team === ARCHIVE_2526.champion ? (isKorean ? ' 🏆' : ' 🏆')
+      const tag = r.team === ARCHIVE_2526.champion ? ' ' + svgIcon('trophy')
         : ((ARCHIVE_2526.relegated || []).includes(r.team) ? (isKorean ? ' (강등)' : ' (R)') : '');
       const rk = isKorean ? `${r.pos}위 · ${r.pts}점` : `#${r.pos} · ${r.pts} pts`;
       return `
@@ -11505,7 +11538,7 @@
     const safetyCondition = conditionText(numbers.safety, context);
     const titleWinsHtml = titleWinsMsg ? `<span class="magic-number-wins${numbers.title.wins === null ? ' magic-number-wins-na' : ''}">${titleWinsMsg}</span>` : '';
     const safetyWinsHtml = safetyWinsMsg ? `<span class="magic-number-wins${numbers.safety.wins === null ? ' magic-number-wins-na' : ''}">${safetyWinsMsg}</span>` : '';
-    return `<section class="team-magic-number-card"><div class="team-magic-number-head"><div><span class="magic-number-kicker">SEASON RACE</span><h3>${isKorean ? '매직넘버' : 'MAGIC NUMBER'}</h3></div><span class="magic-number-rounds">${isKorean ? `남은 ${context.remainingRounds}R · ${numbers.remainingGames}경기` : `${context.remainingRounds} rounds left · ${numbers.remainingGames} games`}</span></div><div class="magic-number-grid"><div class="magic-number-item title-race is-${numbers.title.status}"><span class="magic-number-label">${isKorean ? '우승 확정' : 'TITLE CLINCH'}</span><strong>${magicNumberText(numbers.title)}</strong>${titleWinsHtml}<small>${titleCondition}</small></div><div class="magic-number-item safety-race is-${numbers.safety.status}"><span class="magic-number-label">${isKorean ? '잔류 확정' : 'SAFETY CLINCH'}</span><strong>${magicNumberText(numbers.safety)}</strong>${safetyWinsHtml}<small>${safetyCondition}</small></div></div><p class="magic-number-note">${isKorean ? `${name}의 승점 획득과 경쟁 팀의 승점 손실을 합친 보수적 수치입니다.` : `A conservative combined total of ${name}'s points gained and rivals' points dropped.`}</p></section>`;
+    return `<section class="team-magic-number-card"><div class="team-magic-number-head"><div><span class="magic-number-kicker">Season Race</span><h3>${isKorean ? '매직넘버' : 'Magic Number'}</h3></div><span class="magic-number-rounds">${isKorean ? `남은 ${context.remainingRounds}R · ${numbers.remainingGames}경기` : `${context.remainingRounds} rounds left · ${numbers.remainingGames} games`}</span></div><div class="magic-number-grid"><div class="magic-number-item title-race is-${numbers.title.status}"><span class="magic-number-label">${isKorean ? '우승 확정' : 'Title Clinch'}</span><strong>${magicNumberText(numbers.title)}</strong>${titleWinsHtml}<small>${titleCondition}</small></div><div class="magic-number-item safety-race is-${numbers.safety.status}"><span class="magic-number-label">${isKorean ? '잔류 확정' : 'Safety Clinch'}</span><strong>${magicNumberText(numbers.safety)}</strong>${safetyWinsHtml}<small>${safetyCondition}</small></div></div><p class="magic-number-note">${isKorean ? `${name}의 승점 획득과 경쟁 팀의 승점 손실을 합친 보수적 수치입니다.` : `A conservative combined total of ${name}'s points gained and rivals' points dropped.`}</p></section>`;
   }
 
   function renderMagicNumberStats() {
@@ -11570,7 +11603,7 @@
     const statusTag = !plan.resultsNeeded
       ? ''
       : plan.isActuallyMandatory
-        ? `<span class="pf-mandatory-tag lbl" data-en="Must-win — no games to spare" data-ko="전부 필수 · 여유 없음">${isKorean ? '전부 필수 · 여유 없음' : 'Must-win — no games to spare'}</span>`
+        ? `<span class="pf-mandatory-tag lbl" data-en="Must-win: no games to spare" data-ko="전부 필수 · 여유 없음">${isKorean ? '전부 필수 · 여유 없음' : 'Must-win: no games to spare'}</span>`
         : `<span class="pf-example-tag lbl" data-en="One example scenario" data-ko="예시 시나리오 중 하나">${isKorean ? '예시 시나리오 중 하나' : 'One example scenario'}</span>`;
     return `
       <div class="pf-plan">
@@ -11641,7 +11674,7 @@
     return `
       <div class="path-finder-card">
         <div class="path-finder-head">
-          <span class="pf-kicker lbl" data-en="PATH FINDER" data-ko="경로 찾기">${isKorean ? '경로 찾기' : 'PATH FINDER'}</span>
+          <span class="pf-kicker lbl" data-en="Path Finder" data-ko="경로 찾기">${isKorean ? '경로 찾기' : 'Path Finder'}</span>
           <h3 class="lbl" data-en="${labelEn}" data-ko="${labelKo}">${isKorean ? labelKo : labelEn}</h3>
         </div>
         <div class="pf-plan-grid">
@@ -13737,7 +13770,7 @@
       else ringColor = '#c0392b';
 
       const shortName = (isKorean ? team.nameKo : team.nameEn).split(' ')[0];
-      const labelText = isMine ? '⭐ ' + shortName : shortName;
+      const labelText = isMine ? '★ ' + shortName : shortName;
       const charW = isKorean ? 10.5 : 6.3;
       const labelW = labelText.length * charW + 4;
 
@@ -13862,8 +13895,8 @@
         const name = isKorean ? p.team.nameKo : p.team.nameEn;
         const tip = svgEl('title', {});
         tip.textContent = isKorean
-          ? `${name} — 작년 득점 ${pp.gf.toFixed(2)} / 실점 ${pp.ga.toFixed(2)} → 올해 득점 ${p.team.goalsForPerGame.toFixed(2)} / 실점 ${p.team.goalsAgainstPerGame.toFixed(2)}`
-          : `${name} — last season GF ${pp.gf.toFixed(2)} / GA ${pp.ga.toFixed(2)} → now GF ${p.team.goalsForPerGame.toFixed(2)} / GA ${p.team.goalsAgainstPerGame.toFixed(2)}`;
+          ? `${name} · 작년 득점 ${pp.gf.toFixed(2)} / 실점 ${pp.ga.toFixed(2)} → 올해 득점 ${p.team.goalsForPerGame.toFixed(2)} / 실점 ${p.team.goalsAgainstPerGame.toFixed(2)}`
+          : `${name} · last season GF ${pp.gf.toFixed(2)} / GA ${pp.ga.toFixed(2)} → now GF ${p.team.goalsForPerGame.toFixed(2)} / GA ${p.team.goalsAgainstPerGame.toFixed(2)}`;
         g.appendChild(tip);
         if (dist > p.r + 8) {
           const ux = dx / dist, uy = dy / dist;
@@ -13934,7 +13967,7 @@
 
       const title = svgEl('title', {});
       const name = isKorean ? p.team.nameKo : p.team.nameEn;
-      title.textContent = `${name} — ${isKorean ? '경기당 득점' : 'GF/g'}: ${p.team.goalsForPerGame.toFixed(2)}, ${isKorean ? '경기당 실점' : 'GA/g'}: ${p.team.goalsAgainstPerGame.toFixed(2)}` +
+      title.textContent = `${name} · ${isKorean ? '경기당 득점' : 'GF/g'}: ${p.team.goalsForPerGame.toFixed(2)}, ${isKorean ? '경기당 실점' : 'GA/g'}: ${p.team.goalsAgainstPerGame.toFixed(2)}` +
         (compareMode ? (isKorean ? ' (클릭해서 강조)' : ' (click to highlight)') : (isKorean ? ' (클릭해서 궤적 강조)' : ' (click to highlight trail)'));
 
       g.appendChild(img);
@@ -14286,7 +14319,7 @@
           `<div class="vrl-row"><i class="vrl-line vrl-boat"></i><span>${isKorean ? '배' : 'Boat'} ${info.boatTime}</span></div>` +
           `<div class="vrl-row"><i class="vrl-line ${legendKind === 'road' ? 'vrl-road' : 'vrl-road-straight'}"></i><span>${isKorean ? '육로' : 'Road'} ${info.roadKm}km · ${info.roadTime}</span></div>` +
           `<div class="vrl-total">${isKorean ? '총 ' : 'Total '}<strong>${info.totalTime}</strong></div>` +
-          (legendKind === 'roadStraight' ? `<div class="vrl-note">${isKorean ? '도로 경로선 데이터가 없어 직선으로 표시' : 'No road line data — shown as a straight line'}</div>` : '');
+          (legendKind === 'roadStraight' ? `<div class="vrl-note">${isKorean ? '도로 경로선 데이터가 없어 직선으로 표시' : 'No road line data, shown as a straight line'}</div>` : '');
       } else {
         const km = haversineDistanceKm(home.lat, home.lng, entry.venue.lat, entry.venue.lng);
         body = `<div class="vrl-row"><i class="vrl-line vrl-road-straight"></i><span>${isKorean ? '직선 ' : 'Straight '}${Math.round(km).toLocaleString()}km</span></div>` +
@@ -14615,7 +14648,7 @@
       const name = isKorean ? tl.team.nameKo : tl.team.nameEn;
       const weekLabel = isKorean ? `${wkKo(c.week)}` : `${wkEn(c.week, 'Week', ' ')}`;
       const rankLabel = isKorean ? `${c.rank}위` : `Rank ${c.rank}`;
-      title.textContent = `${name} — ${weekLabel}: ${rankLabel}`;
+      title.textContent = `${name} · ${weekLabel}: ${rankLabel}`;
       dot.appendChild(title);
       lineGroup.appendChild(dot);
       return dot;
@@ -14653,7 +14686,7 @@
 
     const title = svgEl('title', {});
     const name = isKorean ? tl.team.nameKo : tl.team.nameEn;
-    title.textContent = `${name} — ${isKorean ? '현재' : 'Current'}: ${lastCoord.rank}${isKorean ? '위' : ''}`;
+    title.textContent = `${name} · ${isKorean ? '현재' : 'Current'}: ${lastCoord.rank}${isKorean ? '위' : ''}`;
 
     g.appendChild(img);
     g.appendChild(ring);
@@ -14951,7 +14984,7 @@
         const dot = svgEl('circle', { cx: c.x, cy: c.y, r: compact ? 4.5 : 3.5, fill: line.color, stroke: '#fff', 'stroke-width': 1.4, class: 'points-hist-dot' });
         dot.dataset.teamKey = line.team.nameEn;
         const title = svgEl('title', {});
-        title.textContent = `${isKorean ? line.team.nameKo : line.team.nameEn} — ${isKorean ? `${wkKo(c.week)}` : `${wkEn(c.week, 'Week', ' ')}`}: ${c.points}${isKorean ? '점' : ' pts'}`;
+        title.textContent = `${isKorean ? line.team.nameKo : line.team.nameEn} · ${isKorean ? `${wkKo(c.week)}` : `${wkEn(c.week, 'Week', ' ')}`}: ${c.points}${isKorean ? '점' : ' pts'}`;
         dot.appendChild(title);
         svg.appendChild(dot);
         return dot;
@@ -15127,7 +15160,7 @@
         const dot = svgEl('circle', { cx: c.x, cy: c.y, r: compact ? 4.5 : 3.5, fill: line.color, stroke: '#fff', 'stroke-width': 1.4, class: 'points-hist-dot' });
         dot.dataset.teamKey = line.team.nameEn;
         const title = svgEl('title', {});
-        title.textContent = `${isKorean ? line.team.nameKo : line.team.nameEn} — ${isKorean ? `${wkKo(c.round)}` : `${wkEn(c.round, 'Week', ' ')}`}: ${c.pct.toFixed(1)}%`;
+        title.textContent = `${isKorean ? line.team.nameKo : line.team.nameEn} · ${isKorean ? `${wkKo(c.round)}` : `${wkEn(c.round, 'Week', ' ')}`}: ${c.pct.toFixed(1)}%`;
         dot.appendChild(title);
         svg.appendChild(dot);
         return dot;
@@ -15637,7 +15670,7 @@
     const loanTagEl = document.getElementById('squadPlayerModalLoanTag');
     const loanClubEl = document.getElementById('squadPlayerModalLoanClub');
     if (player.isLoan && loanTagEl) {
-      loanTagEl.textContent = isKorean ? '🔁 임대' : '🔁 On Loan';
+      loanTagEl.textContent = isKorean ? '임대' : 'On Loan';
       loanTagEl.style.display = '';
 
       const loanClub = isKorean ? (player.loanClubKo || '') : (player.loanClubEn || '');
@@ -15663,7 +15696,7 @@
     const formerTagEl = document.getElementById('squadPlayerModalFormerTag');
     if (isFormerPlayer && formerTagEl) {
       const statusInfo = FORMER_STATUS_LABEL[player.status] || FORMER_STATUS_LABEL.released;
-      formerTagEl.textContent = isKorean ? `🚪 ${statusInfo.ko}` : `🚪 ${statusInfo.en}`;
+      formerTagEl.textContent = isKorean ? statusInfo.ko : statusInfo.en;
       formerTagEl.style.display = '';
     } else if (formerTagEl) {
       formerTagEl.style.display = 'none';
@@ -15716,23 +15749,23 @@
       const awardChips = [];
       if (stats.captainCount > 0) {
         awardChips.push(isKorean
-          ? `🎖️ 주장 선발 출전 <b>${stats.captainCount}</b>회`
-          : `🎖️ Started as captain <b>${stats.captainCount}</b> time(s)`);
+          ? `주장 선발 출전 <b>${stats.captainCount}</b>회`
+          : `Started as captain <b>${stats.captainCount}</b> time(s)`);
       }
       if (potmCount > 0) {
         awardChips.push(isKorean
-          ? `🏅 이달의 선수 <b>${potmCount}</b>회`
-          : `🏅 Player of the Month <b>${potmCount}</b> time(s)`);
+          ? `이달의 선수 <b>${potmCount}</b>회`
+          : `Player of the Month <b>${potmCount}</b> time(s)`);
       }
       if (gotmCount > 0) {
         awardChips.push(isKorean
-          ? `⚽ 이달의 골 <b>${gotmCount}</b>회`
-          : `⚽ Goal of the Month <b>${gotmCount}</b> time(s)`);
+          ? `이달의 골 <b>${gotmCount}</b>회`
+          : `Goal of the Month <b>${gotmCount}</b> time(s)`);
       }
       if (motmCount > 0) {
         awardChips.push(isKorean
-          ? `🎗️ MOTM <b>${motmCount}</b>회`
-          : `🎗️ MOTM <b>${motmCount}</b> time(s)`);
+          ? `MOTM <b>${motmCount}</b>회`
+          : `MOTM <b>${motmCount}</b> time(s)`);
       }
       if (awardChips.length > 0) {
         awardsRowEl.style.display = '';
@@ -16231,7 +16264,7 @@
       .sort((x, y) => (made[y] - made[x]) || (Number(x) - Number(y)))
       .map(k => `${lineupAssisterName(/^\d+$/.test(k) ? Number(k) : k)} ${made[k]}${isKorean ? '도움' : ' assists'}`);
     const text = main + (multi.length ? ' · ' + multi.join(', ') : '');
-    return `<div class="match-assist-summary"><span class="match-assist-icon" aria-hidden="true">🎯</span>${text}</div>`;
+    return `<div class="match-assist-summary"><span class="match-assist-icon" aria-hidden="true">${svgIcon('target')}</span>${text}</div>`;
   }
 
   function renderLineupPitch(lineup) {
@@ -16242,7 +16275,7 @@
     const goalsTag = (ev) => {
       const goalMins = (ev.goals || []).filter(g => g !== '-');
       return (ev.goals && ev.goals.length)
-        ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>${lineupGoalAssistNote(ev)}`
+        ? `<span class="lineup-goal-tag">${svgIcon('ball')}${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>${lineupGoalAssistNote(ev)}`
         : '';
     };
 
@@ -16281,7 +16314,7 @@
               <span class="lineup-sub-num">${ev.number}</span>
               <span class="lineup-sub-name player-name-link lineup-squad-link" data-player-number="${ev.statKey || ev.number}">${nameFor(ev)}</span>
               ${evCaptainTag}
-              ${ev.injury ? '<span class="lineup-sub-injury">🩹</span>' : ''}
+              ${ev.injury ? `<span class="lineup-sub-injury">${svgIcon('injury')}</span>` : ''}
             </div>`;
         } else {
           const rawTime = lineupMinLabel(ev.inMin || '');
@@ -16428,7 +16461,7 @@
         ? `<img class="pp-card-photo" src="${photoCandidates[0]}" data-rest="${photoCandidates.slice(1).join('|')}" alt="" loading="lazy" onerror="ppCardPhotoNext(this)">` : '';
       const badges = [
         st.captain ? `<span class="pp-badge pp-badge-c" title="${isKo ? '주장' : 'Captain'}">C</span>` : '',
-        goalN ? `<span class="pp-badge pp-badge-goal" title="${isKo ? '득점' : 'Goal'}">⚽${goalN > 1 ? goalN : ''}</span>` : '',
+        goalN ? `<span class="pp-badge pp-badge-goal" title="${isKo ? '득점' : 'Goal'}">${svgIcon('ball')}${goalN > 1 ? goalN : ''}</span>` : '',
         assistN ? `<span class="pp-badge pp-badge-assist" title="${isKo ? '도움' : 'Assist'}">A${assistN > 1 ? assistN : ''}</span>` : '',
         st.outMin ? `<span class="pp-badge pp-badge-out" title="${isKo ? '교체 아웃' : 'Subbed off'}">▼</span>` : ''
       ].join('');
@@ -16436,7 +16469,7 @@
       const subsHtml = subs.map(sb => {
         const sg = (sb.goals || []).length;
         const sa = lineupAssistsMade(lineup, sb.statKey || sb.number);
-        return `<span class="pp-card-sub">▲ ${nameOf(sb)}${sg ? ' ⚽' + (sg > 1 ? sg : '') : ''}${sa ? ' A' + (sa > 1 ? sa : '') : ''}</span>`;
+        return `<span class="pp-card-sub">▲ ${nameOf(sb)}${sg ? ' ' + svgIcon('ball') + (sg > 1 ? sg : '') : ''}${sa ? ' A' + (sa > 1 ? sa : '') : ''}</span>`;
       }).join('');
 
       // ----- 교체 카드(뒷면): 이 선발을 대신해 들어온 선수. starter.replacedBy(번호/배열)가 있으면 우선, 없으면 같은 pos의 첫 subsIn -----
@@ -16460,7 +16493,7 @@
         const ig = (inSub.goals || []).length;
         const ia = lineupAssistsMade(lineup, iLink);
         const iBadges = [
-          ig ? `<span class="pp-badge pp-badge-goal">⚽${ig > 1 ? ig : ''}</span>` : '',
+          ig ? `<span class="pp-badge pp-badge-goal">${svgIcon('ball')}${ig > 1 ? ig : ''}</span>` : '',
           ia ? `<span class="pp-badge pp-badge-assist">A${ia > 1 ? ia : ''}</span>` : '',
           `<span class="pp-badge pp-badge-in" title="${isKo ? '교체 투입' : 'Subbed on'}">▲</span>`,
           inSub.outMin ? `<span class="pp-badge pp-badge-out" title="${isKo ? '교체 아웃' : 'Subbed off'}">▼</span>` : ''
@@ -16485,7 +16518,7 @@
             ${photo}
             <div class="pp-card-badges">${badges}</div>
             <div class="pp-card-nameplate">
-              <span class="pp-card-name">${givenName(nameOf(st))}${st.injury ? ' 🩹' : ''}</span>
+              <span class="pp-card-name">${givenName(nameOf(st))}${st.injury ? ' ' + svgIcon('injury') : ''}</span>
               ${subsHtml}
             </div>
           </div>`;
@@ -16555,7 +16588,7 @@
             <span class="lsr-num">${b.number != null ? b.number : ''}</span>
             <span class="lsr-pos">${b.group}</span>
             <span class="lsr-name">${b.name}</span>
-            ${b.goalN ? `<span class="lsr-tag" title="${isKo ? '득점' : 'Goal'}">⚽${b.goalN > 1 ? b.goalN : ''}</span>` : ''}
+            ${b.goalN ? `<span class="lsr-tag" title="${isKo ? '득점' : 'Goal'}">${svgIcon('ball')}${b.goalN > 1 ? b.goalN : ''}</span>` : ''}
             ${b.assistN ? `<span class="lsr-tag lsr-tag-a" title="${isKo ? '도움' : 'Assist'}">A${b.assistN > 1 ? b.assistN : ''}</span>` : ''}
             ${b.used ? `<span class="lsr-in" title="${isKo ? '교체 투입' : 'Subbed on'}">▲</span>` : ''}
           </li>`).join('');
@@ -16632,7 +16665,7 @@
       ? lineup.subsIn.map(s => {
           const goalMins = (s.goals || []).filter(g => g !== '-');
           const goalsHtml = (s.goals && s.goals.length)
-            ? `<span class="lineup-goal-tag">⚽${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>${lineupGoalAssistNote(s)}`
+            ? `<span class="lineup-goal-tag">${svgIcon('ball')}${goalMins.length ? ' ' + goalMins.join(', ') : ''}</span>${lineupGoalAssistNote(s)}`
             : '';
           return `<span class="lineup-sub-chip lineup-sub-chip-in">▲ ${s.inMin && s.inMin !== '-' ? lineupMinLabel(s.inMin) + ' ' : ''}${s.number} <span class="player-name-link lineup-squad-link" data-player-number="${s.statKey || s.number}">${lineupPlayerFullName(s)}</span>${goalsHtml}</span>`;
         }).join('')
@@ -17073,7 +17106,7 @@
     return `
       <div class="mc-ai-block">
         <div class="mc-ai-header">
-          <span class="mc-ai-badge lbl" data-en="AI Prediction" data-ko="AI 예측">🤖 ${isKorean ? 'AI 예측' : 'AI Prediction'}</span>
+          <span class="mc-ai-badge lbl" data-en="AI Prediction" data-ko="AI 예측">${isKorean ? 'AI 예측' : 'AI Prediction'}</span>
           <span class="mc-ai-score">${scoreTxt}</span>
         </div>
         ${mcAiProbBarHtml(pred, homeShort, awayShort)}
@@ -17082,8 +17115,8 @@
           ${narrative.map(l => `<li>${l}</li>`).join('')}
         </ul>
         ${correctionLineHtml}
-        <div class="mc-ai-disclaimer lbl" data-en="Auto-generated from this season's stats (Poisson model) — for fun, not a guarantee." data-ko="이번 시즌 스탯 기반 자동 계산(포아송 모델)이며, 참고용 예측일 뿐 결과를 보장하지 않습니다.">
-          ${isKorean ? '이번 시즌 스탯 기반 자동 계산(포아송 모델)이며, 참고용 예측일 뿐 결과를 보장하지 않습니다.' : "Auto-generated from this season's stats (Poisson model) — for fun, not a guarantee."}
+        <div class="mc-ai-disclaimer lbl" data-en="Auto-generated from this season's stats (Poisson model). For fun, not a guarantee." data-ko="이번 시즌 스탯 기반 자동 계산(포아송 모델)이며, 참고용 예측일 뿐 결과를 보장하지 않습니다.">
+          ${isKorean ? '이번 시즌 스탯 기반 자동 계산(포아송 모델)이며, 참고용 예측일 뿐 결과를 보장하지 않습니다.' : "Auto-generated from this season's stats (Poisson model). For fun, not a guarantee."}
         </div>
       </div>`;
   }
@@ -17207,7 +17240,7 @@
       chips.push(relChip(`data-rel="team" data-team="${escapeHtml(en)}"`, `${ko.split(' ')[0]} 팀 페이지`, `${en.split(' ')[0]} team page`));
     });
     if (typeof currentView === 'undefined' || currentView !== 'teamCompare') {
-      chips.push(relChip(`data-rel="compare" data-a="${escapeHtml(homeEn)}" data-b="${escapeHtml(awayEn)}"`, '⚖️ 팀 비교 탭에서 자세히', '⚖️ Full comparison'));
+      chips.push(relChip(`data-rel="compare" data-a="${escapeHtml(homeEn)}" data-b="${escapeHtml(awayEn)}"`, '팀 비교 탭에서 자세히', 'Full comparison'));
     }
     html += `<div class="mc-rel-group">${groupLabel('Shortcuts', '바로가기')}<div class="mc-rel-chips mc-rel-chips-wrap">${chips.join('')}</div></div>`;
 
@@ -17325,7 +17358,7 @@
           <span class="mc-team-rank">${rankTxt(away.rank)}</span>
         </div>
       </div>
-      ${(!played && sixPointerInfo(homeEn, awayEn)) ? `<div class="mc-six-banner"><span class="six-tag">⚔️ ${isKorean ? '6점짜리 경기' : '6-pointer'}</span><span class="mc-six-text">${sixNoteText(sixPointerInfo(homeEn, awayEn))}</span></div>` : ''}
+      ${(!played && sixPointerInfo(homeEn, awayEn)) ? `<div class="mc-six-banner"><span class="six-tag">${isKorean ? '6점짜리 경기' : '6-pointer'}</span><span class="mc-six-text">${sixNoteText(sixPointerInfo(homeEn, awayEn))}</span></div>` : ''}
       <div class="mc-compare-layout">
         ${played ? '' : `<div class="mc-compare-right">
           ${aiPredictionBlockHtml(homeEn, homeKo, awayEn, awayKo, home, away)}
@@ -17399,7 +17432,7 @@
     if (!el || !mcTitleImpactStillShown(homeEn, awayEn)) return;
     const id = whatIfFixtureId(homeEn, awayEn);
     const entry = matchTitleImpactCache[id];
-    const titleKo = '이 경기 결과별 우승 확률', titleEn = 'TITLE CHANCE BY RESULT';
+    const titleKo = '이 경기 결과별 우승 확률', titleEn = 'Title Chance by Result';
     const head = `<div class="mc-form-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>`;
     const isMineMatch = homeEn === WHATIF_MY_TEAM_EN || awayEn === WHATIF_MY_TEAM_EN;
     const msg = (ko, en, spin) => `${head}<div class="mc-ti-msg">${spin ? '<span class="predict-spinner"></span>' : ''}<span>${isKorean ? ko : en}</span></div>`;
@@ -17407,7 +17440,7 @@
     const runBtn = (ko, en) => `<button type="button" class="wi-run mc-ti-run" id="mcTitleImpactRun">${isKorean ? ko : en}</button>`;
     // 아직 계산 전(모달을 열기만 한 상태): 시뮬레이션은 버튼을 눌렀을 때만 시작합니다.
     if (!entry) {
-      el.innerHTML = `${head}<p class="mc-ti-idle">${isKorean ? (isMineMatch ? '이 경기의 승/무/패와 점수차(1골 차·2골 차 이상)에 따라 치주물루 우승 확률이 얼마나 달라지는지 계산해 볼 수 있어요.' : '이 경기의 승/무/패에 따라 치주물루 우승 확률이 얼마나 달라지는지 계산해 볼 수 있어요.') : (isMineMatch ? "See how the result and goal margin of this match change Chizumulu's title chance." : "See how each result of this match changes Chizumulu's title chance.")}</p>${runBtn('🔮 결과 예측하기', '🔮 Predict outcomes')}`;
+      el.innerHTML = `${head}<p class="mc-ti-idle">${isKorean ? (isMineMatch ? '이 경기의 승/무/패와 점수차(1골 차·2골 차 이상)에 따라 치주물루 우승 확률이 얼마나 달라지는지 계산해 볼 수 있어요.' : '이 경기의 승/무/패에 따라 치주물루 우승 확률이 얼마나 달라지는지 계산해 볼 수 있어요.') : (isMineMatch ? "See how the result and goal margin of this match change Chizumulu's title chance." : "See how each result of this match changes Chizumulu's title chance.")}</p>${runBtn('결과 예측하기', 'Predict outcomes')}`;
       return;
     }
     if (entry.failed) {
@@ -17627,7 +17660,7 @@
   function rfvSyncButton() {
     const btn = document.getElementById('roundFavorBtn');
     if (!btn) return;
-    const ko = '🔮 치주물루에 유리한 예측 보기', en = '🔮 Results that help Chizumulu';
+    const ko = '치주물루에 유리한 예측 보기', en = 'Results that help Chizumulu';
     btn.innerHTML = `<span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`;
     btn.classList.toggle('active', roundFavorOpen);
     btn.setAttribute('aria-pressed', String(roundFavorOpen));
@@ -17761,8 +17794,8 @@
     panel.style.display = '';
 
     const wk = roundKeyPos(currentRoundKey);
-    const titleKo = `🔮 ${wkKo(wk)}, 치주물루에 유리한 결과`;
-    const titleEn = `🔮 ${wkEn(wk, 'Week', ' ')}: results that help Chizumulu`;
+    const titleKo = `${wkKo(wk)}, 치주물루에 유리한 결과`;
+    const titleEn = `${wkEn(wk, 'Week', ' ')}: results that help Chizumulu`;
     const title = `<h3 class="rfv-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</h3>`;
     const matches = rfvMatches();
 
@@ -17800,7 +17833,7 @@
         const nm = `${wiTeamName(top.m.homeEn).split(' ')[0]} vs ${wiTeamName(top.m.awayEn).split(' ')[0]}`;
         summary = `<p class="rfv-headline">${isKorean
           ? `가장 영향이 큰 경기는 <strong>${nm}</strong> — <strong>${best.label}</strong>이면 치주물루 우승 확률 <strong>${gainTxt}</strong> (결과에 따라 최대 ${top.an.swing.toFixed(1)}%p 차이)`
-          : `Biggest swing: <strong>${nm}</strong> — <strong>${best.label}</strong> gives <strong>${gainTxt}</strong> (up to ${top.an.swing.toFixed(1)}%p apart)`}</p>`;
+          : `Biggest swing: <strong>${nm}</strong>, where <strong>${best.label}</strong> gives <strong>${gainTxt}</strong> (up to ${top.an.swing.toFixed(1)}%p apart)`}</p>`;
       }
     }
     const basis = basePct == null ? '' : `<span class="rfv-base">${isKorean ? `현재 우승 확률 <b>${basePct.toFixed(1)}%</b>` : `Title chance now <b>${basePct.toFixed(1)}%</b>`}</span>`;
@@ -18059,7 +18092,7 @@
           <span class="tc-h2h-tag">${status} · ${weekLbl}</span>
           <span class="tc-h2h-score">${nm(homeT)} vs ${nm(awayT)}</span>
           ${kickoff ? `<span class="tc-h2h-kickoff">${kickoff}</span>` : ''}
-          <button type="button" class="rmc-compare-btn" onclick="openTeamCompareFixture()">⚖️ ${isKorean ? '이 경기 AI 예측 보기' : 'See AI prediction'}</button>
+          <button type="button" class="rmc-compare-btn" onclick="openTeamCompareFixture()">${isKorean ? '이 경기 AI 예측 보기' : 'See AI prediction'}</button>
         </div>`;
     }
 
