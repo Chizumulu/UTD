@@ -1633,7 +1633,7 @@ const scheduledRounds = {
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-07", kickoffTime: "15:00" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", postponed: true },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
     { byeKo: "치폴로폴로 보이즈 FC", byeEn: "Chipolopolo Boys FC" }

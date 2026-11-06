@@ -302,6 +302,8 @@
       'This is not the official website of Chizumulu United FC. It is a fan site posting related information.':
         'Ili si tsamba lovomerezeka la Chizumulu United FC. Ndi tsamba la mafani lomwe limayika zambiri zokhudza timuyi.',
       'Don\'t show this for 1 week': 'Musandionetsenso kwa sabata imodzi', 'Don\'t show this for 7 days': 'Musandionetsenso kwa masiku 7',
+      'Don\'t show this for 14 days': 'Musandionetsenso kwa masiku 14', 'Don\'t show this again': 'Musandionetsenso',
+      'Today\'s Matches': 'Masewera a Lero', 'Hide for today': 'Bisani lero', 'Our match': 'Masewera athu',
       'called up to Malawi U-23 national team': 'waitanidwa ku timu ya dziko la Malawi ya U-23',
       // --- 헤더 / 시즌 ---
       'LIVE': 'PAKUSEWERA', 'Live Now \u00B7 NRFA League One': 'Pakusewera Tsopano \u00B7 NRFA League One',
@@ -618,7 +620,10 @@
       [/^A conservative combined total of (.+)'s points gained and rivals' points dropped\.$/, 'Chiwerengero chosamala cha mapointi omwe $1 wapeza kuphatikiza mapointi omwe otsutsana naye ataya.'],
       [/^(.+) is enough$/, function (m, x) { return S(x) + ' ndikwanira'; }],
       [/^Plus (\d+) more result\(s\) from rounds not yet scheduled$/, 'Kuphatikiza zotsatira $1 zina kuchokera ku magawo osakonzedwa'],
-      [/^(.+)'s remaining games that help you$/, 'Masewera otsala a $1 omwe amakuthandizani']
+      [/^(.+)'s remaining games that help you$/, 'Masewera otsala a $1 omwe amakuthandizani'],
+      // --- 경기일 팝업 ("Sat, Nov 14 \u00B7 4 matches today" / "Week 17 \u00B7 15:00 CAT") ---
+      [/^(.+?), (.+?) (\d+) \u00B7 (\d+) (?:match|matches) today$/, function (m, wd, mo, d, n) { return T(wd) + ', ' + T(mo) + ' ' + d + ' \u00B7 masewera ' + n + ' lero'; }],
+      [/^(.+) \u00B7 (\d{1,2}:\d{2}) CAT$/, function (m, wk, t) { return T(wk) + ' \u00B7 ' + t + ' CAT'; }]
     ];
     for (var i = 0; i < P.length; i++) window.NY_PATTERNS.push(P[i]);
   })();

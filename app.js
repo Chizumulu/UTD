@@ -16155,6 +16155,7 @@
     { id: 'statModal', close: () => closeModal() },
     { id: 'venueMapModal', close: () => closeVenueMapModal() },
     { id: 'postponedMatchesModal', close: () => closePostponedMatchesModal() },
+    { id: 'matchdayPopupModal', close: () => closeMatchdayPopup() },
     { id: 'otherTeamModal', close: () => closeOtherTeamModal() },
     { id: 'archiveTeamModal', close: () => closeArchiveTeamModal() }
   ];
@@ -18665,7 +18666,23 @@
 
   // ===== 접속 안내 팝업 (공식 사이트 아님 안내) =====
   const DISCLAIMER_KEY = 'nrfa-disclaimer-hide-until';
-  const DISCLAIMER_HIDE_WEEKS = 1;
+  const DISCLAIMER_HIDE_DAYS = 14;
+  const HIDE_FOREVER = Number.MAX_SAFE_INTEGER; // '다시 보지 않기'
+
+  // 두 체크박스(N일간 / 다시 보지 않기)는 둘 중 하나만 선택되게 합니다.
+  function exclusiveDontShow(el) {
+    if (!el.checked) return;
+    const group = el.closest('.disclaimer-dontshow-group');
+    if (!group) return;
+    group.querySelectorAll('input[type=checkbox]').forEach(function(o) { if (o !== el) o.checked = false; });
+  }
+  function computeHideUntil(prefix, days) {
+    const forever = document.getElementById(prefix + 'DontShowForever');
+    if (forever && forever.checked) return HIDE_FOREVER;
+    const d = document.getElementById(prefix + 'DontShow');
+    if (d && d.checked) return Date.now() + days * 24 * 60 * 60 * 1000;
+    return null;
+  }
 
   function showDisclaimerIfNeeded() {
     const modal = document.getElementById('disclaimerModal');
@@ -18682,55 +18699,153 @@
 
   function closeDisclaimer() {
     const modal = document.getElementById('disclaimerModal');
-    const dontShow = document.getElementById('disclaimerDontShow');
-    if (dontShow && dontShow.checked) {
-      try {
-        const hideUntil = Date.now() + DISCLAIMER_HIDE_WEEKS * 7 * 24 * 60 * 60 * 1000;
-        localStorage.setItem(DISCLAIMER_KEY, String(hideUntil));
-      } catch (e) {}
+    const hideUntil = computeHideUntil('disclaimer', DISCLAIMER_HIDE_DAYS);
+    if (hideUntil !== null) {
+      try { localStorage.setItem(DISCLAIMER_KEY, String(hideUntil)); } catch (e) {}
     }
     if (modal) closeModalAnimated(modal);
-    showNewsPopupIfNeeded();
+    showNewsPopupIfNeeded() || showMatchdayPopupIfNeeded();
   }
 
   // ===== 뉴스 안내 팝업 (마야미코 치우시와 말라위 U-23 발탁 소식) =====
   // 접속 안내 팝업이 뜬 경우엔 그게 닫힌 다음(closeDisclaimer 안에서 호출) 두 번째로 뜨고,
   // 접속 안내 팝업이 이미 숨김 기간이라 안 뜬 경우엔 진입 시 바로 뜹니다.
   const NEWS_POPUP_KEY = 'nrfa-news-popup-chiuswa-hide-until';
-  const NEWS_POPUP_HIDE_DAYS = 7;
+  const NEWS_POPUP_HIDE_DAYS = 14;
   // 체크박스와 별개로, 이 소식 자체를 요청일(2026-09-09)로부터 7일 뒤에는
   // 아무도 다시 보지 않게 하드 마감시각을 둡니다. 이 시각이 지나면 팝업 자체가 뜨지 않습니다.
   const NEWS_POPUP_EXPIRES_AT = new Date('2026-09-16T00:00:00+09:00').getTime();
 
   function showNewsPopupIfNeeded() {
     const modal = document.getElementById('newsPopupModal');
-    if (!modal) return;
-    if (Date.now() >= NEWS_POPUP_EXPIRES_AT) return; // 7일 지남 - 자동 종료
+    if (!modal) return false;
+    if (Date.now() >= NEWS_POPUP_EXPIRES_AT) return false; // 7일 지남 - 자동 종료
     try {
       const hideUntil = localStorage.getItem(NEWS_POPUP_KEY);
       if (hideUntil && Date.now() < Number(hideUntil)) {
-        return; // 아직 숨김 기간이 지나지 않음
+        return false; // 아직 숨김 기간이 지나지 않음
       }
     } catch (e) {}
     showModalAnimated(modal);
+    return true;
   }
 
-  function closeNewsPopup() {
+  function closeNewsPopup(skipNext) {
     const modal = document.getElementById('newsPopupModal');
-    const dontShow = document.getElementById('newsPopupDontShow');
-    if (dontShow && dontShow.checked) {
-      try {
-        const hideUntil = Date.now() + NEWS_POPUP_HIDE_DAYS * 24 * 60 * 60 * 1000;
-        localStorage.setItem(NEWS_POPUP_KEY, String(hideUntil));
-      } catch (e) {}
+    const hideUntil = computeHideUntil('newsPopup', NEWS_POPUP_HIDE_DAYS);
+    if (hideUntil !== null) {
+      try { localStorage.setItem(NEWS_POPUP_KEY, String(hideUntil)); } catch (e) {}
     }
     if (modal) closeModalAnimated(modal);
+    if (!skipNext) showMatchdayPopupIfNeeded();
+  }
+
+  // ===== 경기일 팝업 (오늘 열리는 경기 안내) =====
+  // 순서: 접속 안내 → 뉴스 → 경기일 팝업. 앞 팝업이 안 뜨면 진입 시 바로 뜹니다.
+  // "오늘"은 리그 일정 카드의 "오늘" 배지와 같은 기준(킥오프의 KST 달력 날짜)입니다.
+  // 오늘 경기가 없으면 뜨지 않고, 날짜가 바뀌면 그날의 경기로 자동 교체됩니다.
+  // roundsData(종료)와 scheduledRounds(예정) 모두에서 찾으며, 연기(postponed)된 경기는 제외합니다.
+  const MATCHDAY_POPUP_KEY = 'nrfa-matchday-popup-hide-date';
+
+  function kstDateKey(ms) {
+    return new Date(ms + KST_OFFSET_MS).toISOString().slice(0, 10);
+  }
+
+  function collectTodayMatches() {
+    const todayKey = kstDateKey(Date.now());
+    const seen = new Set();
+    const out = [];
+    [typeof roundsData !== 'undefined' ? roundsData : null,
+     typeof scheduledRounds !== 'undefined' ? scheduledRounds : null].forEach(function(src) {
+      if (!src) return;
+      Object.keys(src).forEach(function(key) {
+        (src[key] || []).forEach(function(m) {
+          if (!m || m.byeKo || m.byeEn) return;
+          const hasScore = typeof m.homeScore === 'number' && typeof m.awayScore === 'number';
+          if (m.postponed && !hasScore) return;
+          const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+          if (!ms || kstDateKey(ms) !== todayKey) return;
+          const id = m.homeEn + '|' + m.awayEn + '|' + m.kickoffDate;
+          if (seen.has(id)) return;
+          seen.add(id);
+          out.push({ m: m, ms: ms, pos: roundKeyPos(key) });
+        });
+      });
+    });
+    out.sort(function(a, b) {
+      const am = isMyTeamName(a.m.homeEn, a.m.homeKo) || isMyTeamName(a.m.awayEn, a.m.awayKo) ? 0 : 1;
+      const bm = isMyTeamName(b.m.homeEn, b.m.homeKo) || isMyTeamName(b.m.awayEn, b.m.awayKo) ? 0 : 1;
+      return (am - bm) || (a.ms - b.ms);
+    });
+    return out;
+  }
+
+  function matchdayTeamHtml(nameEn, nameKo, side) {
+    const logo = getTeamLogo(nameEn);
+    const img = logo ? `<img src="${escapeHtml(logo)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
+    const label = `<span class="lbl" data-en="${escapeHtml(nameEn)}" data-ko="${escapeHtml(nameKo)}">${escapeHtml(isKorean ? nameKo : nameEn)}</span>`;
+    return `<div class="matchday-popup-team is-${side}">${side === 'home' ? label + img : img + label}</div>`;
+  }
+
+  function showMatchdayPopupIfNeeded() {
+    const modal = document.getElementById('matchdayPopupModal');
+    if (!modal) return false;
+    try {
+      if (localStorage.getItem(MATCHDAY_POPUP_KEY) === kstDateKey(Date.now())) return false;
+    } catch (e) {}
+    let list;
+    try { list = collectTodayMatches(); } catch (e) { return false; }
+    if (!list.length) return false;
+
+    const kd = new Date(Date.now() + KST_OFFSET_MS);
+    const dateKo = `${kd.getUTCMonth() + 1}월 ${kd.getUTCDate()}일 (${WEEKDAY_KO[kd.getUTCDay()]})`;
+    const dateEn = new Date(Date.UTC(kd.getUTCFullYear(), kd.getUTCMonth(), kd.getUTCDate()))
+      .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+    const subKo = `${dateKo} · 오늘 ${list.length}경기가 열립니다`;
+    const subEn = `${dateEn} · ${list.length} ${list.length === 1 ? 'match' : 'matches'} today`;
+    const sub = document.getElementById('matchdayPopupSub');
+    sub.className = 'matchday-popup-sub lbl';
+    sub.setAttribute('data-ko', subKo);
+    sub.setAttribute('data-en', subEn);
+    sub.textContent = isKorean ? subKo : subEn;
+
+    document.getElementById('matchdayPopupList').innerHTML = list.map(function(it) {
+      const m = it.m;
+      const mine = isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo);
+      const kst = new Date(it.ms + KST_OFFSET_MS);
+      const kstTime = String(kst.getUTCHours()).padStart(2, '0') + ':' + String(kst.getUTCMinutes()).padStart(2, '0');
+      const timeKo = `${kstTime} KST (${m.kickoffTime} CAT)`;
+      const timeEn = `${m.kickoffTime} CAT`;
+      const wkKoTxt = wkKo(it.pos), wkEnTxt = wkEn(it.pos, 'Week', ' ');
+      const metaKo = `${wkKoTxt} · ${timeKo}`, metaEn = `${wkEnTxt} · ${timeEn}`;
+      const hasScore = typeof m.homeScore === 'number' && typeof m.awayScore === 'number';
+      const mid = hasScore
+        ? `<div class="matchday-popup-vs is-score">${m.homeScore} : ${m.awayScore}</div>`
+        : `<div class="matchday-popup-vs">vs</div>`;
+      const tag = mine ? `<span class="matchday-popup-mine-tag lbl" data-en="Our match" data-ko="우리 경기">${isKorean ? '우리 경기' : 'Our match'}</span>` : '';
+      return `<li class="matchday-popup-item${mine ? ' is-mine' : ''}">
+        <div class="matchday-popup-meta">${tag}<span class="lbl" data-en="${escapeHtml(metaEn)}" data-ko="${escapeHtml(metaKo)}">${escapeHtml(isKorean ? metaKo : metaEn)}</span></div>
+        <div class="matchday-popup-teams">${matchdayTeamHtml(m.homeEn, m.homeKo, 'home')}${mid}${matchdayTeamHtml(m.awayEn, m.awayKo, 'away')}</div>
+      </li>`;
+    }).join('');
+
+    showModalAnimated(modal);
+    return true;
+  }
+
+  function closeMatchdayPopup() {
+    closeModalAnimated(document.getElementById('matchdayPopupModal'));
+  }
+
+  function dismissMatchdayPopupToday() {
+    try { localStorage.setItem(MATCHDAY_POPUP_KEY, kstDateKey(Date.now())); } catch (e) {}
+    closeMatchdayPopup();
   }
 
   // 뉴스 팝업 안의 선수 이름을 누르면 팝업을 닫고(체크박스 상태는 그대로 반영) 바로
   // 해당 선수의 상세 모달을 이어서 띄웁니다.
   function openPlayerFromNewsPopup(number) {
-    closeNewsPopup();
+    closeNewsPopup(true);
     if (typeof openSquadPlayerModal === 'function') {
       openSquadPlayerModal(number);
     }
@@ -18773,7 +18888,7 @@
     setInterval(updateAllNextMatchCountdowns, 1000);
     window.addEventListener('resize', equalizeTitleLines);
 
-    showDisclaimerIfNeeded() || showNewsPopupIfNeeded();
+    showDisclaimerIfNeeded() || showNewsPopupIfNeeded() || showMatchdayPopupIfNeeded();
     initScrollFadeHints();
     updateInstallBtnVisibility();
 
