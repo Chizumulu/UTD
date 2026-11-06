@@ -114,14 +114,14 @@
   --radius-pill: 999px;
   --radius-tag: 4px;   /* 작은 태그/배지용 (pill 대신) */ /* 탭 바, 토글 버튼, 배지 등 완전한 캡슐형 요소 */
 
-  /* --- 숫자 전용 폰트 스택 ---
-     순위/승점/득실차/스코어 등 "숫자가 줄지어 나오는" 곳에 적용합니다.
-     시스템에 이미 깔린 모노스페이스 폰트만 사용하므로 별도 다운로드가 없고,
-     숫자 자릿수가 항상 같은 폭으로 정렬되어 스포츠 데이터 사이트 특유의
-     "표가 딱딱 맞아떨어지는" 인상을 줍니다. 한글(위/연승 등 단위)처럼
-     모노스페이스 폰트에 없는 글자는 폰트 폴백에 의해 자동으로 마지막
-     Noto Sans KR로 대체되므로 숫자와 한글이 섞여도 안전합니다. */
-  --font-num: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Consolas', 'Roboto Mono', 'Noto Sans KR', Arial, sans-serif;
+  /* --- 폰트 스택 ---
+     본문과 숫자 모두 Pretendard(토스·당근 등 국내 서비스에서 널리 쓰는 무료 서체)로 통일합니다.
+     예전에는 숫자만 모노스페이스를 써서 "터미널" 같은 인상이 났는데, Pretendard는
+     tabular-nums(자릿수 폭 고정) 기능을 지원하므로 열 정렬은 그대로 유지하면서
+     숫자도 한글과 같은 결로 부드럽게 읽힙니다. Pretendard가 로드되기 전/실패 시에는
+     시스템 폰트 → Noto Sans KR 순으로 대체됩니다. */
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Noto Sans KR', 'Segoe UI', Arial, sans-serif;
+  --font-num: var(--font-sans);
 
   /* --- 공용 카드 셸 (다음 경기 / 상대 전적류 위젯) ---
      .next-match-strip, .ti-next-match, 라운드 상세 모달의 상대 전적 카드처럼
@@ -230,7 +230,7 @@
      페이지와 함께 흘러가버리는 문제가 있었습니다. */
   body {
     max-width: 100%;
-    font-family: 'Segoe UI', 'Noto Sans KR', Arial, sans-serif;
+    font-family: var(--font-sans);
     background: linear-gradient(160deg, var(--color-bg-grad-1) 0%, var(--color-bg-grad-2) 40%, var(--color-bg-grad-3) 100%);
     display: flex;
     justify-content: center;
@@ -1869,7 +1869,7 @@
     font-family: var(--font-num);
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1, "lnum" 1;
-    letter-spacing: 0.01em;
+    letter-spacing: 0;
   }
 
   /* ===== 순위표 행 등장 애니메이션 =====
@@ -2871,7 +2871,7 @@
     background: var(--color-navy);
   }
   .venue-popup {
-    font-family: 'Segoe UI', 'Noto Sans KR', Arial, sans-serif;
+    font-family: var(--font-sans);
     font-size: 13px;
     line-height: 1.5;
     color: var(--color-text-dark);
@@ -15899,4 +15899,122 @@ button.rmc-pending-badge:active {
 @media (prefers-reduced-motion: reduce) {
   .side-lang-mini { transition: none; }
   .side-lang-mini:active { transform: none; }
+}
+
+/* =====================================================
+   토스트 확장 + 안내 시트 (브라우저 alert() 대체)
+   - 토스트: 메시지가 길어도 줄바꿈되고, "다시 시도" 같은 액션 버튼을 붙일 수 있습니다.
+   - 안내 시트: 모바일에서는 기존 바텀시트(.sheet-modal)로, PC에서는 가운데 모달로 보입니다.
+   ===================================================== */
+.share-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: min(92vw, 440px);
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-align: left;
+  line-height: 1.45;
+  z-index: 2300; /* 모달(2000~2200) 위에서도 보이게 */
+  visibility: hidden;
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0s linear 0.25s;
+}
+.share-toast.show { visibility: visible; transition-delay: 0s; }
+.share-toast.has-action { pointer-events: auto; padding-right: 8px; }
+.share-toast.is-error::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-red-light);
+}
+.share-toast-msg { min-width: 0; }
+.share-toast-action {
+  flex: none;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--color-white-rgb), 0.14);
+  color: var(--color-gold-light);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.share-toast-action:hover { background: rgba(var(--color-white-rgb), 0.24); }
+.share-toast-action:active { transform: scale(0.96); }
+
+/* ----- 안내 시트 ----- */
+#noticeSheetModal.modal-overlay { z-index: 2200; }
+.notice-sheet-content { max-width: 400px; }
+.notice-sheet-body { padding: 26px 22px 20px; }
+.notice-sheet-title {
+  margin: 0 0 8px;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1.35;
+  color: var(--color-text-darkest);
+}
+.notice-sheet-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+.notice-sheet-details { margin-top: 14px; }
+.notice-sheet-details summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.notice-sheet-detail-text {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  max-height: 160px;
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-stripe);
+  color: var(--color-text-dark);
+  font-family: var(--font-num);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.notice-sheet-actions { display: flex; gap: 8px; margin-top: 22px; }
+.notice-sheet-btn {
+  flex: 1 1 0;
+  min-height: 50px;
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.notice-sheet-btn:active { transform: scale(0.97); }
+.notice-sheet-ok { background: var(--color-selected-bg); color: var(--color-selected-fg); }
+.notice-sheet-ok:hover { background: var(--color-navy-light); }
+.notice-sheet-copy { background: var(--color-bg-btn-hover); color: var(--color-brand-text); }
+.notice-sheet-copy:hover { background: var(--color-border-chip); }
+@media (max-width: 720px) {
+  /* 기존 바텀시트의 손잡이는 어두운 헤더 위 흰색이라, 헤더가 없는 이 시트에서는 밝은 면 위에서 보이는 색으로 바꿉니다 */
+  .notice-sheet-modal.sheet-modal > .modal-content::before {
+    background: rgba(var(--color-tint-rgb), 0.28);
+  }
+  .notice-sheet-body { padding-top: 30px; }
 }

@@ -2712,18 +2712,92 @@
   }
 
   // ===== 공유하기 (Web Share API + 클립보드 폴백) =====
-  function showShareToast(msg, duration) {
+  // ===== 토스트 =====
+  // showToast(msg, { action: { label, onClick }, tone: 'error', duration })
+  // - action이 있으면 메시지 오른쪽에 "다시 시도" 같은 버튼이 붙고, 조금 더 오래 떠 있습니다.
+  // - 브라우저 기본 alert() 대신 쓰는 용도입니다 (화면을 막지 않고, 읽는 사람에게는 role="status"로 안내됩니다).
+  function showToast(msg, opts) {
+    opts = opts || {};
     let toast = document.getElementById('shareToast');
     if (!toast) {
       toast = document.createElement('div');
       toast.id = 'shareToast';
       toast.className = 'share-toast';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
       document.body.appendChild(toast);
     }
-    toast.textContent = msg;
+    toast.textContent = '';
+    const text = document.createElement('span');
+    text.className = 'share-toast-msg';
+    text.textContent = msg;
+    toast.appendChild(text);
+    const hasAction = !!(opts.action && opts.action.label && typeof opts.action.onClick === 'function');
+    if (hasAction) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'share-toast-action';
+      btn.textContent = opts.action.label;
+      btn.addEventListener('click', function () {
+        clearTimeout(toast._hideTimer);
+        toast.classList.remove('show');
+        opts.action.onClick();
+      });
+      toast.appendChild(btn);
+    }
+    toast.classList.toggle('has-action', hasAction);
+    toast.classList.toggle('is-error', opts.tone === 'error');
     toast.classList.add('show');
     clearTimeout(toast._hideTimer);
-    toast._hideTimer = setTimeout(() => toast.classList.remove('show'), duration || 2200);
+    toast._hideTimer = setTimeout(() => toast.classList.remove('show'), opts.duration || (hasAction ? 5000 : 2200));
+  }
+  // 기존 호출부 호환용
+  function showShareToast(msg, duration) { showToast(msg, { duration: duration }); }
+  function toastRetry(fn) {
+    return { label: isKorean ? '다시 시도' : 'Retry', onClick: fn };
+  }
+
+  // ===== 안내 시트 (alert 대체: 긴 설명이나 복사할 상세 내용이 있을 때) =====
+  // showNoticeSheet({ title, desc, detail }) — 모바일에서는 아래에서 올라오는 시트, PC에서는 가운데 모달.
+  // detail이 있으면 "자세한 상태 보기"로 접어 두고, "상태 복사" 버튼으로 문의할 때 붙여넣을 수 있게 합니다.
+  function showNoticeSheet(opts) {
+    opts = opts || {};
+    const modal = document.getElementById('noticeSheetModal');
+    if (!modal) {
+      window.alert([opts.title, opts.desc, opts.detail].filter(Boolean).join('\n\n'));
+      return;
+    }
+    document.getElementById('noticeSheetTitle').textContent = opts.title || '';
+    const desc = document.getElementById('noticeSheetDesc');
+    desc.textContent = opts.desc || '';
+    desc.style.display = opts.desc ? '' : 'none';
+    const details = document.getElementById('noticeSheetDetails');
+    const detailText = document.getElementById('noticeSheetDetailText');
+    const copyBtn = document.getElementById('noticeSheetCopyBtn');
+    const hasDetail = !!opts.detail;
+    details.style.display = hasDetail ? '' : 'none';
+    details.open = false;
+    detailText.textContent = hasDetail ? opts.detail : '';
+    copyBtn.style.display = hasDetail ? '' : 'none';
+    copyBtn._detail = opts.detail || '';
+    showModalAnimated(modal);
+    const ok = modal.querySelector('.notice-sheet-ok');
+    if (ok) ok.focus();
+  }
+  function closeNoticeSheet() {
+    const modal = document.getElementById('noticeSheetModal');
+    if (modal) closeModalAnimated(modal);
+  }
+  async function copyNoticeSheetDetail() {
+    const btn = document.getElementById('noticeSheetCopyBtn');
+    const text = btn && btn._detail;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(isKorean ? '상태를 복사했어요' : 'Copied');
+    } catch (e) {
+      showToast(isKorean ? '복사하지 못했어요. 내용을 길게 눌러 직접 복사해 주세요' : 'Could not copy. Select the text and copy it manually');
+    }
   }
 
   async function shareContent(title, text, url) {
@@ -10803,7 +10877,7 @@
       loadArchiveData().then(function (ok) {
         document.body.style.cursor = '';
         if (ok) openSeasonArchive(opts);
-        else alert(isKorean ? '지난 시즌 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.' : 'Could not load last season data. Please try again in a moment.');
+        else showToast(isKorean ? '지난 시즌 데이터를 불러오지 못했어요' : 'Couldn\u2019t load last season\u2019s data', { tone: 'error', action: toastRetry(function () { openSeasonArchive(opts); }) });
       });
       return;
     }
@@ -12176,7 +12250,7 @@
         if (!blob) {
           if (btn) btn.disabled = false;
           if (btnLabel) btnLabel.textContent = originalLabel;
-          alert(isKorean ? '이미지 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to generate image. Please try again.');
+          showToast(isKorean ? '이미지를 만들지 못했어요' : 'Couldn\u2019t create the image', { tone: 'error', action: toastRetry(exportStandingsImage) });
           return;
         }
         const url = URL.createObjectURL(blob);
@@ -12195,7 +12269,7 @@
       console.error('순위표 이미지 생성 실패:', err);
       if (btn) btn.disabled = false;
       if (btnLabel) btnLabel.textContent = originalLabel;
-      alert(isKorean ? '이미지 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to generate image. Please try again.');
+      showToast(isKorean ? '이미지를 만들지 못했어요' : 'Couldn\u2019t create the image', { tone: 'error', action: toastRetry(exportStandingsImage) });
     }
   }
 
@@ -12212,7 +12286,7 @@
 
   async function downloadMatchPoster(kind, btnId) {
     if (typeof MatchPoster === 'undefined') {
-      alert(isKorean ? '포스터 모듈을 불러오지 못했습니다.' : 'Poster module failed to load.');
+      showToast(isKorean ? '포스터 기능을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요' : 'Couldn\u2019t load the poster tool. Refresh the page and try again', { tone: 'error' });
       return;
     }
     const btn = btnId ? document.getElementById(btnId) : null;
@@ -12229,7 +12303,7 @@
         const roundKey = latestReportReadyRoundKey();
         const report = roundKey ? buildRoundResultReport(roundKey) : null;
         if (!report || report.isBye) {
-          alert(isKorean ? '아직 완료된 경기 결과가 없어요.' : 'No completed match result yet.');
+          showToast(isKorean ? '아직 완료된 경기 결과가 없어요' : 'No completed match results yet');
           return;
         }
         const homeEn = report.isHome ? REPORT_TEAM_EN : report.oppEn;
@@ -12263,7 +12337,7 @@
       } else {
         const pred = buildRoundPredictionReport();
         if (!pred || pred.isBye) {
-          alert(isKorean ? '아직 예정된 다음 경기가 없어요.' : 'No upcoming fixture to preview yet.');
+          showToast(isKorean ? '아직 예정된 다음 경기가 없어요' : 'No upcoming fixture yet');
           return;
         }
         const [homeLogo, awayLogo] = await Promise.all([
@@ -12295,7 +12369,7 @@
 
       canvas.toBlob((blob) => {
         if (!blob) {
-          alert(isKorean ? '포스터 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to generate the poster. Please try again.');
+          showToast(isKorean ? '포스터를 만들지 못했어요' : 'Couldn\u2019t create the poster', { tone: 'error', action: toastRetry(function () { downloadMatchPoster(kind, btnId); }) });
           return;
         }
         const url = URL.createObjectURL(blob);
@@ -12309,7 +12383,7 @@
       }, 'image/png');
     } catch (err) {
       console.error('매치데이 포스터 생성 실패:', err);
-      alert(isKorean ? '포스터 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to generate the poster. Please try again.');
+      showToast(isKorean ? '포스터를 만들지 못했어요' : 'Couldn\u2019t create the poster', { tone: 'error', action: toastRetry(function () { downloadMatchPoster(kind, btnId); }) });
     } finally {
       if (btn) btn.disabled = false;
       if (btnLabel) btnLabel.textContent = originalLabel;
@@ -16192,6 +16266,7 @@
   // 우측 상단 닫기(×) 버튼이나 Esc 키로만 닫히게 통일합니다.
   const DETAIL_MODAL_IDS = [
     // z-index가 더 높아 다른 모달 위에 겹쳐 뜨는 것부터 먼저 닫습니다.
+    { id: 'noticeSheetModal', close: () => closeNoticeSheet() },
     { id: 'squadPlayerModal', close: () => closeSquadPlayerModal() },
     { id: 'fullRecordModal', close: () => closeFullRecordModal() },
     { id: 'playerModal', close: () => closePlayerModal() },
@@ -18627,7 +18702,7 @@
   // 헤더(또는 맨 위 손잡이 영역)를 아래로 끌어 닫을 수 있습니다. 데스크톱 폭은 기존 가운데 모달 그대로입니다.
   const SHEET_MODAL_IDS = ['postponedMatchesModal', 'fullRecordModal', 'statModal', 'playerModal', 'squadPlayerModal',
     'matchDetailModal', 'matchCompareModal', 'otherTeamModal', 'archiveTeamModal', 'matchdayPopupModal', 'iosGuideModal', 'moreSheetModal',
-    'disclaimerModal', 'newsPopupModal'];
+    'disclaimerModal', 'newsPopupModal', 'noticeSheetModal'];
   function isSheetViewport() { return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches); }
   function isSheetMode(modal) { return !!modal && modal.classList.contains('sheet-modal') && isSheetViewport(); }
 
