@@ -3015,9 +3015,10 @@
     const wrap = document.getElementById('teamInfoQuickStats');
     if (!info || !wrap) return;
     const t = info.team;
+    const rb = rollBaseline(t, info.rank);
     const stats = [
-      { ko: '순위', en: 'RANK', value: info.rank + (isKorean ? '위' : ''), highlight: true },
-      { ko: '승점', en: 'PTS', value: t.pts },
+      { ko: '순위', en: 'RANK', value: (rb ? rollSpan('team:rank:' + t.nameEn, rb.rank, info.rank) : info.rank) + (isKorean ? '위' : ''), highlight: true },
+      { ko: '승점', en: 'PTS', value: rb ? rollSpan('team:pts:' + t.nameEn, rb.pts, t.pts) : t.pts },
       { ko: '경기', en: 'PLAYED', value: t.played },
       { ko: '승', en: 'W', value: t.won },
       { ko: '무', en: 'D', value: t.drawn },
@@ -3030,6 +3031,7 @@
       </div>
     `).join('');
     animateStatValues(wrap);
+    playNumberRolls(wrap);
   }
 
   // ===== 다음 경기 카운트다운 (말라위 표준시 CAT = UTC+2 고정, 서머타임 없음) =====
@@ -7547,6 +7549,7 @@
     if (!wrap) return;
     const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     wrap.querySelectorAll('.ti-stat-value').forEach(el => {
+      if (el.querySelector('.num-roll')) return; // 굴러가는 숫자(순위/승점)는 카운트업 대신 롤링이 담당
       const raw = el.textContent || '';
       const match = raw.match(/^(-?\d+)(.*)$/);
       if (!match) return;
@@ -11844,6 +11847,8 @@
     const playedTeams = rankChangeData ? rankChangeData.playedTeams : null;
 
     const tbody = document.getElementById('leagueTableBody');
+    // 숫자 롤링: '전체' 순위표일 때만, 지난번에 본 순위/승점과 달라진 칸을 굴립니다.
+    const rollOn = showRankChange;
     // FLIP 애니메이션용: 다시 그리기 전, 현재 화면에 떠 있는 행들의 위치를 팀 이름 기준으로 기록해둡니다.
     // (최초 렌더링 시에는 행이 없으므로 빈 Map이 되고, 그 경우 아래 flipLeagueTableRows는 조용히 건너뜁니다.)
     const prevRects = captureRowRects(tbody, '[data-team-key]', tr => tr.dataset.teamKey);
@@ -11918,8 +11923,12 @@
         }
       }
 
+      const rb = rollOn ? rollBaseline(team, rank) : null;
+      const rankHtml = rb ? rollSpan('league:rank:' + team.nameEn, rb.rank, rank) : rank;
+      const ptsHtml = rb ? rollSpan('league:pts:' + team.nameEn, rb.pts, team.pts) : team.pts;
+
       tr.innerHTML = `
-        <td class="rank-cell">${rank}</td>
+        <td class="rank-cell">${rankHtml}</td>
         <td class="rank-change-cell">${rankChangeHtml}</td>
         <td class="team team-clickable" onclick="goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')}">
           <img class="team-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}">
@@ -11933,7 +11942,7 @@
         <td>${team.goalsFor}</td>
         <td>${team.goalsAgainst}</td>
         <td class="${gdClass}">${team.gd}</td>
-        <td class="pts">${team.pts}</td>
+        <td class="pts">${ptsHtml}</td>
         <td class="form-cell">${formHtml}</td>
         <td class="next-opp-cell">${nextMatchHtml}</td>
       `;
@@ -11943,6 +11952,7 @@
     attachImageFallback();
     refreshScrollFadeHints();
     flipRowsIn(tbody, '[data-team-key]', tr => tr.dataset.teamKey, prevRects);
+    if (rollOn) { rollCommitSeen(processedData); playNumberRolls(tbody); }
   }
 
   // ===== 메인 화면용 간략 순위표 (Mini League Table for Main view) =====
@@ -11968,9 +11978,12 @@
       const nameShortEn = team.nameEn.split(' ')[0];
       const nameShort = isKorean ? nameShortKo : nameShortEn;
       const gdClass = team.gd > 0 ? 'gd-pos' : (team.gd < 0 ? 'gd-neg' : 'gd-zero');
+      const rb = rollBaseline(team, rank);
+      const rankHtml = rb ? rollSpan('mini:rank:' + team.nameEn, rb.rank, rank) : rank;
+      const ptsHtml = rb ? rollSpan('mini:pts:' + team.nameEn, rb.pts, team.pts) : team.pts;
       return `
         <tr${trClass.trim() ? ` class="${trClass.trim()}"` : ''}>
-          <td class="rank-cell">${rank}</td>
+          <td class="rank-cell">${rankHtml}</td>
           <td class="team team-clickable" onclick="goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')}">
             <img class="team-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}">
             <span class="lbl team-name-full" data-en="${team.nameEn}" data-ko="${team.nameKo}">${name}</span>
@@ -11981,12 +11994,14 @@
           <td>${team.drawn}</td>
           <td>${team.lost}</td>
           <td class="${gdClass}">${team.gd}</td>
-          <td class="pts">${team.pts}</td>
+          <td class="pts">${ptsHtml}</td>
         </tr>`;
     }).join('');
 
     attachImageFallback();
     animateEntranceIn(tbody, 'tr', { stagger: 20 });
+    rollCommitSeen(processedData);
+    playNumberRolls(tbody);
   }
 
   // ===== 순위표 이미지로 내보내기 (Export Standings as PNG) =====
@@ -18679,6 +18694,355 @@
     });
   }
 
+  // =====================================================================
+  // 숫자 롤링 (Odometer Roll) + 확정 축하 연출 (Clinch Celebration)
+  // ---------------------------------------------------------------------
+  // 1) 숫자 롤링: 이 기기에서 마지막으로 본 순위/승점과 지금 값이 다르면, 순위표·메인 미니
+  //    순위표·내 팀 상단 요약의 해당 숫자가 자릿수별로 굴러가며 바뀝니다. 마지막으로 본 값은
+  //    localStorage(STANDINGS_SEEN_KEY)에 저장하고, 처음 방문이거나 시즌이 바뀐 경우(경기
+  //    수가 줄어듦)에는 비교 대상이 없으므로 굴리지 않습니다.
+  // 2) 축하 연출: 내 팀이 우승 또는 잔류를 확정(매직넘버 0)한 것을 이 기기에서 처음 보는
+  //    순간 한 번만 전체 화면 축하 시트를 띄웁니다.
+  // 미리보기: 주소 뒤에 ?rolldemo=1 (롤링), ?celebrate=title 또는 ?celebrate=safety (축하)
+  // =====================================================================
+  var STANDINGS_SEEN_KEY = 'nrfa-seen-standings-v1';
+  var CELEBRATED_KEY = 'nrfa-celebrated-v1';
+  var CELEBRATE_SEASON = '26/27'; // 시즌이 바뀌면 이 값만 올리면 새 시즌 확정 때 다시 축하가 뜹니다
+  var standingsSeenAtLoad = null;
+  var standingsRolledOnce = {};
+
+  function rollReduceMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  function rollEsc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+  function rollQueryParam(name) {
+    try { return new URLSearchParams(location.search).get(name); } catch (e) { return null; }
+  }
+
+  function rollReadSeen() {
+    if (standingsSeenAtLoad !== null) return standingsSeenAtLoad;
+    var data = {};
+    try {
+      var raw = localStorage.getItem(STANDINGS_SEEN_KEY);
+      if (raw) data = (JSON.parse(raw) || {}).teams || {};
+    } catch (e) { data = {}; }
+    standingsSeenAtLoad = data;
+    return data;
+  }
+
+  // 이 팀의 "지난번에 본 값"을 돌려줍니다. 비교할 값이 없으면 null.
+  function rollBaseline(team, rank) {
+    var seen = rollReadSeen();
+    if (rollQueryParam('rolldemo') === '1') {
+      return { pts: Math.max(0, team.pts - 3), rank: rank + 2, played: 0 };
+    }
+    var b = seen[team.nameEn];
+    if (!b || typeof b.pts !== 'number' || typeof b.rank !== 'number') return null;
+    if (typeof b.played === 'number' && team.played < b.played) return null; // 새 시즌
+    return b;
+  }
+
+  function rollCommitSeen(rankedTeams) {
+    rollReadSeen(); // 저장 전에 비교용 스냅샷을 먼저 고정해 둡니다
+    if (rollQueryParam('rolldemo') === '1') return; // 미리보기 중에는 저장하지 않음
+    var teams = {};
+    rankedTeams.forEach(function (t, i) { teams[t.nameEn] = { pts: t.pts, rank: i + 1, played: t.played }; });
+    try { localStorage.setItem(STANDINGS_SEEN_KEY, JSON.stringify({ ts: Date.now(), teams: teams })); } catch (e) {}
+  }
+
+  // 값이 바뀐 칸이면 굴러갈 <span>을, 아니면 그냥 숫자 문자열을 돌려줍니다.
+  function rollSpan(key, from, to, suffix) {
+    suffix = suffix || '';
+    if (typeof from !== 'number' || from === to || standingsRolledOnce[key] || rollReduceMotion()) return String(to) + suffix;
+    return '<span class="num-roll" data-roll-key="' + rollEsc(key) + '" data-roll-from="' + from + '" data-roll-to="' + to + '">' + to + '</span>' + suffix;
+  }
+
+  function playNumberRolls(root) {
+    if (!root) return;
+    var els = root.querySelectorAll('.num-roll[data-roll-from]');
+    Array.prototype.forEach.call(els, function (el, i) {
+      playWhenScrolledIntoView(el, function () {
+        if (!el.isConnected) return;
+        var key = el.getAttribute('data-roll-key');
+        if (standingsRolledOnce[key]) return;
+        standingsRolledOnce[key] = 1;
+        playNumberRoll(el, Math.min(i * 40, 400));
+      });
+    });
+  }
+
+  // 자릿수별 세로 스트립(0-9를 두 번 이어 붙임)을 굴려서 from → to 로 보냅니다.
+  // 실제 숫자 텍스트는 그대로 두고(레이아웃·접근성 유지) 그 위에 굴러가는 레이어만 겹칩니다.
+  function playNumberRoll(el, delay) {
+    var from = el.getAttribute('data-roll-from');
+    var to = el.getAttribute('data-roll-to');
+    if (rollReduceMotion() || !/^\d+$/.test(from) || !/^\d+$/.test(to)) return;
+    var h = el.getBoundingClientRect().height;
+    if (!h) return;
+    var len = Math.max(from.length, to.length);
+    var f = from.padStart(len, '0'), t = to.padStart(len, '0');
+    var up = parseInt(to, 10) > parseInt(from, 10);
+    var layer = document.createElement('span');
+    layer.className = 'num-roll-layer';
+    layer.setAttribute('aria-hidden', 'true');
+    layer.style.color = getComputedStyle(el).color;
+    layer.style.setProperty('--roll-h', h + 'px');
+    var strips = [];
+    for (var i = 0; i < len; i++) {
+      var fd = parseInt(f[i], 10), td = parseInt(t[i], 10);
+      var startIdx = fd, endIdx = td;
+      if (up && td < fd) endIdx = td + 10;        // 19 → 20: 9가 뒤로 감기지 않고 앞으로 넘어가게
+      if (!up && fd < td) startIdx = fd + 10;     // 20 → 19: 0이 앞으로 넘어가지 않고 아래로 내려가게
+      var col = document.createElement('span');
+      col.className = 'num-roll-col' + (i < len - from.length ? ' is-new' : '');
+      var strip = document.createElement('span');
+      strip.className = 'num-roll-strip';
+      for (var d = 0; d < 20; d++) {
+        var dg = document.createElement('span');
+        dg.className = 'num-roll-digit';
+        dg.textContent = String(d % 10);
+        strip.appendChild(dg);
+      }
+      strip.style.transform = 'translateY(' + (-startIdx * h) + 'px)';
+      strip.style.transitionDelay = (delay + (len - 1 - i) * 70) + 'ms';
+      col.appendChild(strip);
+      layer.appendChild(col);
+      strips.push({ strip: strip, endIdx: endIdx });
+    }
+    el.appendChild(layer);
+    el.classList.add('is-rolling');
+    void layer.offsetWidth; // 시작 위치를 먼저 확정한 뒤 목표 위치로 보냅니다
+    requestAnimationFrame(function () {
+      strips.forEach(function (s) { s.strip.style.transform = 'translateY(' + (-s.endIdx * h) + 'px)'; });
+      layer.classList.add('is-go');
+    });
+    setTimeout(function () {
+      el.classList.remove('is-rolling');
+      if (layer.parentNode) layer.parentNode.removeChild(layer);
+    }, 1100 + delay + len * 70);
+  }
+
+  // ===== 모바일 하단 탭바 자동 숨김 =====
+  // 아래로 스크롤하면 탭바가 내려가 숨고, 위로 스크롤하면 다시 올라옵니다.
+  // 맨 위 근처·맨 아래 끝·탭바에 포커스가 있을 때는 항상 보입니다.
+  function initTabbarAutoHide() {
+    var bar = document.getElementById('mTabbar');
+    if (!bar) return;
+    var TOP_ZONE = 60;     // 이 높이 안쪽(맨 위 근처)에서는 항상 보임
+    var MIN_DELTA = 6;     // 이보다 작은 움직임(손떨림, 관성 끝자락)은 무시
+    var lastY = window.scrollY || 0;
+    var ticking = false;
+    function setHidden(hidden) {
+      if (bar.classList.contains('is-hidden') === hidden) return;
+      bar.classList.toggle('is-hidden', hidden);
+      document.body.classList.toggle('tabbar-hidden', hidden);
+    }
+    function update() {
+      ticking = false;
+      var y = window.scrollY || 0;
+      var doc = document.documentElement;
+      var atBottom = window.innerHeight + y >= doc.scrollHeight - 4;
+      if (y <= TOP_ZONE || atBottom) { setHidden(false); lastY = y; return; }
+      var delta = y - lastY;
+      if (Math.abs(delta) < MIN_DELTA) return;
+      setHidden(delta > 0);
+      lastY = y;
+    }
+    window.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }, { passive: true });
+    bar.addEventListener('focusin', function () { setHidden(false); });
+    // 탭을 눌러 화면이 바뀌면 새 화면의 맨 위부터 시작하므로 다시 보이게 합니다.
+    bar.addEventListener('click', function () { setHidden(false); lastY = window.scrollY || 0; });
+  }
+
+  // ===== 확정 축하 (Clinch Celebration) =====
+  function celebrateReadSeen() {
+    try { return JSON.parse(localStorage.getItem(CELEBRATED_KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function celebrateMarkSeen(id) {
+    var m = celebrateReadSeen();
+    m[id] = Date.now();
+    try { localStorage.setItem(CELEBRATED_KEY, JSON.stringify(m)); } catch (e) {}
+  }
+
+  // 내 팀의 현재 확정 상태: 'title' > 'safety' > null
+  function getMyClinchState() {
+    var info = getMyRankedTeam();
+    if (!info) return null;
+    var ranked = getRankedTeams('all');
+    var ctx = getMagicNumberContext(ranked);
+    if (!ctx) return null;
+    var mn = getTeamMagicNumbers(info.team, ranked, ctx);
+    var kind = mn.title.status === 'clinched' ? 'title' : (mn.safety.status === 'clinched' ? 'safety' : null);
+    return kind ? { kind: kind, team: info.team, rank: info.rank } : null;
+  }
+
+  function scheduleClinchCelebration() {
+    var preview = rollQueryParam('celebrate');
+    var state = getMyClinchState();
+    if (preview === 'title' || preview === 'safety') {
+      var info = getMyRankedTeam();
+      if (!info) return;
+      state = { kind: preview, team: info.team, rank: info.rank, preview: true };
+    }
+    if (!state) return;
+    var id = CELEBRATE_SEASON + ':' + state.team.nameEn + ':' + state.kind;
+    // 우승을 확정했다면, 그보다 작은 '잔류 확정' 축하는 따로 띄우지 않고 함께 처리된 것으로 칩니다.
+    if (!state.preview) {
+      var seen = celebrateReadSeen();
+      if (seen[id]) return;
+      if (state.kind === 'title') celebrateMarkSeen(CELEBRATE_SEASON + ':' + state.team.nameEn + ':safety');
+    }
+    var tries = 0;
+    (function waitAndShow() {
+      var busy = Array.prototype.some.call(document.querySelectorAll('.modal-overlay'), function (m) {
+        return m.style.display && m.style.display !== 'none';
+      }) || document.body.classList.contains('season-archive');
+      if (busy && ++tries < 40) { setTimeout(waitAndShow, 400); return; }
+      if (busy) return; // 끝내 다른 창이 열려 있으면 이번엔 건너뛰고(저장 안 함) 다음 방문에 보여줍니다
+      if (!state.preview) celebrateMarkSeen(id);
+      showClinchCelebration(state);
+    })();
+  }
+
+  function showClinchCelebration(state) {
+    if (document.getElementById('celebrateOverlay')) return;
+    var kr = isKorean;
+    var t = state.team;
+    var teamName = kr ? t.nameKo : t.nameEn;
+    var isTitle = state.kind === 'title';
+    var title = isTitle ? (kr ? '우승 확정!' : 'Champions!') : (kr ? '잔류 확정!' : 'Safe!');
+    var body = isTitle
+      ? (kr ? '승점 ' + t.pts + '점으로 남은 경기와 상관없이 1위가 확정됐어요' : 'With ' + t.pts + ' points, 1st place is secured whatever happens next')
+      : (kr ? '승점 ' + t.pts + '점으로 남은 경기와 상관없이 리그 원 잔류가 확정됐어요' : 'With ' + t.pts + ' points, League One survival is secured whatever happens next');
+    var sub = isTitle ? (kr ? '내셔널 디비전 리그로 승격해요' : 'Promotion to the National Division League') : '';
+    var reduce = rollReduceMotion();
+    var prevFocus = document.activeElement;
+
+    var overlay = document.createElement('div');
+    overlay.id = 'celebrateOverlay';
+    overlay.className = 'celebrate-overlay is-' + state.kind + (reduce ? ' is-reduced' : '');
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'celebrateTitle');
+    overlay.innerHTML =
+      '<div class="celebrate-card">' +
+        '<div class="celebrate-main">' +
+          '<svg class="celebrate-check" viewBox="0 0 96 96" aria-hidden="true">' +
+            '<circle class="celebrate-check-bg" cx="48" cy="48" r="44"/>' +
+            '<path class="celebrate-check-mark" pathLength="1" d="M29 49.5l13 13L68 35"/>' +
+          '</svg>' +
+          '<div class="celebrate-team"><img class="celebrate-crest" alt="" src="' + rollEsc(t.logoSrc || '') + '"><span class="celebrate-team-name"></span></div>' +
+          '<h2 class="celebrate-title" id="celebrateTitle"></h2>' +
+          '<p class="celebrate-body"></p>' +
+          (sub ? '<p class="celebrate-sub"></p>' : '') +
+        '</div>' +
+        '<button type="button" class="celebrate-btn"></button>' +
+      '</div>';
+    overlay.querySelector('.celebrate-team-name').textContent = teamName;
+    overlay.querySelector('.celebrate-title').textContent = title;
+    overlay.querySelector('.celebrate-body').textContent = body;
+    if (sub) overlay.querySelector('.celebrate-sub').textContent = sub;
+    var btn = overlay.querySelector('.celebrate-btn');
+    btn.textContent = kr ? '확인' : 'OK';
+    var crest = overlay.querySelector('.celebrate-crest');
+    if (!t.logoSrc) crest.style.display = 'none';
+    else crest.onerror = function () { crest.style.display = 'none'; };
+
+    var stopConfetti = null;
+    var closed = false;
+    function close() {
+      if (closed) return;
+      closed = true;
+      document.removeEventListener('keydown', onKey, true);
+      if (stopConfetti) stopConfetti();
+      overlay.classList.add('is-closing');
+      setTimeout(function () {
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        document.documentElement.classList.remove('celebrate-lock');
+        if (prevFocus && prevFocus.focus) { try { prevFocus.focus(); } catch (e) {} }
+      }, reduce ? 0 : 200);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); close(); }
+      else if (e.key === 'Tab') { e.preventDefault(); btn.focus(); } // 버튼이 하나뿐이라 포커스를 가둡니다
+    }
+    btn.addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onKey, true);
+
+    document.documentElement.classList.add('celebrate-lock');
+    document.body.appendChild(overlay);
+    btn.focus({ preventScroll: true });
+
+    if (!reduce) {
+      // 체크 표시가 그려지는 순간에 맞춰 콘페티와 진동을 터뜨립니다.
+      setTimeout(function () {
+        if (closed) return;
+        var r = overlay.querySelector('.celebrate-check').getBoundingClientRect();
+        stopConfetti = celebrateConfetti(overlay, r.left + r.width / 2, r.top + r.height / 2, isTitle);
+        try { if (navigator.vibrate) navigator.vibrate([14, 50, 24]); } catch (e) {}
+      }, 520);
+    }
+  }
+
+  function celebrateConfetti(host, ox, oy, big) {
+    var canvas = document.createElement('canvas');
+    canvas.className = 'celebrate-confetti';
+    canvas.setAttribute('aria-hidden', 'true');
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W = window.innerWidth, H = window.innerHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.scale(dpr, dpr);
+    host.appendChild(canvas);
+    var colors = ['#DCBE8C', '#cc9c4d', '#0A9696', '#3fc8c8', '#6fa8e0', '#ffffff'];
+    var N = (W < 720 ? 70 : 110) * (big ? 1.25 : 1);
+    var parts = [];
+    for (var i = 0; i < N; i++) {
+      var a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.95;
+      var sp = 7 + Math.random() * 9;
+      parts.push({
+        x: ox, y: oy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        s: 6 + Math.random() * 6, r: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 0.3,
+        c: colors[(Math.random() * colors.length) | 0], round: Math.random() < 0.3
+      });
+    }
+    var start = performance.now(), last = start, raf = 0, stopped = false;
+    function frame(now) {
+      if (stopped) return;
+      var dt = Math.min((now - last) / 16.67, 2); last = now;
+      var el = now - start;
+      ctx.clearRect(0, 0, W, H);
+      var alive = 0;
+      parts.forEach(function (p) {
+        p.vy += 0.28 * dt; p.vx *= Math.pow(0.992, dt); p.vy *= Math.pow(0.992, dt);
+        p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.vr * dt;
+        if (p.y < H + 20) alive++;
+        ctx.globalAlpha = el > 2200 ? Math.max(0, 1 - (el - 2200) / 900) : 1;
+        ctx.fillStyle = p.c;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+        if (p.round) { ctx.beginPath(); ctx.arc(0, 0, p.s / 2.4, 0, Math.PI * 2); ctx.fill(); }
+        else ctx.fillRect(-p.s / 2, -p.s / 3, p.s, p.s / 1.6);
+        ctx.restore();
+      });
+      if (alive === 0 || el > 3200) { stop(); return; }
+      raf = requestAnimationFrame(frame);
+    }
+    function stop() {
+      if (stopped) return;
+      stopped = true;
+      cancelAnimationFrame(raf);
+      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+    }
+    raf = requestAnimationFrame(frame);
+    return stop;
+  }
+
   // ===== 모달 열림/닫힘 애니메이션 (Modal Open/Close) =====
   // 모달이 열릴 때는 이미 CSS(@keyframes modalOverlayIn/modalContentIn)가
   // display:none → flex 전환 시 자동으로 재생돼 부드럽게 나타납니다. 반면 닫힐 때는
@@ -19067,6 +19431,8 @@
 
     pwaVisitCount = trackPwaVisit();
     maybeShowInstallBanner();
+    scheduleClinchCelebration();
+    initTabbarAutoHide();
   });
 
   // ===== 스크롤 힌트 (표/탭 바를 좌우로 넘길 수 있음을 표시) =====
@@ -19436,9 +19802,33 @@
 
 // ===== 바텀시트: 클래스 부여 + 아래로 끌어서 닫기 =====
 (function () {
+  // 하단 고정 '닫기' 버튼을 붙일 시트들 (모바일 폭에서만 보임). 목록형/히어로형/자체 버튼이 있는 시트는 제외.
+  var SHEET_FOOT_IDS = ['postponedMatchesModal', 'fullRecordModal', 'statModal', 'playerModal',
+    'matchDetailModal', 'matchCompareModal', 'otherTeamModal', 'archiveTeamModal', 'iosGuideModal'];
+
+  function addSheetFoot(modal) {
+    var content = modal.querySelector('.modal-content');
+    if (!content || content.querySelector('.sheet-foot')) return;
+    content.classList.add('has-sheet-foot');
+    var foot = document.createElement('div');
+    foot.className = 'sheet-foot';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sheet-foot-btn lbl';
+    btn.setAttribute('data-ko', '닫기');
+    btn.setAttribute('data-en', 'Close');
+    btn.textContent = (typeof isKorean === 'undefined' || isKorean) ? '닫기' : 'Close';
+    btn.addEventListener('click', function () { closeSheet(modal); });
+    foot.appendChild(btn);
+    content.appendChild(foot);
+  }
+
   SHEET_MODAL_IDS.forEach(function (id) {
     var el = document.getElementById(id);
-    if (el) el.classList.add('sheet-modal');
+    if (el) {
+      el.classList.add('sheet-modal');
+      if (SHEET_FOOT_IDS.indexOf(id) !== -1) addSheetFoot(el);
+    }
   });
 
   var DRAG_ZONE_PX = 30;        // 헤더가 없는 시트도 맨 위 이 높이만큼은 손잡이로 취급

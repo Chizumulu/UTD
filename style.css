@@ -16018,3 +16018,252 @@ button.rmc-pending-badge:active {
   }
   .notice-sheet-body { padding-top: 30px; }
 }
+
+/* =====================================================================
+   숫자 롤링 (Odometer Roll) — 순위/승점이 바뀌었을 때 자릿수별로 굴러가며 바뀝니다.
+   실제 숫자 텍스트는 그대로 두고(레이아웃·스크린리더 유지) 그 위에 굴러가는 레이어만 겹칩니다.
+   ===================================================================== */
+.num-roll { position: relative; display: inline-block; }
+.num-roll.is-rolling { color: transparent; }
+.num-roll-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  overflow: hidden;
+  pointer-events: none;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.num-roll-col { display: block; height: 100%; overflow: hidden; }
+.num-roll-col.is-new { opacity: 0; transition: opacity 0.4s ease 0.15s; }
+.num-roll-layer.is-go .num-roll-col.is-new { opacity: 1; }
+.num-roll-strip {
+  display: block;
+  will-change: transform;
+  transition: transform 0.95s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.num-roll-digit {
+  display: block;
+  height: var(--roll-h);
+  line-height: var(--roll-h);
+  text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .num-roll-layer { display: none; }
+  .num-roll.is-rolling { color: inherit; }
+}
+
+/* =====================================================================
+   확정 축하 시트 (Clinch Celebration) — 우승 / 잔류가 확정된 순간 한 번
+   모바일은 전체 화면 + 하단 고정 버튼, 데스크톱은 가운데 카드.
+   ===================================================================== */
+html.celebrate-lock { overflow: hidden; }
+.celebrate-overlay {
+  --celebrate-accent: var(--color-teal);
+  position: fixed;
+  inset: 0;
+  z-index: 2300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--color-navy-rgb), 0.6);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: celebrateFadeIn 0.22s ease both;
+}
+.celebrate-overlay.is-title { --celebrate-accent: var(--color-gold-strong); }
+.celebrate-overlay.is-closing { animation: celebrateFadeOut 0.2s ease both; }
+.celebrate-card {
+  position: relative;
+  width: 92%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 36px 24px 22px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 18px 48px rgba(var(--color-black-rgb), 0.3);
+  animation: celebrateCardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.celebrate-main { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.celebrate-check { width: 96px; height: 96px; overflow: visible; }
+.celebrate-check-bg {
+  fill: var(--celebrate-accent);
+  transform-origin: 48px 48px;
+  animation: celebrateCheckPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+.celebrate-check-mark {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: celebrateCheckDraw 0.38s cubic-bezier(0.4, 0, 0.2, 1) 0.45s forwards;
+}
+.celebrate-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  animation: celebrateRise 0.45s ease 0.7s both;
+}
+.celebrate-crest { width: 20px; height: 20px; object-fit: contain; border-radius: var(--radius-xs); }
+.celebrate-title {
+  margin: 6px 0 0;
+  color: var(--color-text-darkest);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  animation: celebrateRise 0.45s ease 0.78s both;
+}
+.celebrate-body {
+  margin: 10px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.55;
+  animation: celebrateRise 0.45s ease 0.86s both;
+}
+.celebrate-sub {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  animation: celebrateRise 0.45s ease 0.94s both;
+}
+.celebrate-btn {
+  margin-top: 30px;
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-selected-bg);
+  color: var(--color-selected-fg);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, filter 0.15s ease;
+  animation: celebrateRise 0.45s ease 1s both;
+}
+.celebrate-btn:hover { filter: brightness(1.08); }
+.celebrate-btn:active { transform: scale(0.98); }
+.celebrate-confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+@media (max-width: 720px) {
+  .celebrate-overlay { background: var(--color-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .celebrate-card {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    justify-content: space-between;
+    padding: calc(24px + env(safe-area-inset-top, 0px)) 22px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .celebrate-main { flex: 1; justify-content: center; padding-bottom: 8vh; }
+  .celebrate-btn { margin-top: 0; }
+}
+@keyframes celebrateFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes celebrateFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes celebrateCardIn { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes celebrateCheckPop { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes celebrateCheckDraw { to { stroke-dashoffset: 0; } }
+@keyframes celebrateRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .celebrate-overlay, .celebrate-card, .celebrate-check-bg, .celebrate-team,
+  .celebrate-title, .celebrate-body, .celebrate-sub, .celebrate-btn { animation: none; }
+  .celebrate-check-mark { animation: none; stroke-dashoffset: 0; }
+  .celebrate-confetti { display: none; }
+}
+
+/* =====================================================================
+   바텀시트 다듬기 (모바일): 모서리 · 닫기 버튼 · 하단 고정 닫기
+   ===================================================================== */
+.sheet-foot { display: none; }
+@media (max-width: 720px) {
+  /* 1) 모서리: 22px → 24px */
+  .sheet-modal > .modal-content { border-radius: 24px 24px 0 0 !important; }
+
+  /* 2) 닫기(×): 헤더 안의 작은 글자 대신 동그란 터치 버튼 (눌렀을 때 살짝 눌림) */
+  .sheet-modal > .modal-content > .modal-header .close-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: none;
+    padding: 0 0 2px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    font-size: 22px;
+    line-height: 1;
+    opacity: 1;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.15s ease, transform 0.12s ease;
+  }
+  /* 보이는 크기는 34px, 눌리는 영역은 46px */
+  .sheet-modal > .modal-content > .modal-header .close-btn::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+  }
+  .sheet-modal > .modal-content > .modal-header .close-btn:active {
+    background: rgba(255, 255, 255, 0.28);
+    transform: scale(0.92);
+  }
+
+  /* 3) 하단: 스크롤해도 항상 보이는 '닫기' 버튼 (홈 인디케이터 영역 포함) */
+  .sheet-modal > .modal-content.has-sheet-foot { padding-bottom: 0; }
+  .sheet-foot {
+    display: block;
+    flex: none;
+    padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border-light);
+  }
+  .sheet-foot-btn {
+    width: 100%;
+    min-height: 50px;
+    border: 0;
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-table-alt);
+    color: var(--color-text-dark);
+    font: inherit;
+    font-size: 15.5px;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease, background-color 0.15s ease;
+  }
+  .sheet-foot-btn:active { transform: scale(0.98); background: var(--color-border-light); }
+}
+
+/* =====================================================================
+   모바일 하단 탭바 자동 숨김: 아래로 스크롤하면 내려가 숨고, 위로 스크롤하면 올라옵니다.
+   ===================================================================== */
+@media (max-width: 720px) {
+  .m-tabbar { transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+  .m-tabbar.is-hidden { transform: translateY(100%); }
+  /* 탭바가 숨으면 그 위에 띄워 두던 토스트/설치 배너도 같이 내려옵니다 */
+  body.tabbar-hidden .share-toast { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+  body.tabbar-hidden .pwa-install-banner { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m-tabbar { transition: none; }
+}
