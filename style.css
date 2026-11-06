@@ -15553,3 +15553,127 @@ button.rmd-status-link {
 }
 /* 접속 안내 본문 가독성 */
 .disclaimer-modal-body .disclaimer-text { line-height: 1.6; margin-bottom: 14px; }
+
+
+/* ===== 바텀시트 (모바일 폭에서 상세 모달을 화면 아래에서 올라오는 시트로) ===== */
+@keyframes sheetIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@media (max-width: 720px) {
+  .modal-overlay.sheet-modal {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+  }
+  .sheet-modal > .modal-content {
+    position: relative;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0;
+    max-height: 92vh !important;
+    max-height: 92dvh !important;
+    border-radius: 22px 22px 0 0 !important;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -8px 32px rgba(var(--color-black-rgb), 0.28);
+    animation: sheetIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+  /* 맨 위 손잡이 */
+  .sheet-modal > .modal-content::before {
+    content: "";
+    position: absolute; top: 7px; left: 50%;
+    width: 36px; height: 4px; margin-left: -18px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.55);
+    z-index: 3; pointer-events: none;
+  }
+  /* 헤더는 끌어서 닫는 영역: 세로 스크롤 제스처와 겹치지 않게 */
+  .sheet-modal > .modal-content > .modal-header { touch-action: none; padding-top: 22px; }
+  .sheet-modal > .modal-content > .modal-body { overscroll-behavior: contain; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-modal > .modal-content { animation: none !important; }
+}
+@media (max-width: 720px) {
+  .sheet-modal > .modal-content > .modal-header { -webkit-user-select: none; user-select: none; }
+}
+
+/* ===== 마감 처리: 눌림 피드백 · 슬라이딩 토글 · 스코어 타이포 · 목록 여백 ===== */
+
+/* 1) 눌림 피드백 — 탭하는 순간 살짝 눌리는 느낌 */
+.view-toggle-btn, .more-btn, .rank-hist-chip, .lang-btn, .theme-toggle-btn,
+.squad-view-toggle-btn, .disclaimer-confirm-btn, .matchday-popup-btn-secondary,
+.disclaimer-dontshow-group .disclaimer-dontshow, button.rmc-pending-badge {
+  -webkit-tap-highlight-color: transparent;
+}
+.view-toggle-btn:active, .more-btn:active, .rank-hist-chip:active, .lang-btn:active,
+.theme-toggle-btn:active, .squad-view-toggle-btn:active, .disclaimer-confirm-btn:active,
+.matchday-popup-btn-secondary:active, .disclaimer-dontshow-group .disclaimer-dontshow:active,
+button.rmc-pending-badge:active {
+  transform: scale(0.96);
+}
+.disclaimer-confirm-btn, .matchday-popup-btn-secondary, .squad-view-toggle-btn,
+.disclaimer-dontshow-group .disclaimer-dontshow, button.rmc-pending-badge {
+  transition: transform 0.12s ease, background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+/* 2) 카드/표 토글 — 흰 알약이 좌우로 미끄러지며 이동 (:has 미지원 브라우저는 기존 표시 유지) */
+@supports selector(:has(*)) {
+  .squad-view-toggle {
+    position: relative;
+    display: inline-grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+  }
+  .squad-view-toggle::before {
+    content: "";
+    position: absolute;
+    top: 3px; bottom: 3px; left: 3px;
+    width: calc((100% - 8px) / 2);
+    background: var(--color-surface);
+    border-radius: var(--radius-xs);
+    box-shadow: 0 1px 4px rgba(var(--color-navy-rgb), 0.18);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .squad-view-toggle:has(.squad-view-toggle-btn:last-child.is-active)::before {
+    transform: translateX(calc(100% + 2px));
+  }
+  .squad-view-toggle-btn { position: relative; z-index: 1; text-align: center; }
+  .squad-view-toggle-btn.is-active { background: transparent; box-shadow: none; }
+}
+
+/* 3) 경기 결과 스코어 — 크고 굵게, 숫자 폭 고정 */
+.round-match-card .rmc-score:not(.rmc-score-pending) {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+  gap: 6px;
+}
+@media (max-width: 600px) {
+  .round-match-card .rmc-score:not(.rmc-score-pending) { font-size: 21px; }
+}
+
+/* 4) 목록 여백 — 카드 사이·날짜 구분 넉넉하게 (360px 급 좁은 폭은 기존 유지) */
+.round-match-list { gap: 14px; }
+.round-date-heading { margin-top: 14px; }
+@media (min-width: 401px) {
+  .round-match-card { padding: 16px 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .squad-view-toggle::before { transition: none; }
+  .view-toggle-btn:active, .more-btn:active, .rank-hist-chip:active, .lang-btn:active,
+  .theme-toggle-btn:active, .squad-view-toggle-btn:active, .disclaimer-confirm-btn:active,
+  .matchday-popup-btn-secondary:active, .disclaimer-dontshow-group .disclaimer-dontshow:active,
+  button.rmc-pending-badge:active { transform: none; }
+}
+
+/* 3-b) 리그 일정 화면(rmd-*) 스코어: 더 크고 굵게 */
+.rmd-num { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+.rmd-num.is-lose { font-weight: 700; }
+@media (max-width: 400px) { .rmd-num { font-size: 26px; } }
+
+/* 카운트업 중 숫자 폭이 흔들리지 않도록 고정폭 숫자 사용 */
+.pms-tile-value,
+.pt-prob-bar-label,
+.ti-stat-value { font-variant-numeric: tabular-nums; }

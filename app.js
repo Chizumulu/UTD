@@ -595,6 +595,8 @@
   }
 
   let predictionCache = null;
+  let predictCountedRef = null; // 카운트업을 이미 보여준 시뮬레이션 결과(중복 재생 방지)
+  let predictTableCountedRef = null;
   let predictWorker = null;
   let predictWorkerFailed = false; // 워커 생성/로드가 실패하는 환경(예: file://로 직접 열람)에서는 메인 스레드 계산으로 폴백합니다.
   let predictWorkerRequestSeq = 0;
@@ -782,6 +784,12 @@
         ${tile('pms-rank', '예상 최종순위', 'Avg. final rank', r.avgFinalRank.toFixed(1) + (isKorean ? '위' : ''),
                hasRange ? `예상 승점 ${r.ptsP10}~${r.ptsP90}점` : '', hasRange ? `Proj. ${r.ptsP10}–${r.ptsP90} pts` : '')}
       </div>`;
+
+    // 시뮬레이션 결과가 새로 나왔을 때만 숫자를 세어 올립니다 (언어 전환 같은 재렌더링에서는 그대로 표시).
+    if (predictCountedRef !== predictionCache) {
+      predictCountedRef = predictionCache;
+      host.querySelectorAll('.pms-tile-value').forEach((el, k) => countUpTextWhenVisible(el, { delay: k * 70 }));
+    }
   }
 
   function drawPredictionTable() {
@@ -837,6 +845,14 @@
       tbody.appendChild(tr);
     });
 
+    // 확률 막대가 차오르는 동안 퍼센트 숫자도 같이 올라가게 합니다 (결과가 새로 나왔을 때만).
+    if (predictTableCountedRef !== predictionCache) {
+      predictTableCountedRef = predictionCache;
+      tbody.querySelectorAll('.pt-prob-bar-label').forEach(el => countUpTextWhenVisible(el, { duration: 700 }));
+    } else {
+      // 같은 결과를 다시 그릴 때는 막대 성장 애니메이션도 건너뛰어 숫자와 어긋나지 않게 합니다.
+      tbody.querySelectorAll('.pt-prob-bar-fill').forEach(el => { el.style.animation = 'none'; });
+    }
     renderPredictMySummary();
     renderRankProbMatrix();
     renderScenarioTable();
@@ -15996,6 +16012,7 @@
         </div>`;
     }
 
+    animateStatValues(headerEl);
     attachImageFallback();
     renderTeamPointsHistoryChart('otherTeamPointsHistorySvg', t);
     applyOtherTeamHeaderAccent(t.nameEn);
@@ -18523,6 +18540,38 @@
     });
   }
 
+  // ===== 텍스트 카운트업 (소수점/%/접미사 유지) =====
+  // "42.5%", "1.8위", "-3" 처럼 숫자 + 접미사 형태의 텍스트를 0에서 목표값까지 세어 올립니다.
+  // 소수 자릿수는 원래 텍스트 그대로 유지하고, 숫자가 아닌 값(예: "-")이나
+  // reduced-motion 환경에서는 건드리지 않습니다. 화면에 처음 보일 때 한 번만 실행됩니다.
+  function countUpTextWhenVisible(el, opts) {
+    if (!el || el.dataset.countedUp === '1') return;
+    const raw = (el.textContent || '').trim();
+    const m = raw.match(/^([+-]?)(\d+(?:\.(\d+))?)(.*)$/);
+    if (!m) return;
+    el.dataset.countedUp = '1';
+    if (!window.anime || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    const sign = m[1] === '-' ? -1 : 1;
+    const target = parseFloat(m[2]) * sign;
+    const decimals = m[3] ? m[3].length : 0;
+    const prefix = m[1] === '+' ? '+' : '';
+    const suffix = m[4] || '';
+    const duration = (opts && opts.duration) || 700;
+    const delay = (opts && opts.delay) || 0;
+    el.textContent = prefix + (0).toFixed(decimals) + suffix;
+    playWhenScrolledIntoView(el, () => {
+      const state = { v: 0 };
+      window.anime.animate(state, {
+        v: target,
+        duration: duration,
+        delay: delay,
+        ease: 'outCubic',
+        onUpdate: () => { el.textContent = prefix + state.v.toFixed(decimals) + suffix; },
+        onComplete: () => { el.textContent = raw; }
+      });
+    });
+  }
+
   // ===== 모달 열림/닫힘 애니메이션 (Modal Open/Close) =====
   // 모달이 열릴 때는 이미 CSS(@keyframes modalOverlayIn/modalContentIn)가
   // display:none → flex 전환 시 자동으로 재생돼 부드럽게 나타납니다. 반면 닫힐 때는
@@ -18541,6 +18590,14 @@
   let modalAnimSeq = 0;
   const modalAnimTokens = new WeakMap();
 
+  // ===== 바텀시트 모드 (모바일 폭에서 상세 모달을 아래에서 올라오는 시트로) =====
+  // SHEET_MODAL_IDS에 있는 모달은 폭 720px 이하에서 화면 아래에 붙는 시트가 되고,
+  // 헤더(또는 맨 위 손잡이 영역)를 아래로 끌어 닫을 수 있습니다. 데스크톱 폭은 기존 가운데 모달 그대로입니다.
+  const SHEET_MODAL_IDS = ['postponedMatchesModal', 'fullRecordModal', 'statModal', 'playerModal', 'squadPlayerModal',
+    'matchDetailModal', 'matchCompareModal', 'otherTeamModal', 'archiveTeamModal', 'matchdayPopupModal', 'iosGuideModal'];
+  function isSheetViewport() { return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches); }
+  function isSheetMode(modal) { return !!modal && modal.classList.contains('sheet-modal') && isSheetViewport(); }
+
   function showModalAnimated(modal) {
     if (!modal) return;
     modalAnimTokens.set(modal, ++modalAnimSeq);
@@ -18548,7 +18605,7 @@
     // 다시 열릴 때 반투명하거나 살짝 작게 보이는 채로 시작하지 않게 합니다.
     modal.style.opacity = '';
     const content = modal.querySelector('.modal-content');
-    if (content) { content.style.opacity = ''; content.style.transform = ''; }
+    if (content) { content.style.opacity = ''; content.style.transform = ''; content.style.animation = ''; content.style.transition = ''; }
     modal.style.display = 'flex';
   }
 
@@ -18569,9 +18626,17 @@
       modal.style.opacity = '';
       if (content) { content.style.opacity = ''; content.style.transform = ''; }
     };
-    window.anime.animate(modal, { opacity: [1, 0], duration: 180, ease: 'inQuad', onComplete: cleanup });
+    const asSheet = !!content && isSheetMode(modal);
+    window.anime.animate(modal, { opacity: [1, 0], duration: asSheet ? 220 : 180, ease: 'inQuad', onComplete: cleanup });
     if (content) {
-      window.anime.animate(content, { opacity: [1, 0], scale: [1, 0.94], duration: 180, ease: 'inQuad' });
+      if (asSheet) {
+        // 바텀시트: 드래그로 내려가 있던 위치(있다면)에서 이어서 아래로 내려갑니다.
+        const m = /translateY\(([-\d.]+)px\)/.exec(content.style.transform || '');
+        const from = m ? parseFloat(m[1]) : 0;
+        window.anime.animate(content, { translateY: [from, Math.max(content.offsetHeight, 200)], duration: 220, ease: 'inQuad' });
+      } else {
+        window.anime.animate(content, { opacity: [1, 0], scale: [1, 0.94], duration: 180, ease: 'inQuad' });
+      }
     }
   }
 
@@ -19259,3 +19324,64 @@
       else if (area === 'archive') stepArchiveWeek(delta);
     }, { passive: true });
   })();
+
+
+// ===== 바텀시트: 클래스 부여 + 아래로 끌어서 닫기 =====
+(function () {
+  SHEET_MODAL_IDS.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.add('sheet-modal');
+  });
+
+  var DRAG_ZONE_PX = 30;        // 헤더가 없는 시트도 맨 위 이 높이만큼은 손잡이로 취급
+  var CLOSE_DIST_RATIO = 0.25;  // 시트 높이의 25% 이상 내리면 닫힘
+  var CLOSE_VELOCITY = 0.6;     // px/ms — 빠르게 튕기면 닫힘
+  var drag = null;
+
+  function closeSheet(modal) {
+    var entry = (typeof DETAIL_MODAL_IDS !== 'undefined') ? DETAIL_MODAL_IDS.find(function (e) { return e.id === modal.id; }) : null;
+    if (entry) entry.close(); else closeModalAnimated(modal);
+  }
+
+  document.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    var content = e.target.closest && e.target.closest('.sheet-modal > .modal-content');
+    if (!content) return;
+    var modal = content.parentElement;
+    if (!isSheetMode(modal)) return;
+    if (e.target.closest('button, a, input, select, textarea, label')) return;
+    var rect = content.getBoundingClientRect();
+    var inHeader = !!e.target.closest('.modal-header');
+    if (!inHeader && e.clientY - rect.top > DRAG_ZONE_PX) return;
+    drag = { modal: modal, content: content, startY: e.clientY, lastY: e.clientY, lastT: e.timeStamp, v: 0, dy: 0, id: e.pointerId };
+    content.style.transition = 'none';
+    try { content.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+
+  document.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var dy = Math.max(0, e.clientY - drag.startY);
+    var dt = e.timeStamp - drag.lastT;
+    if (dt > 0) drag.v = (e.clientY - drag.lastY) / dt;
+    drag.lastY = e.clientY; drag.lastT = e.timeStamp; drag.dy = dy;
+    drag.content.style.animation = 'none';
+    drag.content.style.transform = 'translateY(' + dy + 'px)';
+    drag.modal.style.opacity = String(Math.max(0.35, 1 - dy / (drag.content.offsetHeight * 1.2)));
+  });
+
+  function endDrag(e) {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    var d = drag; drag = null;
+    var shouldClose = d.dy > d.content.offsetHeight * CLOSE_DIST_RATIO || (d.v > CLOSE_VELOCITY && d.dy > 24);
+    if (shouldClose) {
+      closeSheet(d.modal);   // closeModalAnimated가 현재 위치에서 이어서 내려보냅니다
+    } else {
+      d.content.style.transition = 'transform .25s cubic-bezier(0.22, 1, 0.36, 1)';
+      d.content.style.transform = 'translateY(0)';
+      d.modal.style.opacity = '';
+      setTimeout(function () { d.content.style.transition = ''; d.content.style.transform = ''; }, 260); // animation:none은 다음 열릴 때 showModalAnimated가 되돌립니다(여기서 지우면 올라오는 애니메이션이 다시 재생됨)
+    }
+  }
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+})();
