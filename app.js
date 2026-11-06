@@ -300,6 +300,34 @@
     if (modal) closeModalAnimated(modal);
   }
 
+  // ===== 모바일 하단 탭바 + 더보기 시트 =====
+  // 자주 쓰는 4개 화면(메인/순위/일정/기록)은 하단 탭으로, 나머지는 "더보기" 바텀시트로 보냅니다.
+  // 화면 전환은 기존 showView()를 그대로 쓰고, 현재 탭 표시는 상단 메뉴 버튼의 .active를
+  // 따라가므로(아래 IIFE의 MutationObserver) 다른 경로로 화면이 바뀌어도 항상 맞습니다.
+  function mobileTabGo(view) {
+    const tab = document.querySelector('#mTabbar .m-tab[data-view="' + view + '"]');
+    if (tab && tab.classList.contains('is-active')) {
+      // 이미 보고 있는 탭을 다시 누르면 맨 위로 (iOS/토스 관례)
+      window.scrollTo({ top: 0, behavior: (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth' });
+      return;
+    }
+    showView(view);
+    window.scrollTo(0, 0);
+  }
+  function openMoreSheet() {
+    const modal = document.getElementById('moreSheetModal');
+    if (modal) showModalAnimated(modal);
+  }
+  function closeMoreSheet() {
+    const modal = document.getElementById('moreSheetModal');
+    if (modal) closeModalAnimated(modal);
+  }
+  function openViewFromMore(view) {
+    closeMoreSheet();
+    showView(view);
+    window.scrollTo(0, 0);
+  }
+
   // ===== PWA 설치 유도 배너 =====
   // 사람들이 방문 초반에는 배너를 무시하기 쉬워서, 사이트에 어느 정도
   // 관심을 보인 뒤(재방문 또는 일정 체류 시간 후)에만 배너를 띄워
@@ -16174,7 +16202,11 @@
     { id: 'postponedMatchesModal', close: () => closePostponedMatchesModal() },
     { id: 'matchdayPopupModal', close: () => closeMatchdayPopup() },
     { id: 'otherTeamModal', close: () => closeOtherTeamModal() },
-    { id: 'archiveTeamModal', close: () => closeArchiveTeamModal() }
+    { id: 'archiveTeamModal', close: () => closeArchiveTeamModal() },
+    { id: 'moreSheetModal', close: () => closeMoreSheet() },
+    // 접속 안내·소식 팝업: 끌어서 닫거나 Esc로 닫아도 "확인/닫기" 버튼과 같이 저장·다음 팝업 순서 처리를 합니다.
+    { id: 'disclaimerModal', close: () => closeDisclaimer() },
+    { id: 'newsPopupModal', close: () => closeNewsPopup() }
   ];
 
   document.addEventListener('keydown', function(event) {
@@ -18316,7 +18348,7 @@
     const dateEl = document.getElementById('dateLabel');
     const dateShortEl = document.getElementById('dateLabelShort');
     if (weekEl) weekEl.textContent = isKorean ? `${wkKo(week)}` : `${wkEn(week, 'Week', ' ')}`;
-    if (weekBadgeNumEl) weekBadgeNumEl.textContent = isMakeupPos(week) ? (isKorean ? '연기' : 'MU') : week;
+    if (weekBadgeNumEl) weekBadgeNumEl.textContent = isMakeupPos(week) ? (isKorean ? '연기' : 'MU') : (typeof regularWeekNumber === 'function' ? regularWeekNumber(week) : week); // 내부 순번(round17)이 아니라 정규 주차(16)로 표시
     if (dateEl) {
       dateEl.textContent = isKorean
         ? `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
@@ -18594,7 +18626,8 @@
   // SHEET_MODAL_IDS에 있는 모달은 폭 720px 이하에서 화면 아래에 붙는 시트가 되고,
   // 헤더(또는 맨 위 손잡이 영역)를 아래로 끌어 닫을 수 있습니다. 데스크톱 폭은 기존 가운데 모달 그대로입니다.
   const SHEET_MODAL_IDS = ['postponedMatchesModal', 'fullRecordModal', 'statModal', 'playerModal', 'squadPlayerModal',
-    'matchDetailModal', 'matchCompareModal', 'otherTeamModal', 'archiveTeamModal', 'matchdayPopupModal', 'iosGuideModal'];
+    'matchDetailModal', 'matchCompareModal', 'otherTeamModal', 'archiveTeamModal', 'matchdayPopupModal', 'iosGuideModal', 'moreSheetModal',
+    'disclaimerModal', 'newsPopupModal'];
   function isSheetViewport() { return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches); }
   function isSheetMode(modal) { return !!modal && modal.classList.contains('sheet-modal') && isSheetViewport(); }
 
@@ -19384,4 +19417,55 @@
   }
   document.addEventListener('pointerup', endDrag);
   document.addEventListener('pointercancel', endDrag);
+})();
+
+// ===== 모바일 하단 탭바: 현재 화면 표시 동기화 =====
+(function () {
+  var wrap = document.getElementById('viewToggleWrap');
+  var bar = document.getElementById('mTabbar');
+  var sheet = document.getElementById('moreSheetModal');
+  if (!wrap || !bar) return;
+  var TAB_BY_BTN = { viewRankBtn: 'rank', viewLeagueRankBtn: 'leagueRank', viewRoundsBtn: 'rounds', viewStatsBtn: 'stats' };
+
+  function sync() {
+    var act = wrap.querySelector('.view-toggle-btn.active:not(.archive-nav-btn)');
+    var key = act ? (TAB_BY_BTN[act.id] || 'more') : null;
+    bar.querySelectorAll('.m-tab').forEach(function (b) {
+      var on = b.getAttribute('data-view') === key;
+      b.classList.toggle('is-active', on);
+      if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    if (sheet) sheet.querySelectorAll('.more-sheet-item[data-btn]').forEach(function (it) {
+      it.classList.toggle('is-active', !!act && act.id === it.getAttribute('data-btn'));
+    });
+  }
+  new MutationObserver(sync).observe(wrap, { subtree: true, attributes: true, attributeFilter: ['class'] });
+  sync();
+
+  // 더보기 시트는 메뉴라서 바깥(어두운 배경)을 눌러도 닫히게 합니다.
+  if (sheet) sheet.addEventListener('click', function (e) { if (e.target === sheet) closeMoreSheet(); });
+})();
+
+// ===== 모바일: 언어·다크모드·경기 알림·앱 저장 버튼을 더보기 시트로 이동 =====
+// 버튼을 복제하지 않고 .side-controls 노드를 통째로 옮기므로 id·이벤트·상태(알림 켜짐 등)가 그대로 유지됩니다.
+// 폭이 넓어지거나 25/26 아카이브 화면(탭바가 없음)으로 가면 원래 사이드바 자리로 되돌립니다.
+(function () {
+  var controls = document.querySelector('.app-sidebar .side-controls');
+  var host = document.getElementById('moreSheetSettings');
+  if (!controls || !host) return;
+  var marker = document.createComment('side-controls-home');
+  controls.parentNode.insertBefore(marker, controls);
+  var mq = window.matchMedia('(max-width: 720px)');
+
+  function place() {
+    var toSheet = mq.matches && !document.body.classList.contains('season-archive');
+    if (toSheet) {
+      if (controls.parentNode !== host) host.appendChild(controls);
+    } else if (controls.parentNode === host) {
+      marker.parentNode.insertBefore(controls, marker.nextSibling);
+    }
+  }
+  if (mq.addEventListener) mq.addEventListener('change', place); else mq.addListener(place);
+  new MutationObserver(place).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  place();
 })();

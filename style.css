@@ -15677,3 +15677,226 @@ button.rmc-pending-badge:active {
 .pms-tile-value,
 .pt-prob-bar-label,
 .ti-stat-value { font-variant-numeric: tabular-nums; }
+
+
+/* =====================================================================
+   모바일 하단 탭바 + 더보기 시트 (≤720px)
+   - 메인/순위/일정/기록 4개 + 더보기. 나머지 화면은 더보기 바텀시트에 있습니다.
+   - 상단의 11개 메뉴 버튼은 이 폭에서 숨깁니다. 25/26 아카이브 화면은 전용 메뉴가
+     상단에 있으므로 그때는 탭바를 숨기고 상단 메뉴를 그대로 둡니다.
+   - 되돌리고 싶으면 이 블록만 지우면 됩니다 (상단 메뉴가 다시 보입니다).
+   ===================================================================== */
+.m-tabbar { display: none; }
+@media (max-width: 720px) {
+  .m-tabbar {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 900;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border-light);
+    box-shadow: 0 -4px 18px rgba(var(--color-black-rgb), 0.06);
+  }
+  body.season-archive .m-tabbar { display: none; }
+  body:not(.season-archive) #viewToggleFade { display: none !important; }
+  body:not(.season-archive) .app-shell { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+
+  .m-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 2px 4px;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-faint);
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.18s ease, transform 0.12s ease;
+  }
+  .m-tab:active { transform: scale(0.92); }
+  .m-ico { width: 24px; height: 24px; transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
+  .m-tab-lbl { font-size: 11px; font-weight: 600; line-height: 1.2; white-space: nowrap; }
+  .m-tab.is-active { color: var(--color-brand-text); }
+  .m-tab.is-active .m-ico { transform: translateY(-1px) scale(1.08); }
+  .m-tab.is-active .m-tab-lbl { font-weight: 800; }
+  .m-tab:focus-visible { outline: 2px solid var(--color-brand-text); outline-offset: -2px; border-radius: var(--radius-md); }
+
+  /* 하단에 고정되는 다른 요소는 탭바 위로 올립니다 */
+  .share-toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .pwa-install-banner { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+
+  /* 더보기 시트 */
+  .more-sheet-content .modal-body { padding: 4px 12px 14px; }
+  .more-sheet-list { display: flex; flex-direction: column; }
+  .more-sheet-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 15px 10px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text-dark);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease, transform 0.12s ease;
+  }
+  .more-sheet-item:active { background: var(--color-bg-stripe); transform: scale(0.985); }
+  .more-sheet-item.is-active { color: var(--color-brand-text); font-weight: 800; }
+  .more-sheet-ico { width: 22px; height: 22px; flex-shrink: 0; color: var(--color-text-faint); }
+  .more-sheet-item.is-active .more-sheet-ico { color: var(--color-brand-text); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m-tab, .m-ico, .more-sheet-item { transition: none; }
+  .m-tab:active, .more-sheet-item:active { transform: none; }
+}
+
+
+/* =====================================================================
+   더보기 시트 안의 설정 영역 (모바일 ≤720px): 언어 · 다크 모드 · 경기 알림 · 앱으로 저장
+   - 사이드바의 .side-controls 를 옮겨 오므로, 사이드바용(어두운 배경) 스타일을 id 선택자로 덮어
+     더보기 목록과 같은 행 모양으로 맞춥니다. 커뮤니티 링크는 위 목록에 이미 있어 숨깁니다.
+   ===================================================================== */
+@media (max-width: 720px) {
+  #moreSheetModal .side-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin: 6px 0 0;
+    padding: 6px 0 0;
+    border-top: 1px solid var(--color-border-light);
+  }
+  #moreSheetModal .side-controls .side-community-btn { display: none; }
+  #moreSheetModal .side-controls .lang-btn,
+  #moreSheetModal .side-controls .theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 14px;
+    width: 100%;
+    height: auto;
+    min-height: 52px;
+    padding: 15px 10px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    box-shadow: none;
+    color: var(--color-text-dark);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+  }
+  #moreSheetModal .side-controls .lang-btn:active,
+  #moreSheetModal .side-controls .theme-toggle-btn:active { background: var(--color-bg-stripe); }
+  #moreSheetModal .side-controls svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: var(--color-text-faint);
+  }
+  #moreSheetModal .side-controls .theme-toggle-btn .lbl { display: inline; }
+  #moreSheetModal .side-controls .push-alert-btn.is-on { color: var(--color-brand-text); font-weight: 800; }
+  #moreSheetModal .side-controls .push-alert-btn.is-on svg { color: var(--color-brand-text); }
+}
+
+
+/* =====================================================================
+   마감 처리 보완: 눌림 피드백이 빠져 있던 버튼들 (모두 transform만 사용)
+   ===================================================================== */
+.nms-action-btn, .rmc-compare-btn, .round-tab-btn, .close-btn, .nmp-toggle, .side-season-seg {
+  -webkit-tap-highlight-color: transparent;
+}
+.nms-action-btn:active, .rmc-compare-btn:active, .round-tab-btn:active,
+.close-btn:active, .nmp-toggle:active, button.side-season-seg:active {
+  transform: scale(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nms-action-btn:active, .rmc-compare-btn:active, .round-tab-btn:active,
+  .close-btn:active, .nmp-toggle:active, button.side-season-seg:active { transform: none; }
+}
+
+
+/* 접속 안내·소식 팝업도 모바일에서 바텀시트로 (헤더가 없는 소식 팝업은 위쪽 이미지를 끌어서 닫음) */
+@media (max-width: 720px) {
+  .news-popup-content .news-popup-image { touch-action: none; }
+  #disclaimerModal .modal-content, #newsPopupModal .modal-content { max-width: none; }
+}
+
+
+/* =====================================================================
+   모바일(≤720px): 시즌 전환 줄 오른쪽에 작은 한/영 전환 버튼
+   - 넓은 화면에서는 wrap이 레이아웃에 영향을 주지 않고(display: contents) 버튼도 숨깁니다.
+   - 25/26 아카이브 화면은 하단 컨트롤이 상단 카드로 돌아오므로 이 버튼을 숨깁니다.
+   - 라벨은 CSS로 바뀝니다: 한국어 화면에서는 "EN", 영어 화면에서는 "한".
+   ===================================================================== */
+.side-season-wrap { display: contents; }
+.side-lang-mini { display: none; }
+@media (max-width: 720px) {
+  .side-season-wrap {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    position: relative;
+    margin: 12px 4px 6px;
+  }
+  /* 구분선은 줄 전체 폭으로 유지 (기존에는 시즌 줄에 붙어 있었음) */
+  .side-season-wrap::before {
+    content: "";
+    position: absolute;
+    top: -7px; left: -4px; right: -4px;
+    height: 1px;
+    background: rgba(255,255,255,.12);
+    pointer-events: none;
+  }
+  .app-sidebar .side-season-wrap .side-season-row {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+  }
+  .app-sidebar .side-season-wrap .side-season-row::before { display: none; }
+
+  .side-lang-mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    min-width: 54px;
+    padding: 0 10px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.07);
+    color: rgba(238,242,251,.88);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease, background 0.15s ease;
+  }
+  .side-lang-mini:active { background: rgba(255,255,255,.14); transform: scale(0.96); }
+  .side-lang-mini:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+  .side-lang-mini svg { width: 14px; height: 14px; flex-shrink: 0; }
+  html[data-lang="ko"] .side-lang-mini-text::after { content: "EN"; }
+  html[data-lang="en"] .side-lang-mini-text::after { content: "한"; }
+  body.season-archive .side-lang-mini { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .side-lang-mini { transition: none; }
+  .side-lang-mini:active { transform: none; }
+}
