@@ -210,6 +210,8 @@
     } else if (currentView === 'predict') {
       renderRankHistoryChart();
       renderAiTrackRecord();
+    } else if (currentView === 'venues') {
+      renderTravelImpactCard();
     }
   }
 
@@ -14344,7 +14346,91 @@
 
   function renderVenuesView() {
     renderVenueLeafletMap();
+    renderTravelImpactCard();
     renderVenuesList();
+    applyVenueMode();
+  }
+
+  // 구단 위치 화면 상단 토글: 'map'(지도+구장 목록) / 'travel'(원정거리 분석·구단별 표)
+  let venueViewMode = 'map';
+  function applyVenueMode() {
+    const mapPane = document.getElementById('venueModeMap');
+    const travelPane = document.getElementById('venueModeTravel');
+    if (!mapPane || !travelPane) return;
+    mapPane.style.display = venueViewMode === 'map' ? '' : 'none';
+    travelPane.style.display = venueViewMode === 'travel' ? '' : 'none';
+    document.querySelectorAll('.venue-mode-btn').forEach(btn => {
+      const on = btn.dataset.mode === venueViewMode;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    // 숨겨져 있던 지도는 다시 보일 때 크기를 다시 계산해야 타일이 깨지지 않습니다
+    if (venueViewMode === 'map') setTimeout(() => { if (venueLeafletMap) venueLeafletMap.invalidateSize(); }, 60);
+  }
+  function setVenueMode(mode) {
+    venueViewMode = mode === 'travel' ? 'travel' : 'map';
+    applyVenueMode();
+  }
+
+  // ===== 원정거리 × 성적 분석 카드 (travel-analysis.js / venue-matrix.js) =====
+  // roundsData·scheduledRounds 에 스코어가 채워진 경기는 새로고침만 하면 자동으로 반영됩니다.
+  // 구장은 getTeamVenue(팀, 라운드)로 찾기 때문에 구장 변경 이력(venueHistory)도 그대로 따라갑니다.
+  function renderTravelImpactCard() {
+    const wrap = document.getElementById('travelImpactWrap');
+    if (!wrap) return;
+    if (typeof TravelAnalysis === 'undefined' || typeof venueMatrix === 'undefined') { wrap.innerHTML = ''; return; }
+    const prevMore = wrap.querySelector('.ti-more');
+    const wasOpen = !!(prevMore && prevMore.open);
+    // 분석에서만 "전 경기를 현재 홈구장(leagueData.venue)에서 치른 것"으로 가정할 팀 목록입니다.
+    // (data.js 의 venueHistory 는 그대로 두므로 달력·지도·구단 위치 목록에는 영향이 없습니다.)
+    // 가정을 없애려면 아래 배열을 비우세요 → data.js 의 구장 변경 이력을 그대로 따릅니다.
+    const TRAVEL_CURRENT_VENUE_ONLY = ["M'mbelwa Warriors FC"];
+    const travelVenueOf = (nameEn, weekNum) => {
+      if (TRAVEL_CURRENT_VENUE_ONLY.indexOf(nameEn) >= 0) {
+        const t = leagueData.find(x => x.nameEn === nameEn);
+        if (t && t.venue) return t.venue;
+      }
+      return getTeamVenue(nameEn, weekNum);
+    };
+    const assumedTeams = TRAVEL_CURRENT_VENUE_ONLY
+      .map(en => leagueData.find(x => x.nameEn === en))
+      .filter(t => t && Array.isArray(t.venueHistory) && t.venueHistory.length)
+      .map(t => ({ name: isKorean ? t.nameKo.replace(/\s*FC\s*$/i, '') : t.nameEn.replace(/\s*FC\s*$/i, ''), venue: isKorean ? t.venue.nameKo : t.venue.nameEn }));
+    const travelOpts = {
+      roundsData: roundsData,
+      scheduledRounds: typeof scheduledRounds !== 'undefined' ? scheduledRounds : null,
+      getTeamVenue: travelVenueOf,
+      matrix: venueMatrix,
+      venueRoutes: typeof venueRoutes !== 'undefined' ? venueRoutes : null
+    };
+    let analysisCard = '';
+    try {
+      const res = TravelAnalysis.compute(travelOpts);
+      const body = TravelAnalysis.render(res, { isKorean: isKorean, theme: chartTheme(), open: wasOpen, assumed: assumedTeams });
+      analysisCard =
+        '<div class="scatter-card ti-card">' +
+          '<div class="stats-title"><span>' + (isKorean ? '원정거리 × 성적 분석' : 'Away Distance × Results') + '</span></div>' +
+          '<div class="ti-body">' + body + '</div>' +
+        '</div>';
+    } catch (e) {
+      console.warn('원정거리 분석 계산 중 오류:', e);
+    }
+    // 분석 카드 바로 아래: 구단별 원정거리 정보 표
+    let clubCard = '';
+    try {
+      const clubRes = TravelAnalysis.computeClubs(Object.assign({ teams: leagueData }, travelOpts));
+      if (clubRes) {
+        const clubBody = TravelAnalysis.renderClubs(clubRes, { isKorean: isKorean, assumed: assumedTeams });
+        clubCard =
+          '<div class="scatter-card ti-card ti-club-card">' +
+            '<div class="stats-title"><span>' + (isKorean ? '구단별 원정거리 정보' : 'Away Travel by Club') + '</span></div>' +
+            '<div class="ti-body">' + clubBody + '</div>' +
+          '</div>';
+      }
+    } catch (e) {
+      console.warn('구단별 원정거리 표 계산 중 오류:', e);
+    }
+    wrap.innerHTML = analysisCard + clubCard;
   }
 
   // leagueData(팀별 현재 홈구장)에 extraVenues(구단 위치 화면에만 추가로 보여줄 보조 구장)를 합쳐서
