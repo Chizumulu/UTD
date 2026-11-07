@@ -13345,6 +13345,23 @@ body {
   height: 92%;
   object-fit: contain; object-position: center bottom;
 }
+/* 어두운 피부톤 선수가 진한 청색 카드에 묻히지 않도록 누끼 사진에만 적용:
+   (1) 몸 윤곽을 따라 밝은 외곽선 + 은은한 푸른 빛, (2) 선수 뒤에 밝은 조명(스포트라이트)을 깔아 대비를 키움.
+   세기는 아래 변수로 조절: --pcard-rim(외곽선 색), --pcard-glow(바깥 빛), --pcard-spot(뒤 조명 밝기) */
+.pcard { --pcard-rim: rgba(205, 225, 255, 0.95); --pcard-glow: rgba(110, 170, 255, 0.55); --pcard-spot: 0.55; }
+.pcard-photo.is-cutout {
+  filter:
+    drop-shadow(1px 0 0 var(--pcard-rim)) drop-shadow(-1px 0 0 var(--pcard-rim))
+    drop-shadow(0 1px 0 var(--pcard-rim)) drop-shadow(0 -1px 0 var(--pcard-rim))
+    drop-shadow(0 0 6px var(--pcard-glow));
+}
+.pcard:has(.pcard-photo.is-cutout) {
+  background:
+    radial-gradient(ellipse 75% 70% at 50% 58%, rgba(100, 160, 240, var(--pcard-spot)) 0%, rgba(60, 110, 200, 0.18) 55%, transparent 80%),
+    linear-gradient(165deg, var(--color-navy) 0%, var(--color-navy-deep) 100%);
+}
+/* 머리 위를 어둡게 덮던 상단 그라데이션은 누끼 카드에서는 번호 가독성만 남기고 약하게 */
+.pcard:has(.pcard-photo.is-cutout)::before { height: 28%; opacity: 0.6; }
 .pcard-photo-empty {
   display: flex; align-items: center; justify-content: center;
   font-size: clamp(28px, 40cqw, 52px); font-weight: 700; opacity: 0.25;
@@ -13372,7 +13389,10 @@ body {
 .pcard-name {
   display: block;
   font-size: clamp(11px, 12cqw, 14px); font-weight: 700; line-height: 1.2;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* 긴 영문 이름은 말줄임(...) 대신 최대 2줄로 줄바꿈 (한글 이름은 짧아서 한 줄 그대로) */
+  white-space: normal; overflow: hidden;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  text-wrap: balance; overflow-wrap: anywhere;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 /* 득점 순위 */
