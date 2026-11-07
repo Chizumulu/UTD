@@ -111,9 +111,12 @@ const matchLineups = {
     recentHistory: [
       { comp: "26/27 시즌 NRFA 리그 원 1주차", score: "치주물루 3 : 1 치하메", result: "치주물루 승" },
       { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 23주차", score: "치하메 2 : 1 치주물루", result: "치하메 승" },
-      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 8주차", score: "치주물루 2 : 0 치하메", result: "치주물루 승" }
+      { comp: "2025-26 시즌 음벨와 노던 리전 풋볼 리그 8주차", score: "치주물루 2 : 0 치하메", result: "치주물루 승" },
+      { comp: "2024 NRFA 심소 프리미어 리그(8월 8일)", score: "치주물루 1 : 1 치하메", result: "무승부" },
+      { comp: "2024 NRFA 심소 프리미어 리그(7월 1일)", score: "치하메 2 : 0 치주물루", result: "치하메 승" },
+      { comp: "2024 카스텔컵 예선 플레이오프", score: "치주물루 0 : 3 치하메", result: "치하메 승" }
     ],
-    historySummary: "최근 3경기 전적 2승 0무 1패로 우세"
+    historySummary: "최근 6경기 전적 2승 1무 3패"
   },
   round2: {
     formation: "4-2-3-1",
@@ -2585,7 +2588,7 @@ function computeH2HHistory() {
 
       const info = resolveH2HOpponent(oppRaw);
       const rec = ensure(info);
-      applyResult(rec, myGoals, oppGoals, { source, roundKey, comp: h.comp, scoreText });
+      applyResult(rec, myGoals, oppGoals, { source, roundKey, comp: h.comp, scoreText, resultText: h.result || '' });
     });
   }
 

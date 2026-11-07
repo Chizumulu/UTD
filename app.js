@@ -17136,6 +17136,36 @@
     return (list && list.length) ? { list, historySummary: entry.historySummary || '' } : null;
   }
 
+  // 전적 비교 창의 "상대전적(이전경기)" 목록 — 치주물루가 낀 경기에서만 만듭니다.
+  // 주차 키(roundKey)별 메모를 찾는 대신 computeH2HHistory()(상대팀별 통산 기록)에서 이 상대를 찾아,
+  // 과거 시즌·컵대회 기록(source가 'season'이 아닌 것)을 모두 보여줍니다.
+  // 이번 시즌(26/27) 경기는 바로 위 "이번 시즌 맞대결"에 이미 나오므로 제외하고, 같은 경기가 여러 라운드 메모에
+  // 중복으로 적혀 있어도 한 번만 나오게 합니다. 치주물루가 없는 매치업은 null → 아무것도 표시하지 않습니다.
+  function getPastSeasonMeetingsForMatch(homeEn, homeKo, awayEn, awayKo) {
+    const homeIsMine = isMyTeamName(homeEn, homeKo);
+    const awayIsMine = isMyTeamName(awayEn, awayKo);
+    if (!homeIsMine && !awayIsMine) return null;
+    if (typeof computeH2HHistory !== 'function') return null;
+    const oppEn = homeIsMine ? awayEn : homeEn;
+    const oppKo = homeIsMine ? awayKo : homeKo;
+    const rec = computeH2HHistory().find(r => r.nameEn === oppEn || r.nameKo === oppKo);
+    if (!rec) return null;
+
+    const seen = new Set();
+    const list = [];
+    rec.matches.forEach(m => {
+      if (m.source === 'season') return;                       // 이번 시즌 경기(확정 스코어)는 위 블록에 있음
+      if (/^\s*26\/27/.test(m.comp || '')) return;             // 메모에 적힌 이번 시즌 경기도 제외
+      const dupKey = (m.comp || '') + '|' + (m.scoreText || '');
+      if (seen.has(dupKey)) return;
+      seen.add(dupKey);
+      const result = m.resultText
+        || (m.result === 'W' ? '치주물루 승' : (m.result === 'D' ? '무승부' : '상대 승'));
+      list.push({ comp: m.comp, score: m.scoreText, result });
+    });
+    return list.length ? { list, historySummary: '' } : null;
+  }
+
   // recentHistory 한 건의 "result" 텍스트(예: "치주물루 승", "치주물루 승(몰수승)", "무승부",
   // "심보웨 승")를 우리 팀 기준 W/D/L로 분류합니다.
   function classifyPriorResult(resultText) {
@@ -17499,12 +17529,12 @@
         </div>
       </div>
       ${(!played && sixPointerInfo(homeEn, awayEn)) ? `<div class="mc-six-banner"><span class="six-tag">${isKorean ? '6점짜리 경기' : '6-pointer'}</span><span class="mc-six-text">${sixNoteText(sixPointerInfo(homeEn, awayEn))}</span></div>` : ''}
-      <div class="mc-compare-layout">
-        ${played ? '' : `<div class="mc-compare-right">
+      <div class="mc-compare-layout${played ? ' mc-layout-played' : ''}">
+        ${played ? '' : `<div class="mc-compare-right mc-col-ai">
           ${aiPredictionBlockHtml(homeEn, homeKo, awayEn, awayKo, home, away)}
           ${mcTitleImpactContainerHtml(homeEn, awayEn, played)}
         </div>`}
-        <div class="mc-compare-left">
+        <div class="mc-compare-left mc-col-stats">
           ${played ? `<div class="mc-played-note lbl" data-en="Standings and form shown are as of now, not at kickoff." data-ko="순위와 폼은 경기 당시가 아닌 현재 기준이에요.">${isKorean ? '순위와 폼은 경기 당시가 아닌 현재 기준이에요.' : 'Standings and form shown are as of now, not at kickoff.'}</div>` : ''}
           <div class="mc-stats-block">
             ${mcStatRow('Points', '승점', home.team.pts, away.team.pts, true)}
@@ -17522,16 +17552,20 @@
               <div class="mc-form-side">${mcFormDotsHtml(away.form)}</div>
             </div>
           </div>
+        </div>
+        <div class="mc-compare-meet mc-col-meet">
           <div class="mc-h2h-block">
             <div class="mc-form-title lbl" data-en="Season Head-to-Head" data-ko="이번 시즌 맞대결">${isKorean ? '이번 시즌 맞대결' : 'Season Head-to-Head'}</div>
             ${h2hHtml}
           </div>
-          ${priorMeetingsSectionHtml(getPriorMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey))}
+          ${priorMeetingsSectionHtml(getPastSeasonMeetingsForMatch(homeEn, homeKo, awayEn, awayKo))}
           ${matchRelatedHtml(homeEn, homeKo, awayEn, awayKo, roundKey)}
         </div>
       </div>
     `;
 
+    const mcModalBox = document.querySelector('#matchCompareModal .match-compare-modal-content');
+    if (mcModalBox) mcModalBox.classList.toggle('mc-modal-played', !!played);
     showModalAnimated(document.getElementById('matchCompareModal'));
     mcLoadTitleImpact(homeEn, awayEn);
   }
