@@ -16549,3 +16549,33 @@ html.celebrate-lock { overflow: hidden; }
 :root[data-theme="dark"] .venue-mode-btn.active { color: var(--color-teal-light); }
 .ti-sort-arrow.ti-sort-idle { opacity: 0.6; }
 .ti-club-table th.ti-sorted .ti-sort-arrow { opacity: 1; }
+
+/* ===== 구단 위치 > 원정거리 보기: 모바일 대응 ===== */
+/* flex 컨테이너 안에서 넓은 표 때문에 화면 전체가 옆으로 밀리지 않도록 */
+#venuesView { min-width: 0; max-width: 100%; }
+#venueModeTravel, #venueModeMap { min-width: 0; max-width: 100%; }
+.ti-card, .ti-body { min-width: 0; max-width: 100%; }
+.ti-table-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 600px) {
+  /* 다른 화면의 .ti-card 모바일 패딩(14px 16px)이 이 카드에도 겹쳐 제목 띠가 안쪽으로 들어가던 문제 */
+  .scatter-card.ti-card { padding: 0; margin-bottom: 12px; }
+  .ti-body { padding: 12px 12px 14px; }
+  .ti-verdict { font-size: 13.5px; padding: 9px 11px; }
+  .ti-meta { font-size: 11.5px; }
+  /* 표: 글자·여백을 줄이고, 구단명 열은 두 줄까지 줄바꿈해서 숫자 열이 더 많이 보이게 */
+  .ti-table th, .ti-table td { padding: 6px 4px; }
+  .ti-club-table { min-width: 0; font-size: 11.5px; }
+  .ti-club-table th, .ti-club-table td { font-size: 11.5px; }
+  .ti-club-table thead th { padding: 3px 2px 5px; }
+  .ti-club-table .ti-sort-btn { padding: 3px 4px; font-size: 11px; }
+  .ti-club-table .ti-sort-btn small { font-size: 9.5px; }
+  .ti-club-table .ti-club-name { width: 92px; min-width: 92px; max-width: 92px; white-space: normal; line-height: 1.25; padding-left: 2px; }
+  .ti-club-team { gap: 5px; }
+  .ti-club-logo { width: 16px; height: 16px; }
+  .ti-club-table td { padding-left: 5px; padding-right: 5px; }
+  /* 산점도 글자가 화면 폭에 맞춰 줄어들며 너무 작아지는 것 보정 */
+  .ti-chart svg text { font-size: 21px; }
+  .ti-sub { font-size: 12.5px; }
+  .ti-legend { gap: 8px 12px; }
+  .venue-mode-btn { padding: 9px 8px; font-size: 13px; }
+}
