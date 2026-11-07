@@ -9220,9 +9220,14 @@
         if (m.isBye || m.isScheduled || typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
         const isHome = m.homeEn === nameEn || m.homeKo === nameKo;
         const isAway = m.awayEn === nameEn || m.awayKo === nameKo;
+        // 홈구장을 같이 쓰는 맞대결(더비)은 양 팀 모두 홈 경기로 셉니다.
+        const sharedVenue = (typeof isSharedVenueMatch === 'function') && isSharedVenueMatch(m.homeEn, m.awayEn);
         if (isHome) {
           home.played++;
           if (m.homeScore > m.awayScore) home.won++;
+        } else if (isAway && sharedVenue) {
+          home.played++;
+          if (m.awayScore > m.homeScore) home.won++;
         } else if (isAway) {
           away.played++;
           if (m.awayScore > m.homeScore) away.won++;
@@ -10648,7 +10653,8 @@
         if (!m.homeEn || !m.awayEn) return;
         if (m.postponed || typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
         if (counts[m.homeEn]) counts[m.homeEn].home += 1;
-        if (counts[m.awayEn]) counts[m.awayEn].away += 1;
+        // 홈구장을 같이 쓰는 두 팀의 맞대결(더비)은 어느 쪽도 원정을 간 게 아니므로 양 팀 모두 홈 경기로 셉니다.
+        if (counts[m.awayEn]) counts[m.awayEn][((typeof isSharedVenueMatch === 'function') && isSharedVenueMatch(m.homeEn, m.awayEn)) ? 'home' : 'away'] += 1;
       });
     });
     return counts;
@@ -10685,23 +10691,30 @@
         if (m.postponed || typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
 
         const wantHome = filterType === 'home';
-        const teamName = wantHome ? m.homeEn : m.awayEn;
-        const s = state[teamName];
-        if (!s) return;
+        // 구장 공유 경기(더비)는 양 팀 모두 '홈' 경기로 셉니다: 홈 탭에는 두 팀 다 들어가고, 원정 탭에서는 빠집니다.
+        const shared = (typeof isSharedVenueMatch === 'function') && isSharedVenueMatch(m.homeEn, m.awayEn);
+        const sides = [];
+        if (wantHome) {
+          sides.push([m.homeEn, m.homeScore, m.awayScore]);
+          if (shared) sides.push([m.awayEn, m.awayScore, m.homeScore]);
+        } else if (!shared) {
+          sides.push([m.awayEn, m.awayScore, m.homeScore]);
+        }
+        sides.forEach(([teamName, myScore, oppScore]) => {
+          const s = state[teamName];
+          if (!s) return;
 
-        const myScore = wantHome ? m.homeScore : m.awayScore;
-        const oppScore = wantHome ? m.awayScore : m.homeScore;
+          s.played += 1;
+          s.gf += myScore;
+          s.ga += oppScore;
 
-        s.played += 1;
-        s.gf += myScore;
-        s.ga += oppScore;
+          let result;
+          if (myScore > oppScore) { s.won += 1; result = 'W'; }
+          else if (myScore < oppScore) { s.lost += 1; result = 'L'; }
+          else { s.drawn += 1; result = 'D'; }
 
-        let result;
-        if (myScore > oppScore) { s.won += 1; result = 'W'; }
-        else if (myScore < oppScore) { s.lost += 1; result = 'L'; }
-        else { s.drawn += 1; result = 'D'; }
-
-        s.form.push(result);
+          s.form.push(result);
+        });
       });
     });
 
@@ -12584,7 +12597,8 @@
           result: m.awayScore > m.homeScore ? 'W' : (m.awayScore < m.homeScore ? 'L' : 'D'),
           gf: m.awayScore,
           ga: m.homeScore,
-          home: false
+          // 구장 공유 경기(더비)는 양 팀 모두 홈 경기로 취급합니다.
+          home: (typeof isSharedVenueMatch === 'function') && isSharedVenueMatch(m.homeEn, m.awayEn)
         });
       }
     }

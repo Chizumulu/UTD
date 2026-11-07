@@ -1555,7 +1555,7 @@ const matchDetails = {
     { match: "라이플리 2 : 치바비 1", scorersHome: "BLESSINGS CHINYAMA, PEARSON NYIRENDA", scorersAway: "CLIFFORD CHISALE" },
     { match: "에우티니 2 : 루비리 3", scorersHome: "MAVUTO SHABA, JACK GAMA", scorersAway: "THURASON SHABA, SILVESTER SMART, KING MKANDAWIRE" },
     { match: "젠다 3 : 치폴로폴로 2", scorersHome: "WYSON NYIRENDA (3골)", scorersAway: "TYSON KAUNDA, ZIKANI KASAMBALA" },
-    { match: "마푸 5 : 비전 1", scorersHome: "NORMAN NDLOVU (4골), PRECIOUS MWANZA", scorersAway: "BENJAMIN KALINGA" },
+    { match: "마푸 5 : 비전 1", scorersHome: "NORMAN NDLOVU (4골), PRECIOUS MWANZA", scorersAway: "BENJAMIN KALINGA (자책골)" },
     { match: "루베 0 : 칠룸바 0", scorersHome: "없음", scorersAway: "없음" }
   ],
   // 연기경기주차(round16)도 전체 경기가 종료되어 roundsData.round16으로 옮겨졌으므로 matchDetails.round16을 추가했습니다.
@@ -1632,8 +1632,8 @@ const scheduledRounds = {
   //   30주차(round31)는 날짜 미정이라 대진만 있습니다(1차전 홈/원정 반전). 킥오프 시간은 15:00으로 일괄 입력한 임시값이니, 확정되면 경기별로 수정해주세요.
   // ── 정규 16주차 (엑셀 "Week 16") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round17: [
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-07", kickoffTime: "15:00" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-07", kickoffTime: "15:00" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-07", kickoffTime: "15:00", homeScore: 1, awayScore: 2, scorersHome: "BENJAMIN KALINGA", scorersAway: "ESAU DOBBIE, TEMWA NDHLOVU" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-07", kickoffTime: "15:00", homeScore: 1, awayScore: 4, scorersHome: "FORTUNE CHIRAMBO", scorersAway: "HENDERSON KANYIKA, AUSTINE NGOMA, PETER LUNGU, CHARLES MANDA" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", postponed: true },
@@ -2010,7 +2010,7 @@ const roundsData = {
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 2, awayScore: 1, scorersHome: "BLESSINGS CHINYAMA, PEARSON NYIRENDA", scorersAway: "CLIFFORD CHISALE" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-10-17", kickoffTime: "15:00", homeScore: 2, awayScore: 3, scorersHome: "MAVUTO SHABA, JACK GAMA", scorersAway: "THURASON SHABA, SILVESTER SMART, KING MKANDAWIRE" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 3, awayScore: 2, scorersHome: "WYSON NYIRENDA (3골)", scorersAway: "TYSON KAUNDA, ZIKANI KASAMBALA" },
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 5, awayScore: 1, scorersHome: "NORMAN NDLOVU (4골), PRECIOUS MWANZA", scorersAway: "BENJAMIN KALINGA" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 5, awayScore: 1, scorersHome: "NORMAN NDLOVU (4골), PRECIOUS MWANZA", scorersAway: "BENJAMIN KALINGA (자책골)" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-18", kickoffTime: "15:00", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", postponed: true, movedToWeek: 16, changed: true },
     // 치주물루 유나이티드 FC는 15주차 휴식(bye)입니다.
@@ -3091,6 +3091,8 @@ const nameAliases = {
   "NORMAN NDHLOVU": "NORMAN NDLOVU",
   // 친테체 선수단 명단 기준 철자로 통일
   "ESSAU DOBIE": "ESAU DOBBIE",
+  // 2026-11-07: 실시간 기록에서 "Easu Dobbie"로 들어온 표기도 같은 선수로 통일
+  "EASU DOBBIE": "ESAU DOBBIE",
   // 루비리 선수단 명단 기준 철자로 통일
   "PHILIMON PHIRI": "PHILLIMON PHIRI",
   "TYSON SOKO": "TYSON LUSO SOKO",
@@ -3230,6 +3232,7 @@ const playerDirectory = {
   "WATIPA NYIRENDA": { nameKo: "와티파 니렌다", nameEn: "Watipa Nyirenda" },
   "PHILLIMON PHIRI": { nameKo: "필리몬 피리", nameEn: "Phillimon Phiri" },
   "SOLOMON MANDA": { nameKo: "솔로몬 만다", nameEn: "Solomon Manda" },
+  "CHARLES MANDA": { nameKo: "찰스 만다", nameEn: "Charles Manda" },
   "THURASON SHABA": { nameKo: "투라손 샤바", nameEn: "Thurason Shaba" },
   "BLESSINGS NYASULU": { nameKo: "블레싱스 니야술루", nameEn: "Blessings Nyasulu" },
   "ALEXANDER CHAVULA": { nameKo: "앨릭 차불라", nameEn: "Alexander Chavula" },
@@ -4197,7 +4200,10 @@ const HOME_AWAY_BASELINE_MAX = 1.8; // 홈 배율 상한(극단적인 쏠림 방
 // 표본 수(n)에 비례해 "일반적인 축구 리그" prior와 섞어(축소추정) 반환합니다.
 // n=0(개막 전)이면 그대로 prior 비율을 반환합니다.
 function computeHomeAwayBaselineRatio() {
-  const matches = (typeof collectPlayedMatches === 'function') ? collectPlayedMatches() : [];
+  // 구장 공유 경기(더비)는 홈/원정 득점 비율을 재는 표본에서 제외합니다(어느 쪽도 원정이 아님).
+  const matches = (typeof collectPlayedMatches === 'function')
+    ? collectPlayedMatches().filter(m => !isSharedVenueMatch(m.homeEn, m.awayEn))
+    : [];
   const n = matches.length;
 
   let rawHomeRatio = HOME_AWAY_BASELINE_PRIOR_HOME;
@@ -4656,6 +4662,21 @@ const ITERATIVE_STRENGTH_RAW_MAX = 4;
 
 // 지금까지 끝난 모든 경기를 { homeEn, awayEn, homeScore, awayScore } 목록으로 모읍니다.
 // (roundsData의 확정 라운드 + scheduledRounds에 스코어만 먼저 채워진 경기까지 포함)
+// ===== 홈구장 공유 경기(더비) 판별 =====
+// 두 팀의 현재 홈구장 좌표(leagueData[].venue)가 같으면 "구장 공유 경기"입니다
+// (예: 치바비 리얼 스타즈 vs 루베 마스터즈 — 둘 다 치바비 그라운드 사용).
+// 팀 이름을 하드코딩하지 않고 좌표로 자동 판별하므로, 나중에 다른 팀이 구장을
+// 공유하게 돼도 이 함수는 고칠 필요가 없습니다.
+// 이런 경기는 어느 쪽도 "원정"을 간 것이 아니므로, 홈/원정 지수 추정에서는
+// 양 팀 모두 "홈 경기" 1경기로 셉니다(원정 경기 수는 1경기 줄어듭니다).
+function isSharedVenueMatch(homeEn, awayEn) {
+  if (typeof leagueData === 'undefined') return false;
+  const a = leagueData.find(t => t.nameEn === homeEn);
+  const b = leagueData.find(t => t.nameEn === awayEn);
+  if (!a || !b || !a.venue || !b.venue) return false;
+  return a.venue.lat === b.venue.lat && a.venue.lng === b.venue.lng;
+}
+
 function collectPlayedMatches() {
   const roundKeysSorted = Object.keys(roundsData).sort((a, b) => {
     return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
@@ -4692,11 +4713,27 @@ function computeIterativeStrengthEstimates(matches, teamNames, homeBaseline, awa
     homePlayed[n] = 0; awayPlayed[n] = 0;
   });
 
-  const validMatches = matches.filter(m => homePlayed[m.homeEn] !== undefined && awayPlayed[m.awayEn] !== undefined);
-  validMatches.forEach(m => {
-    homePlayed[m.homeEn] += 1;
-    awayPlayed[m.awayEn] += 1;
+  // 경기 하나를 "팀 시점의 관측(obs)" 두 개로 풀어서 다룹니다.
+  //   venue    : 그 팀이 득점/실점한 장소 유형('home' | 'away')
+  //   oppVenue : 상대 팀이 그 경기에서 서 있던 장소 유형 — 상대의 어떤 지수를 쓸지 결정
+  // 일반 경기는 (홈팀: home/상대 away), (원정팀: away/상대 home)로 기존과 완전히 같습니다.
+  // 구장 공유 경기(isSharedVenueMatch)는 양 팀 모두 자기 홈구장에서 뛴 것으로 보아
+  // (둘 다 home/상대도 home) 홈 경기 1경기씩으로만 셉니다 — 원정 경기는 세지 않습니다.
+  const obs = [];
+  matches.forEach(m => {
+    if (homePlayed[m.homeEn] === undefined || awayPlayed[m.awayEn] === undefined) return;
+    if (isSharedVenueMatch(m.homeEn, m.awayEn)) {
+      obs.push({ team: m.homeEn, opp: m.awayEn, gf: m.homeScore, ga: m.awayScore, venue: 'home', oppVenue: 'home' });
+      obs.push({ team: m.awayEn, opp: m.homeEn, gf: m.awayScore, ga: m.homeScore, venue: 'home', oppVenue: 'home' });
+    } else {
+      obs.push({ team: m.homeEn, opp: m.awayEn, gf: m.homeScore, ga: m.awayScore, venue: 'home', oppVenue: 'away' });
+      obs.push({ team: m.awayEn, opp: m.homeEn, gf: m.awayScore, ga: m.homeScore, venue: 'away', oppVenue: 'home' });
+    }
   });
+  const homeObs = obs.filter(o => o.venue === 'home');
+  const awayObs = obs.filter(o => o.venue === 'away');
+  homeObs.forEach(o => { homePlayed[o.team] += 1; });
+  awayObs.forEach(o => { awayPlayed[o.team] += 1; });
 
   function clampRaw(v) {
     return Math.min(ITERATIVE_STRENGTH_RAW_MAX, Math.max(ITERATIVE_STRENGTH_RAW_MIN, v));
@@ -4707,44 +4744,50 @@ function computeIterativeStrengthEstimates(matches, teamNames, homeBaseline, awa
     if (m > 0) teamNames.forEach(n => { obj[n] = clampRaw(obj[n] / m); });
   }
 
-  if (validMatches.length) {
+  if (obs.length) {
     for (let iter = 0; iter < ITERATIVE_STRENGTH_ITERATIONS; iter++) {
-      // 1) homeAttack — "이 팀이 홈에서 넣은 골"을, 그 상대의 (지금까지 추정된) awayDefense로 나눔
+      // 1) homeAttack — "이 팀이 홈에서 넣은 골"을, 상대의 (지금까지 추정된) 수비 지수로 나눔
+      //    (상대가 원정이면 awayDefense, 구장 공유 경기처럼 상대도 홈이면 homeDefense)
       const sumGoalsHome = {}, sumExpHome = {};
       teamNames.forEach(n => { sumGoalsHome[n] = 0; sumExpHome[n] = 0; });
-      validMatches.forEach(m => {
-        sumGoalsHome[m.homeEn] += m.homeScore;
-        sumExpHome[m.homeEn] += homeBaseline * awayDefense[m.awayEn];
+      homeObs.forEach(o => {
+        const oppDef = o.oppVenue === 'home' ? homeDefense[o.opp] : awayDefense[o.opp];
+        sumGoalsHome[o.team] += o.gf;
+        sumExpHome[o.team] += homeBaseline * oppDef;
       });
       teamNames.forEach(n => { homeAttack[n] = sumExpHome[n] > 0 ? sumGoalsHome[n] / sumExpHome[n] : 1; });
       normalize(homeAttack);
 
-      // 2) awayDefense — "이 팀이 원정에서 내준 골"을, 그 상대의 (갱신된) homeAttack으로 나눔
+      // 2) awayDefense — "이 팀이 원정에서 내준 골"을, 그 상대(홈팀)의 (갱신된) homeAttack으로 나눔
       const sumConcededAway = {}, sumExpAwayDef = {};
       teamNames.forEach(n => { sumConcededAway[n] = 0; sumExpAwayDef[n] = 0; });
-      validMatches.forEach(m => {
-        sumConcededAway[m.awayEn] += m.homeScore;
-        sumExpAwayDef[m.awayEn] += homeBaseline * homeAttack[m.homeEn];
+      awayObs.forEach(o => {
+        sumConcededAway[o.team] += o.ga;
+        sumExpAwayDef[o.team] += homeBaseline * homeAttack[o.opp];
       });
       teamNames.forEach(n => { awayDefense[n] = sumExpAwayDef[n] > 0 ? sumConcededAway[n] / sumExpAwayDef[n] : 1; });
       normalize(awayDefense);
 
-      // 3) awayAttack — "이 팀이 원정에서 넣은 골"을, 그 상대의 (지금까지 추정된) homeDefense로 나눔
+      // 3) awayAttack — "이 팀이 원정에서 넣은 골"을, 그 상대(홈팀)의 (지금까지 추정된) homeDefense로 나눔
       const sumGoalsAway = {}, sumExpAway = {};
       teamNames.forEach(n => { sumGoalsAway[n] = 0; sumExpAway[n] = 0; });
-      validMatches.forEach(m => {
-        sumGoalsAway[m.awayEn] += m.awayScore;
-        sumExpAway[m.awayEn] += awayBaseline * homeDefense[m.homeEn];
+      awayObs.forEach(o => {
+        sumGoalsAway[o.team] += o.gf;
+        sumExpAway[o.team] += awayBaseline * homeDefense[o.opp];
       });
       teamNames.forEach(n => { awayAttack[n] = sumExpAway[n] > 0 ? sumGoalsAway[n] / sumExpAway[n] : 1; });
       normalize(awayAttack);
 
-      // 4) homeDefense — "이 팀이 홈에서 내준 골"을, 그 상대의 (갱신된) awayAttack으로 나눔
+      // 4) homeDefense — "이 팀이 홈에서 내준 골"을, 상대 공격 지수로 나눔
+      //    (상대가 원정이면 awayBaseline*awayAttack, 구장 공유 경기처럼 상대도 홈이면 homeBaseline*homeAttack)
       const sumConcededHome = {}, sumExpHomeDef = {};
       teamNames.forEach(n => { sumConcededHome[n] = 0; sumExpHomeDef[n] = 0; });
-      validMatches.forEach(m => {
-        sumConcededHome[m.homeEn] += m.awayScore;
-        sumExpHomeDef[m.homeEn] += awayBaseline * awayAttack[m.awayEn];
+      homeObs.forEach(o => {
+        const oppExp = o.oppVenue === 'home'
+          ? homeBaseline * homeAttack[o.opp]
+          : awayBaseline * awayAttack[o.opp];
+        sumConcededHome[o.team] += o.ga;
+        sumExpHomeDef[o.team] += oppExp;
       });
       teamNames.forEach(n => { homeDefense[n] = sumExpHomeDef[n] > 0 ? sumConcededHome[n] / sumExpHomeDef[n] : 1; });
       normalize(homeDefense);
@@ -5653,7 +5696,10 @@ function _computeAiPredictionTrackRecordUncached() {
   leagueData.forEach(t => {
     state[t.nameEn] = {
       home: { played: 0, gf: 0, ga: 0 },
-      away: { played: 0, gf: 0, ga: 0 }
+      away: { played: 0, gf: 0, ga: 0 },
+      // 구장 공유 경기(더비): 홈/원정 어느 쪽에도 넣지 않고 따로 쌓습니다
+      // (리그 평균 득점·'기록 유무' 계산에만 사용, 홈/원정 배율 추정에서는 제외).
+      shared: { played: 0, gf: 0, ga: 0 }
     };
   });
   // 반복 연산(SOS 보정)에 쓸, 그 라운드 '직전'까지 치러진 경기 목록입니다.
@@ -5739,8 +5785,8 @@ function _computeAiPredictionTrackRecordUncached() {
   function strengthsFromState() {
     let totalGoals = 0, totalGames = 0;
     Object.values(state).forEach(s => {
-      totalGoals += s.home.gf + s.away.gf;
-      totalGames += s.home.played + s.away.played;
+      totalGoals += s.home.gf + s.away.gf + s.shared.gf;
+      totalGames += s.home.played + s.away.played + s.shared.played;
     });
     const leagueAvgGoals = totalGames > 0 ? totalGoals / totalGames : 1.3;
     const { homeRatio, awayRatio } = homeAwayBaselineFromState();
@@ -5817,8 +5863,8 @@ function _computeAiPredictionTrackRecordUncached() {
 
       const homeState = state[m.homeEn];
       const awayState = state[m.awayEn];
-      const homeHasHistory = homeState && (homeState.home.played + homeState.away.played) > 0;
-      const awayHasHistory = awayState && (awayState.home.played + awayState.away.played) > 0;
+      const homeHasHistory = homeState && (homeState.home.played + homeState.away.played + homeState.shared.played) > 0;
+      const awayHasHistory = awayState && (awayState.home.played + awayState.away.played + awayState.shared.played) > 0;
       // 두 팀 다 이전 경기 기록이 전혀 없는 개막 라운드는 사실상
       // "홈 어드밴티지만 반영된" 예측이라 통계에서는 참고용으로만 취급합니다.
       const lowConfidence = !(homeHasHistory && awayHasHistory);
@@ -5994,8 +6040,13 @@ function _computeAiPredictionTrackRecordUncached() {
       if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
       const home = state[m.homeEn], away = state[m.awayEn];
       if (!home || !away) return;
-      home.home.played += 1; home.home.gf += m.homeScore; home.home.ga += m.awayScore;
-      away.away.played += 1; away.away.gf += m.awayScore; away.away.ga += m.homeScore;
+      if (isSharedVenueMatch(m.homeEn, m.awayEn)) {
+        home.shared.played += 1; home.shared.gf += m.homeScore; home.shared.ga += m.awayScore;
+        away.shared.played += 1; away.shared.gf += m.awayScore; away.shared.ga += m.homeScore;
+      } else {
+        home.home.played += 1; home.home.gf += m.homeScore; home.home.ga += m.awayScore;
+        away.away.played += 1; away.away.gf += m.awayScore; away.away.ga += m.homeScore;
+      }
       // 다음 라운드의 반복 연산(SOS 보정)이 이번 라운드 경기까지 포함해서
       // 다시 계산되도록, 여기서도 함께 누적합니다(walk-forward).
       playedSoFar.push({ homeEn: m.homeEn, awayEn: m.awayEn, homeScore: m.homeScore, awayScore: m.awayScore });
