@@ -5444,6 +5444,100 @@
     return out;
   }
 
+  // ===== 메인 미니 순위표 라이브 반영 =====
+  // 중계창(라이브 티커)에 떠 있는 경기의 현재 스코어를 순위표에 임시로 반영합니다.
+  //  - 승리 중이면 승 +1, 무승부 중이면 무 +1, 패배 중이면 패 +1, 득점/실점도 현재 스코어만큼 더해 다시 정렬합니다.
+  //  - 반영 대상은 "중계창이 열려 있고(킥오프~4시간) data.js에 최종 스코어가 아직 입력되지 않은 경기"뿐입니다.
+  //    경기가 끝난 뒤 data.js에 결과를 올리면(= leagueData에 이미 합산됨) 그 경기는 자동으로 빠져 평소 순위표로 돌아갑니다.
+  let miniLiveSignature = '';
+
+  // 같은 홈/원정 경기에 대해 data.js(scheduledRounds/roundsData)에 이미 최종 스코어가 있는지.
+  // 같은 팀끼리의 지난 맞대결은 제외하고, 킥오프가 이미 지난 경기 중 가장 최근 것만 봅니다.
+  function leagueFinalScoreInData(homeEn, awayEn) {
+    const now = Date.now();
+    let best = null, bestMs = null;
+    for (const source of [
+      (typeof scheduledRounds !== 'undefined') ? scheduledRounds : null,
+      (typeof roundsData !== 'undefined') ? roundsData : null
+    ]) {
+      if (!source) continue;
+      for (const roundKey in source) {
+        const round = source[roundKey];
+        if (!Array.isArray(round)) continue;
+        for (const m of round) {
+          if (m.postponed || m.homeEn !== homeEn || m.awayEn !== awayEn) continue;
+          const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+          if (!ms || ms > now) continue;
+          if (bestMs === null || ms > bestMs) { best = m; bestMs = ms; }
+        }
+      }
+    }
+    return !!best && typeof best.homeScore === 'number' && typeof best.awayScore === 'number';
+  }
+
+  function getMiniLiveMatches() {
+    const out = [];
+    const seen = new Set();
+    (leagueLiveRenderedCache || []).forEach(m => {
+      if (!m || !isLeagueMatchInLiveWindow(m)) return;
+      const homeEn = resolveLeagueTeamNameEn(m.homeTeam);
+      const awayEn = resolveLeagueTeamNameEn(m.awayTeam);
+      const hs = (m.score && typeof m.score.home === 'number') ? m.score.home : null;
+      const as = (m.score && typeof m.score.away === 'number') ? m.score.away : null;
+      if (!homeEn || !awayEn || hs === null || as === null) return;
+      if (leagueFinalScoreInData(homeEn, awayEn)) return; // 결과가 올라왔으면 라이브 반영 종료
+      const key = homeEn + '|' + awayEn;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ homeEn, awayEn, hs, as, ended: !!m.ended || m.status === 'full_time' });
+    });
+    return out;
+  }
+
+  function miniLiveSignatureOf(list) {
+    return list.map(x => x.homeEn + ':' + x.hs + '-' + x.as + (x.ended ? 'F' : '')).sort().join('|');
+  }
+
+  // leagueData 복사본에 라이브 스코어를 더해 순위표와 같은 기준(승점>골득실>다득점>승자승)으로 정렬합니다.
+  // live[팀] = { gf, ga, oppEn, ended, state: 'W' | 'D' | 'L' }
+  function getLiveProjectedRanking(liveMatches) {
+    const rows = leagueData.map(t => Object.assign({}, t));
+    const byName = {};
+    rows.forEach(r => { byName[r.nameEn] = r; });
+    const h2hList = getLeagueMatchesForTiebreak();
+    const live = {};
+    liveMatches.forEach(x => {
+      const home = byName[x.homeEn], away = byName[x.awayEn];
+      if (!home || !away) return;
+      h2hList.push({ homeEn: x.homeEn, awayEn: x.awayEn, homeScore: x.hs, awayScore: x.as });
+      [[home, x.hs, x.as, x.awayEn], [away, x.as, x.hs, x.homeEn]].forEach(([me, gf, ga, oppEn]) => {
+        me.played = (me.played || 0) + 1;
+        me.goalsFor = (me.goalsFor || 0) + gf;
+        me.goalsAgainst = (me.goalsAgainst || 0) + ga;
+        if (gf > ga) me.won = (me.won || 0) + 1;
+        else if (gf < ga) me.lost = (me.lost || 0) + 1;
+        else me.drawn = (me.drawn || 0) + 1;
+        live[me.nameEn] = { gf, ga, oppEn, ended: x.ended, state: gf > ga ? 'W' : (gf < ga ? 'L' : 'D') };
+      });
+    });
+    rows.forEach(r => {
+      r.pts = (r.won * 3) + (r.drawn * 1);
+      r.gd = r.goalsFor - r.goalsAgainst;
+    });
+    const teams = rankByTiebreakers(rows, h2hList, {
+      id: r => r.nameEn, pts: r => r.pts, gf: r => r.goalsFor, ga: r => r.goalsAgainst
+    });
+    return { teams, live };
+  }
+
+  // 라이브 목록이 바뀌었을 때(득점, 종료, 결과 업로드로 인한 해제 등)만 미니 순위표를 다시 그립니다.
+  function syncMiniTableWithLive() {
+    if (typeof leagueData === 'undefined' || !document.getElementById('mainMiniTableBody')) return;
+    const sig = miniLiveSignatureOf(getMiniLiveMatches());
+    if (sig === miniLiveSignature) return;
+    renderMainMiniTable({ quiet: true });
+  }
+
   function renderLeagueLiveTicker(matches) {
     const wrap = document.getElementById('leagueLiveTicker');
     const scroller = document.getElementById('leagueLiveTickerScroller');
@@ -5455,6 +5549,7 @@
 
     // showView가 rank 화면 복귀 시 이 값 그대로 다시 그릴 수 있도록 최신 목록을 저장해둡니다.
     leagueLiveRenderedCache = matches;
+    syncMiniTableWithLive();
 
     // 라이브 창은 메인(순위) 화면에서만 노출합니다. 다른 탭에 있을 땐 경기가
     // 진행 중이어도 숨겨두고, rank 화면으로 돌아왔을 때 다시 그립니다(아래 showView 참고).
@@ -11932,8 +12027,10 @@
         <td class="rank-change-cell">${rankChangeHtml}</td>
         <td class="team team-clickable" onclick="goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')}">
           <img class="team-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}">
-          <span class="lbl" data-en="${team.nameEn}" data-ko="${team.nameKo}">${name}</span>
+          <span class="lbl team-name-full" data-en="${team.nameEn}" data-ko="${team.nameKo}">${name}</span>
+          <span class="lbl team-name-short" data-en="${team.nameEn.split(' ')[0]}" data-ko="${team.nameKo.split(' ')[0]}">${name.split(' ')[0]}</span>
         </td>
+        <td class="pts pts-m-cell">${ptsHtml}</td>
         <td>${team.played}</td>
         <td class="ha-count-cell"><span class="ha-count-h">${(haCounts[team.nameEn] || {}).home || 0}</span><span class="ha-count-sep">/</span><span class="ha-count-a">${(haCounts[team.nameEn] || {}).away || 0}</span></td>
         <td>${team.won}</td>
@@ -11942,7 +12039,7 @@
         <td>${team.goalsFor}</td>
         <td>${team.goalsAgainst}</td>
         <td class="${gdClass}">${team.gd}</td>
-        <td class="pts">${ptsHtml}</td>
+        <td class="pts pts-orig-cell">${ptsHtml}</td>
         <td class="form-cell">${formHtml}</td>
         <td class="next-opp-cell">${nextMatchHtml}</td>
       `;
@@ -11958,10 +12055,22 @@
   // ===== 메인 화면용 간략 순위표 (Mini League Table for Main view) =====
   // 상세 순위표(리그 순위 탭)와 달리 홈/원정/최근5 필터 없이 항상 시즌 전체 기준으로,
   // 순위/팀명/경기/승/무/패/득실차/승점 8개 열만 보여줍니다.
-  function renderMainMiniTable() {
+  function renderMainMiniTable(opts) {
     const tbody = document.getElementById('mainMiniTableBody');
     if (!tbody) return;
-    const processedData = getRankedTeams('all');
+    // 중계창이 열려 있고 결과가 아직 data.js에 없는 경기가 있으면, 현재 스코어를 반영한 임시 순위로 그립니다.
+    const liveMatches = getMiniLiveMatches();
+    miniLiveSignature = miniLiveSignatureOf(liveMatches);
+    let liveInfo = null;
+    let processedData;
+    if (liveMatches.length) {
+      const proj = getLiveProjectedRanking(liveMatches);
+      processedData = proj.teams;
+      liveInfo = Object.keys(proj.live).length ? proj.live : null;
+    }
+    if (!liveInfo) processedData = getRankedTeams('all');
+    const liveNote = document.getElementById('miniLiveNote');
+    if (liveNote) liveNote.style.display = liveInfo ? '' : 'none';
 
     tbody.innerHTML = processedData.map((team, index) => {
       const rank = index + 1;
@@ -11973,12 +12082,26 @@
       if (team.nameEn === 'Chizumulu United FC' || team.nameKo === '치주물루 유나이티드 FC') {
         trClass += 'my-team ';
       }
+      const lv = liveInfo ? liveInfo[team.nameEn] : null;
+      if (lv) trClass += 'is-live-row live-' + lv.state + ' ';
       const name = isKorean ? team.nameKo : team.nameEn;
       const nameShortKo = team.nameKo.split(' ')[0];
       const nameShortEn = team.nameEn.split(' ')[0];
       const nameShort = isKorean ? nameShortKo : nameShortEn;
       const gdClass = team.gd > 0 ? 'gd-pos' : (team.gd < 0 ? 'gd-neg' : 'gd-zero');
-      const rb = rollBaseline(team, rank);
+      // 라이브 칩: 진행 중이면 승리중/무승부중/패배중 + 현재 스코어, 종료됐지만 아직 결과가 안 올라왔으면 승리/무승부/패배
+      let liveChipHtml = '';
+      if (lv) {
+        const words = lv.ended
+          ? { W: ['Won', '승리'], D: ['Drew', '무승부'], L: ['Lost', '패배'] }
+          : { W: ['Winning', '승리중'], D: ['Drawing', '무승부중'], L: ['Losing', '패배중'] };
+        const w = words[lv.state];
+        const tip = isKorean
+          ? (lv.ended ? '경기 종료 · 최종 결과 반영 전' : '진행 중 경기 스코어를 반영한 임시 순위')
+          : (lv.ended ? 'Full time · final result not yet recorded' : 'Provisional standing based on the live score');
+        liveChipHtml = `<span class="mini-live-chip live-${lv.state}${lv.ended ? ' is-ended' : ''}" title="${tip}"><span class="mini-live-dot"></span><span class="lbl mini-live-word" data-en="${w[0]}" data-ko="${w[1]}">${isKorean ? w[1] : w[0]}</span><span class="mini-live-score">${lv.gf}-${lv.ga}</span></span>`;
+      }
+      const rb = liveInfo ? null : rollBaseline(team, rank);
       const rankHtml = rb ? rollSpan('mini:rank:' + team.nameEn, rb.rank, rank) : rank;
       const ptsHtml = rb ? rollSpan('mini:pts:' + team.nameEn, rb.pts, team.pts) : team.pts;
       return `
@@ -11987,7 +12110,7 @@
           <td class="team team-clickable" onclick="goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToTeamInfo('${team.nameEn.replace(/'/g, "\\'")}')}">
             <img class="team-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}">
             <span class="lbl team-name-full" data-en="${team.nameEn}" data-ko="${team.nameKo}">${name}</span>
-            <span class="lbl team-name-short" data-en="${nameShortEn}" data-ko="${nameShortKo}">${nameShort}</span>
+            <span class="lbl team-name-short" data-en="${nameShortEn}" data-ko="${nameShortKo}">${nameShort}</span>${liveChipHtml}
           </td>
           <td>${team.played}</td>
           <td>${team.won}</td>
@@ -11999,9 +12122,12 @@
     }).join('');
 
     attachImageFallback();
-    animateEntranceIn(tbody, 'tr', { stagger: 20 });
-    rollCommitSeen(processedData);
-    playNumberRolls(tbody);
+    if (!(opts && opts.quiet)) animateEntranceIn(tbody, 'tr', { stagger: 20 });
+    if (!liveInfo) {
+      // 임시(라이브) 순위는 "지난번에 본 순위"로 저장하지 않습니다.
+      rollCommitSeen(processedData);
+      playNumberRolls(tbody);
+    }
   }
 
   // ===== 순위표 이미지로 내보내기 (Export Standings as PNG) =====

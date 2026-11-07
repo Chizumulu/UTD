@@ -1836,6 +1836,7 @@
   #mainTable td:nth-child(8),
   #mainTable td:nth-child(9),
   #mainTable td:nth-child(10),
+  #mainTable td:nth-child(11),
   td.pts,
   .gd-pos,
   .gd-neg,
@@ -16318,4 +16319,158 @@ html.celebrate-lock { overflow: hidden; }
 }
 @media (prefers-reduced-motion: reduce) {
   .m-tabbar { transition: none; }
+}
+
+/* 리그 순위표: 풀네임/약어 두 가지를 그려두고, PC는 풀네임·모바일은 약어(치주물루/칠룸바 …)를 보여줌 */
+#mainTable .team-name-short { display: none; }
+/* 모바일 전용 승점 칸(팀 바로 오른쪽): PC에서는 숨기고 기존 위치의 승점 칸을 씀 */
+#mainTable .pts-m-th, #mainTable .pts-m-cell { display: none; }
+
+/* =============================================================
+   모바일 리그 순위표: 왼쪽(순위·팀) 고정 + 오른쪽 통계만 좌우 스크롤
+   - 순위(1열)와 팀(3열)이 왼쪽에 고정되고, 변동(2열)·경기·승·무·패… 는 옆으로 밀립니다.
+   - 변동(2열)은 스크롤하면 고정된 순위·팀 밑으로 들어가 사라지고, 팀 열이 순위 바로 옆에 붙습니다.
+   - 고정 칸은 뒤가 비치지 않도록 줄무늬/상위권/내 팀 배경색을 칸마다 따로 채웁니다.
+   ============================================================= */
+@media (max-width: 720px) {
+  /* table의 overflow:hidden은 sticky를 막으므로 clip(스크롤 영역을 만들지 않는 잘라내기)으로 교체 */
+  #mainTable {
+    overflow: visible;
+    overflow: clip;
+    width: max-content;
+    min-width: 100%;
+  }
+  /* 필터 알약·안내 문구는 표와 같이 밀려나지 않게 왼쪽에 고정 */
+  #rankTableScroller > .rank-filter-bar,
+  #rankTableScroller > .rank-form-note {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+  }
+  /* 왼쪽 가장자리 페이드는 고정 칸 위를 덮으므로 이 표에서는 끔 */
+  #rankTableFade.scroll-fade-wrap::before { display: none; }
+
+  /* 고정 칸 공통 */
+  #mainTable th:nth-child(1), #mainTable td:nth-child(1),
+  #mainTable th:nth-child(3), #mainTable td:nth-child(3) {
+    position: sticky;
+    z-index: 2;
+    background-color: var(--color-surface);
+  }
+  #mainTable th:nth-child(1), #mainTable th:nth-child(3) {
+    z-index: 3;
+    background-color: var(--color-navy);
+  }
+  #mainTable tbody tr:nth-child(even) td:nth-child(1),
+  #mainTable tbody tr:nth-child(even) td:nth-child(3) {
+    background-color: var(--color-bg-stripe);
+  }
+  #mainTable tr.rank-1 td:nth-child(1), #mainTable tr.rank-2 td:nth-child(1), #mainTable tr.rank-3 td:nth-child(1) {
+    background-color: var(--color-bg-rank-highlight);
+  }
+  #mainTable tr.rank-1 td:nth-child(3), #mainTable tr.rank-2 td:nth-child(3), #mainTable tr.rank-3 td:nth-child(3) {
+    background-color: color-mix(in srgb, var(--color-bg-rank-highlight) 45%, var(--color-surface));
+  }
+  #mainTable tr.my-team td:nth-child(1), #mainTable tr.my-team td:nth-child(3) {
+    background-color: var(--color-bg-myteam-1);
+  }
+  /* 행(tr)에 있던 승격/강등/내 팀 왼쪽 막대는 고정 칸에 가려지므로 첫 칸에 직접 그림 */
+  #mainTable tr.promo td:nth-child(1)   { box-shadow: inset 4px 0 0 var(--color-green); }
+  #mainTable tr.releg td:nth-child(1)   { box-shadow: inset 4px 0 0 var(--color-red); }
+  #mainTable tr.my-team td:nth-child(1) { box-shadow: inset 4px 0 0 var(--color-teal); }
+
+  /* 1열: 순위 */
+  #mainTable th:nth-child(1), #mainTable td:nth-child(1) {
+    left: 0;
+    width: 42px; min-width: 42px; max-width: 42px;
+    padding-left: 9px; padding-right: 2px;
+    box-sizing: border-box;
+  }
+  /* 2열: 변동 (고정 안 함 — 스크롤하면 순위·팀 밑으로 들어감) */
+  #mainTable th:nth-child(2), #mainTable td:nth-child(2) {
+    position: relative;
+    z-index: 1;
+  }
+  /* 3열: 팀 — 긴 이름은 말줄임 대신 줄바꿈 */
+  #mainTable th:nth-child(3), #mainTable td:nth-child(3) {
+    left: 42px;
+    width: 108px; min-width: 108px; max-width: 108px;
+    padding-left: 8px; padding-right: 6px;
+    box-sizing: border-box;
+  }
+  #mainTable td.team {
+    font-size: 14px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+  #mainTable td.team .team-logo {
+    width: 22px; height: 22px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  #mainTable td.team .team-name-full { display: none; }
+  #mainTable td.team .team-name-short {
+    display: inline-block;
+    max-width: 66px;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+  }
+  /* 좁은 고정 칸이라 내 팀 이름 옆 별표는 모바일 순위표에서만 숨김 */
+  #mainTable tr.my-team td.team::after { display: none; }
+
+  /* 열 순서(모바일): 순위·변동·팀 | 승점 · 경기 · 홈/원정 · 승 · 무 · 패 · 득점 · 실점 · 득실차 · 최근5 · 다음상대
+     → 승점 칸을 팀 바로 옆에 두고 원래 위치의 승점 칸은 숨김 */
+  #mainTable th.pts-m-th, #mainTable td.pts-m-cell { display: table-cell; }
+  #mainTable th.pts-orig-th, #mainTable td.pts-orig-cell { display: none; }
+
+  /* 옆으로 스크롤 중일 때만 고정 영역 오른쪽에 은은한 그림자로 경계 표시 */
+  #rankTableFade.show-left #mainTable td:nth-child(3),
+  #rankTableFade.show-left #mainTable th:nth-child(3) {
+    box-shadow: 6px 0 8px -6px rgba(0, 0, 0, 0.28);
+  }
+}
+
+
+/* =============================================================
+   메인 미니 순위표 실시간(라이브) 반영 표시
+   - 빨간 점(진행 중) + 승리중/무승부중/패배중 + 현재 스코어 칩, 승점 칸은 파란색 강조
+   ============================================================= */
+.mini-live-note {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 8px; padding: 7px 12px;
+  font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary);
+  background: var(--color-bg-stripe);
+  border: 1px solid var(--color-border-light);
+  border-radius: 10px;
+}
+.mini-live-dot {
+  display: inline-block; flex: none;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #e5392b;
+  box-shadow: 0 0 0 0 rgba(229, 57, 43, 0.5);
+  animation: miniLivePulse 1.6s ease-out infinite;
+}
+@keyframes miniLivePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(229, 57, 43, 0.5); }
+  70%  { box-shadow: 0 0 0 6px rgba(229, 57, 43, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(229, 57, 43, 0); }
+}
+.mini-live-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-left: 6px; padding: 1px 7px 1px 6px;
+  font-size: 11px; font-weight: 700; line-height: 1.5; white-space: nowrap;
+  border-radius: 999px; vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.mini-live-chip.live-W { color: #1f8a4c; background: rgba(46, 160, 90, 0.14); }
+.mini-live-chip.live-D { color: var(--color-text-muted); background: rgba(128, 138, 154, 0.18); }
+.mini-live-chip.live-L { color: #2f6fe4; background: rgba(47, 111, 228, 0.13); }
+.mini-live-chip.is-ended .mini-live-dot { background: var(--color-text-muted); animation: none; box-shadow: none; }
+.mini-rank-table tr.is-live-row td.pts { color: #2f6fe4; }
+@media (max-width: 600px) {
+  .mini-live-chip { margin-left: 4px; padding: 1px 5px; font-size: 10.5px; gap: 3px; }
+  .mini-live-chip .mini-live-word { display: none; }  /* 좁은 화면에서는 점 + 스코어만 */
+}
+@media (prefers-reduced-motion: reduce) {
+  .mini-live-dot { animation: none; }
 }

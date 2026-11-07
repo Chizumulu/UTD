@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '012',
-    data: '002',
-    app: '011',
+    style: '020',
+    data: '020',
+    app: '020',
     report: '001',
     archive: '200',
     predictWorker: '200',
@@ -750,6 +750,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="table-card-head">
   <h2 class="lbl" data-en="" data-ko=""></h2>
 </div>
+<div class="mini-live-note" id="miniLiveNote" style="display:none">
+  <span class="mini-live-dot"></span>
+  <span class="lbl" data-en="LIVE standings · includes current scores of matches in progress" data-ko="실시간 순위 · 진행 중인 경기의 현재 스코어를 반영한 임시 순위예요">실시간 순위 · 진행 중인 경기의 현재 스코어를 반영한 임시 순위예요</span>
+</div>
 <table id="mainMiniTable" class="mini-rank-table">
   <thead>
     <tr>
@@ -941,7 +945,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <table id="mainTable">
   <thead>
     <tr>
-      <th class="lbl" data-en="RANK" data-ko="순위">순위</th><th class="lbl rank-change-th" data-en="CHG" data-ko="변동">변동</th><th class="lbl" data-en="TEAMS" data-ko="팀">팀</th><th class="lbl" data-en="P" data-ko="경기">경기</th><th class="lbl ha-count-th" data-en="H/A" data-ko="홈/원정">홈/원정</th><th class="lbl" data-en="W" data-ko="승">승</th><th class="lbl" data-en="D" data-ko="무">무</th><th class="lbl" data-en="L" data-ko="패">패</th><th class="lbl" data-en="F" data-ko="득점">득점</th><th class="lbl" data-en="A" data-ko="실점">실점</th><th class="lbl" data-en="GD" data-ko="득실차">득실차</th><th class="lbl" data-en="PTS" data-ko="승점">승점</th><th class="lbl" data-en="FORM" data-ko="최근 5경기">최근 5경기</th><th class="lbl" data-en="NEXT" data-ko="다음 상대">다음 상대</th>
+      <th class="lbl" data-en="RANK" data-ko="순위">순위</th><th class="lbl rank-change-th" data-en="CHG" data-ko="변동">변동</th><th class="lbl" data-en="TEAMS" data-ko="팀">팀</th><th class="lbl pts-m-th" data-en="PTS" data-ko="승점">승점</th><th class="lbl" data-en="P" data-ko="경기">경기</th><th class="lbl ha-count-th" data-en="H/A" data-ko="홈/원정">홈/원정</th><th class="lbl" data-en="W" data-ko="승">승</th><th class="lbl" data-en="D" data-ko="무">무</th><th class="lbl" data-en="L" data-ko="패">패</th><th class="lbl" data-en="F" data-ko="득점">득점</th><th class="lbl" data-en="A" data-ko="실점">실점</th><th class="lbl" data-en="GD" data-ko="득실차">득실차</th><th class="lbl pts-orig-th" data-en="PTS" data-ko="승점">승점</th><th class="lbl" data-en="FORM" data-ko="최근 5경기">최근 5경기</th><th class="lbl" data-en="NEXT" data-ko="다음 상대">다음 상대</th>
     </tr>
   </thead>
   <tbody id="leagueTableBody">
