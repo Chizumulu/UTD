@@ -16575,10 +16575,10 @@
   function translateHistSummary(txt) {
     const t = String(txt || '');
     if (isKorean) return t;
-    const m = t.trim().match(/^최근\s*(\d+)경기\s*전적\s*(?:\d+전\s*)?(?:(\d+)승\s*)?(?:(\d+)무\s*)?(?:(\d+)패)?\s*로\s*(우세|열세|백중세)$/);
+    const m = t.trim().match(/^(최근|통산)\s*(\d+)경기\s*전적\s*(?:\d+전\s*)?(?:(\d+)승\s*)?(?:(\d+)무\s*)?(?:(\d+)패)?\s*로\s*(우세|열세|백중세)$/);
     if (!m) return t;
-    const verdict = { '우세': 'In favor', '열세': 'Trailing', '백중세': 'Evenly matched' }[m[5]];
-    return `Last ${m[1]} matches: ${m[2] || 0}W ${m[3] || 0}D ${m[4] || 0}L · ${verdict}`;
+    const verdict = { '우세': 'In favor', '열세': 'Trailing', '백중세': 'Evenly matched' }[m[6]];
+    return `${m[1] === '통산' ? 'All-time' : 'Last'} ${m[2]} matches: ${m[3] || 0}W ${m[4] || 0}D ${m[5] || 0}L · ${verdict}`;
   }
   function lineupGoalAssistNote(ev) {
     const names = (ev.assists || []).filter(x => x !== null && x !== undefined).map(lineupAssisterName);
@@ -17119,7 +17119,7 @@
       </tr>`).join('');
     return `
       <div class="lineup-history-section">
-        <div class="lineup-subs-title lbl" data-en="Recent Head-to-Head" data-ko="최근 상대 전적">${isKo ? '최근 상대 전적' : 'Recent Head-to-Head'}</div>
+        <div class="lineup-subs-title lbl" data-en="Head-to-Head" data-ko="상대 전적">${isKo ? '상대 전적' : 'Head-to-Head'}</div>
         <div class="h2h-card">
           <table class="h2h-table">
             <thead><tr>

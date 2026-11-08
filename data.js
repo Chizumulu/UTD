@@ -460,6 +460,32 @@ const matchLineups = {
     ],
     subsUnused: [5, 77, 88]
   }
+  // ===== 정규 16주차(round17) @ 치하메 올스타즈 FC (2026-11-08 원정) 선발 라인업 =====
+  // 라인업 이미지 기준입니다(이미지 제목은 \"16라운드\" = 연기경기주차를 뺀 정규 16주차, 데이터 키는 round17).
+  // 경기 전이라 result는 \"예정\"으로 두었습니다. 경기가 끝나면 \"N : N 승/무/패\"로 바꾸고,
+  // 득점·도움(goals/assists), 교체 아웃(outMin), 교체 투입(subsIn)을 채워주세요.
+  // 대기 명단은 3, 8, 9, 11, 77, 80, 88번입니다. 이미지에 주장 표시가 없어 captain은 아무에게도 달지 않았습니다.
+  // (주장 만토 카망가(15)는 이번 명단에 없고, 부주장 알란 음롱골라(3)는 벤치입니다. 확인되면 해당 선수에 captain: true를 추가해주세요.)
+  , round17: {
+    formation: "4-2-3-1",
+    opponentKo: "치하메 올스타즈 FC",
+    result: "예정",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
+      { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
+      { pos: "CAM", number: 7, nameKo: "디킨스 니렌다" },
+      { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
+      { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
+      { pos: "RCM", number: 10, nameKo: "찰스 데야" },
+      { pos: "LB", number: 25, nameKo: "모버트 카타파" },
+      { pos: "LCB", number: 13, nameKo: "조셉 반다" },
+      { pos: "RCB", number: 4, nameKo: "켈빈 반다" },
+      { pos: "RB", number: 66, nameKo: "조던 칠와" },
+      { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
+    ],
+    subsIn: [],
+    subsUnused: [3, 8, 9, 11, 77, 80, 88]
+  }
 };
 
 const squadData = [
@@ -1634,11 +1660,11 @@ const scheduledRounds = {
   round17: [
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-07", kickoffTime: "15:00", homeScore: 1, awayScore: 2, scorersHome: "BENJAMIN KALINGA", scorersAway: "ESAU DOBBIE, TEMWA NDHLOVU" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-07", kickoffTime: "15:00", homeScore: 1, awayScore: 4, scorersHome: "FORTUNE CHIRAMBO", scorersAway: "HENDERSON KANYIKA, AUSTINE NGOMA, PETER LUNGU, CHARLES MANDA" },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 2, awayScore: 1, scorersHome: "PEARSON NYIRENDA (2골)", scorersAway: "JOMOLE PHIRI" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", postponed: true },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "WYSON NYIRENDA", scorersAway: "없음" },
     { byeKo: "치폴로폴로 보이즈 FC", byeEn: "Chipolopolo Boys FC" }
   ],
   // ── 정규 17주차 (엑셀 "Week 17") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
@@ -5073,7 +5099,7 @@ function computeTeamSeasonMeetings(nameEnA, nameKoA, nameEnB, nameKoB) {
         homeEn: m.homeEn, homeKo: m.homeKo, awayEn: m.awayEn, awayKo: m.awayKo,
         homeScore: m.homeScore, awayScore: m.awayScore,
         played: typeof m.homeScore === 'number' && typeof m.awayScore === 'number',
-        postponed: !!m.postponed,
+        postponed: !!m.postponed, movedFromWeek: m.movedFromWeek,
         kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime
       });
     });
@@ -5122,8 +5148,77 @@ function buildAutoMatchEntry(roundKey, weekNum, lineup) {
   return { comp, score, result };
 }
 
-// 상세보기에서 실제로 사용할 "최근 상대 전적" 리스트 + 요약 문구를 반환합니다.
+// 상세보기에서 실제로 사용할 "상대 전적" 리스트 + 요약 문구를 반환합니다.
+// 이제 "최근 1경기"가 아니라 이 상대와의 모든 전적을 보여줍니다.
+//   1) 이번 시즌(26/27) 맞대결 전부 — 끝난 경기만, 최신 경기가 위
+//   2) 과거 시즌·컵대회 기록 — computeH2HHistory()가 모은 matchLineups/upcomingMatchHistory 메모 전부(중복 제거)
+// 전체 기록을 만들 수 없으면(상대 정보 없음 등) 예전 방식(수동 recentHistory 또는 이번 경기 + 사전 메모)으로 되돌아갑니다.
+function buildFullH2HListForOpponent(opponentKo) {
+  if (!opponentKo || typeof computeH2HHistory !== 'function') return null;
+  const ourKo = '치주물루 유나이티드 FC';
+  const ourEn = 'Chizumulu United FC';
+  const info = (typeof resolveH2HOpponent === 'function') ? resolveH2HOpponent(opponentKo) : null;
+  const rec = computeH2HHistory().find(r => (info && r.key === info.key) || r.nameKo === opponentKo);
+  const oppEn = (rec && rec.nameEn) || (info && info.nameEn) || '';
+  const shortKo = nameKo => (nameKo || '').trim().split(' ')[0];
+
+  const list = [];
+
+  // 1) 이번 시즌 맞대결 (최신 → 과거)
+  if (typeof computeTeamSeasonMeetings === 'function' && oppEn) {
+    computeTeamSeasonMeetings(ourEn, ourKo, oppEn, rec ? rec.nameKo : opponentKo)
+      .filter(m => m.played)
+      .reverse()
+      .forEach(m => {
+        const wk = parseInt(String(m.roundKey).replace('round', ''), 10);
+        const weekNo = (isMakeupWeek(wk) && m.movedFromWeek) ? m.movedFromWeek : regularWeekNumber(wk);
+        const homeShort = (m.homeKo === ourKo) ? '치주물루' : shortKo(m.homeKo);
+        const awayShort = (m.awayKo === ourKo) ? '치주물루' : shortKo(m.awayKo);
+        let result;
+        if (m.homeScore === m.awayScore) result = '무승부';
+        else result = `${m.homeScore > m.awayScore ? homeShort : awayShort} 승`;
+        list.push({
+          comp: `26/27 시즌 NRFA 리그 원 ${weekNo}주차`,
+          score: `${homeShort} ${m.homeScore} : ${m.awayScore} ${awayShort}`,
+          result
+        });
+      });
+  }
+
+  // 2) 과거 시즌·컵대회 기록 전부 (이번 시즌 경기는 위에서 이미 넣었으므로 제외)
+  if (rec) {
+    const seen = new Set();
+    rec.matches.forEach(m => {
+      if (m.source === 'season') return;
+      if (/^\s*26\/27/.test(m.comp || '')) return;
+      const dupKey = (m.comp || '') + '|' + (m.scoreText || '');
+      if (seen.has(dupKey)) return;
+      seen.add(dupKey);
+      const result = m.resultText
+        || (m.result === 'W' ? '치주물루 승' : (m.result === 'D' ? '무승부' : `${shortKo(rec.nameKo)} 승`));
+      list.push({ comp: m.comp, score: m.scoreText, result });
+    });
+  }
+  return list.length ? list : null;
+}
+
+function summarizeH2HList(list) {
+  let w = 0, d = 0, l = 0;
+  list.forEach(h => {
+    const r = String(h.result || '');
+    if (r.indexOf('무승부') !== -1) d++;
+    else if (r.indexOf('치주물루') !== -1) w++;
+    else l++;
+  });
+  const tone = w > l ? '우세' : (w < l ? '열세' : '백중세');
+  return `통산 ${list.length}경기 전적 ${w}승 ${d}무 ${l}패로 ${tone}`;
+}
+
 function getEffectiveRoundHistory(roundKey, weekNum, lineup) {
+  const full = buildFullH2HListForOpponent(lineup.opponentKo);
+  if (full) return { list: full, summary: summarizeH2HList(full) };
+
+  // --- 이하 예전 방식(폴백) ---
   if (lineup.recentHistory && lineup.recentHistory.length) {
     return { list: lineup.recentHistory, summary: lineup.historySummary || '' };
   }
@@ -5133,8 +5228,6 @@ function getEffectiveRoundHistory(roundKey, weekNum, lineup) {
     && upcomingMatchHistory[roundKey]
     && upcomingMatchHistory[roundKey].recentHistory) || [];
 
-  // 연기 후 다른 주차로 재편성된 경기(movedFromWeek)는 과거 상대전적 메모가 원래 주차 키
-  // (예: round11)에 적혀 있을 수 있으므로, 현재 주차 키에 없으면 원래 주차 키에서도 찾아봅니다.
   if (!priorList.length && typeof upcomingMatchHistory !== 'undefined') {
     const pool = (typeof roundsData !== 'undefined' && roundsData[roundKey])
       || (typeof scheduledRounds !== 'undefined' && scheduledRounds[roundKey])
@@ -5146,17 +5239,7 @@ function getEffectiveRoundHistory(roundKey, weekNum, lineup) {
   }
   const list = autoEntry ? [autoEntry, ...priorList] : priorList.slice();
   if (!list.length) return { list: [], summary: '' };
-
-  let w = 0, d = 0, l = 0;
-  list.forEach(h => {
-    const r = String(h.result || '');
-    if (r.indexOf('무승부') !== -1) d++;
-    else if (r.indexOf('치주물루') !== -1) w++;
-    else l++;
-  });
-  const tone = w > l ? '우세' : (w < l ? '열세' : '백중세');
-  const summary = `최근 ${list.length}경기 전적 ${w}승 ${d}무 ${l}패로 ${tone}`;
-  return { list, summary };
+  return { list, summary: summarizeH2HList(list).replace('통산', '최근') };
 }
 
 // overrides(선택): '만약에 시뮬레이터'용 결과 고정. { "홈팀 nameEn||원정팀 nameEn": 'H' | 'D' | 'A' }
