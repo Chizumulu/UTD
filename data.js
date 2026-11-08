@@ -1612,6 +1612,39 @@ const matchDetails = {
       scorersHome: "ACKIM KAMANGA",
       scorersAway: "없음"
     }
+  ],
+  // 정규 16주차 (에크웬데니 vs 칠룸바는 연기되어 새 일정 미정이라 여기엔 없음)
+  round17: [
+    {
+      match: "마푸 1 : 친테체 2",
+      scorersHome: "BENJAMIN KALINGA",
+      scorersAway: "ESAU DOBBIE, TEMWA NDHLOVU"
+    },
+    {
+      match: "루베 1 : 치바비 4",
+      scorersHome: "FORTUNE CHIRAMBO",
+      scorersAway: "HENDERSON KANYIKA, AUSTINE NGOMA, PETER LUNGU, CHARLES MANDA"
+    },
+    {
+      match: "치하메 0 : 치주물루 0",
+      scorersHome: "없음",
+      scorersAway: "없음"
+    },
+    {
+      match: "라이플리 2 : 비전 1",
+      scorersHome: "PEARSON NYIRENDA (2골)",
+      scorersAway: "JOMOLE PHIRI"
+    },
+    {
+      match: "에우티니 1 : 음벨와 2",
+      scorersHome: "DANIEL CHISOKWE",
+      scorersAway: "JOLLEN KANYINJI, TAWONGA CHIHANA"
+    },
+    {
+      match: "젠다 1 : 루비리 0",
+      scorersHome: "WYSON NYIRENDA",
+      scorersAway: "없음"
+    }
   ]
 };
 
@@ -1652,21 +1685,11 @@ const seasonOpeningNotice = {
 
 const scheduledRounds = {
   // 15주차는 전체 라운드가 종료되어 roundsData.round15로 옮겨졌습니다.
+  // 정규 16주차(round17)도 전체 라운드가 종료되어 roundsData.round17로 옮겨졌습니다. (에크웬데니 vs 칠룸바는 연기되어 roundsData.round17에 postponed로 남아 있음, 새 일정 미정)
   // (치하메 vs 친테체는 연기경기주차로 이동 — roundsData.round16 참고)
   // 연기경기주차(round16)는 모든 경기가 끝나 roundsData.round16으로 옮겨졌습니다.
   // ★ 후반기(2차전) 일정: 엑셀 Week 16~29 → round17~round30 (연기경기주차가 round16이라 키가 한 칸씩 밀립니다).
   //   30주차(round31)는 날짜 미정이라 대진만 있습니다(1차전 홈/원정 반전). 킥오프 시간은 15:00으로 일괄 입력한 임시값이니, 확정되면 경기별로 수정해주세요.
-  // ── 정규 16주차 (엑셀 "Week 16") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
-  round17: [
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-07", kickoffTime: "15:00", homeScore: 1, awayScore: 2, scorersHome: "BENJAMIN KALINGA", scorersAway: "ESAU DOBBIE, TEMWA NDHLOVU" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-07", kickoffTime: "15:00", homeScore: 1, awayScore: 4, scorersHome: "FORTUNE CHIRAMBO", scorersAway: "HENDERSON KANYIKA, AUSTINE NGOMA, PETER LUNGU, CHARLES MANDA" },
-    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 2, awayScore: 1, scorersHome: "PEARSON NYIRENDA (2골)", scorersAway: "JOMOLE PHIRI" },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", postponed: true },
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-08", kickoffTime: "15:00" },
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "WYSON NYIRENDA", scorersAway: "없음" },
-    { byeKo: "치폴로폴로 보이즈 FC", byeEn: "Chipolopolo Boys FC" }
-  ],
   // ── 정규 17주차 (엑셀 "Week 17") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round18: [
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-11-14", kickoffTime: "15:00" },
@@ -2055,6 +2078,18 @@ const roundsData = {
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 13, changed: true, homeScore: 3, awayScore: 0, forfeit: true },
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-10-25", kickoffTime: "15:00", movedFromWeek: 13, homeScore: 3, awayScore: 0, forfeit: true },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-10-24", kickoffTime: "15:00", movedFromWeek: 15, changed: true, homeScore: 1, awayScore: 0, scorersHome: "ACKIM KAMANGA", scorersAway: "없음" }
+  ],
+  // ── 정규 16주차 (round17) — 전 경기 종료, scheduledRounds에서 옮겨옴 (11월 7~8일) ──
+  //  - 에크웬데니 vs 칠룸바: 연기 (새 일정 미정) — 일정이 정해지면 해당 주차에 새 항목을 추가하고 이 항목에 movedToWeek를 달아주세요.
+  round17: [
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-07", kickoffTime: "15:00", homeScore: 1, awayScore: 2, scorersHome: "BENJAMIN KALINGA", scorersAway: "ESAU DOBBIE, TEMWA NDHLOVU" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-07", kickoffTime: "15:00", homeScore: 1, awayScore: 4, scorersHome: "FORTUNE CHIRAMBO", scorersAway: "HENDERSON KANYIKA, AUSTINE NGOMA, PETER LUNGU, CHARLES MANDA" },
+    { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 0, awayScore: 0, scorersHome: "없음", scorersAway: "없음" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 2, awayScore: 1, scorersHome: "PEARSON NYIRENDA (2골)", scorersAway: "JOMOLE PHIRI" },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", postponed: true },
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 1, awayScore: 2, scorersHome: "DANIEL CHISOKWE", scorersAway: "JOLLEN KANYINJI, TAWONGA CHIHANA" },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "WYSON NYIRENDA", scorersAway: "없음" },
+    { byeKo: "치폴로폴로 보이즈 FC", byeEn: "Chipolopolo Boys FC" }
   ]
 };
 
@@ -3174,6 +3209,7 @@ const playerDirectory = {
   "ACKIM KAMANGA": { nameKo: "아킴 카망가", nameEn: "Ackim Kamanga" },
   "BABA NKHOMA": { nameKo: "바바 은코마", nameEn: "Baba Nkhoma" },
   "DANIEL CHISOKWE": { nameKo: "다니엘 치소크웨", nameEn: "Daniel Chisokwe" },
+  "JOLLEN KANYINJI": { nameKo: "졸렌 칸인지", nameEn: "Jollen Kanyinji" },
   "KINGSLEY MVULA": { nameKo: "킹슬리 음불라", nameEn: "Kingsley Mvula" },
   "DANIEL SIWALE": { nameKo: "다니엘 시왈레", nameEn: "Daniel Siwale" },
   "HENDERSON KANYIKA": { nameKo: "헨더슨 칸이카", nameEn: "Henderson Kanyika" },
