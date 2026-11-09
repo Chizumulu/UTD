@@ -3204,7 +3204,7 @@
   //  - 다음 경기 승/무/패별 우승 확률 : '만약에 시뮬레이터'와 같은 overrides 방식으로 3번 더 시뮬레이션(워커)
   // 워커 계산은 비용이 있으므로 화면에 먼저 즉시 계산분만 그리고, 비동기 값이 도착하면 다시 그립니다.
   // 결과는 (승점·경기수·다음 경기·data 버전)이 같은 동안 localStorage에 캐시해서, 재방문 시 재계산하지 않습니다.
-  const PRS_CACHE_KEY = 'prs-cache-v2';
+  const PRS_CACHE_KEY = 'prs-cache-v3'; // v3: 지난주 대비 계산 방식 변경(이전 캐시의 잘못된 값을 버리기 위해 키를 올림)
   const prsState = { model: null, running: false, timer: null, failedSig: null };
 
   function prsSignature(ranked, fx) {
@@ -3262,11 +3262,23 @@
         // 지난주 대비: 화면에 보이는 현재 값(정식 몬테카를로) − 직전 라운드 값(추이 차트의 간이 모델).
         // 우승확률 추이 차트도 마지막 점을 정식 값으로 덮어쓰므로, 차트의 마지막 선 방향과 항상 일치합니다.
         // (간이 모델 마지막 두 점끼리 빼면 정식 값과 모델이 달라 부호까지 어긋날 수 있었습니다.)
+        // ※ 다만 정식 값과 간이 모델 값은 스케일이 크게 달라서(예: 정식 5% vs 간이 20%) 그대로 빼면
+        //   "▼35%p" 같은 엉뚱한 값이 나옵니다. 그래서 간이 모델 안에서의 변화율(직전 라운드 → 최근 라운드)만
+        //   가져와 정식 값에 적용합니다: 직전 정식값(추정) = 직전 간이값 × (정식 현재값 / 간이 현재값).
         let delta = null;
         const hist = await ensureTitleProbabilityHistory();
         if (hist && hist.length >= 2) {
           const prev = hist[hist.length - 2].championPct[myEn];
-          if (typeof prev === 'number') delta = basePct - prev;
+          const last = hist[hist.length - 1].championPct[myEn];
+          if (typeof prev === 'number' && typeof last === 'number') {
+            if (last >= 1) {
+              const impliedPrev = Math.min(100, prev * (basePct / last));
+              delta = basePct - impliedPrev;
+            } else {
+              // 간이 모델상 현재 확률이 사실상 0이면 비율을 쓸 수 없어서, 간이 모델끼리의 차이를 씁니다.
+              delta = last - prev;
+            }
+          }
         }
 
         // 다음 경기 승/무/패별 우승 확률 (내 팀 기준 W/D/L → 홈/원정 H/D/A로 변환)
