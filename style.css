@@ -16579,3 +16579,167 @@ html.celebrate-lock { overflow: hidden; }
   .ti-legend { gap: 8px 12px; }
   .venue-mode-btn { padding: 9px 8px; font-size: 13px; }
 }
+
+/* =====================================================================
+   구단정보 "전력분석" 탭 (team-analysis.js)
+   ===================================================================== */
+#tiSection-analysis { min-width: 0; }
+#tiSection-analysis .ta-card { margin-bottom: 4px; min-width: 0; }
+.ta-dim { color: var(--color-text-muted); font-weight: 500; font-size: 12px; }
+.ta-note { margin-top: 12px; font-size: 11.5px; line-height: 1.5; color: var(--color-text-soft); }
+.ta-hint { margin-top: 6px; }
+.ta-empty { padding: 18px 8px; text-align: center; font-size: 13px; color: var(--color-text-muted); }
+.ta-subtitle { margin: 16px 0 8px; font-size: 12.5px; font-weight: 700; color: var(--color-text-dark); }
+.ta-insight {
+  margin-top: 12px; padding: 9px 12px; font-size: 12.5px; line-height: 1.6; font-weight: 500;
+  color: var(--color-text-dark); background: var(--color-bg-btn-hover); border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-teal);
+}
+.ta-insight b { font-weight: 800; color: var(--color-stat-value); }
+
+/* 결과 칩 (승/무/패) */
+.ta-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ta-chip {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; flex: 0 0 auto;
+  min-width: 52px; padding: 4px 9px; border-radius: var(--radius-sm); color: #fff; line-height: 1.25; text-align: center;
+}
+.ta-chip-opp { font-size: 10.5px; font-weight: 600; opacity: 0.92; white-space: nowrap; }
+.ta-chip-main { font-size: 12px; font-weight: 800; white-space: nowrap; }
+.ta-chip-w { background: var(--color-teal-dark); }
+.ta-chip-d { background: var(--color-neutral-badge); }
+.ta-chip-l { background: var(--color-red); }
+:root[data-theme="dark"] .ta-chip-w { background: #138c87; }
+:root[data-theme="dark"] .ta-chip-l { background: #b8453a; }
+
+/* 막대 */
+.ta-bar { display: block; flex: 1 1 auto; height: 7px; border-radius: 4px; background: var(--color-bg-table-alt); overflow: hidden; }
+.ta-bar-fill { display: block; height: 100%; border-radius: 4px; background: var(--color-teal); }
+.ta-fill-top { background: var(--color-gold-strong); }
+
+/* 타일 */
+.ta-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 14px; }
+.ta-tiles-3 { grid-template-columns: repeat(3, 1fr); margin-top: 0; }
+.ta-tiles-4 { grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 560px) { .ta-tiles-4 { grid-template-columns: repeat(4, 1fr); } }
+.ta-tile { padding: 10px 11px; background: var(--color-bg-btn-hover); border-radius: var(--radius-md); min-width: 0; }
+.ta-tile-label { font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+.ta-tile-value { margin-top: 2px; font-size: 20px; font-weight: 800; color: var(--color-stat-value); line-height: 1.2; }
+.ta-tile-value small { font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+.ta-tile-sub { margin-top: 2px; font-size: 11px; color: var(--color-text-soft); line-height: 1.35; }
+
+/* 1) 상대 유형별 */
+.ta-tier-row { padding: 10px 0; border-top: 1px solid var(--color-border-light); }
+.ta-tier-row:first-of-type { border-top: none; padding-top: 0; }
+.ta-tier-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 13.5px; color: var(--color-text-dark); }
+.ta-tier-rec { margin-left: auto; font-size: 12px; color: var(--color-text-muted); }
+.ta-tier-bar { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.ta-tier-ppg { flex: 0 0 auto; min-width: 74px; text-align: right; font-size: 14px; font-weight: 800; color: var(--color-stat-value); }
+.ta-tier-ppg small { font-size: 10.5px; font-weight: 600; color: var(--color-text-muted); }
+.ta-tier-goals { margin-top: 4px; font-size: 11.5px; color: var(--color-text-soft); }
+
+/* 2) 네트워크 */
+.ta-network-wrap { margin-top: 12px; }
+.ta-network { display: block; width: 100%; max-width: 520px; height: auto; margin: 0 auto; overflow: visible; }
+.ta-edge { fill: none; stroke: var(--color-teal); stroke-opacity: 0.55; stroke-linecap: round; transition: stroke-opacity 0.15s; }
+.ta-arrow { fill: var(--color-teal); }
+.ta-node { cursor: pointer; outline: none; }
+.ta-node circle { fill: var(--color-surface); stroke: var(--color-teal); stroke-width: 2.5; transition: opacity 0.15s; }
+.ta-node-top circle { stroke: var(--color-gold-strong); stroke-width: 3.5; }
+.ta-node:focus-visible circle { stroke-width: 4; }
+.ta-node-num { font-size: 12px; font-weight: 800; fill: var(--color-text-dark); pointer-events: none; }
+.ta-node-label { font-size: 14px; font-weight: 700; fill: var(--color-text-dark); pointer-events: none; }
+.ta-node-sub { font-size: 11.5px; fill: var(--color-text-muted); pointer-events: none; }
+.ta-focus .ta-edge { stroke-opacity: 0.08; }
+.ta-focus .ta-edge.ta-on { stroke-opacity: 0.95; }
+.ta-focus .ta-node { opacity: 0.25; }
+.ta-focus .ta-node.ta-on { opacity: 1; }
+.ta-list { margin: 0; padding: 0; list-style: none; }
+.ta-list li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--color-border-light); font-size: 13px; color: var(--color-text-dark); }
+.ta-list li:first-child { border-top: none; }
+.ta-rank { flex: 0 0 auto; width: 20px; height: 20px; line-height: 20px; text-align: center; font-size: 11px; font-weight: 800; color: var(--color-teal-dark); background: var(--color-bg-table-alt); border-radius: 50%; }
+.ta-arrow-txt { color: var(--color-teal-dark); font-weight: 800; }
+.ta-count { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--color-stat-value); }
+
+/* 3) 상대 리포트 */
+.ta-select-wrap { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+.ta-select {
+  width: 100%; padding: 9px 10px; font-size: 14px; font-weight: 600; font-family: inherit;
+  color: var(--color-text-dark); background: var(--color-surface);
+  border: 1px solid var(--color-border-chip); border-radius: var(--radius-md);
+}
+.ta-rep-head { display: flex; align-items: center; gap: 12px; }
+.ta-rep-rank { flex: 0 0 auto; min-width: 46px; padding: 8px 6px; text-align: center; font-size: 22px; font-weight: 800; color: #fff; background: var(--color-navy); border-radius: var(--radius-md); line-height: 1.1; }
+.ta-rep-rank small { font-size: 11px; font-weight: 600; }
+:root[data-theme="dark"] .ta-rep-rank { background: #2b5fb0; }
+.ta-rep-title { min-width: 0; font-size: 15px; color: var(--color-text-darkest); }
+.ta-next { margin-top: 12px; padding: 8px 12px; font-size: 12.5px; color: var(--color-text-dark); background: var(--color-bg-rank-highlight); border-radius: var(--radius-md); }
+.ta-venue-row { display: flex; justify-content: space-between; gap: 8px; padding: 7px 10px; font-size: 12.5px; color: var(--color-text-dark); border-radius: var(--radius-sm); }
+.ta-venue-row:nth-child(even) { background: var(--color-bg-stripe); }
+.ta-venue-hi { box-shadow: inset 0 0 0 1.5px var(--color-teal); }
+.ta-venue-hi em { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--color-teal-dark); margin-left: 4px; }
+.ta-list-plain li { padding: 5px 0; }
+.ta-bullets { margin: 0; padding-left: 18px; font-size: 12.8px; line-height: 1.6; color: var(--color-text-dark); }
+.ta-bullets li { margin-bottom: 3px; }
+
+/* 표 */
+.ta-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.ta-table th { padding: 6px 6px; text-align: right; font-size: 11px; font-weight: 700; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border-light); }
+.ta-table td { padding: 7px 6px; text-align: right; color: var(--color-text-dark); border-bottom: 1px solid var(--color-border-light); white-space: nowrap; }
+.ta-table th:first-child, .ta-table td:first-child { text-align: left; white-space: normal; }
+
+/* 5) 선발 조합 */
+.ta-slot { display: grid; grid-template-columns: 42px minmax(96px, 1.1fr) minmax(40px, 1fr); gap: 4px 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--color-border-light); font-size: 12.5px; color: var(--color-text-dark); }
+.ta-subtitle + .ta-slot { border-top: none; }
+.ta-slot-pos { font-size: 11px; font-weight: 800; color: var(--color-teal-dark); background: var(--color-bg-table-alt); border-radius: var(--radius-sm); padding: 2px 0; text-align: center; }
+.ta-slot-main small { color: var(--color-text-muted); font-weight: 600; }
+.ta-slot-others { grid-column: 2 / -1; font-size: 11px; color: var(--color-text-soft); }
+.ta-slot-others:empty { display: none; }
+.ta-unit { margin-bottom: 10px; }
+.ta-unit-title { font-size: 11.5px; font-weight: 700; color: var(--color-teal-dark); margin-bottom: 4px; }
+.ta-unit-row { display: flex; flex-direction: column; gap: 1px; padding: 6px 10px; margin-bottom: 4px; background: var(--color-bg-btn-hover); border-radius: var(--radius-sm); }
+.ta-unit-names { font-size: 12.5px; font-weight: 700; color: var(--color-text-dark); }
+.ta-unit-stat { font-size: 11.5px; color: var(--color-text-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ta-edge, .ta-node circle { transition: none; }
+}
+
+
+/* ---- 전력분석: 요약 카드 · 이동 칩 · 표본 적음 배지 ---- */
+.ta-summary { padding-bottom: 12px; }
+.ta-sum-title { font-size: 13px; font-weight: 800; color: var(--color-stat-value); margin-bottom: 6px; }
+.ta-sum-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--color-bg-btn-hover); font-size: 13px; }
+.ta-sum-row:first-of-type { border-top: 0; }
+.ta-sum-label { flex: none; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
+.ta-sum-value { text-align: right; min-width: 0; }
+.ta-nav { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr 1fr; gap: 6px; margin-top: 10px; }
+.ta-nav-chip { min-width: 0; white-space: nowrap; text-align: center; padding: 7px 4px; border: 0; border-radius: 999px; background: var(--color-bg-btn-hover); color: var(--color-text-soft); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.ta-nav-chip:hover, .ta-nav-chip:focus-visible { color: var(--color-stat-value); }
+.ti-section-title[id^="taSec"] { scroll-margin-top: 64px; }
+.ta-badge { display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 999px; background: var(--color-bg-btn-hover); color: var(--color-text-muted); font-size: 10px; font-weight: 700; white-space: nowrap; vertical-align: middle; }
+.ta-caution { margin-top: 10px; }
+
+/* ---- 전력분석 UX 개선 ---- */
+.ta-sec-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ta-top-link { flex: none; padding: 3px 9px; border: 0; border-radius: 999px; background: transparent; color: var(--color-text-muted); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.ta-top-link:hover, .ta-top-link:focus-visible { background: var(--color-bg-btn-hover); color: var(--color-stat-value); }
+.ta-nav-chip:focus-visible, .ta-top-link:focus-visible, .ta-more-btn:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; }
+.ta-chips-sm .ta-chip { min-width: 46px; padding: 3px 7px; }
+.ta-chips-sm .ta-chip-main { font-size: 11.5px; }
+.ta-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ta-table th { white-space: nowrap; }
+.ta-more-btn { display: block; width: 100%; margin-top: 8px; padding: 8px 0; border: 0; border-radius: var(--radius-md); background: var(--color-bg-btn-hover); color: var(--color-text-soft); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.ta-more-btn:hover { color: var(--color-stat-value); }
+.ta-card-compact { padding: 12px 14px; margin-top: 10px; }
+.ta-subtitle-first { margin-top: 0; }
+.ta-progress { position: relative; height: 8px; margin-top: 4px; border-radius: 4px; background: var(--color-bg-table-alt); }
+.ta-progress-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--color-teal); }
+.ta-progress-mark { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--color-gold-strong); border-radius: 1px; }
+.ta-progress-legend { display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; color: var(--color-text-muted); }
+@media (prefers-reduced-motion: reduce) { .ta-edge, .ta-node circle { transition: none; } }
+.ta-select-wrap, .ta-select { min-width: 0; max-width: 100%; }
+.ta-select { width: 100%; text-overflow: ellipsis; }
+/* 표 래퍼: 표의 내용 폭이 카드(부모) 폭을 밀어내지 않도록 최소 폭 기여를 0으로 두고 부모 폭에 맞춥니다. */
+.ta-table-wrap { width: 0; min-width: 100%; }
+/* 래퍼가 표의 바깥 그림자를 잘라내 얇은 띠가 생기므로, 카드 안 표는 그림자 없이 둡니다. */
+.ta-card .ta-table { box-shadow: none; }

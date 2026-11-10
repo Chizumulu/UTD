@@ -7547,7 +7547,8 @@
       squad: 'tiSquadBtn',
       honors: 'tiHonorsBtn',
       results: 'tiResultsBtn',
-      predict: 'tiPredictBtn'
+      predict: 'tiPredictBtn',
+      analysis: 'tiAnalysisBtn'
     };
     Object.keys(buttons).forEach(key => {
       const btnEl = document.getElementById(buttons[key]);
@@ -7587,7 +7588,7 @@
   // 예전에는 8개 섹션을 한 페이지에 다 늘어놓고 앵커 스크롤 + IntersectionObserver로
   // "지금 보고 있는 섹션"만 추정해서 탭을 하이라이트했습니다. 지금은 4개 탭으로
   // 정리하면서 실제로 선택한 탭의 .ti-tabpage만 보여주고 나머지는 숨깁니다.
-  const TEAM_INFO_TABS = ['overview', 'story', 'squad', 'honors', 'results', 'predict'];
+  const TEAM_INFO_TABS = ['overview', 'story', 'squad', 'honors', 'results', 'predict', 'analysis'];
   function applyTeamInfoTab(tab) {
     if (TEAM_INFO_TABS.indexOf(tab) === -1) tab = 'overview';
     currentTeamInfoTab = tab;
@@ -7705,8 +7706,53 @@
     renderTeamHalfReviewTab();
     renderTeamResultsTab();
     renderTeamInfoNextMatchTab();
+    renderTeamAnalysisTab();
     applyTeamInfoTab(currentTeamInfoTab);
     setupTeamInfoRevealObserver();
+  }
+
+  // ===== 구단정보 "전력분석" 탭 =====
+  // 계산과 HTML 생성은 team-analysis.js(TeamAnalysis)가 전부 맡고, 여기서는 필요한 데이터만
+  // 모아 넘겨준 뒤 결과를 DOM에 넣고 이벤트를 연결합니다. 분석 코드에서 오류가 나도
+  // 구단정보의 다른 탭이 같이 멈추지 않도록 try/catch로 격리했습니다.
+  function renderTeamAnalysisTab() {
+    const el = document.getElementById('teamInfoAnalysisTab');
+    if (!el) return;
+    const mine = getMyRankedTeam();
+    if (!mine || typeof TeamAnalysis === 'undefined') { el.innerHTML = ''; return; }
+    const ctx = {
+      myEn: mine.team.nameEn,
+      isKorean: isKorean,
+      rankedTeams: getRankedTeams('all'),
+      roundsData: roundsData,
+      scheduledRounds: scheduledRounds,
+      matchLineups: matchLineups,
+      squadData: squadData,
+      formerSquadData: (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [],
+      topScorers: topScorersData,
+      // 합작 집계는 data.js 한 곳(computeAssistCombos)만 쓰도록 넘겨줍니다.
+      assistCombos: (typeof computeAssistCombos === 'function') ? computeAssistCombos() : null,
+      roundLabel: key => isKorean ? wkKo(roundKeyPos(key)) : wkEn(roundKeyPos(key))
+    };
+    // 기록·수상 탭에서 옮겨온 카드들 — 각 분석 섹션 바로 아래에 붙습니다. 카드 하나가 실패해도
+    // 전력분석 본문은 그대로 보이도록 따로 격리합니다.
+    try {
+      ctx.extraSections = {
+        scoring: renderAssistLeadersCard('combo') + renderPositionPairCards(),
+        subs: renderAppearanceStatsCard('ratio'),
+        lineup: renderKeyPlayerImpactCard() + renderPairImpactCard()
+      };
+    } catch (err) {
+      console.error('[전력분석] 추가 카드 렌더링 실패', err);
+      ctx.extraSections = {};
+    }
+    try {
+      el.innerHTML = TeamAnalysis.render(ctx);
+      TeamAnalysis.bind(el, ctx);
+    } catch (err) {
+      console.error('[전력분석] 렌더링 실패', err);
+      el.innerHTML = '<div class="ti-card"><div class="ta-empty">' + (isKorean ? '전력분석을 불러오지 못했습니다.' : 'Could not load the analysis.') + '</div></div>';
+    }
   }
 
   // ===== 구단 정보 개요 탭 하단 "다음 경기" 카드 =====
@@ -7822,7 +7868,10 @@
   // ===== 도움 & 공격포인트 카드 =====
   // squadPlayerStats(골/도움)와 computeAssistCombos()로 자동 계산됩니다.
   // 도움 최다 / 공격포인트(골+도움) 상위 3순위(동률은 모두 포함) / 2회 이상 호흡을 맞춘 콤비.
-  function renderAssistLeadersCard() {
+  // part: 'rank'(기본) = 도움 최다·공격포인트·경기당 공격포인트 랭킹 (기록·수상 탭)
+  //       'combo'      = 최강 콤비·콤비 합작률·전체 콤비 표 (전력분석 탭 "득점 패턴" 아래)
+  function renderAssistLeadersCard(part) {
+    const isCombo = part === 'combo';
     if (typeof computeAssistCombos !== 'function') return '';
     const { combos: baseCombos, totalGoals, assistedGoals, solo } = computeAssistCombos();
     // 합작률(함께 뛴 경기 수 포함)이 계산 가능하면 그 버전을 쓰고, 없으면 기존 횟수만 씁니다.
@@ -7935,7 +7984,9 @@
       { type: 'comborate', wide: true, titleKo: '콤비 합작률', titleEn: 'Duo Scoring Rate', subKo: `함께 뛴 경기당 합작 골 (${rateMin}경기 이상 · 2회 이상 합작)`, subEn: `Combos per shared game (${rateMin}+ games together, 2+ combos)`,
         rows: rateRows }
     ];
-    const blocksHtml = blocks.map(b => `
+    const isComboBlock = (b) => b.type === 'combo' || b.type === 'comborate';
+    const picked = blocks.filter(b => isCombo ? isComboBlock(b) : !isComboBlock(b));
+    const blocksHtml = picked.map(b => `
       <div class="ti-appear-block${b.wide ? ' ti-appear-block-wide' : ''}">
         <div class="ti-appear-block-head">
           <span class="ti-appear-block-title lbl" data-en="${b.titleEn}" data-ko="${b.titleKo}">${isKorean ? b.titleKo : b.titleEn}</span>
@@ -7949,10 +8000,10 @@
     const noteEn = `${assistedGoals} of ${totalGoals} recorded goals have an assist logged`;
     return `
       <div class="ti-card ti-appear-card">
-        <div class="ti-card-title lbl" data-en="Assists" data-ko="도움 기록">${isKorean ? '도움 기록' : 'Assists'}</div>
+        <div class="ti-card-title lbl" data-en="${isCombo ? 'Scoring Duos' : 'Assists'}" data-ko="${isCombo ? '합작 콤비' : '도움 기록'}">${isCombo ? (isKorean ? '합작 콤비' : 'Scoring Duos') : (isKorean ? '도움 기록' : 'Assists')}</div>
         <div class="ti-gk-card-note lbl" data-en="${noteEn}" data-ko="${noteKo}">${isKorean ? noteKo : noteEn}</div>
         <div class="ti-appear-grid">${blocksHtml}</div>
-        ${matrixHtml}
+        ${isCombo ? matrixHtml : ''}
       </div>`;
   }
 
@@ -8228,7 +8279,9 @@
     if (btn && btn.dataset.fullrec) openFullRecordModal(btn.dataset.fullrec);
   });
 
-  function renderAppearanceStatsCard() {
+  // only: 'ratio' 이면 "선발 대비 교체 비율" 블록만(전력분석 탭 "교체 활용 현황" 아래), 아니면 그 블록을 뺀 나머지(기록·수상 탭)
+  function renderAppearanceStatsCard(only) {
+    const ratioOnly = only === 'ratio';
     const leaders = computeAppearanceLeaders();
     const gameSuffix = (n) => isKorean ? `${n}경기` : `${n}`;
 
@@ -8255,7 +8308,8 @@
       }
     ];
 
-    const blocksHtml = blocks.map(b => `
+    const picked = blocks.filter((b, i) => ratioOnly ? i === blocks.length - 1 : i !== blocks.length - 1);
+    const blocksHtml = picked.map(b => `
       <div class="ti-appear-block">
         <div class="ti-appear-block-head">
           <span class="ti-appear-block-title lbl" data-en="${b.titleEn}" data-ko="${b.titleKo}">${isKorean ? b.titleKo : b.titleEn}</span>
@@ -8266,7 +8320,7 @@
 
     return `
       <div class="ti-card ti-appear-card">
-        <div class="ti-card-title lbl" data-en="Appearance Stats" data-ko="출전 기록">${isKorean ? '출전 기록' : 'Appearance Stats'}</div>
+        <div class="ti-card-title lbl" data-en="${ratioOnly ? 'Sub Usage' : 'Appearance Stats'}" data-ko="${ratioOnly ? '교체 활용도' : '출전 기록'}">${ratioOnly ? (isKorean ? '교체 활용도' : 'Sub Usage') : (isKorean ? '출전 기록' : 'Appearance Stats')}</div>
         <div class="ti-gk-card-note lbl" data-en="Based on lineup data entered so far" data-ko="지금까지 입력된 라인업 데이터 기준">${isKorean ? '지금까지 입력된 라인업 데이터 기준' : 'Based on lineup data entered so far'}</div>
         <div class="ti-appear-grid">${blocksHtml}</div>
       </div>`;
@@ -8516,13 +8570,11 @@
     if (!el) return;
     el.innerHTML = buildTeamScorerCardsHtml('Chizumulu United FC', '치주물루 유나이티드 FC')
       + fullRecordBtnHtml('goals')
-      + renderAssistLeadersCard()
+      + renderAssistLeadersCard('rank')
       + renderClubTrackerCard()
       + renderGoalkeeperRecordCard()
-      + renderAppearanceStatsCard()
-      + renderPositionPairCards()
-      + renderKeyPlayerImpactCard()
-      + renderPairImpactCard();
+      + renderAppearanceStatsCard();
+    // 콤비·포지션 분포·영향도·조합 효과·교체 비율은 "분석" 성격이라 전력분석 탭으로 옮겼습니다 (renderTeamAnalysisTab).
   }
 
   // ===== 팀 스토리 탭 =====

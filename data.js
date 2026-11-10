@@ -464,14 +464,14 @@ const matchLineups = {
   // 라인업 이미지 기준입니다(이미지 제목은 "16라운드" = 연기경기주차를 뺀 정규 16주차, 데이터 키는 round17).
   // 경기 종료(0 : 0 무)로 result를 채웠습니다. 득점이 없어서 goals/assists는 비어 있고,
   // 교체 아웃(outMin)·교체 투입(subsIn) 정보는 아직 없어서 적지 않았습니다. 알려주시면 채워주세요.
-  // 대기 명단은 3, 8, 9, 11, 77, 80, 88번입니다. 이미지에 주장 표시가 없어 captain은 아무에게도 달지 않았습니다.
-  // (주장 만토 카망가(15)는 이번 명단에 없고, 부주장 알란 음롱골라(3)는 벤치입니다. 확인되면 해당 선수에 captain: true를 추가해주세요.)
+  // 대기 명단은 3, 8, 9, 11, 77, 80, 88번입니다. 이 경기 주장은 티모시 카타파(TK, 22번)입니다.
+  // (평소 주장 만토 카망가(15)는 이번 명단에 없고, 부주장 알란 음롱골라(3)는 벤치였습니다.)
   , round17: {
     formation: "4-2-3-1",
     opponentKo: "치하메 올스타즈 FC",
     result: "0 : 0 무",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", captain: true },
       { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
       { pos: "CAM", number: 7, nameKo: "디킨스 니렌다" },
       { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
@@ -553,6 +553,11 @@ const staffData = [
   ]},
   { roleKo: "미디어", roleEn: "Media", people: [
     { nameKo: "모스터 은코마", nameEn: "Moster Nkhoma" }
+  ]},
+  // 전력분석관은 이름이 정해지면 people에 { nameKo: "", nameEn: "" } 형태로 채워주세요.
+  { roleKo: "전력분석관", roleEn: "Performance Analyst", people: [] },
+  { roleKo: "운전기사", roleEn: "Driver", people: [
+    { nameKo: "던킨", nameEn: "Duncan" }
   ]}
 ];
 
