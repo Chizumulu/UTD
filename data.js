@@ -554,8 +554,9 @@ const staffData = [
   { roleKo: "미디어", roleEn: "Media", people: [
     { nameKo: "모스터 은코마", nameEn: "Moster Nkhoma" }
   ]},
-  // 전력분석관은 이름이 정해지면 people에 { nameKo: "", nameEn: "" } 형태로 채워주세요.
-  { roleKo: "전력분석관", roleEn: "Performance Analyst", people: [] },
+  { roleKo: "전력분석관", roleEn: "Performance Analyst", people: [
+    { nameKo: "김재하", nameEn: "Kim Jae-ha" }
+  ]},
   { roleKo: "운전기사", roleEn: "Driver", people: [
     { nameKo: "던킨", nameEn: "Duncan" }
   ]}
@@ -1698,7 +1699,7 @@ const scheduledRounds = {
   // ── 정규 17주차 (엑셀 "Week 17") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round18: [
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-11-14", kickoffTime: "15:00" },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-11-14", kickoffTime: "15:00" },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-11-15", kickoffTime: "15:00" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-11-14", kickoffTime: "15:00" },
     { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-11-14", kickoffTime: "15:00" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-11-15", kickoffTime: "15:00" },

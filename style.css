@@ -10509,13 +10509,15 @@
   .next-match-strip {
     width: 100%;
     display: grid;
-    grid-template-columns: auto auto 1fr;
+    /* 가운데 열(홈/원정 배지)을 카드 정중앙에 고정: 좌우 열 폭을 1fr로 동일하게 */
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     grid-template-areas:
       "eyebrow eyebrow eyebrow"
       "team1 ha team2"
-      "meta weather actions";
+      "meta meta meta"
+      "weather weather actions";
     align-items: center;
-    column-gap: 8px;
+    column-gap: 16px;
     row-gap: 6px;
     padding: 12px 14px;
   }
@@ -10532,16 +10534,17 @@
     align-items: center;
     width: auto;
     min-width: 0;
-    gap: 4px;
+    gap: 6px;
   }
-  .nmh-team:first-of-type { grid-area: team1; min-width: 0; }
-  .nmh-team:last-of-type { grid-area: team2; min-width: 0; }
+  /* 왼쪽 팀은 배지 쪽(오른쪽)으로, 오른쪽 팀은 배지 쪽(왼쪽)으로 붙여서 배지 기준 좌우 대칭 */
+  .nmh-team:first-of-type { grid-area: team1; min-width: 0; justify-self: end; }
+  .nmh-team:last-of-type { grid-area: team2; min-width: 0; justify-self: start; }
   .nmh-team .nms-opp-rank { font-size: var(--fs-2xs); padding: 1px 5px; flex-shrink: 0; }
   .nmh-team-mine .nms-opp-rank { display: none; }
   .nmh-team span {
     font-size: 12px;
     max-width: none;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
   }
   .nmh-crest.team-logo {
@@ -10558,12 +10561,13 @@
   .nmh-dday { display: none; }
   .nmh-center {
     grid-area: meta;
-    text-align: left;
+    text-align: center;
     min-width: 0;
   }
   .nmh-meta {
     margin-top: 0;
     font-size: var(--fs-xs);
+    white-space: nowrap; /* 날짜·시간은 한 줄로 (자리가 모자라면 아래 줄의 날씨/버튼이 내려가도록 meta를 전체 폭 한 줄로 배치) */
   }
   .nmh-venue {
     display: none;
@@ -16344,6 +16348,48 @@ html.celebrate-lock { overflow: hidden; }
   .m-tabbar { transition: none; }
 }
 
+/* =====================================================================
+   모바일 "더보기" 안내 말풍선 (app.js의 '더보기 안내 말풍선' 블록과 짝)
+   - 더보기가 5번째(맨 오른쪽) 탭이라 오른쪽에 붙이고, 꼬리가 그 탭을 가리킵니다.
+   - 되돌리고 싶으면 이 블록만 지우면 됩니다.
+   ===================================================================== */
+.more-hint { display: none; }
+@media (max-width: 720px) {
+  .more-hint {
+    display: flex; align-items: center; gap: 6px;
+    position: fixed; right: 10px;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 10px);
+    z-index: 901;
+    max-width: calc(100vw - 20px);
+    padding: 9px 6px 9px 12px;
+    border-radius: 12px;
+    background: var(--color-navy, #033990);
+    color: #fff;
+    font-size: 13px; font-weight: 600; line-height: 1.3;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    opacity: 0; transform: translateY(6px); pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .more-hint.show { opacity: 1; transform: none; pointer-events: auto; }
+  .more-hint.is-away { opacity: 0; transform: translateY(6px); pointer-events: none; }
+  .more-hint::after {
+    content: ""; position: absolute; bottom: -6px;
+    right: calc(10vw - 16px);
+    border: 6px solid transparent; border-bottom: 0;
+    border-top-color: var(--color-navy, #033990);
+  }
+  .more-hint-text { cursor: pointer; }
+  .more-hint-close {
+    flex: 0 0 auto; width: 28px; height: 28px;
+    border: 0; background: transparent; color: inherit;
+    font-size: 20px; line-height: 1; opacity: 0.8; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.season-archive .more-hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .more-hint { transition: none; } }
+
+
 /* 리그 순위표: 풀네임/약어 두 가지를 그려두고, PC는 풀네임·모바일은 약어(치주물루/칠룸바 …)를 보여줌 */
 #mainTable .team-name-short { display: none; }
 /* 모바일 전용 승점 칸(팀 바로 오른쪽): PC에서는 숨기고 기존 위치의 승점 칸을 씀 */
@@ -16922,3 +16968,101 @@ tr[data-a11y-btn]:focus-visible, td[data-a11y-btn]:focus-visible { outline-offse
 .mcenter-assist { font-size: 13px; color: var(--color-teal-dark); font-weight: 600; }
 .mcenter-in { color: var(--color-green-text); font-weight: 700; }
 .mcenter-out { color: var(--color-red-text); font-weight: 700; }
+
+
+/* =============================================================
+   모바일 순위표(영문): 줄바꿈 없이 한 줄로 보이게
+   - "RANK"가 RAN/K로 끊기던 것: 머리글 글씨를 줄이고 줄바꿈 금지
+   - 긴 팀명(Chizumulu, M'mbelwa, Chipolopolo 등)이 끊기거나 로고 아래로 밀리던 것:
+     팀 칸을 조금 넓히고(108→122px), 로고·글씨를 살짝 줄이고, 팀명은 줄바꿈 금지
+   - 한글 화면은 영향 없음. 되돌리고 싶으면 이 블록만 지우면 됩니다.
+   ============================================================= */
+@media (max-width: 720px) {
+  html[data-lang="en"] #mainTable th:nth-child(1) {
+    font-size: 10px;
+    letter-spacing: 0;
+    white-space: nowrap;
+    padding-left: 8px;
+    padding-right: 0;
+  }
+  html[data-lang="en"] #mainTable th:nth-child(3),
+  html[data-lang="en"] #mainTable td:nth-child(3) {
+    width: 122px; min-width: 122px; max-width: 122px;
+  }
+  html[data-lang="en"] #mainTable td.team {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  html[data-lang="en"] #mainTable td.team .team-logo {
+    width: 20px; height: 20px;
+    margin-right: 5px;
+  }
+  html[data-lang="en"] #mainTable td.team .team-name-short {
+    display: inline;
+    max-width: none;
+  }
+}
+
+/* =====================================================================
+   다음 경기 카드 모바일(≤600px): 날짜 · 날씨는 한 줄(왼쪽), 캘린더·공유 버튼은 같은 줄 오른쪽
+   - 한글/영문 공통. PC·태블릿은 기존 배치 그대로입니다.
+   - 버튼 영역(약 100px)을 비워 두고 왼쪽에서 날짜와 날씨를 나란히 놓으며,
+     자리가 모자라면 날씨만 날짜 아래 줄로 내려갑니다.
+   ===================================================================== */
+.nms-weather-inline.match-weather { display: none; }
+@media (max-width: 600px) {
+  .next-match-strip {
+    grid-template-areas:
+      "eyebrow eyebrow eyebrow"
+      "team1 ha team2"
+      "meta meta meta";
+  }
+  .nmh-center { text-align: left; }
+  .nmh-meta-line {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    padding-right: 100px;
+  }
+  .nmh-meta-line .nms-weather-inline.match-weather {
+    display: inline-flex;
+    flex-shrink: 0;
+    padding-left: 8px;
+    border-left: 1px solid var(--color-border-light);
+  }
+  .nmh-bottom .nms-weather.match-weather { display: none; }
+  /* 버튼 묶음은 날짜 줄과 같은 칸에 겹쳐 오른쪽 끝에 배치 */
+  .nms-action-group { grid-area: meta; justify-self: end; align-self: center; }
+}
+
+
+/* =====================================================================
+   다음 경기 카드 팀 이름: 모바일(≤600px)은 짧은 이름, 그 이상(PC·태블릿)은 정식 이름
+   - app.js가 .nm-short(첫 단어)와 .nm-full(정식 이름)을 둘 다 그려 둡니다.
+   ===================================================================== */
+.nmh-team .nm-full { display: none; }
+@media (min-width: 601px) {
+  .nmh-team .nm-short { display: none; }
+  .nmh-team .nm-full { display: inline; }
+  .nmh-team { width: auto; min-width: 130px; max-width: 220px; }
+}
+
+/* =====================================================================
+   다음 경기 카드(PC·태블릿, ≥601px): 가운데(D-day·일정)에서 양쪽 팀을 더 멀리 떨어뜨림
+   - 팀 블록 안의 로고 · 팀명 · 순위 사이도 살짝 넓힘
+   - 파일 맨 끝에 있어서 위의 .nmh-top gap 규칙들을 덮어씁니다.
+   ===================================================================== */
+@media (min-width: 601px) {
+  .nmh-top { gap: 64px; }
+  .nmh-center { min-width: 200px; }
+  .nmh-team { gap: 8px; }
+}
+@media (min-width: 881px) and (max-width: 1440px) {
+  .nmh-team { gap: 5px; }
+}
+@media (min-width: 601px) and (max-width: 720px) {
+  .nmh-top { gap: 32px; }
+  .nmh-center { min-width: 160px; }
+}

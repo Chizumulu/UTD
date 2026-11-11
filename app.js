@@ -2722,6 +2722,9 @@
     const myNameFull = isKorean ? t.nameKo : t.nameEn;
     const oppName = oppNameFull.split(' ')[0];
     const myName = myNameFull.split(' ')[0];
+    // 모바일은 짧은 이름(첫 단어), PC·태블릿(>600px)은 정식 이름을 CSS로 골라 보여줍니다.
+    const nmNameHtml = (full) => `<span class="nm-short">${String(full).split(' ')[0]}</span><span class="nm-full">${full}</span>`;
+    const nmEscAttr = (h) => h.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const kickoffTxt = formatKickoff(nmx);
     const nextMatchHomeEn = nmx.homeAway === 'H' ? t.nameEn : nmx.oppEn;
     const nextMatchVenue = isCupNext ? null : getTeamVenue(nextMatchHomeEn, nextWeek);
@@ -2748,15 +2751,19 @@
     const myTeamHtml = `
         <div class="nmh-team nmh-team-mine">
           <img class="team-logo nmh-crest" src="./dd.svg" alt="Chizumulu United FC">
-          <span class="lbl" data-en="Chizumulu" data-ko="치주물루" title="${myNameFull}">${myName}</span>
+          <span class="lbl" data-en="${nmEscAttr(nmNameHtml(t.nameEn))}" data-ko="${nmEscAttr(nmNameHtml(t.nameKo))}" title="${myNameFull}">${nmNameHtml(myNameFull)}</span>
           ${myRankTxt ? `<span class="nms-opp-rank">${myRankTxt}</span>` : ''}
         </div>`;
     const oppTeamHtml = `
         <div class="nmh-team">
           ${nmx.oppLogo ? `<img class="team-logo nmh-crest opp-logo" data-en-name="${nmx.oppEn}" data-ko-name="${nmx.oppKo}" title="${oppNameFull}" src="${nmx.oppLogo}" alt="${nmx.oppEn}">` : `<span class="team-logo nmh-crest opp-logo nmh-crest-fallback" title="${oppNameFull}">${String(nmx.oppEn || '?').trim().charAt(0).toUpperCase()}</span>`}
-          <span title="${oppNameFull}">${oppName}</span>
+          <span title="${oppNameFull}">${nmNameHtml(oppNameFull)}</span>
           ${oppRankTxt ? `<span class="nms-opp-rank">${oppRankTxt}</span>` : ''}
         </div>`;
+    // 모바일: 날짜와 날씨를 같은 줄(캘린더·공유 버튼 왼쪽)에 보여주기 위한 날씨 사본(기본은 CSS로 숨김, 모바일에서만 표시).
+    const inlineWeatherHtml = weatherHtml
+      ? weatherHtml.replace('class="match-weather nms-weather"', 'class="match-weather nms-weather nms-weather-inline"')
+      : '';
     const leftTeamHtml = nmx.homeAway === 'H' ? myTeamHtml : oppTeamHtml;
     const rightTeamHtml = nmx.homeAway === 'H' ? oppTeamHtml : myTeamHtml;
 
@@ -2767,7 +2774,10 @@
         <div class="nmh-center">
           ${ddayTxt ? `<div class="nmh-dday">${ddayTxt}</div>` : ''}
           ${(daysLeft === 0 && kickoffMs) ? `<div class="nmh-dday-clock" data-kickoff-utc="${kickoffMs}">${ddayClockText(kickoffMs)}</div>` : ''}
-          <div class="nmh-meta">${kickoffTxt || ''}</div>
+          <div class="nmh-meta-line">
+            <div class="nmh-meta">${kickoffTxt || ''}</div>
+            ${inlineWeatherHtml}
+          </div>
           ${nextMatchVenueName ? `<div class="nmh-venue">${svgIcon('stadium')} ${nextMatchVenueName}</div>` : ''}
         </div>
         ${rightTeamHtml}
@@ -20572,4 +20582,119 @@
   if (mq.addEventListener) mq.addEventListener('change', place); else mq.addListener(place);
   new MutationObserver(place).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   place();
+})();
+
+
+// ===== 모바일 "더보기" 안내 말풍선 =====
+// 하단 탭바의 "더보기" 바로 위에 작은 말풍선을 띄워 "더보기에 더 많은 정보가 있어요"를 알려줍니다.
+// - ✕ 또는 더보기 탭/말풍선을 누르면 "확인함"으로 기록(nrfa-more-hint-seen)해 다시는 띄우지 않습니다.
+// - 아무것도 안 누르고 약 10초 뒤 저절로 사라진 경우는 "확인함"으로 치지 않고 횟수만 셉니다(nrfa-more-hint-auto).
+//   이렇게 저절로 사라진 횟수가 MAX_AUTO(3)번에 이르면 그때부터는 더 이상 띄우지 않습니다.
+// - 접속 안내/뉴스/경기일 팝업 등 모달이 하나라도 열려 있으면 기다렸다가, 모두 닫히고 나서 띄웁니다.
+// - 모바일 폭(≤720px)에서만, 25/26 아카이브 화면이 아닐 때만 보입니다.
+// - 탭바가 스크롤로 숨겨져 있거나 PWA 설치 배너·모달이 떠 있는 동안은 잠깐 숨깁니다(기록은 남기지 않음).
+// - 문구는 .lbl + data-ko/data-en 이라서 언어를 바꾸면 같이 바뀝니다.
+(function () {
+  var KEY = 'nrfa-more-hint-seen';
+  var AUTO_KEY = 'nrfa-more-hint-auto';
+  var MAX_AUTO = 3;              // 저절로 사라진 횟수가 이만큼이면 더 안 띄움
+  var SHOW_DELAY_MS = 2000;      // 진입 후 첫 확인까지 대기
+  var AUTO_HIDE_MS = 10000;
+  var POPUP_POLL_MS = 700;       // 모달이 열려 있으면 이 간격으로 다시 확인
+  var POPUP_CLEAR_STREAK = 2;    // 모달 없음이 연속 이 횟수 확인돼야 띄움(팝업 → 다음 팝업 사이 틈 방지)
+  var MODAL_IDS = ['disclaimerModal', 'newsPopupModal', 'matchdayPopupModal', 'iosGuideModal',
+                   'moreSheetModal', 'noticeSheetModal', 'matchDetailModal', 'matchCompareModal',
+                   'otherTeamModal', 'archiveTeamModal', 'playerModal', 'squadPlayerModal',
+                   'statModal', 'fullRecordModal', 'postponedMatchesModal', 'venueMapModal'];
+  var bar = document.getElementById('mTabbar');
+  var moreTab = bar && bar.querySelector('.m-tab[data-view="more"]');
+  if (!bar || !moreTab) return;
+  var mq = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
+
+  function seen() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
+  function markSeen() { try { localStorage.setItem(KEY, '1'); } catch (e) {} }
+  function autoCount() { try { return parseInt(localStorage.getItem(AUTO_KEY), 10) || 0; } catch (e) { return 0; } }
+  function bumpAuto() { try { localStorage.setItem(AUTO_KEY, String(autoCount() + 1)); } catch (e) {} }
+  function exhausted() { return seen() || autoCount() >= MAX_AUTO; }
+  if (exhausted()) return;
+
+  var hint = null, done = false, autoTimer = null, showTimer = null, awayTimer = null, clearStreak = 0;
+
+  function pwaBannerVisible() {
+    var b = document.getElementById('pwaInstallBanner');
+    return !!(b && b.classList.contains('show'));
+  }
+  function popupOpen() {
+    for (var i = 0; i < MODAL_IDS.length; i++) {
+      var el = document.getElementById(MODAL_IDS[i]);
+      if (el && window.getComputedStyle(el).display !== 'none') return true;
+    }
+    return false;
+  }
+  function updateAway() {
+    if (!hint) return;
+    hint.classList.toggle('is-away', bar.classList.contains('is-hidden') || pwaBannerVisible() || popupOpen());
+  }
+  function remove() {
+    clearTimeout(autoTimer);
+    clearTimeout(showTimer);
+    clearInterval(awayTimer);
+    if (!hint) return;
+    var el = hint;
+    hint = null;
+    el.classList.remove('show');
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+  }
+  // 사용자가 직접 ✕ / 더보기 탭 / 말풍선을 누름 → 다시는 안 띄움
+  function dismiss() {
+    if (done) return;
+    done = true;
+    markSeen();
+    remove();
+  }
+  // 아무것도 안 누르고 시간이 지나 사라짐 → 횟수만 올리고 "확인함"으로는 기록하지 않음
+  function autoDismiss() {
+    if (done) return;
+    done = true;
+    bumpAuto();
+    remove();
+  }
+  function build() {
+    var en = document.documentElement.getAttribute('data-lang') === 'en';
+    hint = document.createElement('div');
+    hint.className = 'more-hint';
+    hint.setAttribute('role', 'status');
+    hint.innerHTML =
+      '<span class="more-hint-text lbl" data-ko="더보기에 더 많은 정보가 있어요" data-en="Tap More for extra info">' +
+      (en ? 'Tap More for extra info' : '더보기에 더 많은 정보가 있어요') + '</span>' +
+      '<button type="button" class="more-hint-close" aria-label="Close">&times;</button>';
+    hint.querySelector('.more-hint-close').addEventListener('click', function (e) { e.stopPropagation(); dismiss(); });
+    hint.querySelector('.more-hint-text').addEventListener('click', function () { moreTab.click(); });
+    document.body.appendChild(hint);
+  }
+  function show() {
+    if (done || exhausted()) return;
+    if (!mq || !mq.matches) return;
+    if (document.body.classList.contains('season-archive')) return;
+    // 모달/설치 배너가 떠 있으면 기다림. 모두 닫힌 뒤 연속으로 확인돼야 띄움.
+    if (popupOpen() || pwaBannerVisible()) {
+      clearStreak = 0;
+      showTimer = setTimeout(show, POPUP_POLL_MS);
+      return;
+    }
+    if (++clearStreak < POPUP_CLEAR_STREAK) { showTimer = setTimeout(show, POPUP_POLL_MS); return; }
+    build();
+    updateAway();
+    awayTimer = setInterval(updateAway, 500); // 말풍선이 떠 있는 동안 모달이 열리면 잠깐 숨김
+    requestAnimationFrame(function () { requestAnimationFrame(function () { if (hint) hint.classList.add('show'); }); });
+    autoTimer = setTimeout(autoDismiss, AUTO_HIDE_MS);
+  }
+
+  // 더보기 탭을 직접 누르면 위치를 알았다는 뜻이니 닫고 다시 안 띄웁니다.
+  moreTab.addEventListener('click', dismiss, true);
+  new MutationObserver(updateAway).observe(bar, { attributes: true, attributeFilter: ['class'] });
+  var banner = document.getElementById('pwaInstallBanner');
+  if (banner) new MutationObserver(updateAway).observe(banner, { attributes: true, attributeFilter: ['class', 'style'] });
+
+  showTimer = setTimeout(show, SHOW_DELAY_MS);
 })();
