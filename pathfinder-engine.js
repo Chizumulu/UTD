@@ -132,12 +132,13 @@
   }
 
   // ---- 목표 순위 슬롯 보정 ----
-  // title이면 1위(=1슬롯), safety면 "상위 safeSlots위 안에 들어야 안전".
-  // safeSlots가 없거나(undefined/NaN) 상대 팀 수보다 크면 범위 안으로 보정해서
+  // title(우승·승격)이면 "상위 slots위 안에 들어야 승격"(slots 생략 시 1위 = 기존 우승),
+  // safety면 "상위 slots위 안에 들어야 잔류(=강등 안 당함)".
+  // slots가 없거나(undefined/NaN) 상대 팀 수보다 크면 범위 안으로 보정해서
   // 아래 정렬 배열의 인덱스가 undefined가 되는 것을 막습니다.
-  function resolveSlot(mode, safeSlots, opponentCount) {
-    if (mode === 'title') return 1;
-    const s = Number.isFinite(safeSlots) ? Math.floor(safeSlots) : 1;
+  // 주의: title 모드에서 넘기는 값은 승격팀 수(LEAGUE_RULES.promote)입니다.
+  function resolveSlot(mode, slots, opponentCount) {
+    const s = Number.isFinite(slots) ? Math.floor(slots) : 1;
     return Math.min(Math.max(s, 1), opponentCount);
   }
 
@@ -236,7 +237,8 @@
   //   rankedTeams        - getRankedTeams('all') 결과 그대로 (team.pts/played/nameEn 필요)
   //   scheduledRounds    - data.js의 scheduledRounds 그대로
   //   seasonGames        - (팀 수-1)*2, 기존 getMagicNumberContext().seasonGames
-  //   safeSlots          - 기존 getMagicNumberContext().safeSlots (mode='safety'일 때만 사용)
+  //   safeSlots          - mode='safety'면 잔류 슬롯(getMagicNumberContext().safeSlots),
+  //                        mode='title'이면 승격팀 수(LEAGUE_RULES.promote, 생략하면 1)
   //
   // 출력: { mode, rival, remainingGames, safest: {...}, easiest: {...} }
   function computePathFinder(teamEn, mode, rankedTeams, scheduledRounds, seasonGames, safeSlots) {

@@ -330,12 +330,12 @@ const matchLineups = {
     opponentKo: "음벨와 워리어스 FC",
     result: "2 : 1 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"], assists: [88], captain: true },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["50'"], assists: [88], captain: true },
       { pos: "LW", number: 49, nameKo: "쿰부카니" },
       { pos: "CAM", number: 10, nameKo: "찰스", outMin: "전반" },
       { pos: "RW", number: 6, nameKo: "벤자민" },
       { pos: "LCM", number: 98, nameKo: "스티브" },
-      { pos: "RCM", number: 7, nameKo: "디킨스", goals: ["-"], assists: [13] },
+      { pos: "RCM", number: 7, nameKo: "디킨스", goals: ["64'"], assists: [13] },
       { pos: "LB", number: 5, nameKo: "라반" },
       { pos: "LCB", number: 13, nameKo: "조셉" },
       { pos: "RCB", number: 99, nameKo: "패트릭" },
@@ -360,7 +360,7 @@ const matchLineups = {
     starters: [
       { pos: "ST", number: 22, nameKo: "티모시 카타파" },
       { pos: "LW", number: 49, nameKo: "쿰부카니 바냐" },
-      { pos: "CAM", number: 9, nameKo: "제임스 헤르메스", goals: ["-"], assists: [6] },
+      { pos: "CAM", number: 9, nameKo: "제임스 헤르메스", goals: ["8'"], assists: [6] },
       { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
       { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
       { pos: "RCM", number: 7, nameKo: "디킨스 니렌다" },
@@ -381,16 +381,16 @@ const matchLineups = {
   }
   // ===== 13주차 vs 칠룸바 배럭스 FC (2026-10-02 홈, 4 : 0 승) 선발 라인업 =====
   // 모버트 카타파 등번호는 라인업 이미지에는 2번으로 잘못 적혀 있으나 실제는 25번입니다.
-  // 득점 시각은 확인된 것만 적고(디킨스 36' 첫 골), 나머지는 "-"로 둡니다. 쿰부카니(49)는
+  // 득점 시각은 모두 확인됐습니다(디킨스 35'·49', 카타파 51', 쿰부카니 70'). 쿰부카니(49)는
   // 대기 명단에 있었지만 득점했으므로 교체 투입(subsIn)으로 처리했고, 교체 시각/아웃 선수는 미확인입니다.
   , round13: {
     formation: "4-2-3-1",
     opponentKo: "칠룸바 배럭스 FC",
     result: "4 : 0 승",
     starters: [
-      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["-"], assists: [6] },
+      { pos: "ST", number: 22, nameKo: "티모시 카타파", goals: ["51'"], assists: [6] },
       { pos: "LW", number: 9, nameKo: "제임스 헤르메스" },
-      { pos: "CAM", number: 7, nameKo: "디킨스 니렌다", goals: ["36'", "-"], assists: [6, 22] },
+      { pos: "CAM", number: 7, nameKo: "디킨스 니렌다", goals: ["35'", "49'"], assists: [6, 22] },
       { pos: "RW", number: 6, nameKo: "벤자민 니렌다" },
       { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
       { pos: "RCM", number: 98, nameKo: "스티브 피리" },
@@ -401,7 +401,7 @@ const matchLineups = {
       { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
     ],
     subsIn: [
-      { number: 49, nameKo: "쿰부카니 바냐", pos: "LW", inMin: "-", goals: ["-"], assists: [66] }
+      { number: 49, nameKo: "쿰부카니 바냐", pos: "LW", inMin: "-", goals: ["70'"], assists: [66] }
     ],
     subsUnused: [4, 8, 10, 11, 25, 77, 80, 88]
   }
@@ -5302,6 +5302,14 @@ function listRemainingFixturesForWhatIf() {
   }));
 }
 
+// ===== 리그 승격·강등 규칙 (한 곳에서만 관리) =====
+// 시즌/리그가 바뀌면 이 값만 고치면 시뮬레이션·예측 화면·경우의 수 계산이 함께 따라옵니다.
+//   promote  : 승격팀 수 (1이면 1위 = 승격, 우승 확률과 같은 값)
+//   relegate : 강등팀 수 (최하위부터 이 팀 수만큼)
+//   순위 결정: 승점 > 골득실 > 다득점 > 승자승 (rankByTiebreakers가 처리 - 기존과 동일)
+// data.js는 워커(predict-worker.js)도 importScripts로 불러오므로 워커도 이 값을 그대로 씁니다.
+const LEAGUE_RULES = { promote: 1, relegate: 3 };
+
 function runMonteCarloSimulation(iterations, overrides) {
   const N = iterations || 4000;
   const fixtures = generateRemainingFixtures();
@@ -5349,13 +5357,19 @@ function runMonteCarloSimulation(iterations, overrides) {
   const rankCounts = {}; // nameEn -> [순위1횟수, 순위2횟수, ...]
   const champCount = {};
   const top3Count = {};
-  const bottom3Count = {};
+  const bottom3Count = {}; // 강등 횟수 (이름은 하위호환용 - 실제 기준은 LEAGUE_RULES.relegate)
+  const promoteCount = {};
   const finalPtsSum = {};
   const finalRankSum = {};
   // 순위별 최종 승점 표본(인덱스 0 = 1위): '우승·잔류 라인 예상 승점'에 사용
   const ptsAtRank = Array.from({ length: teamCount }, () => []);
   // 팀별 최종 승점 표본: 예측 표의 '예상 최종승점' 옆에 10~90% 범위를 보여주는 데 사용
   const ptsByTeam = {};
+  // 치주물루의 '남은 경기 결과(승·무·패 횟수)'별 집계: { "승-무": [시뮬레이션 횟수, 그중 승격한 횟수] }
+  // '3승 1무로 끝나면 승격 확률 몇 %' 표가 사용합니다(같은 루프에서 센 값이라 계산이 늘지 않습니다).
+  const MY_PROMO_TEAM_EN = 'Chizumulu United FC';
+  const myRecordStats = {};
+  const myRemainingGames = fixtures.filter(fx => fx.home.nameEn === MY_PROMO_TEAM_EN || fx.away.nameEn === MY_PROMO_TEAM_EN).length;
 
   teams.forEach(t => {
     ptsByTeam[t.nameEn] = [];
@@ -5363,6 +5377,7 @@ function runMonteCarloSimulation(iterations, overrides) {
     champCount[t.nameEn] = 0;
     top3Count[t.nameEn] = 0;
     bottom3Count[t.nameEn] = 0;
+    promoteCount[t.nameEn] = 0;
     finalPtsSum[t.nameEn] = 0;
     finalRankSum[t.nameEn] = 0;
   });
@@ -5394,6 +5409,7 @@ function runMonteCarloSimulation(iterations, overrides) {
       };
     });
 
+    let myW = 0, myD = 0; // 이번 반복에서 치주물루의 남은 경기 승/무 횟수
     fixtures.forEach((fx, fxIdx) => {
       const homeHA = teamHomeAway[fx.home.nameEn];
       const awayHA = teamHomeAway[fx.away.nameEn];
@@ -5449,6 +5465,10 @@ function runMonteCarloSimulation(iterations, overrides) {
       awayState.gf += awayGoals;
       awayState.ga += homeGoals;
       simH2HMatches.push({ homeEn: fx.home.nameEn, awayEn: fx.away.nameEn, homeScore: homeGoals, awayScore: awayGoals });
+      if (fx.home.nameEn === MY_PROMO_TEAM_EN || fx.away.nameEn === MY_PROMO_TEAM_EN) {
+        if (homeGoals === awayGoals) myD += 1;
+        else if ((homeGoals > awayGoals) === (fx.home.nameEn === MY_PROMO_TEAM_EN)) myW += 1;
+      }
 
       if (homeGoals > awayGoals) {
         homeState.pts += 3;
@@ -5481,7 +5501,14 @@ function runMonteCarloSimulation(iterations, overrides) {
       finalRankSum[s.nameEn] += rank;
       if (rank === 1) champCount[s.nameEn] += 1;
       if (rank <= 3) top3Count[s.nameEn] += 1;
-      if (rank > teamCount - 3) bottom3Count[s.nameEn] += 1;
+      if (rank > teamCount - LEAGUE_RULES.relegate) bottom3Count[s.nameEn] += 1;
+      if (rank <= LEAGUE_RULES.promote) promoteCount[s.nameEn] += 1;
+      if (s.nameEn === MY_PROMO_TEAM_EN) {
+        const key = myW + '-' + myD;
+        const slot = myRecordStats[key] || (myRecordStats[key] = [0, 0]);
+        slot[0] += 1;
+        if (rank <= LEAGUE_RULES.promote) slot[1] += 1;
+      }
     });
   }
 
@@ -5498,7 +5525,9 @@ function runMonteCarloSimulation(iterations, overrides) {
     logoSrc: t.logoSrc,
     championPct: (champCount[t.nameEn] / N) * 100,
     top3Pct: (top3Count[t.nameEn] / N) * 100,
-    bottom3Pct: (bottom3Count[t.nameEn] / N) * 100,
+    bottom3Pct: (bottom3Count[t.nameEn] / N) * 100, // 하위호환 별칭 (= relegatePct)
+    relegatePct: (bottom3Count[t.nameEn] / N) * 100,
+    promotePct: (promoteCount[t.nameEn] / N) * 100,
     avgFinalPts: finalPtsSum[t.nameEn] / N,
     ptsP10: ptsQuantile(ptsByTeam[t.nameEn], 0.1),
     ptsP50: ptsQuantile(ptsByTeam[t.nameEn], 0.5),
@@ -5524,6 +5553,12 @@ function runMonteCarloSimulation(iterations, overrides) {
   return {
     results,
     rankLines,
+    // 치주물루 남은 경기 결과별 승격 집계 [{ w, d, l, n, promoted }] (남은 경기 수 myRemainingGames 기준)
+    myRecordCurve: Object.keys(myRecordStats).map(k => {
+      const [w, d] = k.split('-').map(Number);
+      return { w, d, l: myRemainingGames - w - d, n: myRecordStats[k][0], promoted: myRecordStats[k][1] };
+    }),
+    myRemainingGames,
     iterations: N,
     whatIfFixedCount,
     remainingFixtureCount: fixtures.length,

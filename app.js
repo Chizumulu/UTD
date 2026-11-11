@@ -784,11 +784,12 @@
     // 한 줄 요약 칩: 가장 두드러지는 상태만 짧게 알려줍니다 (확률 기준).
     let chip = null;
     if (r.championPct >= 50) chip = { cls: 'is-gold', ko: '우승 유력', en: 'Title favourite' };
-    else if (r.bottom3Pct >= 50) chip = { cls: 'is-warn', ko: '강등권 위험', en: 'Relegation risk' };
+    else if (r.relegatePct >= 50) chip = { cls: 'is-warn', ko: '강등권 위험', en: 'Relegation risk' };
     else if (r.top3Pct >= 50) chip = { cls: 'is-good', ko: '상위 3위 유력', en: 'Top-3 likely' };
-    else if (r.bottom3Pct < 5) chip = { cls: 'is-good', ko: '잔류 안정권', en: 'Safe from the drop' };
+    else if (r.relegatePct < 5) chip = { cls: 'is-good', ko: '잔류 안정권', en: 'Safe from the drop' };
     else chip = { cls: '', ko: '중위권 경쟁', en: 'Mid-table battle' };
 
+    const relZoneLo = predictionCache.results.length - LEAGUE_RULES.relegate + 1; // 강등권 시작 순위
     const pct = (v) => (v >= 99.95 ? '100' : (v < 0.05 ? '0' : v.toFixed(1))) + '%';
     const hasRange = typeof r.ptsP10 === 'number' && typeof r.ptsP90 === 'number';
     const tile = (cls, ko, en, value, subKo, subEn) => `
@@ -808,9 +809,9 @@
         <span class="pms-chip ${chip.cls}">${isKorean ? chip.ko : chip.en}</span>
       </div>
       <div class="pms-tiles">
-        ${tile('pms-champ', '우승 확률', 'Title chance', pct(r.championPct), '1위로 마칠 확률', 'Finish 1st')}
+        ${tile('pms-champ', '우승·승격 확률', 'Title / promotion', pct(r.promotePct), `1위로 마칠 확률 (상위 ${LEAGUE_RULES.promote}팀 승격)`, `Finish 1st (top ${LEAGUE_RULES.promote} promoted)`)}
         ${tile('pms-top3', '상위 3위 확률', 'Top-3 chance', pct(r.top3Pct), '3위 이내로 마칠 확률', 'Finish in top 3')}
-        ${tile('pms-bot3', '하위 3위 확률', 'Bottom-3 chance', pct(r.bottom3Pct), '13~15위로 마칠 확률', 'Finish 13th–15th')}
+        ${tile('pms-bot3', '강등 확률', 'Relegation chance', pct(r.relegatePct), `${relZoneLo}~${predictionCache.results.length}위로 마칠 확률`, `Finish ${relZoneLo}th–${predictionCache.results.length}th`)}
         ${tile('pms-rank', '예상 최종순위', 'Avg. final rank', r.avgFinalRank.toFixed(1) + (isKorean ? '위' : ''),
                hasRange ? `예상 승점 ${r.ptsP10}~${r.ptsP90}점` : '', hasRange ? `Proj. ${r.ptsP10}–${r.ptsP90} pts` : '')}
       </div>`;
@@ -835,10 +836,11 @@
     predictionCache.results.forEach((r, idx) => {
       const rank = idx + 1;
       const tr = document.createElement('tr');
-      if (rank === 1) tr.classList.add('rank-1', 'promo');
+      if (rank <= LEAGUE_RULES.promote) tr.classList.add('promo');
+      if (rank === 1) tr.classList.add('rank-1');
       else if (rank === 2) tr.classList.add('rank-2');
       else if (rank === 3) tr.classList.add('rank-3');
-      if (rank > predictionCache.results.length - 3) tr.classList.add('releg');
+      if (rank > predictionCache.results.length - LEAGUE_RULES.relegate) tr.classList.add('releg');
       if (r.nameEn === 'Chizumulu United FC') tr.classList.add('my-team');
 
       const name = isKorean ? r.nameKo : r.nameEn;
@@ -855,9 +857,9 @@
       }
 
       // 모바일(≤600px)에서는 표가 카드형으로 바뀌므로, 각 칸에 위치 클래스와 라벨(data-label)을 달아둡니다.
-      const lblChamp = isKorean ? '우승' : 'Title';
+      const lblChamp = isKorean ? '우승·승격' : 'Title/Promo';
       const lblTop3 = isKorean ? '상위 3위' : 'Top 3';
-      const lblBot3 = isKorean ? '하위 3위' : 'Bottom 3';
+      const lblBot3 = isKorean ? '강등' : 'Relegation';
       const avgRankTxt = isKorean ? `예상 ${r.avgFinalRank.toFixed(1)}위` : `Avg. #${r.avgFinalRank.toFixed(1)}`;
       tr.innerHTML = `
         <td class="rank-cell pt-c-rank">${rank}</td>
@@ -866,9 +868,9 @@
           <span class="pt-team-name-full">${name}</span>
           <span class="pt-team-name-short">${shortName}</span>
         </td>
-        <td class="pt-prob-cell pt-c-champ" data-label="${lblChamp}">${barCell(r.championPct, 'champ')}</td>
+        <td class="pt-prob-cell pt-c-champ" data-label="${lblChamp}">${barCell(r.promotePct, 'champ')}</td>
         <td class="pt-prob-cell pt-c-top3" data-label="${lblTop3}">${barCell(r.top3Pct, 'top3')}</td>
-        <td class="pt-prob-cell pt-c-bot3" data-label="${lblBot3}">${barCell(r.bottom3Pct, 'bottom3')}</td>
+        <td class="pt-prob-cell pt-c-bot3" data-label="${lblBot3}">${barCell(r.relegatePct, 'bottom3')}</td>
         <td class="pt-c-avgrank">${r.avgFinalRank.toFixed(1)}</td>
         <td class="pt-pts-cell pt-c-pts">${r.avgFinalPts.toFixed(1)}${(typeof r.ptsP10 === 'number' && typeof r.ptsP90 === 'number') ? `<small class="pt-pts-range" title="${isKorean ? '시뮬레이션 결과의 80% 구간 (하위 10% ~ 상위 10% 제외)' : 'Middle 80% of simulated outcomes'}">${r.ptsP10}~${r.ptsP90}</small>` : ''}<small class="pt-avgrank-inline">${avgRankTxt}</small></td>
       `;
@@ -887,6 +889,7 @@
     renderRankProbMatrix();
     renderScenarioTable();
     renderRankLines();
+    renderPromoOdds();
     renderWhatIf();
     try { renderNextMatchPreviewCard(); } catch (e) {}
     attachImageFallback();
@@ -903,7 +906,7 @@
     const teamCount = lines.length;
     if (teamCount < 4) { host.innerHTML = ''; return; }
 
-    const safeRank = teamCount - 3;
+    const safeRank = teamCount - LEAGUE_RULES.relegate;
     const defs = [
       { rank: 1, ko: '우승 라인', en: 'Title line', subKo: '1위 최종 승점', subEn: '1st-place total', cls: 'rl-title' },
       { rank: 3, ko: '3위 라인', en: 'Top-3 line', subKo: '3위 최종 승점', subEn: '3rd-place total', cls: 'rl-top3' },
@@ -1017,6 +1020,66 @@
       ${summary}`;
   }
 
+  // ===== 남은 경기 결과별 승격 확률 ("3승 1무로 끝나면 승격 확률 몇 %") =====
+  // 시뮬레이션이 센 치주물루의 '남은 경기 승·무·패 조합별 승격 횟수'(myRecordCurve)를 그대로 보여줍니다.
+  // 표본이 너무 적은 조합은 빼고, 승격 확률이 갈리는 구간(50% 부근) 위주로 최대 8줄만 고릅니다.
+  // 어떤 상대를 이기느냐는 구분하지 않은 시뮬레이션 평균이에요(경기별 영향은 '만약에 시뮬레이터').
+  function renderPromoOdds() {
+    const host = document.getElementById('promoOddsBody');
+    if (!host) return;
+    host.innerHTML = '';
+    if (!predictionCache || !Array.isArray(predictionCache.myRecordCurve) || !predictionCache.myRecordCurve.length) return;
+    const remaining = predictionCache.myRemainingGames || 0;
+    if (remaining <= 0) return;
+    const me = (predictionCache.results || []).find(r => r.nameEn === 'Chizumulu United FC');
+    if (!me) return;
+    const mine = getMyRankedTeam();
+    const myPts = mine ? mine.team.pts : null;
+
+    const totalRuns = predictionCache.iterations || predictionCache.myRecordCurve.reduce((a, r) => a + r.n, 0);
+    const MIN_SAMPLE = Math.max(10, Math.round(totalRuns * 0.005)); // 표본이 너무 적은 조합은 제외
+    const rows = predictionCache.myRecordCurve
+      .filter(r => r.n >= MIN_SAMPLE)
+      .map(r => Object.assign({}, r, { pct: r.promoted / r.n * 100, pts: r.w * 3 + r.d }))
+      .sort((a, b) => b.pts - a.pts || b.w - a.w);
+
+    // 승격 확률이 50%를 처음 밑도는 지점 주변 8줄
+    const firstBelow = rows.findIndex(r => r.pct < 50);
+    const anchor = firstBelow === -1 ? rows.length : firstBelow;
+    const start = Math.max(0, Math.min(anchor - 4, rows.length - 8));
+    const shown = rows.slice(start, start + 8);
+
+    const label = r => {
+      const parts = [];
+      if (r.w) parts.push(isKorean ? `${r.w}승` : `${r.w}W`);
+      if (r.d) parts.push(isKorean ? `${r.d}무` : `${r.d}D`);
+      if (r.l) parts.push(isKorean ? `${r.l}패` : `${r.l}L`);
+      return parts.join(' ');
+    };
+
+    const promo = me.promotePct;
+    const barHtml = `
+      <div class="po-big">${promo.toFixed(1)}%</div>
+      <div class="po-bar"><div class="po-bar-fill" style="width:${Math.max(0, Math.min(100, promo)).toFixed(1)}%"></div></div>
+      <div class="po-bar-legend"><span class="po-yes">${isKorean ? '승격' : 'Promoted'} ${promo.toFixed(1)}%</span><span class="po-no">${isKorean ? '미승격' : 'Not promoted'} ${(100 - promo).toFixed(1)}%</span></div>`;
+
+    const rowsHtml = shown.length ? shown.map(r => `
+        <div class="po-row">
+          <div class="po-record">${label(r)}<span>${isKorean ? `최종 ${myPts === null ? '' : myPts + r.pts}점` : `${myPts === null ? '' : myPts + r.pts} pts`}</span></div>
+          <div class="po-pct">${r.pct >= 99.95 ? '100' : (r.pct < 0.05 ? '0' : r.pct.toFixed(1))}%</div>
+        </div>`).join('') : `<div class="po-empty">${isKorean ? '표본이 부족해 아직 보여줄 결과가 없어요.' : 'Not enough simulated outcomes to show yet.'}</div>`;
+
+    host.innerHTML = `
+      <div class="po-top">
+        <div class="po-top-title">${isKorean ? '치주물루의 최종 승격 확률' : "Chizumulu's promotion odds"}</div>
+        ${barHtml}
+      </div>
+      <div class="po-sub">${isKorean ? `남은 ${remaining}경기 결과별 예상` : `By result of the ${remaining} games left`}</div>
+      <div class="po-head"><span>${isKorean ? '결과' : 'Result'}</span><span>${isKorean ? '승격 확률' : 'Promotion odds'}</span></div>
+      ${rowsHtml}
+      <div class="rl-summary-note po-note">${isKorean ? '시뮬레이션 평균이며, 어떤 상대를 이기느냐는 구분하지 않아요. 표본이 적은 조합은 숨겼어요.' : 'Simulation average; it does not distinguish which opponents you beat. Rare outcomes are hidden.'}</div>`;
+  }
+
   // ===== 만약에 시뮬레이터 (What-if) =====
   // 남은 경기의 결과를 사용자가 직접 고정(승/무/패)하고, 그 가정으로 몬테카를로를 다시 돌려
   // 기본 예측과 나란히 비교합니다. 계산은 기존 예측과 같은 워커(requestPredictWorker)를 쓰고,
@@ -1031,7 +1094,8 @@
   let whatIfFixturesCache = null;
   // 경기별 '결과 → 우승확률 변화' 미리보기. 경기 ID(H/D/A 저장값 기준)로 캐시해서 팀을 바꿔도 겹치는 경기는 재사용합니다.
   // cache[fxId] = { H: {팀영문명: 우승%}, D: {...}, A: {...} } — 기준은 predictionCache(기본 예측)이고, 그것이 새로 계산되면 캐시를 버립니다.
-  const whatIfImpact = { cache: {}, baseRef: null, running: false, done: 0, total: 0, failed: false };
+  const whatIfImpact = { cache: {}, baseRef: null, running: false, done: 0, total: 0, failed: false, metric: null }; // metric: 'promo'(우승·승격) | 'rel'(강등) | null(팀 상황에 맞춰 자동)
+  // cache[fxId] = { H, D, A: {팀: 우승·승격%}, rel: { H, D, A: {팀: 강등%} } } — 같은 시뮬레이션 한 번으로 두 지표를 함께 담습니다.
 
   function wiEsc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1159,11 +1223,19 @@
     let headline = '';
     if (fs && fb) {
       const name = wiTeamName(focusEn);
-      const d = fs.championPct - fb.championPct;
+      const d = fs.promotePct - fb.promotePct;
       const dTxt = Math.abs(d) < WHATIF_FLAT_PCT ? (isKorean ? '변화 없음' : 'no real change') : `${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}%p`;
       headline = isKorean
-        ? `<strong>${name}</strong> 우승 확률 ${fb.championPct.toFixed(1)}% → <strong>${fs.championPct.toFixed(1)}%</strong> (${dTxt})`
-        : `<strong>${name}</strong> title chance ${fb.championPct.toFixed(1)}% → <strong>${fs.championPct.toFixed(1)}%</strong> (${dTxt})`;
+        ? `<strong>${name}</strong> 우승·승격 확률 ${fb.promotePct.toFixed(1)}% → <strong>${fs.promotePct.toFixed(1)}%</strong> (${dTxt})`
+        : `<strong>${name}</strong> title / promotion chance ${fb.promotePct.toFixed(1)}% → <strong>${fs.promotePct.toFixed(1)}%</strong> (${dTxt})`;
+      // 강등 확률이 의미 있는 크기(1% 이상)일 때만 한 줄 덧붙입니다.
+      if (fs.relegatePct >= 1 || fb.relegatePct >= 1) {
+        const dr = fs.relegatePct - fb.relegatePct;
+        const drTxt = Math.abs(dr) < WHATIF_FLAT_PCT ? (isKorean ? '변화 없음' : 'no real change') : `${dr > 0 ? '+' : '−'}${Math.abs(dr).toFixed(1)}%p`;
+        headline += isKorean
+          ? ` · 강등 확률 ${fb.relegatePct.toFixed(1)}% → <strong>${fs.relegatePct.toFixed(1)}%</strong> (${drTxt})`
+          : ` · relegation chance ${fb.relegatePct.toFixed(1)}% → <strong>${fs.relegatePct.toFixed(1)}%</strong> (${drTxt})`;
+      }
     }
 
     const rows = res.data.results.map(r => {
@@ -1174,9 +1246,9 @@
       const cell = (val, baseVal, invert) => `<td class="wi-num"><span class="wi-val">${val.toFixed(1)}%</span>${b ? wiDeltaChip(val - baseVal, false, invert) : ''}</td>`;
       return `<tr class="${cls}">
         <td class="wi-team"><img class="team-logo team-logo-sm" src="${wiEsc(r.logoSrc)}" alt=""><span class="wi-name-full">${name}</span><span class="wi-name-short">${shortName}</span></td>
-        ${cell(r.championPct, b ? b.championPct : 0, false)}
+        ${cell(r.promotePct, b ? b.promotePct : 0, false)}
         ${cell(r.top3Pct, b ? b.top3Pct : 0, false)}
-        ${cell(r.bottom3Pct, b ? b.bottom3Pct : 0, true)}
+        ${cell(r.relegatePct, b ? b.relegatePct : 0, true)}
         <td class="wi-num"><span class="wi-val">${r.avgFinalPts.toFixed(1)}</span>${(typeof r.ptsP10 === 'number') ? `<small class="wi-range">${r.ptsP10}~${r.ptsP90}</small>` : ''}${b ? wiDeltaChip(r.avgFinalPts - b.avgFinalPts, true, false) : ''}</td>
       </tr>`;
     }).join('');
@@ -1193,9 +1265,9 @@
           <table class="stats-table wi-result-table">
             <thead><tr>
               <th>${isKorean ? '팀' : 'TEAM'}</th>
-              <th>${isKorean ? '우승' : 'TITLE'}</th>
+              <th>${isKorean ? '우승·승격' : 'TITLE/PROMO'}</th>
               <th>${isKorean ? '상위 3위' : 'TOP 3'}</th>
-              <th>${isKorean ? '하위 3위' : 'BOTTOM 3'}</th>
+              <th>${isKorean ? '강등' : 'RELEGATION'}</th>
               <th>${isKorean ? '예상 승점' : 'AVG PTS'}</th>
             </tr></thead>
             <tbody>${rows}</tbody>
@@ -1215,16 +1287,26 @@
     return !!predictionCache;
   }
 
-  // 선택한 팀 기준 승/무/패 각각의 우승확률 변화(%p). 캐시가 없으면 null.
+  // 영향을 어떤 지표로 볼지: 사용자가 고른 값이 있으면 그것, 없으면 강등 위험이 승격 가능성보다 큰 팀은 강등, 아니면 우승·승격.
+  function wiImpactMetric(teamEn) {
+    if (whatIfImpact.metric) return whatIfImpact.metric;
+    const baseRow = predictionCache && predictionCache.results.find(r => r.nameEn === teamEn);
+    return (baseRow && baseRow.relegatePct > baseRow.promotePct) ? 'rel' : 'promo';
+  }
+
+  // 선택한 팀 기준 승/무/패 각각의 우승·승격(또는 강등) 확률 변화(%p). 캐시가 없으면 null.
   function wiImpactDeltas(fx, teamEn) {
     if (!wiImpactValid()) return null;
     const c = whatIfImpact.cache[fx.id];
     const baseRow = predictionCache.results.find(r => r.nameEn === teamEn);
     if (!c || !baseRow) return null;
+    const isRel = wiImpactMetric(teamEn) === 'rel';
+    const src = isRel ? c.rel : c;
+    const base = isRel ? baseRow.relegatePct : baseRow.promotePct;
     const out = {};
     for (const view of ['W', 'D', 'L']) {
-      const v = c[wiPickFromView(fx, teamEn, view)][teamEn];
-      out[view] = (typeof v === 'number' ? v : 0) - baseRow.championPct;
+      const v = src[wiPickFromView(fx, teamEn, view)][teamEn];
+      out[view] = (typeof v === 'number' ? v : 0) - base;
     }
     return out;
   }
@@ -1240,9 +1322,9 @@
     whatIfImpact.done = 0;
     whatIfImpact.total = todo.length;
     renderWhatIf();
-    const toMap = data => {
+    const toMap = (data, key) => {
       const m = {};
-      data.results.forEach(r => { m[r.nameEn] = r.championPct; });
+      data.results.forEach(r => { m[r.nameEn] = r[key]; });
       return m;
     };
     (async function () {
@@ -1250,14 +1332,15 @@
         // 스피너가 먼저 그려진 뒤에 계산을 시작합니다(워커를 못 쓰는 환경 대비).
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 30)));
         for (const fx of todo) {
-          const entry = {};
+          const entry = { rel: {} };
           for (const pick of ['H', 'D', 'A']) {
             const picks = {}; picks[fx.id] = pick;
             const data = await requestPredictWorker(
               { iterations: WHATIF_ITERATIONS, overrides: picks },
               () => runMonteCarloSimulation(WHATIF_ITERATIONS, picks)
             );
-            entry[pick] = toMap(data);
+            entry[pick] = toMap(data, 'promotePct');
+            entry.rel[pick] = toMap(data, 'relegatePct');
           }
           if (whatIfImpact.baseRef !== baseRef) break; // 계산 도중 기본 예측이 새로 계산됨 → 낡은 값은 버림
           whatIfImpact.cache[fx.id] = entry;
@@ -1309,17 +1392,24 @@
     });
     const impactCached = teamFx.filter(fx => impactMap[fx.id]).length;
     const impactAll = impactCached === teamFx.length && teamFx.length > 0;
+    const impactMetric = wiImpactMetric(teamEn);
+    const impactIsRel = impactMetric === 'rel';
     const impactLabel = whatIfImpact.running
       ? (isKorean ? `계산 중... ${whatIfImpact.done}/${whatIfImpact.total}` : `Calculating... ${whatIfImpact.done}/${whatIfImpact.total}`)
       : (impactAll ? (isKorean ? '경기별 영향 계산 완료' : 'Impact calculated')
-        : (isKorean ? '경기별 우승확률 영향 보기' : 'Show title-chance impact per game'));
+        : (isKorean ? '경기별 승격·강등 확률 영향 보기' : 'Show promotion / relegation impact per game'));
     const impactCanRun = !!predictionCache && !whatIfImpact.running && !impactAll;
+    const metricToggle = `<span class="wi-metric" role="group">
+          <button type="button" class="wi-chip${impactIsRel ? '' : ' is-on'}" data-wi-action="metric-promo" aria-pressed="${!impactIsRel}">${isKorean ? '우승·승격' : 'Title/Promo'}</button>
+          <button type="button" class="wi-chip${impactIsRel ? ' is-on' : ''}" data-wi-action="metric-rel" aria-pressed="${impactIsRel}">${isKorean ? '강등' : 'Relegation'}</button>
+        </span>`;
     const impactBar = `<div class="wi-impact-bar">
         <button type="button" class="wi-chip" data-wi-action="impact"${impactCanRun ? '' : ' disabled'}>${impactLabel}</button>
+        ${metricToggle}
         <span class="wi-impact-note">${whatIfImpact.failed
           ? (isKorean ? '계산에 실패했어요. 다시 시도해 주세요.' : 'Calculation failed. Please try again.')
           : (impactCached
-            ? (isKorean ? `각 버튼 아래 숫자는 그 경기만 고정했을 때 ${teamNameTxt}의 우승 확률 변화(기본 예측 대비)예요. 다른 경기를 이미 골랐어도 값은 그대로예요.` : `Numbers under each button show the change in ${teamNameTxt}'s title chance if only that game is fixed (vs. the base forecast), regardless of your other picks.`)
+            ? (isKorean ? `각 버튼 아래 숫자는 그 경기만 고정했을 때 ${teamNameTxt}의 ${impactIsRel ? '강등' : '우승·승격'} 확률 변화(기본 예측 대비)예요.${impactIsRel ? ' 강등은 내려갈수록(초록) 좋은 변화예요.' : ''} 다른 경기를 이미 골랐어도 값은 그대로예요.` : `Numbers under each button show the change in ${teamNameTxt}'s ${impactIsRel ? 'relegation' : 'title / promotion'} chance if only that game is fixed (vs. the base forecast), regardless of your other picks.`)
             : (isKorean ? '경기당 3번씩 시뮬레이션해서 시간이 조금 걸려요(처음 한 번만).' : 'Runs 3 simulations per game, so it takes a moment (first time only).'))}</span>
       </div>`;
 
@@ -1331,7 +1421,7 @@
       const dateTxt = wiDateText(fx);
       const dl = impactMap[fx.id] || null;
       const btn = (view, labelKo, labelEn, cls) =>
-        `<div class="wi-cell"><button type="button" class="wi-btn ${cls}${cur === view ? ' is-on' : ''}" data-wi-id="${wiEsc(fx.id)}" data-wi-view="${view}" aria-pressed="${cur === view}">${isKorean ? labelKo : labelEn}</button>${dl ? wiDeltaChip(dl[view], false, false) : ''}</div>`;
+        `<div class="wi-cell"><button type="button" class="wi-btn ${cls}${cur === view ? ' is-on' : ''}" data-wi-id="${wiEsc(fx.id)}" data-wi-view="${view}" aria-pressed="${cur === view}">${isKorean ? labelKo : labelEn}</button>${dl ? wiDeltaChip(dl[view], false, impactIsRel) : ''}</div>`;
       const isKey = !!dl && fx.id === keyId;
       return `<div class="wi-row${cur ? ' is-picked' : ''}${isKey ? ' is-key' : ''}">
         <div class="wi-match">
@@ -1442,6 +1532,12 @@
         case 'impact':
           runWiImpact();
           return;
+        case 'metric-promo':
+          whatIfImpact.metric = 'promo';
+          break;
+        case 'metric-rel':
+          whatIfImpact.metric = 'rel';
+          break;
         default:
           return;
       }
@@ -11743,12 +11839,13 @@
     const currentRound = completedRoundNumbers.length ? Math.max.apply(null, completedRoundNumbers) : 0;
     const remainingRounds = Math.max(0, seasonRounds - (typeof regularWeekNumber === 'function' ? regularWeekNumber(currentRound) : currentRound));
     const maxPoints = team => team.pts + Math.max(0, seasonGames - team.played) * 3;
-    return { remainingRounds, seasonGames, maxPoints, safeSlots: teamCount - 3 };
+    return { remainingRounds, seasonGames, maxPoints, safeSlots: teamCount - LEAGUE_RULES.relegate, promoteSlots: LEAGUE_RULES.promote };
   }
 
   function getTeamMagicNumbers(team, rankedTeams, context) {
     const opponents = rankedTeams.filter(other => other.nameEn !== team.nameEn);
-    const titleRival = opponents.reduce((best, other) => context.maxPoints(other) > context.maxPoints(best) ? other : best);
+    // 승격 라이벌: 상대 최대 승점이 promoteSlots번째로 높은 팀 (승격 1팀이면 최대 승점 1위 팀 = 기존 우승 라이벌과 같음)
+    const titleRival = opponents.slice().sort((a, b) => context.maxPoints(b) - context.maxPoints(a))[Math.min(context.promoteSlots, opponents.length) - 1];
     const safetyThreshold = opponents.slice().sort((a, b) => context.maxPoints(b) - context.maxPoints(a))[context.safeSlots - 1];
     const numberAgainst = rival => Math.max(0, context.maxPoints(rival) - team.pts + 1);
     const remainingGames = Math.max(0, context.seasonGames - team.played);
@@ -11764,7 +11861,7 @@
     const myMax = context.maxPoints(team);
     const teamsAbove = opponents.filter(other => other.pts > myMax).length;
     // 상태: clinched(확정) / eliminated(우승 경쟁 탈락·강등 확정) / alive(진행 중)
-    title.status = title.number === 0 ? 'clinched' : (teamsAbove >= 1 ? 'eliminated' : 'alive');
+    title.status = title.number === 0 ? 'clinched' : (teamsAbove >= context.promoteSlots ? 'eliminated' : 'alive');
     safety.status = safety.number === 0 ? 'clinched' : (teamsAbove >= context.safeSlots ? 'eliminated' : 'alive');
     title.wins = title.status === 'eliminated' ? null : winsNeeded(title.number);
     safety.wins = safety.status === 'eliminated' ? null : winsNeeded(safety.number);
@@ -11793,7 +11890,7 @@
   function magicNumberText(entry) {
     if (entry.status === 'eliminated') {
       const isTitle = entry.kind === 'title';
-      return isKorean ? (isTitle ? '우승 경쟁 탈락' : '강등 확정') : (isTitle ? 'ELIMINATED' : 'RELEGATED');
+      return isKorean ? (isTitle ? '승격 경쟁 탈락' : '강등 확정') : (isTitle ? 'ELIMINATED' : 'RELEGATED');
     }
     return entry.number === 0 ? (isKorean ? '확정' : 'CLINCHED') : (isKorean ? `${entry.number}점 남음` : `${entry.number} PTS LEFT`);
   }
@@ -11833,7 +11930,7 @@
     const safetyCondition = conditionText(numbers.safety, context);
     const titleWinsHtml = titleWinsMsg ? `<span class="magic-number-wins${numbers.title.wins === null ? ' magic-number-wins-na' : ''}">${titleWinsMsg}</span>` : '';
     const safetyWinsHtml = safetyWinsMsg ? `<span class="magic-number-wins${numbers.safety.wins === null ? ' magic-number-wins-na' : ''}">${safetyWinsMsg}</span>` : '';
-    return `<section class="team-magic-number-card"><div class="team-magic-number-head"><div><span class="magic-number-kicker">Season Race</span><h3>${isKorean ? '매직넘버' : 'Magic Number'}</h3></div><span class="magic-number-rounds">${isKorean ? `남은 ${context.remainingRounds}R · ${numbers.remainingGames}경기` : `${context.remainingRounds} rounds left · ${numbers.remainingGames} games`}</span></div><div class="magic-number-grid"><div class="magic-number-item title-race is-${numbers.title.status}"><span class="magic-number-label">${isKorean ? '우승 확정' : 'Title Clinch'}</span><strong>${magicNumberText(numbers.title)}</strong>${titleWinsHtml}<small>${titleCondition}</small></div><div class="magic-number-item safety-race is-${numbers.safety.status}"><span class="magic-number-label">${isKorean ? '잔류 확정' : 'Safety Clinch'}</span><strong>${magicNumberText(numbers.safety)}</strong>${safetyWinsHtml}<small>${safetyCondition}</small></div></div><p class="magic-number-note">${isKorean ? `${name}의 승점 획득과 경쟁 팀의 승점 손실을 합친 보수적 수치입니다.` : `A conservative combined total of ${name}'s points gained and rivals' points dropped.`}</p></section>`;
+    return `<section class="team-magic-number-card"><div class="team-magic-number-head"><div><span class="magic-number-kicker">Season Race</span><h3>${isKorean ? '매직넘버' : 'Magic Number'}</h3></div><span class="magic-number-rounds">${isKorean ? `남은 ${context.remainingRounds}R · ${numbers.remainingGames}경기` : `${context.remainingRounds} rounds left · ${numbers.remainingGames} games`}</span></div><div class="magic-number-grid"><div class="magic-number-item title-race is-${numbers.title.status}"><span class="magic-number-label">${isKorean ? '우승·승격 확정' : 'Promotion Clinch'}</span><strong>${magicNumberText(numbers.title)}</strong>${titleWinsHtml}<small>${titleCondition}</small></div><div class="magic-number-item safety-race is-${numbers.safety.status}"><span class="magic-number-label">${isKorean ? '잔류 확정' : 'Safety Clinch'}</span><strong>${magicNumberText(numbers.safety)}</strong>${safetyWinsHtml}<small>${safetyCondition}</small></div></div><p class="magic-number-note">${isKorean ? `${name}의 승점 획득과 경쟁 팀의 승점 손실을 합친 보수적 수치입니다.` : `A conservative combined total of ${name}'s points gained and rivals' points dropped.`}</p></section>`;
   }
 
   function renderMagicNumberStats() {
@@ -11994,7 +12091,7 @@
     leagueData.forEach(t => { teamByEnMap[t.nameEn] = t; });
 
     const titleResult = PathFinderEngine.computePathFinder(
-      mine.team.nameEn, 'title', ranked, scheduledRounds, context.seasonGames, context.safeSlots
+      mine.team.nameEn, 'title', ranked, scheduledRounds, context.seasonGames, context.promoteSlots
     );
     const safetyResult = PathFinderEngine.computePathFinder(
       mine.team.nameEn, 'safety', ranked, scheduledRounds, context.seasonGames, context.safeSlots
@@ -12002,7 +12099,7 @@
 
     target.innerHTML = `
       <div class="path-finder-section">
-        ${pathFinderRaceCardHtml(titleResult, teamByEnMap, '우승까지 경로', 'Path to the title')}
+        ${pathFinderRaceCardHtml(titleResult, teamByEnMap, '우승·승격까지 경로', 'Path to promotion')}
         ${pathFinderRaceCardHtml(safetyResult, teamByEnMap, '잔류까지 경로', 'Path to safety')}
       </div>`;
     attachImageFallback();
@@ -17318,6 +17415,7 @@
     bodyEl.innerHTML = `
       <div class="lineup-formation-tag">${lineup.formation}</div>
       ${buildMatchAssistSummary(lineup)}
+      ${renderMatchCenterSection(roundKey, lineup, opponentName)}
       <div class="match-detail-layout">
         <div class="match-detail-left">
           ${renderLineupLeft(lineup)}
@@ -17331,6 +17429,223 @@
     `;
 
     showModalAnimated(document.getElementById('matchDetailModal'));
+  }
+
+  // ===== 경기 상세: 매치센터 섹션 (이벤트 타임라인 · 전/후반 결과 · MVP) =====
+  // 데이터는 matchLineups[roundKey]의 goals/assists/subsIn(inMin/outMin)과 teamAwards.motm 만 씁니다.
+  //  - 골 시간이 "-"(미상)인 골은 "시간 미상"으로 따로 모읍니다. 결과 스코어(result)가 라인업 득점 합보다
+  //    크면(자책골 등) 그 차이도 "득점자 미기록"으로 취급합니다.
+  //  - 상대 득점은 시간·득점자 데이터가 없으므로, 실점이 0인 경기만 전·후반 스코어를 확정하고
+  //    실점이 있는 경기는 상대 쪽을 "?"로 둡니다.
+  //  - 교체는 "전반"/"후반" 구간만 기록돼 있어서 분 단위가 아니라 구간별로 묶어 보여줍니다.
+  function mcParseMinute(g) {
+    const m = String(g == null ? '' : g).match(/^\s*(\d+)(?:\s*\+\s*(\d+))?/);
+    if (!m) return null;
+    const base = parseInt(m[1], 10);
+    const extra = m[2] ? parseInt(m[2], 10) : 0;
+    return { base: base, key: base + extra / 100, half: base <= 45 ? 1 : 2, label: base + (extra ? '+' + extra : '') + "'" };
+  }
+
+  function mcRefName(ref) {
+    if (typeof ref === 'string' && /^F\d+$/.test(ref)) {
+      const fl = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+      const fp = fl.find(p => p.number === parseInt(ref.slice(1), 10));
+      if (fp) return (isKorean ? fp.nameKo : (fp.nameEn || fp.nameKo)).split(' ')[0];
+    }
+    return lineupAssisterName(ref);
+  }
+
+  function mcPlayerLink(p) {
+    const name = lineupPlayerFullName(p).split(' ')[0];
+    return `<span class="mcenter-name lineup-squad-link" data-player-number="${p.statKey || p.number}">${name}</span>`;
+  }
+
+  function renderMatchCenterSection(roundKey, lineup, opponentName) {
+    const isKo = isKorean;
+    const starters = lineup.starters || [];
+    const subsIn = lineup.subsIn || [];
+    const everyone = starters.concat(subsIn);
+
+    // --- 우리 팀 골 수집 ---
+    const goals = [];
+    let order = 0;
+    everyone.forEach(p => {
+      (p.goals || []).forEach((g, i) => {
+        const a = Array.isArray(p.assists) ? p.assists[i] : null;
+        goals.push({
+          p: p, min: mcParseMinute(g), order: order++,
+          assist: (a === null || a === undefined || a === '-') ? null : a
+        });
+      });
+    });
+    const known = goals.filter(g => g.min).sort((x, y) => (x.min.key - y.min.key) || (x.order - y.order));
+    const unknown = goals.filter(g => !g.min);
+
+    // --- 스코어 ---
+    const rm = String(lineup.result || '').match(/(\d+)\s*:\s*(\d+)/);
+    const oursTotal = rm ? parseInt(rm[1], 10) : null;
+    const oppTotal = rm ? parseInt(rm[2], 10) : null;
+    const unrecorded = oursTotal === null ? 0 : Math.max(0, oursTotal - goals.length);
+    const unknownTotal = unknown.length + unrecorded;
+    const h1 = known.filter(g => g.min.half === 1).length;
+    const h2 = known.filter(g => g.min.half === 2).length;
+    const oppKnownZero = oppTotal === 0;
+
+    // --- 교체 (같은 포지션의 나가는 선수 ↔ 들어오는 선수를 순서대로 짝지음) ---
+    const outsByPos = {};
+    const insByPos = {};
+    starters.forEach(s => { if (s.outMin) (outsByPos[s.pos] = outsByPos[s.pos] || []).push(s); });
+    subsIn.forEach(s => {
+      (insByPos[s.pos] = insByPos[s.pos] || []).push(s);
+      if (s.outMin) (outsByPos[s.pos] = outsByPos[s.pos] || []).push(s);
+    });
+    const subEvents = [];
+    subsIn.forEach(s => {
+      const idx = (insByPos[s.pos] || []).indexOf(s);
+      const out = (outsByPos[s.pos] || [])[idx] || null;
+      const half = s.inMin === '전반' ? 1 : (s.inMin === '후반' ? 2 : 0);
+      subEvents.push({ inP: s, outP: out, half: half });
+    });
+
+    // --- MVP ---
+    const motmNums = (typeof teamAwards !== 'undefined' && teamAwards.motm && teamAwards.motm[roundKey]) || [];
+
+    if (!rm && !goals.length && !subEvents.length && !motmNums.length) return '';
+
+    // ---------- 전·후반 결과 ----------
+    const ourName = isKo ? '치주물루' : 'Chizumulu';
+    const star = unknownTotal > 0 ? '*' : '';
+    // 시간이 확인된 우리 골이 하나도 없는데 미상 골만 있으면 0으로 보이지 않게 "?"로 표시
+    const halfScore = (n) => `${(n === 0 && unknownTotal > 0 && !known.length) ? '?' : n + star} : ${oppKnownZero ? 0 : '?'}`;
+    let halvesHtml = '';
+    if (rm) {
+      const notes = [];
+      if (unknownTotal > 0) {
+        notes.push(isKo ? `* 득점 시간 미상 ${unknownTotal}골은 전·후반 집계에서 제외`
+                        : `* ${unknownTotal} goal${unknownTotal > 1 ? 's' : ''} with no recorded minute are not counted in the halves`);
+      }
+      if (!oppKnownZero) {
+        notes.push(isKo ? '? 상대 득점은 시간 기록이 없어 전·후반을 나눌 수 없음'
+                        : '? Opponent goals have no recorded minutes, so halves cannot be split');
+      }
+      halvesHtml = `
+        <div class="mcenter-card mcenter-halves-card">
+          <div class="mcenter-card-title">${isKo ? '전·후반 결과' : 'Result by Half'}</div>
+          <div class="mcenter-legend">${ourName} : ${opponentName}</div>
+          <div class="mcenter-halves">
+            <div class="mcenter-half"><span class="mcenter-half-lbl">${isKo ? '전반' : '1st half'}</span><span class="mcenter-half-score">${halfScore(h1)}</span></div>
+            <div class="mcenter-half"><span class="mcenter-half-lbl">${isKo ? '후반' : '2nd half'}</span><span class="mcenter-half-score">${halfScore(h2)}</span></div>
+            <div class="mcenter-half mcenter-half-ft"><span class="mcenter-half-lbl">${isKo ? '최종' : 'Full time'}</span><span class="mcenter-half-score">${oursTotal} : ${oppTotal}</span></div>
+          </div>
+          ${notes.length ? `<div class="mcenter-note">${notes.join('<br>')}</div>` : ''}
+        </div>`;
+    }
+
+    // ---------- MVP ----------
+    let mvpHtml = '';
+    if (motmNums.length) {
+      const chips = motmNums.map(n => {
+        const p = everyone.find(x => x.number === n);
+        const sq = squadData.find(x => x.number === n);
+        const full = p ? lineupPlayerFullName(p) : (sq ? (isKo ? sq.nameKo : (sq.nameEn || sq.nameKo)) : String(n));
+        const g = p ? (p.goals || []).length : 0;
+        const a = lineupAssistsMade(lineup, n);
+        const stat = [
+          g ? (isKo ? `${g}골` : `${g} goal${g > 1 ? 's' : ''}`) : '',
+          a ? (isKo ? `${a}도움` : `${a} assist${a > 1 ? 's' : ''}`) : ''
+        ].filter(Boolean).join(' · ');
+        return `
+          <div class="mcenter-mvp">
+            <span class="mcenter-mvp-ic">${svgIcon('trophy')}</span>
+            <span class="mcenter-mvp-main">
+              <span class="mcenter-mvp-name lineup-squad-link" data-player-number="${n}">${full}</span>
+              <span class="mcenter-mvp-sub">#${n}${stat ? ' · ' + stat : ''}</span>
+            </span>
+          </div>`;
+      }).join('');
+      mvpHtml = `
+        <div class="mcenter-card mcenter-mvp-card">
+          <div class="mcenter-card-title">${isKo ? '경기 MVP' : 'Man of the Match'}</div>
+          ${chips}
+        </div>`;
+    }
+
+    // ---------- 타임라인 ----------
+    const goalRow = (g) => `
+      <li class="mcenter-ev mcenter-ev-goal">
+        <span class="mcenter-min">${g.min ? g.min.label : '–'}</span>
+        <span class="mcenter-ev-ic">${svgIcon('ball')}</span>
+        <span class="mcenter-ev-body">${mcPlayerLink(g.p)}${g.assist !== null
+          ? `<span class="mcenter-assist">${isKo ? '도움' : 'ast.'} <span class="mcenter-name lineup-squad-link" data-player-number="${g.assist}">${mcRefName(g.assist)}</span></span>` : ''}</span>
+      </li>`;
+    const subRow = (e) => `
+      <li class="mcenter-ev mcenter-ev-sub">
+        <span class="mcenter-min mcenter-min-sub">${e.half ? lineupMinLabel(e.half === 1 ? '전반' : '후반') : '–'}</span>
+        <span class="mcenter-ev-ic">${svgIcon('swap')}</span>
+        <span class="mcenter-ev-body"><span class="mcenter-in">▲ ${mcPlayerLink(e.inP)}</span>${e.outP
+          ? `<span class="mcenter-out">▼ ${mcPlayerLink(e.outP)}</span>` : ''}</span>
+      </li>`;
+
+    const groupHtml = (label, rows) => rows
+      ? `<div class="mcenter-group"><div class="mcenter-group-lbl">${label}</div><ol class="mcenter-tl">${rows}</ol></div>` : '';
+
+    const firstRows = known.filter(g => g.min.half === 1).map(goalRow).join('')
+      + subEvents.filter(e => e.half === 1).map(subRow).join('');
+    const secondRows = known.filter(g => g.min.half === 2).map(goalRow).join('')
+      + subEvents.filter(e => e.half === 2).map(subRow).join('');
+    let unknownRows = unknown.map(goalRow).join('')
+      + subEvents.filter(e => e.half === 0).map(subRow).join('');
+    if (unrecorded > 0) {
+      unknownRows += `
+        <li class="mcenter-ev mcenter-ev-goal">
+          <span class="mcenter-min">–</span>
+          <span class="mcenter-ev-ic">${svgIcon('ball')}</span>
+          <span class="mcenter-ev-body"><span class="mcenter-muted">${isKo ? `득점자 미기록 ${unrecorded}골` : `${unrecorded} goal${unrecorded > 1 ? 's' : ''} without a recorded scorer`}</span></span>
+        </li>`;
+    }
+    const oppRows = (oppTotal > 0)
+      ? `<li class="mcenter-ev mcenter-ev-opp">
+          <span class="mcenter-min">–</span>
+          <span class="mcenter-ev-ic">${svgIcon('ball')}</span>
+          <span class="mcenter-ev-body"><span class="mcenter-muted">${isKo ? `${opponentName} 득점 ${oppTotal}골 (시간·득점자 기록 없음)` : `${opponentName}: ${oppTotal} goal${oppTotal > 1 ? 's' : ''} (no minute or scorer recorded)`}</span></span>
+        </li>` : '';
+
+    // 0~90분 위에 골 위치를 찍는 막대 (장식용, 같은 정보가 아래 목록에 글로 있음)
+    let barHtml = '';
+    if (known.length) {
+      const maxMin = Math.max(90, ...known.map(g => Math.ceil(g.min.base)));
+      const pins = known.map(g => {
+        const pct = Math.min(100, (g.min.base / maxMin) * 100);
+        return `<span class="mcenter-pin" style="left:${pct.toFixed(1)}%"></span>`;
+      }).join('');
+      barHtml = `
+        <div class="mcenter-bar" aria-hidden="true">
+          <span class="mcenter-bar-ht" style="left:${((45 / maxMin) * 100).toFixed(1)}%"></span>
+          ${pins}
+          <span class="mcenter-bar-tick mcenter-bar-tick-0">0'</span>
+          <span class="mcenter-bar-tick mcenter-bar-tick-ht" style="left:${((45 / maxMin) * 100).toFixed(1)}%">45'</span>
+          <span class="mcenter-bar-tick mcenter-bar-tick-end">${maxMin}'</span>
+        </div>`;
+    }
+
+    const bodyRows = groupHtml(isKo ? '전반' : '1st half', firstRows)
+      + groupHtml(isKo ? '후반' : '2nd half', secondRows)
+      + groupHtml(isKo ? '시간 미상' : 'Time unknown', unknownRows)
+      + groupHtml(isKo ? '상대 팀' : 'Opponent', oppRows);
+
+    const timelineHtml = `
+      <div class="mcenter-card mcenter-timeline-card">
+        <div class="mcenter-card-title">${isKo ? '경기 타임라인' : 'Match Timeline'}</div>
+        ${barHtml}
+        ${bodyRows || `<div class="mcenter-empty">${isKo ? '기록된 이벤트가 없습니다' : 'No events recorded'}</div>`}
+        ${subEvents.length ? `<div class="mcenter-note">${isKo ? '교체는 전·후반 구분만 기록돼 있어 분 단위로 표시하지 않습니다.' : 'Substitutions are recorded by half only, not by minute.'}</div>` : ''}
+      </div>`;
+
+    return `
+      <section class="mcenter" aria-label="${isKo ? '경기 요약' : 'Match summary'}">
+        <div class="mcenter-top">${halvesHtml}${mvpHtml}</div>
+        ${timelineHtml}
+      </section>`;
   }
 
   function closeMatchDetail() {

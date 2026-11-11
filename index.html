@@ -21,17 +21,18 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '001',
-    data: '001',
-    app: '001',
+    style: '010',
+    data: '010',
+    app: '010',
     report: '001',
     archive: '200',
-    predictWorker: '200',
-    pathfinderEngine: '200',
-    teamAnalysis: '002',
+    predictWorker: '220',
+    pathfinderEngine: '201',
+    teamAnalysis: '013',
     poster: '001',
     travelAnalysis: '005',
-    venueMatrix: '001'
+    venueMatrix: '001',
+    a11y: '001'
   };
 </script>
 <!-- Google Tag Manager -->
@@ -430,6 +431,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </style>
 </head>
 <body>
+<a class="skip-link lbl" href="#mainContent" data-ko="본문으로 바로가기" data-en="Skip to main content">본문으로 바로가기</a>
 <dialog class="match-alert-confirm" id="enableMatchAlertsDialog" aria-labelledby="enableMatchAlertsTitle" aria-describedby="enableMatchAlertsDescription">
   <h2 class="lbl" id="enableMatchAlertsTitle" data-ko="경기 알림을 설정하시겠어요?" data-en="Set up match alerts?">경기 알림을 설정하시겠어요?</h2>
   <p class="lbl" id="enableMatchAlertsDescription" data-ko="킥오프 1시간 전, 득점, 경기 종료 알림을 보내드립니다. 동의하면 브라우저 알림 권한을 요청합니다." data-en="Get alerts one hour before kickoff, for goals, and at full time. Continue to allow browser notifications.">킥오프 1시간 전, 득점, 경기 종료 알림을 보내드립니다. 동의하면 브라우저 알림 권한을 요청합니다.</p>
@@ -610,7 +612,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </aside>
 
-<div class="container">
+<div class="container" id="mainContent" role="main" tabindex="-1">
 <div class="next-match-strip" id="nextMatchStrip" aria-busy="true">
   <div class="nmh-eyebrow"><span class="skeleton-bar skeleton-bar-eyebrow"></span></div>
   <div class="nmh-top">
@@ -1252,9 +1254,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <tr>
           <th class="lbl" data-en="RANK" data-ko="순위">순위</th>
           <th class="lbl" data-en="TEAMS" data-ko="팀">팀</th>
-          <th class="lbl" data-en="TITLE %" data-ko="우승 확률">우승 확률</th>
+          <th class="lbl" data-en="TITLE / PROMO %" data-ko="우승·승격 확률">우승·승격 확률</th>
           <th class="lbl" data-en="TOP 3 %" data-ko="상위 3위 확률">상위 3위 확률</th>
-          <th class="lbl" data-en="BOTTOM 3 %" data-ko="하위 3위 확률">하위 3위 확률</th>
+          <th class="lbl" data-en="RELEGATION %" data-ko="강등 확률">강등 확률</th>
           <th class="lbl" data-en="AVG FINAL RANK" data-ko="예상 최종순위">예상 최종순위</th>
           <th class="lbl" data-en="AVG FINAL PTS (80% RANGE)" data-ko="예상 최종승점 (80% 범위)">예상 최종승점 (80% 범위)</th>
         </tr>
@@ -1370,6 +1372,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
     </div>
     <div class="rl-body" id="rankLinesBody"></div>
+  </div>
+  <div class="scatter-card rl-card po-card">
+    <div class="stats-title">
+      <span class="lbl" data-en="Promotion Odds by Result" data-ko="남은 경기 결과별 승격 확률">남은 경기 결과별 승격 확률</span>
+      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'promoOddsInfo')">ⓘ</span>
+      <div class="info-tooltip" id="promoOddsInfo" onclick="event.stopPropagation()">
+        <span class="lbl" data-ko="시뮬레이션에서 치주물루의 남은 경기가 '3승 1무'처럼 끝난 경우만 모아, 그중 실제로 1위(승격)한 비율을 센 값이에요. 어떤 상대를 이기느냐는 구분하지 않은 평균이고(경기별 영향은 '만약에 시뮬레이터'에서 확인하세요), 표본이 적은 조합은 숨겼어요." data-en="Among simulated seasons where Chizumulu's remaining games ended in a given record (e.g. 3 wins, 1 draw), the share that finished 1st (promoted). It is an average that does not distinguish which opponents you beat (use the What-if simulator for that), and rare records are hidden.">시뮬레이션에서 치주물루의 남은 경기가 '3승 1무'처럼 끝난 경우만 모아, 그중 실제로 1위(승격)한 비율을 센 값이에요. 어떤 상대를 이기느냐는 구분하지 않은 평균이고(경기별 영향은 '만약에 시뮬레이터'에서 확인하세요), 표본이 적은 조합은 숨겼어요.</span>
+      </div>
+    </div>
+    <div class="rl-body po-body" id="promoOddsBody"></div>
   </div>
   <section class="magic-number-stats-section" aria-live="polite">
     <div class="stats-title advanced">
@@ -1935,6 +1947,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.write('<script src="travel-analysis.js?v=' + window.ASSET_VERSIONS.travelAnalysis + '"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
   document.write('<script src="lang-ny.js?v=002"><\/script>');
+  document.write('<script src="a11y.js?v=' + window.ASSET_VERSIONS.a11y + '"><\/script>');
 </script>
 </body>
 </html>

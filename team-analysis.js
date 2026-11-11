@@ -6,6 +6,7 @@
 //   1) 상대 유형별 성적      : 현재 순위 기준 상위/중위/하위권 상대 + 홈/원정 성적
 //   2) 득점 패턴            : 도움 → 득점 연결 그래프 + (app.js 카드) 최강 콤비·합작률·전체 콤비 표·포지션별 득점/도움
 //   3) 상대별 한 장 리포트   : 상대 하나를 골라 폼·득실·득점원·맞대결을 한 카드로
+//   3-2) 선수 비교          : 선수 둘을 골라 출전·골·도움·출전 시 팀 성적을 나란히 + 레이더 차트 + 함께 뛴 경기
 //   4) 교체 활용 현황        : 교체 투입 선수의 득점·도움, 교체 인원별 성적 + (app.js 카드) 선발 대비 교체 비율
 //   5) 선발 조합·포메이션    : 포메이션별 성적, 포지션별 주전 고정도, 라인업 변동, 유닛 조합
 //                            + (app.js 카드) 핵심 선수 영향도, 선발 조합 효과
@@ -610,7 +611,8 @@
       network: computeScoringNetwork(ctx),
       goalTimes: computeGoalTimes(ctx),
       subs: computeSubstitutions(ctx, games),
-      lineup: computeLineupAnalysis(ctx, games)
+      lineup: computeLineupAnalysis(ctx, games),
+      players: computePlayerStats(ctx)
     };
   }
 
@@ -758,7 +760,7 @@
         '</g>';
     }).join('');
 
-    var svg = '<svg class="ta-network" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(T('도움에서 득점으로 이어지는 연결 그래프', 'Assist-to-goal connection graph')) + '">' +
+    var svg = '<svg class="ta-network" viewBox="0 0 ' + W + ' ' + H + '" role="group" aria-label="' + esc(T('도움에서 득점으로 이어지는 연결 그래프', 'Assist-to-goal connection graph')) + '">' +
       '<defs><marker id="taArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ta-arrow"></path></marker></defs>' +
       edgesSvg + nodesSvg + '</svg>';
 
@@ -935,6 +937,237 @@
       T('확정된 경기 결과 기준입니다.', 'Based on confirmed match results.'));
   }
 
+
+  // =====================================================================
+  // 선수 비교
+  // =====================================================================
+  // 라인업(matchLineups)이 입력된 경기만 대상으로, 선수별 출전·골·도움과 "그 선수가 뛴 경기의
+  // 팀 성적"을 모읍니다. 출전 시간(분)은 기록이 없어(전반/후반만 입력) 경기 수 기준으로만 비교합니다.
+  // 도움은 다른 화면과 수치가 갈리지 않도록 ctx.assistCombos(data.js 단일 출처)가 있으면 그것을 씁니다.
+  function computePlayerStats(ctx) {
+    var games = buildGames(ctx, ctx.myEn, true).filter(function (g) { return g.lineup && !g.forfeit; });
+    var byRef = {};
+    var perGame = [];   // 경기마다 { res, gf, ga, refs:{ref:true} } — 함께 뛴 경기 계산용
+    function get(ref) {
+      var k = String(ref);
+      if (!byRef[k]) byRef[k] = { key: ref, apps: 0, starts: 0, subs: 0, goals: 0, assists: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, cs: 0, pos: {} };
+      return byRef[k];
+    }
+    var localAssists = {};
+    games.forEach(function (g) {
+      var lu = g.lineup, refs = {};
+      function mark(p, started) {
+        var ref = refOf(p);
+        if (!isRef(ref) || refs[String(ref)]) return;
+        refs[String(ref)] = true;
+        var st = get(ref);
+        st.apps++; if (started) st.starts++; else st.subs++;
+        st[g.res.toLowerCase()]++;
+        st.gf += g.gf; st.ga += g.ga; if (g.ga === 0) st.cs++;
+        if (p.pos) st.pos[p.pos] = (st.pos[p.pos] || 0) + 1;
+        (p.goals || []).forEach(function (_, i) {
+          st.goals++;
+          var a = (p.assists || [])[i];
+          if (isRef(a)) localAssists[String(a)] = (localAssists[String(a)] || 0) + 1;
+        });
+      }
+      (lu.starters || []).forEach(function (p) { mark(p, true); });
+      (lu.subsIn || []).forEach(function (p) { mark(p, false); });
+      perGame.push({ res: g.res, gf: g.gf, ga: g.ga, refs: refs });
+    });
+    // 도움: 단일 출처가 있으면 그 값, 없으면 라인업에서 센 값
+    var assistTotals = localAssists;
+    if (ctx.assistCombos && ctx.assistCombos.combos) {
+      assistTotals = {};
+      ctx.assistCombos.combos.forEach(function (c) { assistTotals[String(c.from)] = (assistTotals[String(c.from)] || 0) + c.count; });
+    }
+    var teamN = games.length;
+    var list = Object.keys(byRef).map(function (k) {
+      var st = byRef[k];
+      st.assists = assistTotals[k] || 0;
+      st.ga_ = st.goals + st.assists;
+      st.gpa = st.apps ? st.goals / st.apps : 0;
+      st.apa = st.apps ? st.assists / st.apps : 0;
+      st.gapa = st.apps ? st.ga_ / st.apps : 0;
+      st.ppg = st.apps ? (st.w * 3 + st.d) / st.apps : 0;
+      st.csRate = st.apps ? st.cs / st.apps : 0;
+      st.availability = teamN ? st.apps / teamN : 0;
+      st.startRate = teamN ? st.starts / teamN : 0;
+      return st;
+    }).sort(function (a, b) { return (b.ga_ - a.ga_) || (b.apps - a.apps) || cmpRef(a.key, b.key); });
+    var max = { gpa: 0, apa: 0 };
+    list.forEach(function (st) { max.gpa = Math.max(max.gpa, st.gpa); max.apa = Math.max(max.apa, st.apa); });
+    return { teamN: teamN, list: list, byRef: byRef, perGame: perGame, max: max };
+  }
+
+  // 함께/따로 뛴 경기의 팀 성적
+  function computeTogether(pdata, refA, refB) {
+    var a = String(refA), b = String(refB);
+    var buckets = { both: [], onlyA: [], onlyB: [], neither: [] };
+    pdata.perGame.forEach(function (g) {
+      var pa = !!g.refs[a], pb = !!g.refs[b];
+      buckets[pa && pb ? 'both' : (pa ? 'onlyA' : (pb ? 'onlyB' : 'neither'))].push(g);
+    });
+    return {
+      both: aggregate(buckets.both), onlyA: aggregate(buckets.onlyA),
+      onlyB: aggregate(buckets.onlyB), neither: aggregate(buckets.neither),
+      all: aggregate(pdata.perGame)
+    };
+  }
+
+  var selectedPlayerA = null, selectedPlayerB = null;
+
+  function playerPosLabel(ctx, st) {
+    var former = /^F\d+$/.test(String(st.key));
+    var num = String(st.key).replace(/^F/, '');
+    var src = former ? (ctx.formerSquadData || []) : (ctx.squadData || []);
+    for (var i = 0; i < src.length; i++) {
+      if (String(src[i].number) === num && src[i].position) return src[i].position;
+    }
+    var best = null;
+    Object.keys(st.pos).forEach(function (k) { if (!best || st.pos[k] > st.pos[best]) best = k; });
+    return best || '';
+  }
+  function playerOptionLabel(ctx, name, st) {
+    var T = lang(ctx);
+    var former = /^F\d+$/.test(String(st.key));
+    return '#' + String(st.key).replace(/^F/, '') + ' ' + name(st.key, true) + (former ? T(' (전 선수단)', ' (former)') : '') +
+      ' · ' + st.apps + T('경기', ' apps');
+  }
+  function ensurePlayerSelection(pdata) {
+    var keys = pdata.list.map(function (st) { return String(st.key); });
+    if (keys.indexOf(String(selectedPlayerA)) < 0) selectedPlayerA = keys[0];
+    if (keys.indexOf(String(selectedPlayerB)) < 0 || String(selectedPlayerB) === String(selectedPlayerA)) {
+      selectedPlayerB = keys.filter(function (k) { return k !== String(selectedPlayerA); })[0];
+    }
+  }
+
+  // 6축 레이더. 골·도움은 선수단 최고치 대비, 나머지는 0~1(또는 승점은 0~3) 절대 비율입니다.
+  function radarAxes(ctx, pdata, st) {
+    var T = lang(ctx);
+    var m = pdata.max;
+    return [
+      { label: T('골', 'Goals'), v: m.gpa ? st.gpa / m.gpa : 0 },
+      { label: T('도움', 'Assists'), v: m.apa ? st.apa / m.apa : 0 },
+      { label: T('출전', 'Apps'), v: st.availability },
+      { label: T('선발', 'Starts'), v: st.startRate },
+      { label: T('팀 승점', 'Team pts'), v: st.ppg / 3 },
+      { label: T('무실점', 'Clean sh.'), v: st.csRate }
+    ];
+  }
+  function renderRadar(ctx, pdata, A, B, nameA, nameB) {
+    var T = lang(ctx);
+    var W = 340, H = 270, cx = 170, cy = 136, R = 86;
+    var axA = radarAxes(ctx, pdata, A), axB = radarAxes(ctx, pdata, B), n = axA.length;
+    function pt(i, v) {
+      var ang = -Math.PI / 2 + i * 2 * Math.PI / n;
+      v = Math.max(0, Math.min(1, v));
+      return [cx + Math.cos(ang) * R * v, cy + Math.sin(ang) * R * v];
+    }
+    function poly(vals) { return vals.map(function (x, i) { var q = pt(i, x.v); return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' '); }
+    var rings = [1 / 3, 2 / 3, 1].map(function (f) {
+      var pts = axA.map(function (_, i) { var q = pt(i, f); return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' ');
+      return '<polygon class="ta-radar-ring" points="' + pts + '"></polygon>';
+    }).join('');
+    var spokes = axA.map(function (_, i) { var q = pt(i, 1); return '<line class="ta-radar-spoke" x1="' + cx + '" y1="' + cy + '" x2="' + q[0].toFixed(1) + '" y2="' + q[1].toFixed(1) + '"></line>'; }).join('');
+    var labels = axA.map(function (ax, i) {
+      var q = pt(i, 1.2);
+      var anchor = Math.abs(q[0] - cx) < 4 ? 'middle' : (q[0] < cx ? 'end' : 'start');
+      return '<text class="ta-radar-label" x="' + q[0].toFixed(1) + '" y="' + (q[1] + 4).toFixed(1) + '" text-anchor="' + anchor + '">' + esc(ax.label) + '</text>';
+    }).join('');
+    var dotsA = axA.map(function (x, i) { var q = pt(i, x.v); return '<circle class="ta-radar-dot-a" cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="3.4"></circle>'; }).join('');
+    var dotsB = axB.map(function (x, i) { var q = pt(i, x.v); return '<rect class="ta-radar-dot-b" x="' + (q[0] - 3.2).toFixed(1) + '" y="' + (q[1] - 3.2).toFixed(1) + '" width="6.4" height="6.4"></rect>'; }).join('');
+    var aria = T('레이더 차트: ' + nameA + ' 선수와 ' + nameB + ' 선수의 여섯 가지 지표 비교. 정확한 수치는 아래 비교표에 있습니다.',
+      'Radar chart comparing ' + nameA + ' and ' + nameB + ' on six metrics. Exact figures are in the table below.');
+    var svg = '<svg class="ta-radar" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(aria) + '">' +
+      rings + spokes +
+      '<polygon class="ta-radar-a" points="' + poly(axA) + '"></polygon>' +
+      '<polygon class="ta-radar-b" points="' + poly(axB) + '"></polygon>' +
+      dotsA + dotsB + labels + '</svg>';
+    var legend = '<div class="ta-radar-legend" aria-hidden="true">' +
+      '<span class="ta-leg"><i class="ta-leg-a"></i>' + esc(nameA) + '</span>' +
+      '<span class="ta-leg"><i class="ta-leg-b"></i>' + esc(nameB) + '</span></div>';
+    return '<div class="ta-radar-wrap">' + svg + legend + '</div>';
+  }
+
+  function renderPlayerCompareBody(ctx, pdata, refA, refB) {
+    var T = lang(ctx);
+    var name = makeNamer(ctx);
+    var A = pdata.byRef[String(refA)], B = pdata.byRef[String(refB)];
+    if (!A || !B) return empty(T('선수를 선택해 주세요.', 'Pick two players.'));
+    var nA = name(A.key, true), nB = name(B.key, true);
+
+    // 이기는 쪽에 굵게 + 스크린리더용 "(우위)" 표시 (색에만 의존하지 않도록)
+    function cell(txt, mine, other, higherBetter) {
+      var win = higherBetter && mine !== other && (higherBetter === 1 ? mine > other : mine < other);
+      return '<td' + (win ? ' class="ta-win"' : '') + '>' + txt + (win ? '<span class="sr-only"> ' + T('(우위)', '(higher)') + '</span>' : '') + '</td>';
+    }
+    function row(label, ta, tb, va, vb, hb) {
+      return '<tr><th scope="row">' + label + '</th>' + cell(ta, va, vb, hb) + cell(tb, vb, va, hb) + '</tr>';
+    }
+    function rec(st) { return st.apps ? T(st.w + '승 ' + st.d + '무 ' + st.l + '패', st.w + 'W ' + st.d + 'D ' + st.l + 'L') : '-'; }
+    var rows =
+      row(T('포지션', 'Position'), esc(playerPosLabel(ctx, A) || '-'), esc(playerPosLabel(ctx, B) || '-'), 0, 0, 0) +
+      row(T('출전 경기', 'Appearances'), A.apps + '<small class="ta-dim">/' + pdata.teamN + '</small>', B.apps + '<small class="ta-dim">/' + pdata.teamN + '</small>', A.apps, B.apps, 1) +
+      row(T('선발 / 교체', 'Starts / Subs'), A.starts + ' / ' + A.subs, B.starts + ' / ' + B.subs, A.starts, B.starts, 1) +
+      row(T('골', 'Goals'), A.goals, B.goals, A.goals, B.goals, 1) +
+      row(T('도움', 'Assists'), A.assists, B.assists, A.assists, B.assists, 1) +
+      row(T('공격포인트', 'G+A'), A.ga_, B.ga_, A.ga_, B.ga_, 1) +
+      row(T('경기당 공격포인트', 'G+A per app'), fmt2(A.gapa), fmt2(B.gapa), Math.round(A.gapa * 100), Math.round(B.gapa * 100), 1) +
+      row(T('뛴 경기 팀 전적', 'Team record'), rec(A), rec(B), 0, 0, 0) +
+      row(T('뛴 경기 팀 승점/경기', 'Team pts/game'), A.apps ? fmt2(A.ppg) : '-', B.apps ? fmt2(B.ppg) : '-', Math.round(A.ppg * 100), Math.round(B.ppg * 100), 1) +
+      row(T('뛴 경기 팀 득실', 'Team GF-GA'), A.gf + '-' + A.ga, B.gf + '-' + B.ga, 0, 0, 0) +
+      row(T('무실점 경기', 'Clean sheets'), A.cs + '<small class="ta-dim">/' + A.apps + '</small>', B.cs + '<small class="ta-dim">/' + B.apps + '</small>', Math.round(A.csRate * 100), Math.round(B.csRate * 100), 1);
+    var table = '<div class="ta-compare"><table class="ta-table"><caption class="sr-only">' + esc(T(nA + ' 선수와 ' + nB + ' 선수 비교표', 'Comparison of ' + nA + ' and ' + nB)) + '</caption>' +
+      '<thead><tr><th scope="col">' + T('지표', 'Metric') + '</th>' +
+      '<th scope="col" class="ta-col-a"><span class="ta-leg"><i class="ta-leg-a"></i>' + esc(nA) + '</span>' + smallBadge(ctx, A.apps) + '</th>' +
+      '<th scope="col" class="ta-col-b"><span class="ta-leg"><i class="ta-leg-b"></i>' + esc(nB) + '</span>' + smallBadge(ctx, B.apps) + '</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table></div>';
+
+    // 함께 뛴 경기
+    var tg = computeTogether(pdata, A.key, B.key);
+    function tgRow(label, a) {
+      if (!a.g) return '';
+      return '<tr><th scope="row">' + label + smallBadge(ctx, a.g) + '</th><td>' + a.g + '</td><td>' + record(ctx, a) + '</td><td>' + fmt2(a.ppg) + '</td><td>' + a.gf + '-' + a.ga + '</td></tr>';
+    }
+    var tgRows = tgRow(T('둘 다 출전', 'Both played'), tg.both) +
+      tgRow(T(nA + '만 출전', 'Only ' + nA), tg.onlyA) + tgRow(T(nB + '만 출전', 'Only ' + nB), tg.onlyB) +
+      tgRow(T('둘 다 결장', 'Neither played'), tg.neither);
+    var together = '<div class="ta-subtitle">' + T('함께 뛴 경기 vs 따로 뛴 경기', 'Together vs. Apart') + '</div>' +
+      '<table class="ta-table"><thead><tr><th scope="col">' + T('구분', 'Case') + '</th><th scope="col">' + T('경기', 'P') + '</th><th scope="col">' + T('전적', 'Record') + '</th><th scope="col">' + T('점/경기', 'Pts/g') + '</th><th scope="col">' + T('득실', 'GF-GA') + '</th></tr></thead><tbody>' + tgRows + '</tbody></table>';
+    var insight = '';
+    if (tg.both.g >= 2 && tg.all.g && tg.both.g < tg.all.g) {
+      var diff = tg.both.ppg - tg.all.ppg;
+      insight = '<div class="ta-insight">' + T(
+        '두 선수가 함께 뛴 <b>' + tg.both.g + '경기</b>의 승점은 경기당 <b>' + fmt2(tg.both.ppg) + '점</b>으로, 시즌 평균(' + fmt2(tg.all.ppg) + '점)보다 ' + (Math.abs(diff) < 0.05 ? '비슷합니다.' : (diff > 0 ? fmt2(diff) + '점 높습니다.' : fmt2(-diff) + '점 낮습니다.')),
+        'In the <b>' + tg.both.g + ' games</b> both played, the team averaged <b>' + fmt2(tg.both.ppg) + ' pts/game</b> vs. ' + fmt2(tg.all.ppg) + ' for the season' + (Math.abs(diff) < 0.05 ? ' — about the same.' : (diff > 0 ? ' (+' + fmt2(diff) + ').' : ' (−' + fmt2(-diff) + ').'))) + '</div>';
+    }
+    var caution = '<div class="ta-note ta-caution">' + T(
+      '선수가 뛴 경기의 팀 성적은 그 선수 때문이라고 단정할 수 없습니다(상대·일정·다른 선수의 영향이 섞여 있습니다). 출전 시간(분)은 기록이 없어 경기 수 기준입니다.',
+      'Team results in games a player featured in are not caused by that player alone — opponents, fixtures and teammates all contribute. Minutes are not recorded, so figures are per appearance.') + '</div>';
+    return renderRadar(ctx, pdata, A, B, nA, nB) + table + together + insight + caution;
+  }
+
+  function renderPlayerCompare(ctx, data) {
+    var T = lang(ctx);
+    var title = T('선수 비교', 'Player Comparison');
+    var pdata = data.players;
+    if (!pdata || pdata.list.length < 2) return card(title, empty(T('비교할 선수가 아직 부족합니다. 라인업이 입력된 경기에서 2명 이상 출전하면 표시됩니다.', 'Not enough players yet — needs lineup data with at least two players.')));
+    ensurePlayerSelection(pdata);
+    var name = makeNamer(ctx);
+    function opts(sel) {
+      return pdata.list.map(function (st) {
+        return '<option value="' + esc(String(st.key)) + '"' + (String(st.key) === String(sel) ? ' selected' : '') + '>' + esc(playerOptionLabel(ctx, name, st)) + '</option>';
+      }).join('');
+    }
+    var selects = '<div class="ta-pl-selects">' +
+      '<label class="ta-select-wrap"><span class="ta-dim"><i class="ta-leg-a" aria-hidden="true"></i> ' + T('선수 A', 'Player A') + '</span><select class="ta-select" id="taPlayerA">' + opts(selectedPlayerA) + '</select></label>' +
+      '<label class="ta-select-wrap"><span class="ta-dim"><i class="ta-leg-b" aria-hidden="true"></i> ' + T('선수 B', 'Player B') + '</span><select class="ta-select" id="taPlayerB">' + opts(selectedPlayerB) + '</select></label></div>';
+    return card(title, selects + '<div id="taPlayerStatus" class="sr-only" role="status" aria-live="polite"></div><div id="taPlayerCompare">' + renderPlayerCompareBody(ctx, pdata, selectedPlayerA, selectedPlayerB) + '</div>',
+      T('라인업이 입력된 ' + pdata.teamN + '경기 기준입니다. 레이더의 골·도움은 선수단 최고치 대비, 나머지는 절대 비율입니다.',
+        'Based on the ' + pdata.teamN + ' games with lineups. Radar goals/assists are relative to the squad best; other axes are absolute ratios.'));
+  }
+
   // ---- 4) ----
   function renderSubstitutions(ctx, data) {
     var T = lang(ctx);
@@ -1087,7 +1320,7 @@
 
     var chips = [
       ['taSecTiers', T('상대 유형', 'Opponents')], ['taSecScoring', T('득점', 'Scoring')],
-      ['taSecReport', T('리포트', 'Scouting')], ['taSecSubs', T('교체', 'Subs')], ['taSecLineup', T('선발', 'Lineup')]
+      ['taSecReport', T('리포트', 'Scouting')], ['taSecPlayers', T('선수 비교', 'Players')], ['taSecSubs', T('교체', 'Subs')], ['taSecLineup', T('선발', 'Lineup')]
     ].map(function (c) {
       return '<button type="button" class="ta-nav-chip" data-target="' + c[0] + '">' + c[1] + '</button>';
     }).join('');
@@ -1105,6 +1338,7 @@
       sectionTitle(T('상대 유형별 성적', 'Results by Opponent Level'), 'taSecTiers') + renderTiers(ctx, data) +
       sectionTitle(T('득점 패턴', 'Scoring Patterns'), 'taSecScoring') + renderNetwork(ctx, data) + renderGoalTimes(ctx, data) + (x.scoring || '') +
       sectionTitle(T('상대별 한 장 리포트', 'Opponent Scouting Report'), 'taSecReport') + renderOpponentReport(ctx, data) +
+      sectionTitle(T('선수 비교', 'Player Comparison'), 'taSecPlayers') + renderPlayerCompare(ctx, data) +
       sectionTitle(T('교체 활용 현황', 'Substitution Usage'), 'taSecSubs') + renderSubstitutions(ctx, data) + (x.subs || '') +
       sectionTitle(T('선발 조합·포메이션', 'Starting XI & Formation'), 'taSecLineup') + renderLineups(ctx, data) + (x.lineup || '');
   }
@@ -1138,6 +1372,27 @@
         var box = rootEl.querySelector('#taOpponentReport');
         if (box) box.innerHTML = renderOpponentReportBody(ctx, buildGames(ctx, ctx.myEn, true), selectedOpp);
       });
+    }
+    var selA = rootEl.querySelector('#taPlayerA'), selB = rootEl.querySelector('#taPlayerB');
+    if (selA && selB) {
+      var redrawPlayers = function (changed) {
+        var pdata = computePlayerStats(ctx);
+        selectedPlayerA = selA.value; selectedPlayerB = selB.value;
+        // 같은 선수를 양쪽에 고르면 방금 바꾸지 않은 쪽을 다른 선수로 자동 변경
+        if (selectedPlayerA === selectedPlayerB) {
+          var other = pdata.list.map(function (st) { return String(st.key); }).filter(function (k) { return k !== String(changed.value); })[0];
+          if (changed === selA) { selectedPlayerB = other; selB.value = other; } else { selectedPlayerA = other; selA.value = other; }
+        }
+        var box = rootEl.querySelector('#taPlayerCompare');
+        if (box) box.innerHTML = wrapTables(renderPlayerCompareBody(ctx, pdata, selectedPlayerA, selectedPlayerB));
+        var st = rootEl.querySelector('#taPlayerStatus');
+        if (st) {
+          var nm = makeNamer(ctx);
+          st.textContent = (ctx.isKorean ? '비교 대상이 ' : 'Now comparing ') + nm(selectedPlayerA, true) + (ctx.isKorean ? ' 선수와 ' : ' and ') + nm(selectedPlayerB, true) + (ctx.isKorean ? ' 선수로 바뀌었습니다.' : '.');
+        }
+      };
+      selA.addEventListener('change', function () { redrawPlayers(selA); });
+      selB.addEventListener('change', function () { redrawPlayers(selB); });
     }
     var svg = rootEl.querySelector('.ta-network');
     if (svg) {
@@ -1177,6 +1432,8 @@
     compute: compute,
     // 단위 테스트/디버깅용
     _buildGames: buildGames,
-    _computeOpponentReport: computeOpponentReport
+    _computeOpponentReport: computeOpponentReport,
+    _computePlayerStats: computePlayerStats,
+    _computeTogether: computeTogether
   };
 }));
