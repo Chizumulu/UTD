@@ -538,7 +538,7 @@ const staffData = [
     { nameKo: "맥팔른 마푸타", nameEn: "Mcfallen Mafuta" }
   ]},
   { roleKo: "어시스턴트 코치", roleEn: "Assistant Coach", people: [
-    { nameKo: "맥슨 툰두", nameEn: "Mackson Thundu" }
+    { nameKo: "맥슨 툰두", nameEn: "Mackson Mac Sams Thundu" }
   ]},
   { roleKo: "골키퍼 코치", roleEn: "Goalkeeper Coach", people: [
     { nameKo: "로버트 음지지망가", nameEn: "Robert Mzizimanga" }
@@ -6536,16 +6536,128 @@ const squadPlayerStatsSeason = computeSeasonPlayerStats();
 //   예) { labelKo: '16강', labelEn: 'Round of 16', matches: [
 //          { home: 'Chizumulu United FC', away: 'Jenda United FC', date: '2026-11-07', time: '14:00', venueKo: '치테코 커뮤니티 그라운드' } ] }
 // ============================================================================
-const cupTournament = {
-  id: 'mmbelwaCup',
-  year: 2026,
-  nameKo: 'NRFA 음벨와컵 2026',
-  nameEn: "NRFA M'mbelwa Cup 2026",
-  status: 'upcoming',
-  descKo: 'NRFA가 주최하는 컵대회입니다. 대진과 일정이 발표되는 대로 이곳에 업데이트됩니다.',
-  descEn: 'A cup competition organised by the NRFA. Draw and fixtures will appear here as soon as they are announced.',
-  rounds: []
-};
+// ----------------------------------------------------------------------------
+// 컵대회는 cupTournaments 배열에 대회별로 한 항목씩 넣습니다. (컵 화면 상단 칩으로 전환, 배열 첫 항목이 기본 화면)
+//   - organizerKo / organizerEn : 주최 (컵 화면 맨 위 작은 문구에 표시)
+//   - logoSrc : 컵 화면 상단 로고 (없으면 트로피 아이콘)
+//   - infoKo / infoEn : 소개 표 [[항목, 내용], ...]   - scheduleKo / scheduleEn : 일정표 [[날짜, 내용], ...]
+//   - 날짜가 아직 안 나온 부분은 '추후 발표'로 두고, 확정되면 고쳐 주세요.
+// ----------------------------------------------------------------------------
+const cupTournaments = [
+  {
+    id: 'faCup2627',
+    year: 2026,
+    nameKo: '2026/27 FA컵',
+    nameEn: '2026/27 FA Cup',
+    organizerKo: 'FAM', organizerEn: 'FAM',
+    logoSrc: './fam-logo.png',
+    chipKo: 'FA컵', chipEn: 'FA Cup',
+    status: 'upcoming',
+    descKo: '말라위축구협회(FAM)가 주최하는 컵대회입니다. 32강 이전은 지역 플레이오프로 치르고, 32강부터 결승까지는 토너먼트로 진행됩니다. 1부 16개 팀은 32강에 자동 진출합니다.',
+    descEn: 'A cup competition organised by the Football Association of Malawi (FAM). Regional play-offs are held before the Round of 32, and a knockout bracket runs from the Round of 32 to the final. The 16 top-flight teams advance automatically to the Round of 32.',
+    // 값 형식: 문자열 | 문자열 배열(줄바꿈) | { tag, name, sub, meta, badge } 목록(등급·단계 표시) | { note } 작은 주석 | { teams: [영문팀명…] } 로고 칩
+    infoKo: [
+      ['주최', 'FAM (말라위축구협회)'],
+      ['참가 팀', [
+        { tag: '1부', name: '슈퍼 리그 오브 말라위', sub: 'Super League of Malawi', meta: '16팀', badge: '32강 자동 진출', hl: true },
+        { tag: '2부', name: '내셔널 디비전 리그', sub: 'National Division League', meta: '12팀' },
+        { tag: '3부', name: '지역 1부 리그 (리그 원)', sub: 'Regional League One', meta: '상위 6팀 × 4' },
+        { tag: '4부', name: '지역 2부 리그 (리그 투)', sub: 'Regional League Two', meta: '상위 4팀 × 4' },
+        { tag: '별도', name: '디스트릭트 컵 우승팀 (25/26시즌)', sub: 'District Cup winners', meta: '31팀' },
+        { note: '※ 3·4부 리그는 26/10/31까지의 순위 기준 · 북부 · 남부 · 중부 · 동부 지역별' }
+      ]],
+      ['NRFA 리그 원 참가 팀', { teams: ['Chibavi Real Stars FC', 'Jenda United FC', 'Chizumulu United FC', 'Chilumba Barracks FC', 'Raiply FC', 'Mafu Stars FC'] }],
+      ['대회 방식', [
+        { tag: '예선', name: '32강 이전: 지역 플레이오프' },
+        { tag: '본선', name: '32강부터 결승까지 토너먼트' },
+        { tag: '시드', name: '1부 16개 팀은 32강 자동 진출' }
+      ]],
+      ['선수 자격', 'Mpira Connect 등록 필수']
+    ],
+    infoEn: [
+      ['Organiser', 'FAM (Football Association of Malawi)'],
+      ['Teams', [
+        { tag: 'T1', name: 'Super League of Malawi', meta: '16 teams', badge: 'Auto Round of 32', hl: true },
+        { tag: 'T2', name: 'National Division League', meta: '12 teams' },
+        { tag: 'T3', name: 'Regional League One', meta: 'Top 6 × 4' },
+        { tag: 'T4', name: 'Regional League Two', meta: 'Top 4 × 4' },
+        { tag: 'Extra', name: '2025/26 District Cup winners', meta: '31 teams' },
+        { note: '* Tier 3 and 4 based on standings as of 31 Oct 2026 · by region: North, South, Central, East' }
+      ]],
+      ['NRFA League One teams', { teams: ['Chibavi Real Stars FC', 'Jenda United FC', 'Chizumulu United FC', 'Chilumba Barracks FC', 'Raiply FC', 'Mafu Stars FC'] }],
+      ['Format', [
+        { tag: 'Qualifying', name: 'Before Round of 32: regional play-offs' },
+        { tag: 'Knockout', name: 'Round of 32 to the final' },
+        { tag: 'Seeded', name: '16 top-flight teams enter the Round of 32 automatically' }
+      ]],
+      ['Eligibility', 'Mpira Connect registration required']
+    ],
+    // 일정 형식: [날짜, 내용, { end: 'YYYY-MM-DD'(끝난 일정은 흐리게), tag: '추첨' 같은 작은 표시, final: true(결승 강조) }]
+    scheduleKo: [
+      ['11/11', '대회 발표', { end: '2026-11-11' }],
+      ['11/20', '지역 플레이오프 추첨 · 대회 요강 발표', { end: '2026-11-20', tag: '추첨' }],
+      ['11/28 – 12/27', '지역 플레이오프', { end: '2026-12-27' }],
+      ['12/29', '전국 추첨', { end: '2026-12-29', tag: '추첨' }],
+      ['1/10–11, 1/24–25', '32강', { end: '2027-01-25' }],
+      ['2/12–13', '16강', { end: '2027-02-13' }],
+      ['2/27–28', '8강', { end: '2027-02-28' }],
+      ['3/6–7', '4강', { end: '2027-03-07' }],
+      ['3/20', '결승', { end: '2027-03-20', final: true }]
+    ],
+    scheduleEn: [
+      ['11 Nov', 'Announcement', { end: '2026-11-11' }],
+      ['20 Nov', 'Regional play-offs draw & competition package', { end: '2026-11-20', tag: 'Draw' }],
+      ['28 Nov – 27 Dec', 'Regional play-offs', { end: '2026-12-27' }],
+      ['29 Dec', 'National draw', { end: '2026-12-29', tag: 'Draw' }],
+      ['10–11 Jan, 24–25 Jan', 'Round of 32', { end: '2027-01-25' }],
+      ['12–13 Feb', 'Round of 16', { end: '2027-02-13' }],
+      ['27–28 Feb', 'Quarter-finals', { end: '2027-02-28' }],
+      ['6–7 Mar', 'Semi-finals', { end: '2027-03-07' }],
+      ['20 Mar', 'Final', { end: '2027-03-20', final: true }]
+    ],
+    // 대진표(브라켓) 뼈대: count = 해당 라운드 경기 수. rounds 에 같은 라벨(labelKo/labelEn)로 경기를 넣으면 팀/점수가 자동으로 채워집니다.
+    bracket: [
+      { labelKo: '32강', labelEn: 'Round of 32', count: 16, dateKo: '1/10–11 · 1/24–25', dateEn: '10–11 · 24–25 Jan',
+      // 1부(슈퍼 리그 오브 말라위) 자동 진출 16팀. 전국 추첨(12/29) 전이라 대진 위치는 임시 배치이며, rounds 에 경기가 들어오면 그 경기가 우선합니다.
+      entrants: [
+        { en: 'Nyasa Big Bullets FC', ko: '니아사 빅 불렛츠 FC' },
+        { en: 'Mighty Wanderers FC', ko: '마이티 원더러스 FC' },
+        { en: 'Silver Strikers FC', ko: '실버 스트라이커스 FC' },
+        { en: 'Blue Eagles FC', ko: '블루 이글스 FC' },
+        { en: 'Moyale Barracks FC', ko: '모얄레 배럭스 FC' },
+        { en: 'Mitundu Baptist FC', ko: '미툰두 뱁티스트 FC' },
+        { en: 'Chitipa United FC', ko: '치티파 유나이티드 FC' },
+        { en: 'Ekhaya FC', ko: '에크하야 FC' },
+        { en: 'Masters FC', ko: '마스터스 FC' },
+        { en: 'Red Lions FC', ko: '레드 라이언스 FC' },
+        { en: 'CIVO United FC', ko: '시보 유나이티드 FC' },
+        { en: 'Dedza Dynamos FC', ko: '데드자 다이너모스 FC' },
+        { en: 'Karonga United FC', ko: '카롱가 유나이티드 FC' },
+        { en: 'Kamuzu Barracks FC', ko: '카무주 배럭스 FC' },
+        { en: 'Creck SC', ko: '크렉 SC' },
+        { en: 'MAFCO FC', ko: '마프코 FC' }
+      ] },
+      { labelKo: '16강', labelEn: 'Round of 16', count: 8, dateKo: '2/12–13', dateEn: '12–13 Feb' },
+      { labelKo: '8강', labelEn: 'Quarter-finals', count: 4, dateKo: '2/27–28', dateEn: '27–28 Feb' },
+      { labelKo: '4강', labelEn: 'Semi-finals', count: 2, dateKo: '3/6–7', dateEn: '6–7 Mar' },
+      { labelKo: '결승', labelEn: 'Final', count: 1, dateKo: '3/20', dateEn: '20 Mar' }
+    ],
+    rounds: []
+  },
+  {
+    id: 'mmbelwaCup',
+    year: 2026,
+    nameKo: 'NRFA 음벨와컵 2026',
+    nameEn: "NRFA M'mbelwa Cup 2026",
+    organizerKo: 'NRFA', organizerEn: 'NRFA',
+    logoSrc: './ddds.webp',
+    chipKo: '음벨와컵', chipEn: "M'mbelwa Cup",
+    status: 'upcoming',
+    descKo: 'NRFA가 주최하는 컵대회입니다. 대진과 일정이 발표되는 대로 이곳에 업데이트됩니다.',
+    descEn: 'A cup competition organised by the NRFA. Draw and fixtures will appear here as soon as they are announced.',
+    rounds: []
+  }
+];
 
 // ============================================================
 // 데이터 검증 (validateSiteData)

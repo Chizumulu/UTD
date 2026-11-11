@@ -413,8 +413,21 @@
 
   // ===== 컵대회 (NRFA 음벨와컵 2026) =====
   // 모바일(제목 옆 알약)·PC(사이드바 버튼) 토글이 같은 함수를 씁니다.
-  // 컵 화면 ↔ 리그 메인 화면을 오가며, 데이터는 data.js의 cupTournament를 읽습니다.
+  // 컵 화면 ↔ 리그 메인 화면을 오가며, 데이터는 data.js의 cupTournaments(배열)를 읽습니다.
   let cupMode = false;
+  // 컵이 여러 개일 때 지금 보고 있는 컵의 id. 비어 있으면 배열의 첫 컵을 보여줍니다.
+  let cupSelectedId = null;
+  function getCups() {
+    return (typeof cupTournaments !== 'undefined' && Array.isArray(cupTournaments)) ? cupTournaments.filter(Boolean) : [];
+  }
+  function getSelectedCup() {
+    const cups = getCups();
+    return cups.find(function (x) { return x.id === cupSelectedId; }) || cups[0] || null;
+  }
+  function selectCup(id) {
+    cupSelectedId = id;
+    renderCupView();
+  }
   function setCupMode(on) {
     cupMode = !!on;
     document.body.classList.toggle('cup-mode', cupMode);
@@ -462,20 +475,125 @@
     const logo = t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '';
     return '<div class="cup-team' + (away ? ' is-away' : '') + '">' + logo + '<span>' + cupEsc(name) + '</span></div>';
   }
+  function cupBracketHtml(c) {
+    const defs = c.bracket;
+    if (!Array.isArray(defs) || !defs.length) return '';
+    const ko = isKorean;
+    const found = function (def) {
+      return (c.rounds || []).find(function (r) { return r && (r.labelKo === def.labelKo || r.labelEn === def.labelEn); });
+    };
+    const winnerSide = function (m) {
+      if (!m || m.homeScore == null || m.awayScore == null) return '';
+      if (m.homeScore !== m.awayScore) return m.homeScore > m.awayScore ? 'h' : 'a';
+      if (m.pso && /^\d+\s*:\s*\d+$/.test(m.pso)) { const p = m.pso.split(':').map(Number); return p[0] > p[1] ? 'h' : (p[1] > p[0] ? 'a' : ''); }
+      return '';
+    };
+    const row = function (nameEn, nameKo, score, isWin) {
+      if (!nameEn) return '<div class="cup-br-team is-tbd"><span class="cup-br-name">' + (ko ? '미정' : 'TBD') + '</span><span class="cup-br-score"></span></div>';
+      const t = leagueData.find(function (x) { return x.nameEn === nameEn; });
+      const name = ko ? (nameKo || (t && t.nameKo) || nameEn) : nameEn;
+      const logo = t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '<i class="cup-br-dot"></i>';
+      return '<div class="cup-br-team' + (isWin ? ' is-win' : '') + '">' + logo + '<span class="cup-br-name">' + cupEsc(name) + '</span><span class="cup-br-score">' + (score != null ? score : '') + '</span></div>';
+    };
+    let cols = '';
+    defs.forEach(function (def, di) {
+      const r = found(def), ms = (r && r.matches) || [];
+      let cells = '';
+      for (let i = 0; i < def.count; i++) {
+        const m = ms[i], w = winnerSide(m);
+        const ent = !m && def.entrants && def.entrants[i];
+        cells += '<div class="cup-br-cell"><div class="cup-br-match' + (def.count === 1 ? ' is-final' : '') + '">' +
+          (ent ? row(ent.en, ent.ko, null, false) : row(m && m.home, m && m.homeKo, m && m.homeScore, w === 'h')) +
+          row(m && m.away, m && m.awayKo, m && m.awayScore, w === 'a') + '</div></div>';
+      }
+      cols += '<div class="cup-br-col' + (di === defs.length - 1 ? ' is-last' : '') + '"><div class="cup-br-head"><b>' + cupEsc(ko ? def.labelKo : def.labelEn) +
+        '</b><small>' + cupEsc(ko ? def.dateKo : def.dateEn) + '</small></div><div class="cup-br-cells">' + cells + '</div></div>';
+    });
+    return '<section class="cup-bracket"><h3 class="cup-round-title">' + (ko ? '대진표' : 'Bracket') + '</h3>' +
+      '<div class="cup-br-scroll"><div class="cup-br-grid">' + cols + '</div></div>' +
+      '<p class="cup-br-note">' + (ko ? '1부 16개 팀은 32강 자동 진출 · 표시된 위치는 임시 배치이며, 대진은 추첨(지역 플레이오프 11/20, 전국 12/29) 후 확정됩니다.' : 'The 16 top-flight teams enter the Round of 32 automatically. Their positions are provisional; the bracket is set after the draws (regional play-offs 20 Nov, national 29 Dec).') + '</p></section>';
+  }
   function renderCupView() {
     const root = document.getElementById('cupViewContent');
-    if (!root || typeof cupTournament === 'undefined') return;
-    const c = cupTournament, ko = isKorean;
+    const c = getSelectedCup();
+    if (!root || !c) return;
+    const ko = isKorean;
     const statusMap = {
       upcoming: ['개막 전', 'Coming soon'], live: ['진행 중', 'In progress'], finished: ['종료', 'Finished']
     };
     const st = statusMap[c.status] || statusMap.upcoming;
-    let html = '<div class="cup-hero">' +
-      '<svg class="cup-hero-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v4.5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 6H4.5v1.2A3 3 0 0 0 7.5 10.2M17 6h2.5v1.2a3 3 0 0 1-3 3M12 13.5V17M8.5 20h7M10 17h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-      '<div><div class="cup-hero-eyebrow">NRFA CUP</div>' +
+    let html = '';
+    const cups = getCups();
+    if (cups.length > 1) {
+      html += '<div class="cup-chips" role="tablist" aria-label="' + (ko ? '컵대회 선택' : 'Select cup') + '">';
+      cups.forEach(function (x) {
+        const on = x.id === c.id;
+        html += '<button type="button" role="tab" class="cup-chip' + (on ? ' is-on' : '') + '" aria-selected="' + (on ? 'true' : 'false') + '"' +
+          ' onclick="selectCup(\'' + cupEsc(x.id) + '\')">' +
+          (x.logoSrc ? '<img src="' + cupEsc(x.logoSrc) + '" alt="">' : '') +
+          '<span>' + cupEsc(ko ? (x.chipKo || x.nameKo) : (x.chipEn || x.nameEn)) + '</span></button>';
+      });
+      html += '</div>';
+    }
+    html += '<div class="cup-hero">' +
+      (c.logoSrc ? '<img class="cup-hero-logo" src="' + cupEsc(c.logoSrc) + '" alt="' + cupEsc((ko ? c.organizerKo : c.organizerEn) || '') + '">' :
+      '<svg class="cup-hero-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v4.5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 6H4.5v1.2A3 3 0 0 0 7.5 10.2M17 6h2.5v1.2a3 3 0 0 1-3 3M12 13.5V17M8.5 20h7M10 17h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>') +
+      '<div><div class="cup-hero-eyebrow">' + cupEsc((ko ? c.organizerKo : c.organizerEn) || c.organizerEn || 'NRFA') + ' CUP</div>' +
       '<h2 class="cup-hero-title">' + cupEsc(ko ? c.nameKo : c.nameEn) + '</h2>' +
       '<p class="cup-hero-desc">' + cupEsc(ko ? c.descKo : c.descEn) + '</p>' +
       '<span class="cup-status' + (c.status === 'live' ? ' is-live' : '') + '">' + (ko ? st[0] : st[1]) + '</span></div></div>';
+
+    const infoRows = ko ? c.infoKo : c.infoEn, schedRows = ko ? c.scheduleKo : c.scheduleEn;
+    // 값 하나를 화면용 HTML로 바꿉니다: 문자열 / 문자열 배열 / { tag, name, sub, meta, badge } 목록 / { note } / { teams }
+    const kvValue = function (v) {
+      if (v && !Array.isArray(v) && Array.isArray(v.teams)) {
+        return '<div class="cup-team-chips">' + v.teams.map(function (en) {
+          const t = leagueData.find(function (x) { return x.nameEn === en; });
+          const nm = ko ? ((t && t.nameKo) || en) : en;
+          return '<span class="cup-team-chip">' + (t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '') + '<span>' + cupEsc(nm) + '</span></span>';
+        }).join('') + '</div>';
+      }
+      if (Array.isArray(v) && v.some(function (x) { return x && typeof x === 'object'; })) {
+        return '<ul class="cup-tiers">' + v.map(function (x) {
+          if (x && x.note) return '<li class="cup-tier-note">' + cupEsc(x.note) + '</li>';
+          if (!x || typeof x !== 'object') return '<li class="cup-tier-note">' + cupEsc(x) + '</li>';
+          return '<li class="cup-tier' + (x.hl ? ' is-hl' : '') + '">' +
+            (x.tag ? '<b class="cup-tier-tag">' + cupEsc(x.tag) + '</b>' : '') +
+            '<span class="cup-tier-main"><span class="cup-tier-name">' + cupEsc(x.name || '') + '</span>' +
+            (x.sub ? '<small>' + cupEsc(x.sub) + '</small>' : '') + '</span>' +
+            (x.badge ? '<span class="cup-tier-badge">' + cupEsc(x.badge) + '</span>' : '') +
+            (x.meta ? '<span class="cup-tier-meta">' + cupEsc(x.meta) + '</span>' : '') + '</li>';
+        }).join('') + '</ul>';
+      }
+      return Array.isArray(v) ? v.map(cupEsc).join('<br>') : cupEsc(v);
+    };
+    const kvBlock = function (title, rows) {
+      if (!Array.isArray(rows) || !rows.length) return '';
+      return '<section class="cup-info"><h3 class="cup-round-title">' + title + '</h3><dl class="cup-kv">' +
+        rows.map(function (r) { return '<div class="cup-kv-row"><dt>' + cupEsc(r[0]) + '</dt><dd>' + kvValue(r[1]) + '</dd></div>'; }).join('') +
+        '</dl></section>';
+    };
+    // 일정: 세로 타임라인. 끝난 일정은 흐리게, 아직 안 끝난 첫 일정에는 '다음' 표시, 결승은 골드로 강조합니다.
+    const scheduleBlock = function (title, rows) {
+      if (!Array.isArray(rows) || !rows.length) return '';
+      const todayKey = kstDateKey(Date.now());
+      let nextMarked = false;
+      return '<section class="cup-info"><h3 class="cup-round-title">' + title + '</h3><ol class="cup-tl">' +
+        rows.map(function (r) {
+          const o = r[2] || {};
+          const done = !!o.end && o.end < todayKey;
+          let isNext = false;
+          if (!done && !nextMarked) { isNext = true; nextMarked = true; }
+          return '<li class="cup-tl-item' + (done ? ' is-done' : '') + (isNext ? ' is-next' : '') + (o.final ? ' is-final' : '') + '">' +
+            '<span class="cup-tl-date">' + cupEsc(r[0]) + '</span>' +
+            '<span class="cup-tl-text">' + cupEsc(r[1]) +
+            (o.tag ? '<em class="cup-tl-tag">' + cupEsc(o.tag) + '</em>' : '') +
+            (isNext ? '<em class="cup-tl-next">' + (ko ? '다음' : 'Next') + '</em>' : '') + '</span></li>';
+        }).join('') + '</ol></section>';
+    };
+    html += '<div class="cup-info-grid">' + kvBlock(ko ? '대회 안내' : 'About', infoRows) + scheduleBlock(ko ? '일정' : 'Schedule', schedRows) + '</div>';
+
+    html += cupBracketHtml(c);
 
     const rounds = (c.rounds || []).filter(function (r) { return r && r.matches && r.matches.length; });
     if (!rounds.length) {
@@ -2598,15 +2716,15 @@
 
   // ===== 다음 경기 미니 스트립 (메뉴 바 ~ 순위표 사이) =====
 
-  // ===== 컵대회 다음 경기 (data.js cupTournament 연동) =====
-  // cupTournament.rounds[].matches[] 중 우리 팀이 낀 경기에서, 점수가 아직 없고 날짜(date)가 있는 것 가운데
+  // ===== 컵대회 다음 경기 (data.js cupTournaments 연동) =====
+  // cupTournaments[].rounds[].matches[] 중 우리 팀이 낀 경기에서, 점수가 아직 없고 날짜(date)가 있는 것 가운데
   // 킥오프가 가장 빠른 경기를 리그 nextMatch와 같은 모양으로 돌려줍니다. 컵 데이터가 비어 있으면 null.
   function cupKickoffKey(x) { return (x.kickoffDate || '9999-12-31') + ' ' + (x.kickoffTime || '99:99'); }
 
   function listMyCupFixtures() {
     const out = [];
-    if (typeof cupTournament === 'undefined' || !cupTournament || !Array.isArray(cupTournament.rounds)) return out;
-    cupTournament.rounds.forEach(function (r) {
+    getCups().forEach(function (cup) {
+    (Array.isArray(cup.rounds) ? cup.rounds : []).forEach(function (r) {
       ((r && r.matches) || []).forEach(function (m) {
         if (!m || !m.home || !m.away || !m.date) return;
         if (m.homeScore != null && m.awayScore != null) return; // 이미 끝난 경기
@@ -2623,9 +2741,10 @@
           awayEn: m.away, awayKo: m.awayKo || (iAmHome ? ((oppTeam && oppTeam.nameKo) || m.away) : '치주물루 유나이티드 FC'),
           roundLabelKo: r.labelKo || r.labelEn || '', roundLabelEn: r.labelEn || r.labelKo || '',
           venueKo: m.venueKo, venueEn: m.venueEn,
-          compKo: (cupTournament.nameKo || '컵대회'), compEn: (cupTournament.nameEn || 'Cup')
+          compKo: (cup.nameKo || '컵대회'), compEn: (cup.nameEn || 'Cup')
         });
       });
+    });
     });
     out.sort(function (a, b) { return cupKickoffKey(a) < cupKickoffKey(b) ? -1 : cupKickoffKey(a) > cupKickoffKey(b) ? 1 : 0; });
     return out;
@@ -3090,7 +3209,7 @@
         if (ev) events.push(ev); else undated++;
       });
     });
-    // 컵대회(cupTournament) 예정 경기도 함께 담습니다. 데이터가 없으면 아무것도 추가되지 않습니다.
+    // 컵대회(cupTournaments) 예정 경기도 함께 담습니다. 데이터가 없으면 아무것도 추가되지 않습니다.
     listMyCupFixtures().forEach(c => {
       const ev = buildMatchVEvent({
         homeEn: c.homeEn, homeKo: c.homeKo, awayEn: c.awayEn, awayKo: c.awayKo,
@@ -3290,7 +3409,7 @@
         });
       });
     });
-    // 컵대회(cupTournament) 예정 경기를 합치고, 대회 구분 없이 킥오프 순으로 정렬합니다.
+    // 컵대회(cupTournaments) 예정 경기를 합치고, 대회 구분 없이 킥오프 순으로 정렬합니다.
     // 컵 데이터가 없으면 위의 리그 목록을 그대로 돌려줍니다.
     const cups = listMyCupFixtures();
     if (!cups.length) return out;
@@ -19893,14 +20012,14 @@
     showNewsPopupIfNeeded() || showMatchdayPopupIfNeeded();
   }
 
-  // ===== 뉴스 안내 팝업 (마야미코 치우시와 말라위 U-23 발탁 소식) =====
+  // ===== 뉴스 안내 팝업 (2026/27 FA컵 신설 소식 · 2026-11-12부터 7일간) =====
   // 접속 안내 팝업이 뜬 경우엔 그게 닫힌 다음(closeDisclaimer 안에서 호출) 두 번째로 뜨고,
   // 접속 안내 팝업이 이미 숨김 기간이라 안 뜬 경우엔 진입 시 바로 뜹니다.
-  const NEWS_POPUP_KEY = 'nrfa-news-popup-chiuswa-hide-until';
+  const NEWS_POPUP_KEY = 'nrfa-news-popup-facup2627-hide-until';
   const NEWS_POPUP_HIDE_DAYS = 14;
-  // 체크박스와 별개로, 이 소식 자체를 요청일(2026-09-09)로부터 7일 뒤에는
+  // 체크박스와 별개로, 이 소식 자체를 요청일(2026-11-12)로부터 7일 뒤에는
   // 아무도 다시 보지 않게 하드 마감시각을 둡니다. 이 시각이 지나면 팝업 자체가 뜨지 않습니다.
-  const NEWS_POPUP_EXPIRES_AT = new Date('2026-09-16T00:00:00+09:00').getTime();
+  const NEWS_POPUP_EXPIRES_AT = new Date('2026-11-19T00:00:00+09:00').getTime();
 
   function showNewsPopupIfNeeded() {
     const modal = document.getElementById('newsPopupModal');
@@ -20030,6 +20149,15 @@
 
   // 뉴스 팝업 안의 선수 이름을 누르면 팝업을 닫고(체크박스 상태는 그대로 반영) 바로
   // 해당 선수의 상세 모달을 이어서 띄웁니다.
+  // FA컵 신설 팝업의 문구를 누르면 팝업을 닫고 컵대회 화면(FA컵)으로 이동합니다.
+  function openCupFromNewsPopup() {
+    closeNewsPopup(true);
+    if (typeof showCupView === 'function') {
+      showCupView();
+      window.scrollTo(0, 0);
+    }
+  }
+
   function openPlayerFromNewsPopup(number) {
     closeNewsPopup(true);
     if (typeof openSquadPlayerModal === 'function') {
