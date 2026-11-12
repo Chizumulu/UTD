@@ -8802,137 +8802,56 @@
     // 콤비·포지션 분포·영향도·조합 효과·교체 비율은 "분석" 성격이라 전력분석 탭으로 옮겼습니다 (renderTeamAnalysisTab).
   }
 
-  // ===== 팀 스토리 탭 =====
-  // data.js의 teamStory(섬 소개 / 구단 역사 / 스태프 이야기 / 사진 갤러리)를 읽어 그립니다.
-  // 비어 있는 섹션은 숨기고, 전부 비어 있으면 "준비 중" 안내를 보여줍니다.
-  let storyLightboxIdx = -1;
+  // ===== 팀 스폰서 탭 (내부 id/함수명은 story 그대로) =====
+  // data.js의 teamSponsors 배열을 읽어 스폰서 카드로 그립니다. 비어 있으면 "준비 중" 안내를 보여줍니다.
   function renderTeamStoryTab() {
     const el = document.getElementById('teamInfoStoryTab');
     if (!el) return;
-    const st = (typeof teamStory !== 'undefined' && teamStory) ? teamStory : {};
-    const pickText = (ko, en) => isKorean ? (ko || en || '') : (en || ko || '');
-    // 언어 전환 시 다시 그리지 않아도 바뀌도록 .lbl + data-ko/data-en 로 내보냅니다.
-    const t = (tag, cls, ko, en) => {
-      if (!ko && !en) return '';
-      return `<${tag} class="${cls} lbl" data-ko="${escapeHtml(ko || en)}" data-en="${escapeHtml(en || ko)}">${escapeHtml(pickText(ko, en))}</${tag}>`;
+    const list = ((typeof teamSponsors !== 'undefined' && teamSponsors) || []).filter(s => s && s.nameKo && s.url);
+    const pick = (ko, en) => isKorean ? (ko || en || '') : (en || ko || '');
+    const lbl = (tag, cls, ko, en) => (!ko && !en) ? '' :
+      `<${tag} class="${cls} lbl" data-ko="${escapeHtml(ko || en)}" data-en="${escapeHtml(en || ko)}">${escapeHtml(pick(ko, en))}</${tag}>`;
+    if (!list.length) {
+      el.innerHTML = `<div class="ti-card" style="text-align:center; color:var(--color-text-faint);">
+        <span class="lbl" data-en="The team sponsor info is coming soon." data-ko="팀 스폰서 정보를 준비 중이에요.">${isKorean ? '팀 스폰서 정보를 준비 중이에요.' : 'The team sponsor info is coming soon.'}</span></div>`;
+      return;
+    }
+    const card = (s, i) => {
+      const ch = escapeHtml(Array.from(s.nameKo)[0]);
+      const featured = !!(s.roleKo || s.roleEn);
+      const mark = s.logo
+        ? `<img class="ti-sponsor-logo" src="${escapeHtml(s.logo)}" alt="${escapeHtml(s.nameKo)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ti-sponsor-initial',textContent:'${ch}'}))">`
+        : `<span class="ti-sponsor-initial">${ch}</span>`;
+      const href = `href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer"`;
+      const style = `style="--i:${i}"`;
+      if (featured) {
+        return `<a class="ti-card ti-sponsor-card is-featured${s.tier === 'main' ? ' is-main' : ''}" ${href} ${style}>
+          ${lbl('span', 'ti-sponsor-band', s.roleKo, s.roleEn)}
+          <span class="ti-sponsor-stage">
+            ${mark}
+            ${lbl('span', 'ti-sponsor-name', s.nameKo, s.nameEn)}
+            ${lbl('span', 'ti-sponsor-desc', s.descKo, s.descEn)}
+            <span class="ti-sponsor-cta lbl" data-ko="사이트 방문" data-en="Visit site">${isKorean ? '사이트 방문' : 'Visit site'}<i aria-hidden="true">→</i></span>
+          </span>
+        </a>`;
+      }
+      return `<a class="ti-card ti-sponsor-card" ${href} ${style}>
+        ${mark}
+        <span class="ti-sponsor-body">
+          ${lbl('span', 'ti-sponsor-name', s.nameKo, s.nameEn)}
+          ${lbl('span', 'ti-sponsor-desc', s.descKo, s.descEn)}
+        </span>
+        <span class="ti-sponsor-arrow" aria-hidden="true">↗</span>
+      </a>`;
     };
     const title = (ko, en) => `<div class="ti-section-title lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</div>`;
+    const featured = list.filter(s => s.roleKo || s.roleEn);
+    const others = list.filter(s => !(s.roleKo || s.roleEn));
     let html = '';
-
-    // 1) 섬 소개
-    const isl = st.island || {};
-    const paraKo = isl.paragraphsKo || [], paraEn = isl.paragraphsEn || [];
-    const paraN = Math.max(paraKo.length, paraEn.length);
-    const facts = (isl.facts || []).filter(f => f && (f.valueKo || f.valueEn));
-    if (isl.titleKo || isl.titleEn || paraN || facts.length) {
-      const paras = Array.from({ length: paraN }, (_, i) => t('p', 'ti-story-p', paraKo[i], paraEn[i])).join('');
-      const factsHtml = facts.length ? `<div class="ti-story-facts">${facts.map(f => `
-        <div class="ti-story-fact">
-          ${t('span', 'ti-story-fact-label', f.labelKo, f.labelEn)}
-          ${t('b', 'ti-story-fact-value', f.valueKo, f.valueEn)}
-        </div>`).join('')}</div>` : '';
-      const hero = isl.heroImage ? `<img class="ti-story-hero-img" src="${escapeHtml(isl.heroImage)}" alt="" loading="lazy" onerror="this.remove()">` : '';
-      html += title('치주물루 섬', 'Chizumulu Island') + `
-        <div class="ti-card ti-story-block">
-          ${hero}
-          ${t('h3', 'ti-story-h', isl.titleKo, isl.titleEn)}
-          ${paras}${factsHtml}
-        </div>`;
-    }
-
-    // 2) 구단 역사 타임라인
-    const hist = (st.history || []).filter(h => h && (h.titleKo || h.titleEn || h.textKo || h.textEn));
-    if (hist.length) {
-      html += title('구단 역사', 'Club History') + `
-        <div class="ti-story-timeline">${hist.map(h => `
-          <div class="ti-story-tl-item ti-story-block">
-            <span class="ti-story-tl-year">${escapeHtml(h.year || '')}</span>
-            <div class="ti-story-tl-body">
-              ${t('div', 'ti-story-tl-title', h.titleKo, h.titleEn)}
-              ${t('div', 'ti-story-tl-text', h.textKo, h.textEn)}
-            </div>
-          </div>`).join('')}
-        </div>`;
-    }
-
-    // 3) 감독·스태프 이야기
-    const staff = (st.staffStories || []).filter(p => p && (p.nameKo || p.nameEn));
-    if (staff.length) {
-      html += title('감독·스태프 이야기', 'Coaches & Staff') + `
-        <div class="ti-story-staff">${staff.map(p => `
-          <div class="ti-card ti-story-block ti-story-person">
-            ${p.photoSrc ? `<img class="ti-story-person-photo" src="${escapeHtml(p.photoSrc)}" alt="${escapeHtml(p.nameEn || p.nameKo)}" loading="lazy" onerror="this.remove()">` : ''}
-            <div class="ti-story-person-body">
-              ${t('div', 'ti-story-person-name', p.nameKo, p.nameEn)}
-              ${t('div', 'ti-story-person-role', p.roleKo, p.roleEn)}
-              ${t('p', 'ti-story-p', p.bioKo, p.bioEn)}
-            </div>
-          </div>`).join('')}
-        </div>`;
-    }
-
-    // 4) 사진 갤러리
-    const gal = (st.gallery || []).filter(g => g && g.src);
-    if (gal.length) {
-      html += title('사진 갤러리', 'Gallery') + `
-        <div class="ti-story-gallery">${gal.map((g, i) => `
-          <button type="button" class="ti-story-gal-item ti-story-block" data-story-idx="${i}">
-            <img src="${escapeHtml(g.src)}" alt="${escapeHtml(g.captionEn || g.captionKo || '')}" loading="lazy" onerror="this.closest('button').remove()">
-          </button>`).join('')}
-        </div>`;
-    }
-
-    if (!html) {
-      html = `<div class="ti-card" style="text-align:center; color:var(--color-text-faint);">
-        <span class="lbl" data-en="The team story is coming soon." data-ko="팀 스토리를 준비 중이에요.">${isKorean ? '팀 스토리를 준비 중이에요.' : 'The team story is coming soon.'}</span></div>`;
-    }
+    if (featured.length) html += title('팀 스폰서', 'Team Sponsors') + `<div class="ti-sponsor-grid ti-sponsor-grid-featured">${featured.map((x, i) => card(x, i)).join('')}</div>`;
+    if (others.length) html += title('후원사', 'Partners') + `<div class="ti-sponsor-grid">${others.map((x, i) => card(x, i + featured.length)).join('')}</div>`;
     el.innerHTML = html;
   }
-
-  // 갤러리 확대 보기 (좌우 이동 / ESC / 바깥 클릭으로 닫기)
-  function storyGalleryItems() {
-    return ((typeof teamStory !== 'undefined' && teamStory && teamStory.gallery) || []).filter(g => g && g.src);
-  }
-  function showStoryLightbox(idx) {
-    const items = storyGalleryItems();
-    if (!items.length) return;
-    storyLightboxIdx = (idx + items.length) % items.length;
-    const g = items[storyLightboxIdx];
-    let box = document.getElementById('storyLightbox');
-    if (!box) {
-      box = document.createElement('div');
-      box.id = 'storyLightbox';
-      box.className = 'ti-lightbox';
-      box.innerHTML = `<button type="button" class="ti-lb-btn ti-lb-close" aria-label="close">&times;</button>
-        <button type="button" class="ti-lb-btn ti-lb-prev" aria-label="prev">&#8249;</button>
-        <figure class="ti-lb-fig"><img class="ti-lb-img" alt=""><figcaption class="ti-lb-cap"></figcaption></figure>
-        <button type="button" class="ti-lb-btn ti-lb-next" aria-label="next">&#8250;</button>`;
-      box.addEventListener('click', (e) => {
-        if (e.target.closest('.ti-lb-prev')) showStoryLightbox(storyLightboxIdx - 1);
-        else if (e.target.closest('.ti-lb-next')) showStoryLightbox(storyLightboxIdx + 1);
-        else if (!e.target.closest('.ti-lb-img')) closeStoryLightbox();
-      });
-      document.body.appendChild(box);
-    }
-    box.querySelector('.ti-lb-img').src = g.src;
-    box.querySelector('.ti-lb-cap').textContent = isKorean ? (g.captionKo || g.captionEn || '') : (g.captionEn || g.captionKo || '');
-    box.classList.add('open');
-  }
-  function closeStoryLightbox() {
-    const box = document.getElementById('storyLightbox');
-    if (box) box.classList.remove('open');
-    storyLightboxIdx = -1;
-  }
-  document.addEventListener('click', function (e) {
-    const b = e.target.closest('.ti-story-gal-item[data-story-idx]');
-    if (b) showStoryLightbox(parseInt(b.dataset.storyIdx, 10));
-  });
-  document.addEventListener('keydown', function (e) {
-    if (storyLightboxIdx < 0) return;
-    if (e.key === 'Escape') closeStoryLightbox();
-    else if (e.key === 'ArrowLeft') showStoryLightbox(storyLightboxIdx - 1);
-    else if (e.key === 'ArrowRight') showStoryLightbox(storyLightboxIdx + 1);
-  });
 
   function renderTeamStaffTab() {
     const el = document.getElementById('teamInfoStaffTab');

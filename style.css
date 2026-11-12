@@ -13530,38 +13530,56 @@ body {
 .spm-form-col.is-link:focus-visible { outline: 2px solid var(--color-navy); outline-offset: 1px; }
 .spm-form-sum { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
 
-/* ===== 팀 스토리 탭 ===== */
-.ti-card.ti-story-block { margin-bottom: 16px; }
-.ti-story-hero-img { display: block; width: 100%; max-height: 220px; object-fit: cover; border-radius: var(--radius-lg); margin-bottom: 14px; }
-.ti-story-h { margin: 0 0 8px; font-size: 18px; font-weight: 700; color: var(--color-text-darkest); }
-.ti-story-p { margin: 0 0 10px; font-size: 14px; line-height: 1.75; color: var(--color-text-darkest); word-break: keep-all; }
-.ti-story-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; }
-.ti-story-fact { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-bg-stripe); }
-.ti-story-fact-label { font-size: 11.5px; font-weight: 600; color: var(--color-text-faint); }
-.ti-story-fact-value { font-size: 14px; font-weight: 700; color: var(--color-navy); }
+/* ===== 팀 스폰서 탭 ===== */
+.ti-sponsor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 22px; }
+.ti-sponsor-grid-featured { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 
-.ti-story-timeline { position: relative; margin: 0 0 18px 6px; padding-left: 18px; border-left: 2px solid var(--color-border-light); }
-.ti-story-tl-item { position: relative; display: flex; gap: 12px; align-items: flex-start; padding: 0 0 18px; }
-.ti-story-tl-item::before { content: ''; position: absolute; left: -25px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--color-navy); box-shadow: 0 0 0 3px var(--color-surface); }
-.ti-story-tl-year { flex: 0 0 auto; min-width: 48px; font-size: 15px; font-weight: 700; color: var(--color-gold-strong); }
-.ti-story-tl-title { font-size: 15px; font-weight: 700; color: var(--color-text-darkest); }
-.ti-story-tl-text { margin-top: 3px; font-size: 13.5px; line-height: 1.65; color: var(--color-text-muted); word-break: keep-all; }
+.ti-sponsor-card { position: relative; display: flex; align-items: center; gap: 14px; margin: 0; text-decoration: none; color: inherit;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; animation: tiSponsorIn 0.4s ease both; animation-delay: calc(var(--i, 0) * 45ms); }
+.ti-sponsor-card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(var(--color-navy-rgb), 0.16); }
+.ti-sponsor-card:focus-visible { outline: 3px solid var(--color-gold-strong); outline-offset: 2px; }
+.ti-sponsor-card:active { transform: translateY(-1px); }
 
-.ti-story-staff { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-bottom: 18px; }
-.ti-story-person { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 0; }
-.ti-story-person-photo { flex: 0 0 auto; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; object-position: center 15%; border: 1px solid var(--color-border-light); }
-.ti-story-person-body { min-width: 0; }
-.ti-story-person-name { font-size: 15px; font-weight: 700; color: var(--color-text-darkest); }
-.ti-story-person-role { margin: 1px 0 6px; font-size: 12px; font-weight: 600; color: var(--color-text-faint); }
-.ti-story-person .ti-story-p { font-size: 13.5px; margin-bottom: 0; }
+.ti-sponsor-logo, .ti-sponsor-initial { flex: 0 0 auto; width: 48px; height: 48px; border-radius: var(--radius-lg); border: 1px solid var(--color-border-light); background: var(--color-bg-stripe); }
+.ti-sponsor-logo { width: 48px; height: 48px; object-fit: contain; border: none; border-radius: 0; background: transparent; box-shadow: none; padding: 0; }
+.ti-sponsor-initial { display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 800; color: var(--color-navy); }
+.ti-sponsor-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.ti-sponsor-name { font-size: 14.5px; font-weight: 700; color: var(--color-text-darkest); word-break: keep-all; }
+.ti-sponsor-desc { font-size: 12.5px; line-height: 1.5; color: var(--color-text-muted); word-break: keep-all; }
+.ti-sponsor-arrow { flex: 0 0 auto; font-size: 14px; font-weight: 700; color: var(--color-text-faint); opacity: 0.45; transition: transform 0.18s ease, opacity 0.18s ease, color 0.18s ease; }
+.ti-sponsor-card:hover .ti-sponsor-arrow { opacity: 1; color: var(--color-navy); transform: translate(2px, -2px); }
 
-.ti-story-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 18px; }
-.ti-story-gal-item { padding: 0; border: none; cursor: pointer; border-radius: var(--radius-lg); overflow: hidden; aspect-ratio: 4 / 3; background: var(--color-bg-stripe); box-shadow: 0 2px 8px rgba(var(--color-navy-rgb), 0.12); transition: transform 0.15s, box-shadow 0.15s; }
-.ti-story-gal-item:hover { box-shadow: 0 6px 14px rgba(var(--color-navy-rgb), 0.2); }
-.ti-story-gal-item img { display: block; width: 100%; height: 100%; object-fit: cover; }
-@media (max-width: 480px) {
-  .ti-story-gallery { grid-template-columns: repeat(2, 1fr); }
-  .ti-story-staff { grid-template-columns: 1fr; }
+/* 메인 · 용품 스폰서: 위쪽 색 띠 + 가운데 정렬된 큰 로고 */
+.ti-sponsor-card.is-featured { flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; border: 1.5px solid rgba(var(--color-navy-rgb), 0.22); }
+.ti-sponsor-band { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 12px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #fff; background: linear-gradient(135deg, var(--color-navy), rgba(var(--color-navy-rgb), 0.82)); }
+.ti-sponsor-stage { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px 16px 16px; text-align: center; }
+.ti-sponsor-card.is-featured .ti-sponsor-initial { width: 84px; height: 84px; border-radius: 22px; font-size: 34px; background: #fff; box-shadow: 0 4px 14px rgba(var(--color-navy-rgb), 0.14); }
+.ti-sponsor-card.is-featured .ti-sponsor-logo { width: 100%; max-width: 240px; height: 120px; margin-bottom: 4px; }
+.ti-sponsor-card.is-featured:not(.is-main) .ti-sponsor-logo { max-width: 190px; height: 96px; margin-top: 12px; margin-bottom: 16px; }
+.ti-sponsor-card.is-featured .ti-sponsor-name { font-size: 20px; font-weight: 800; }
+.ti-sponsor-cta { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--color-navy); background: var(--color-bg-stripe); transition: background 0.18s ease, color 0.18s ease; }
+.ti-sponsor-cta i { font-style: normal; transition: transform 0.18s ease; }
+.ti-sponsor-card.is-featured:hover .ti-sponsor-cta { background: var(--color-navy); color: #fff; }
+.ti-sponsor-card.is-featured:hover .ti-sponsor-cta i { transform: translateX(3px); }
+
+/* 메인 스폰서: 금색 강조 */
+.ti-sponsor-card.is-main { border-color: var(--color-gold-strong); box-shadow: 0 8px 26px rgba(var(--color-navy-rgb), 0.14), 0 0 0 3px rgba(var(--color-navy-rgb), 0.04); }
+.ti-sponsor-card.is-main .ti-sponsor-band { background: linear-gradient(135deg, var(--color-gold-strong), var(--color-navy)); }
+.ti-sponsor-card.is-main .ti-sponsor-band::before { content: '★'; font-size: 13px; letter-spacing: 0; }
+.ti-sponsor-card.is-main .ti-sponsor-name { font-size: 22px; }
+.ti-sponsor-card.is-main .ti-sponsor-initial { border-color: var(--color-gold-strong); }
+
+@keyframes tiSponsorIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .ti-sponsor-card { animation: none; transition: none; }
+  .ti-sponsor-card:hover { transform: none; }
+}
+@media (max-width: 560px) {
+  .ti-sponsor-grid { grid-template-columns: 1fr; }
+  .ti-sponsor-grid-featured { grid-template-columns: 1fr; }
+  .ti-sponsor-stage { padding: 18px 14px 14px; }
+  .ti-sponsor-card.is-featured .ti-sponsor-logo { height: 100px; }
+  .ti-sponsor-card.is-featured:not(.is-main) .ti-sponsor-logo { height: 80px; }
 }
 
 .ti-lightbox { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0, 10, 30, 0.88); }

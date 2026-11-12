@@ -563,35 +563,26 @@ const staffData = [
   ]}
 ];
 
-// ===== 팀 스토리 (구단 정보 → 팀 스토리 탭) =====
-// 이 객체를 채우면 "팀 스토리" 탭에 자동으로 나타납니다.
-//  - 비워 둔 항목(빈 문자열/빈 배열)은 그 섹션이 통째로 숨겨지고, 전부 비어 있으면 "준비 중" 안내가 나옵니다.
-//  - 영문(…En)은 선택 사항이며 비우면 한국어가 그대로 표시됩니다.
-//  - 사진 파일은 index.html과 같은 폴더에 두고 파일명만 적으세요. (스태프 사진은 얼굴형, 갤러리는 가로형 권장)
-const teamStory = {
-  // 1) 치주물루 섬 소개
-  island: {
-    titleKo: "", titleEn: "",
-    heroImage: "",                      // 예: "섬.jpg"
-    paragraphsKo: [],                   // 문단 단위로: ["첫 문단", "두 번째 문단"]
-    paragraphsEn: [],
-    facts: [
-      // { labelKo: "위치", labelEn: "Location", valueKo: "", valueEn: "" }
-    ]
-  },
-  // 2) 구단 역사 (오래된 순으로 적으면 위에서 아래로 흐릅니다)
-  history: [
-    // { year: "", titleKo: "", titleEn: "", textKo: "", textEn: "" }
-  ],
-  // 3) 감독·스태프 이야기 (staffData의 명단과는 별개로, 소개글을 쓰고 싶은 사람만 적습니다)
-  staffStories: [
-    // { nameKo: "", nameEn: "", roleKo: "", roleEn: "", photoSrc: "", bioKo: "", bioEn: "" }
-  ],
-  // 4) 사진 갤러리
-  gallery: [
-    // { src: "", captionKo: "", captionEn: "" }
-  ]
-};
+// ===== 팀 스폰서 (구단 정보 → 팀 스폰서 탭) =====
+// 이 배열에 적은 순서대로 "팀 스폰서" 탭에 카드로 나옵니다.
+//  - nameKo / url 은 필수, nameEn / descKo / descEn / logo 는 선택입니다.
+//  - roleKo / roleEn (예: "메인 스폰서")을 적은 항목은 위쪽에 큰 카드로 따로 나오고, 나머지는 "후원사" 목록에 나옵니다.
+//  - tier: "main" 을 적으면 금색 강조(가장 눈에 띄는 카드), 안 적으면 네이비 강조가 됩니다.
+//  - logo 는 이미지 주소(https://…) 또는 index.html과 같은 폴더에 둔 파일명 (예: "logo_kimboknam.png"). 비우거나 불러오지 못하면 이름 첫 글자가 표시됩니다.
+//  - descKo / descEn 을 적으면 카드에 한 줄 소개가 같이 나옵니다.
+const teamSponsors = [
+  { nameKo: "김복남맥주", nameEn: "Kimboknam Beer", roleKo: "메인 스폰서", roleEn: "Main Sponsor", tier: "main", logo: "https://i.namu.wiki/i/wQoxW3EqZrbRXMeljkJBj3pKNVvws3esMioxRywYiq3hMan8DO0tRbUZLDgvv5bUUnmUdhnC7_uWlNE4PMaSa2W8ZE7VxFz4GU-yxHc5ZkhD9sOjyRTEdVJVeAVj1yxBnvc2C0yKsGeGyEZr_Sa-ag.webp", url: "https://kimboknam.com/layout/res/home.php?go=main" },
+  { nameKo: "디에포", nameEn: "DeÉpo", roleKo: "용품 스폰서", roleEn: "Kit Sponsor", logo: "https://i.namu.wiki/i/EsxaECFyNeQN6QGIxOrlSvZMyKXyPjjySdcLLpYpf7-qZOWgoLdvly4RmtS9cGhmfKTDH7ceyYEt8nVAAb-EUgZxGJlA0W0-BwzB1B1dWYFM4j3xJlnjMfrdgSo9f_Z2BSlm4EigCI7OO8J66pFgTg.webp", url: "https://deepo.co.kr/" },
+  { nameKo: "엘초이스", nameEn: "El Choice", url: "https://elchoice.co.kr/product/%EC%97%98%EC%B4%88%EC%9D%B4%EC%8A%A4-%EB%B0%9C%EB%AA%A9-%ED%85%8C%EC%9D%B4%ED%95%91-%EB%B3%B4%ED%98%B8%EB%8C%80-v15/30/" },
+  { nameKo: "옥산", nameEn: "Oksan", url: "https://oksanchair.com/" },
+  { nameKo: "마이프로틴", nameEn: "Myprotein", url: "https://www.myprotein.co.kr/" },
+  { nameKo: "비우고 맑은물 약콩두유", nameEn: "Viugo Soy Milk", url: "https://smartstore.naver.com/viugo/products/9866143888" },
+  { nameKo: "비기캐리어", nameEn: "Biggie Carrier", url: "https://smartstore.naver.com/biggiemall/category/710344ba803d4984bf0fd1824385081b?cp=1" },
+  { nameKo: "KT스카이라이프 (포착/POCHAK)", nameEn: "KT Skylife (POCHAK)", url: "https://jade-sawine-66f2e7.netlify.app/" },
+  { nameKo: "PIRO", nameEn: "PIRO", url: "https://smartstore.naver.com/piro_sports" },
+  { nameKo: "컬렉스", nameEn: "Collex", url: "https://collexx.io/" },
+  { nameKo: "축구체크", nameEn: "Chuk9 Check", url: "https://www.instagram.com/chuk9__check/" }
+];
 
 // ===== 26/27 시즌 유니폼 이미지 =====
 const kitData = {
