@@ -44,7 +44,8 @@ const matchHighlights = {
   round3: 'https://youtu.be/goM_m99MrDQ?si=coMD5rW48IhFYh0q',
   round10: 'https://www.youtube.com/watch?v=JEBuNaWeewo',
   round12: 'https://www.youtube.com/watch?v=gXAbTbQmExE', // 치바비 2 : 1 치주물루 (9/27)
-  round13: 'https://www.youtube.com/watch?v=PL1cSweH95Y' // 치주물루 4 : 0 칠룸바 (10/2)
+  round13: 'https://www.youtube.com/watch?v=PL1cSweH95Y', // 치주물루 4 : 0 칠룸바 (10/2)
+  round16: 'https://www.youtube.com/watch?v=zA_9akefq5M' // 치주물루 4 : 0 루비리 (10/20, 9주차 연기경기)
 };
 
 // ===== 구단 유튜브 코너 - 채널 최신 영상 자동 연동 설정 =====

@@ -3809,6 +3809,11 @@
   .rmc-highlight-btn svg {
     flex-shrink: 0;
   }
+  .rmc-highlight-btn .rmc-caster {
+    font-size: 11.5px;
+    font-weight: 500;
+    opacity: 0.9;
+  }
   .match-detail-modal-content {
     max-width: 560px;
   }
@@ -15100,6 +15105,92 @@ button.rmd-status-link {
 .rmd-bye-row .rmd-logo { width: 28px; height: 28px; }
 .rmd-bye-row .round-bye-badge { margin-left: auto; }
 @container rmdlist (max-width: 959px) { .rmd-bye-row { padding: 12px 16px; } }
+
+/* ===== 구단정보 > 경기결과: 리그 일정과 같은 날짜 카드 디자인 위에 얹는 요소 ===== */
+.ti-results-stack { display: flex; flex-direction: column; gap: 14px; }
+.ti-results-stack > * { width: 100%; box-sizing: border-box; }
+.rmd-result-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box;
+  border-radius: var(--radius-tag); color: var(--color-white);
+  font-size: 12px; font-weight: 700; line-height: 1; letter-spacing: 0.02em;
+}
+.rmd-result-badge.is-w { background: var(--color-teal); }
+.rmd-result-badge.is-d { background: var(--color-neutral-badge); }
+.rmd-result-badge.is-l { background: var(--color-red); }
+/* ===== 구단정보 > 경기결과: 버튼은 모두 팀명 아래 한 줄(.rmd-end)에 모으고, 팀명 칸은 모든 행에서 같은 자리에 고정 ===== */
+.rmd-act-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  min-height: 36px; padding: 0 14px; box-sizing: border-box;
+  border: 1px solid var(--color-border-light); border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-text-dark);
+  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1.25; text-decoration: none;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.rmd-act-btn:hover, .rmd-act-btn:focus-visible { background: var(--color-teal); border-color: var(--color-teal); color: var(--color-white); }
+.rmd-act-btn svg { flex-shrink: 0; }
+.rmd-act-btn.rmd-act-hl { background: #ff0000; border-color: #ff0000; color: var(--color-white); }
+.rmd-act-btn.rmd-act-hl:hover, .rmd-act-btn.rmd-act-hl:focus-visible { background: #d90000; border-color: #d90000; }
+.rmd-act-caster { font-size: 11.5px; font-weight: 500; opacity: 0.9; }
+
+/* PC: 마지막 칸(버튼) 없이 5칸 고정 → 팀명/스코어 위치가 행마다 같음. 버튼은 아래 줄 전체 폭에 오른쪽 정렬 */
+/* 왼쪽(시간 64 + 구장 124 + 간격)과 같은 폭의 빈 칸을 오른쪽에 둬서, 팀명·스코어가 카드 정중앙에 오게 함 */
+.rmd-row.rmd-tv { grid-template-columns: 64px 124px minmax(0, 1fr) 100px minmax(0, 1fr) 200px; }
+/* 버튼 묶음은 팀명·스코어와 같은 가운데 축(3~5번 칸) 아래에 가운데 정렬 */
+.rmd-tv .rmd-end { grid-column: 3 / 6; order: 5; justify-content: center; flex-wrap: wrap; gap: 8px; padding-top: 10px; }
+.rmd-tv .rmd-end .rmd-toggle,
+.rmd-tv .rmd-end .rmd-btn,
+.rmd-tv .rmd-end .rmd-act-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+  min-height: 36px; min-width: 96px; padding: 0 14px; box-sizing: border-box;
+  border: 1px solid var(--color-border-light); border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-text-dark);
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.rmd-tv .rmd-end .rmd-act-hl { background: #ff0000; border-color: #ff0000; color: var(--color-white); }
+.rmd-tv .rmd-end .rmd-act-hl:hover, .rmd-tv .rmd-end .rmd-act-hl:focus-visible { background: #d90000; border-color: #d90000; }
+.rmd-tv .rmd-end .rmd-toggle:hover, .rmd-tv .rmd-end .rmd-toggle:focus-visible { background: var(--color-bg-table-alt); }
+.rmd-row.is-open.rmd-tv .rmd-end .rmd-toggle { color: var(--color-teal); border-color: var(--color-teal); }
+
+/* 좁은 폭(모바일): 일반 버튼은 같은 폭으로 나눠 채우고, 하이라이트는 아래 전체 폭 */
+@container rmdlist (max-width: 959px) {
+  .rmd-row.rmd-tv { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .rmd-tv .rmd-end { grid-column: auto; order: 0; justify-content: stretch; padding-top: 0; }
+  .rmd-tv .rmd-end .rmd-toggle,
+  .rmd-tv .rmd-end .rmd-btn,
+  .rmd-tv .rmd-end .rmd-act-btn { flex: 1 1 88px; min-width: 0; padding: 0 8px; font-size: 12.5px; }
+  .rmd-tv .rmd-end .rmd-act-hl { flex: 1 1 100%; padding: 0 10px; }
+}
+
+/* ===== 리그 일정: 치주물루 경기 행의 상세보기 버튼 (PC 오른쪽 176px 칸 안에서 2열로 정리) ===== */
+.rmd-end.rmd-end-detail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; justify-content: stretch; }
+.rmd-end-detail .rmd-toggle { order: 0; }
+.rmd-end-detail .rmd-btn { order: 1; }
+.rmd-end-detail .rmd-act-btn { order: 2; }
+.rmd-end-detail .rmd-act-wide { grid-column: 1 / -1; }
+.rmd-end-detail .rmd-toggle,
+.rmd-end-detail .rmd-btn,
+.rmd-end-detail .rmd-act-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+  width: 100%; min-width: 0; min-height: 36px; padding: 0 8px; box-sizing: border-box;
+  border: 1px solid var(--color-border-light); border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-text-dark);
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.rmd-end-detail .rmd-toggle:hover, .rmd-end-detail .rmd-toggle:focus-visible { background: var(--color-bg-table-alt); }
+.rmd-row.is-open .rmd-end-detail .rmd-toggle { color: var(--color-teal); border-color: var(--color-teal); }
+@container rmdlist (max-width: 959px) {
+  .rmd-end.rmd-end-detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+  .rmd-end-detail .rmd-act-wide { grid-column: auto; }
+  .rmd-end-detail .rmd-toggle,
+  .rmd-end-detail .rmd-btn,
+  .rmd-end-detail .rmd-act-btn { min-height: 34px; font-size: 12.5px; }
+}
+
+/* 연기/이동 상태 문구("N주차 경기로 이동" 등): 한 줄로 길게 늘어나 팀 로고를 덮지 않도록 줄바꿈 */
+.rmd-mid.is-single { min-width: 0; }
+.rmd-mid.is-single .rmd-status { white-space: normal; max-width: 108px; line-height: 1.35; word-break: keep-all; overflow-wrap: anywhere; }
 
 /* 구단 위치: 구장이 2곳 이상인 팀의 '현구장' 마커 */
 .venue-current-tag {
