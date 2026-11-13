@@ -567,21 +567,24 @@ const staffData = [
 // 이 배열에 적은 순서대로 "팀 스폰서" 탭에 카드로 나옵니다.
 //  - nameKo / url 은 필수, nameEn / descKo / descEn / logo 는 선택입니다.
 //  - roleKo / roleEn (예: "메인 스폰서")을 적은 항목은 위쪽에 큰 카드로 따로 나오고, 나머지는 "후원사" 목록에 나옵니다.
+//  - logoBg 를 적으면 로고 뒤에 배경색이 깔립니다 (흰색 로고처럼 밝은 카드에서 안 보일 때 사용, 예: "#111").
+//  - logoW 를 적으면 로고 가로 폭(px)이 그 값으로 늘어납니다 (가로로 긴 로고가 작게 보일 때 사용, 기본 48, 예: 120).
 //  - tier: "main" 을 적으면 금색 강조(가장 눈에 띄는 카드), 안 적으면 네이비 강조가 됩니다.
 //  - logo 는 이미지 주소(https://…) 또는 index.html과 같은 폴더에 둔 파일명 (예: "logo_kimboknam.png"). 비우거나 불러오지 못하면 이름 첫 글자가 표시됩니다.
 //  - descKo / descEn 을 적으면 카드에 한 줄 소개가 같이 나옵니다.
 const teamSponsors = [
   { nameKo: "김복남맥주", nameEn: "Kimboknam Beer", roleKo: "메인 스폰서", roleEn: "Main Sponsor", tier: "main", logo: "https://i.namu.wiki/i/wQoxW3EqZrbRXMeljkJBj3pKNVvws3esMioxRywYiq3hMan8DO0tRbUZLDgvv5bUUnmUdhnC7_uWlNE4PMaSa2W8ZE7VxFz4GU-yxHc5ZkhD9sOjyRTEdVJVeAVj1yxBnvc2C0yKsGeGyEZr_Sa-ag.webp", url: "https://kimboknam.com/layout/res/home.php?go=main" },
   { nameKo: "디에포", nameEn: "DeÉpo", roleKo: "용품 스폰서", roleEn: "Kit Sponsor", logo: "https://i.namu.wiki/i/EsxaECFyNeQN6QGIxOrlSvZMyKXyPjjySdcLLpYpf7-qZOWgoLdvly4RmtS9cGhmfKTDH7ceyYEt8nVAAb-EUgZxGJlA0W0-BwzB1B1dWYFM4j3xJlnjMfrdgSo9f_Z2BSlm4EigCI7OO8J66pFgTg.webp", url: "https://deepo.co.kr/" },
-  { nameKo: "엘초이스", nameEn: "El Choice", url: "https://elchoice.co.kr/product/%EC%97%98%EC%B4%88%EC%9D%B4%EC%8A%A4-%EB%B0%9C%EB%AA%A9-%ED%85%8C%EC%9D%B4%ED%95%91-%EB%B3%B4%ED%98%B8%EB%8C%80-v15/30/" },
-  { nameKo: "옥산", nameEn: "Oksan", url: "https://oksanchair.com/" },
-  { nameKo: "마이프로틴", nameEn: "Myprotein", url: "https://www.myprotein.co.kr/" },
-  { nameKo: "비우고 맑은물 약콩두유", nameEn: "Viugo Soy Milk", url: "https://smartstore.naver.com/viugo/products/9866143888" },
-  { nameKo: "비기캐리어", nameEn: "Biggie Carrier", url: "https://smartstore.naver.com/biggiemall/category/710344ba803d4984bf0fd1824385081b?cp=1" },
-  { nameKo: "KT스카이라이프 (포착/POCHAK)", nameEn: "KT Skylife (POCHAK)", url: "https://jade-sawine-66f2e7.netlify.app/" },
-  { nameKo: "PIRO", nameEn: "PIRO", url: "https://smartstore.naver.com/piro_sports" },
-  { nameKo: "컬렉스", nameEn: "Collex", url: "https://collexx.io/" },
-  { nameKo: "축구체크", nameEn: "Chuk9 Check", url: "https://www.instagram.com/chuk9__check/" }
+  { nameKo: "엘초이스", nameEn: "El Choice", logoBg: "#111", logo: "https://ecimg.cafe24img.com/pg545b96614970059/elchoice20192/web/upload/appfiles/ZaReJam3QiELznoZeGGkMG/fab57a96045fbed8735a16154a0f64a6.png", url: "https://elchoice.co.kr/" },
+  { nameKo: "옥산", nameEn: "Oksan", logoBg: "#111", logo: "https://oksanchair.com/web/upload/category/logo/v2_07be1fe127ba1764ec1805e52bc34277_YdvRFSKQg7_top.jpg", url: "https://oksanchair.com/" },
+  { nameKo: "마이프로틴", nameEn: "Myprotein", logo: "https://upload.wikimedia.org/wikipedia/en/f/fd/Myprotein_logo_2023.png", url: "https://www.myprotein.co.kr/" },
+  { nameKo: "비우고 맑은물 약콩두유", nameEn: "Viugo Soy Milk", logo: "https://shop-phinf.pstatic.net/20250131_142/1738314449992M9Ur8_PNG/%C1%A6%B8%F1%C0%BB-%C0%D4%B7%C2%C7%D8%C1%D6%BC%BC%BF%E4_-001_%2827%29.png?type=m10000_10000", url: "https://smartstore.naver.com/viugo/products/9866143888" },
+  { nameKo: "비기캐리어", nameEn: "Biggie Carrier", logo: "https://shop-phinf.pstatic.net/20260617_165/1781657224098TpEVa_PNG/KakaoTalk_20260612_135921440_01.png?type=m10000_10000", url: "https://smartstore.naver.com/biggiemall/category/710344ba803d4984bf0fd1824385081b?cp=1" },
+  { nameKo: "KT스카이라이프 (포착/POCHAK)", nameEn: "KT Skylife (POCHAK)", logo: "https://www.skylife.co.kr/_next/image?url=%2FimagesPC%2Fcommon%2Fheader%2Flogo-2.png&w=256&q=75", url: "https://www.skylife.co.kr/product/pochak" },
+  { nameKo: "PIRO", nameEn: "PIRO", logo: "https://shop-phinf.pstatic.net/20250909_125/1757384892131WF5pQ_PNG/91517687079739014_1496624710.png?type=m120", url: "https://smartstore.naver.com/piro_sports" },
+  { nameKo: "컬렉스", nameEn: "Collex", logoBg: "#111", logo: "https://image.collexx.io/592d271f-eb8c-4735-b532-955b036a6a58.png", url: "https://collexx.io/" },
+  { nameKo: "축구체크", nameEn: "Chuk9 Check", url: "https://www.instagram.com/chuk9__check/" },
+  { nameKo: "위프", nameEn: "Whiff", logo: "https://whiff.co.kr/web/upload/NNEditor/20260316/c3a90ea7ecc99c03b2cc2e3d8e954732.png", url: "https://whiff.co.kr/" }
 ];
 
 // ===== 26/27 시즌 유니폼 이미지 =====

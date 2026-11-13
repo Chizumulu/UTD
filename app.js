@@ -8820,7 +8820,7 @@
       const ch = escapeHtml(Array.from(s.nameKo)[0]);
       const featured = !!(s.roleKo || s.roleEn);
       const mark = s.logo
-        ? `<img class="ti-sponsor-logo" src="${escapeHtml(s.logo)}" alt="${escapeHtml(s.nameKo)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ti-sponsor-initial',textContent:'${ch}'}))">`
+        ? `<img class="ti-sponsor-logo" src="${escapeHtml(s.logo)}"${(s.logoBg || s.logoW) ? ` style="${s.logoBg ? `background:${escapeHtml(s.logoBg)};border-radius:12px;padding:6px;box-sizing:border-box;` : ''}${s.logoW ? `width:${parseInt(s.logoW, 10)}px;` : ''}"` : ''} alt="${escapeHtml(s.nameKo)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ti-sponsor-initial',textContent:'${ch}'}))">`
         : `<span class="ti-sponsor-initial">${ch}</span>`;
       const href = `href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer"`;
       const style = `style="--i:${i}"`;
