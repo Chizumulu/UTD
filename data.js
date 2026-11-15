@@ -1694,10 +1694,10 @@ const scheduledRounds = {
   // ── 정규 17주차 (엑셀 "Week 17") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round18: [
     { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-11-14", kickoffTime: "15:00", homeScore: 3, awayScore: 1, scorersHome: "JONATHAN PHIRI (2골), SILVESTER SMART", scorersAway: "PATRICK KANYENDA" },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-11-15", kickoffTime: "15:00" },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-11-15", kickoffTime: "15:00", homeScore: 3, awayScore: 2, scorersHome: "RODERICK MALUZI, BLESSINGS NYASULU, MASSA YOLLAM", scorersAway: "ROBARCO KANDIADO, WYSON NYIRENDA" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-11-18", kickoffTime: "15:00" }, // 11/14(토) → 11/18(수)로 변경
     { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-11-14", kickoffTime: "15:00", homeScore: 6, awayScore: 0, scorersHome: "HENDERSON KANYIKA (4골), CLIFFORD CHISALE (2골)", scorersAway: "없음" },
-    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-11-15", kickoffTime: "15:00" },
+    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-11-15", kickoffTime: "15:00", homeScore: 2, awayScore: 0, scorersHome: "JOMOLE PHIRI, AUSTIN HARAWA", scorersAway: "없음" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-11-18", kickoffTime: "15:00" }, // 11/15(일) → 11/18(수)로 변경
     { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-11-17", kickoffTime: "15:00" },
     { byeKo: "치하메 올스타즈 FC", byeEn: "Chihame All Stars FC" }
@@ -3281,6 +3281,9 @@ const playerDirectory = {
   "KING NYASULU": { nameKo: "킹 니야술루", nameEn: "King Nyasulu" },
   "TRYSON KAUNDA": { nameKo: "타이슨 카운다", nameEn: "Tryson Kaunda" },
   "CLEMENT KASEKA": { nameKo: "클레멘트 카세카", nameEn: "Clement Kaseka" },
+  "RODERICK MALUZI": { nameKo: "로데릭 말루지", nameEn: "Roderick Maluzi" },
+  "ROBARCO KANDIADO": { nameKo: "로바르코 칸디아도", nameEn: "Robarco Kandiado" },
+  "AUSTIN HARAWA": { nameKo: "오스틴 하라와", nameEn: "Austin Harawa" },
   "PATRICK KANYENDA": { nameKo: "패트릭 칸옌다", nameEn: "Patrick Kanyenda" },
   "JERPHASON KANYENDA": { nameKo: "제르파손 칸옌다", nameEn: "Jerphason Kanyenda" },
   "GOMEZGANI SIBALE": { nameKo: "고메즈가니 시발레", nameEn: "Gomezgani Sibale" },
