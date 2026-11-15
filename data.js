@@ -1646,19 +1646,6 @@ const matchDetails = {
       scorersHome: "WYSON NYIRENDA",
       scorersAway: "없음"
     }
-  ],
-  // 정규 17주차 (11/14 먼저 치러진 2경기만 — 나머지는 scheduledRounds.round18에서 진행 중)
-  round18: [
-    {
-      match: "루비리 3 : 치폴로폴로 1",
-      scorersHome: "JONATHAN PHIRI (2골), SILVESTER SMART",
-      scorersAway: "PATRICK KANYENDA"
-    },
-    {
-      match: "치바비 6 : 에크웬데니 0",
-      scorersHome: "HENDERSON KANYIKA (4골), CLIFFORD CHISALE (2골)",
-      scorersAway: "없음"
-    }
   ]
 };
 
