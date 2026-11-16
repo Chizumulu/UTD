@@ -2601,7 +2601,7 @@ function computeH2HHistory() {
       if (!info.isCurrentLeagueTeam && oppEn) info.nameEn = oppEn;
       const rec = ensure(info);
       applyResult(rec, myGoals, oppGoals, {
-        source, roundKey, weekNum, homeAway: homeIsUs ? 'H' : 'A'
+        source, roundKey, weekNum, homeAway: homeIsUs ? 'H' : 'A', forfeit: !!m.forfeit, movedFromWeek: m.movedFromWeek || null
       });
     });
   }
@@ -5243,14 +5243,17 @@ function buildFullH2HListForOpponent(opponentKo) {
       .reverse()
       .forEach(m => {
         const wk = parseInt(String(m.roundKey).replace('round', ''), 10);
-        const weekNo = (isMakeupWeek(wk) && m.movedFromWeek) ? m.movedFromWeek : regularWeekNumber(wk);
+        // 연기경기주차에 치른 경기는 "연기경기주차 (N주차에서 이동)", 다른 주차로 옮겨 치른 경기는 "M주차 (N주차에서 이동)"로 표기합니다.
+        const fromNo = m.movedFromWeek ? regularWeekNumber(m.movedFromWeek) : null;
+        const weekLabel = (isMakeupWeek(wk) ? '연기경기주차' : `${regularWeekNumber(wk)}주차`)
+          + (fromNo ? ` (${fromNo}주차에서 이동)` : '');
         const homeShort = (m.homeKo === ourKo) ? '치주물루' : shortKo(m.homeKo);
         const awayShort = (m.awayKo === ourKo) ? '치주물루' : shortKo(m.awayKo);
         let result;
         if (m.homeScore === m.awayScore) result = '무승부';
         else result = `${m.homeScore > m.awayScore ? homeShort : awayShort} 승`;
         list.push({
-          comp: `26/27 시즌 NRFA 리그 원 ${weekNo}주차`,
+          comp: `26/27 시즌 NRFA 리그 원 ${weekLabel}`,
           score: `${homeShort} ${m.homeScore} : ${m.awayScore} ${awayShort}`,
           result
         });

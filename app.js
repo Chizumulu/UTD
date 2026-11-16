@@ -17523,14 +17523,22 @@
 
   function formatCompLabel(comp) {
     const text = String(comp || '');
-    const weekMatch = text.match(/(\d+)\s*주차/);
-    if (!weekMatch) return isKorean ? text : translateCompEn(text);
-    const seasonMatch = text.match(/(\d{4})-(\d{2})/) || text.match(/(\d{2})\/(\d{2})/);
+    // "(N주차에서 이동)" 꼬리표는 따로 떼어 두었다가 마지막에 붙입니다.
+    const movedMatch = text.match(/\(\s*(\d+)\s*주차에서 이동\s*\)/);
+    const base = text.replace(/\s*\(\s*\d+\s*주차에서 이동\s*\)/, '');
+    const isMakeup = base.indexOf('연기경기주차') !== -1;
+    const weekMatch = base.match(/(\d+)\s*주차/);
+    if (!weekMatch && !isMakeup) return isKorean ? text : translateCompEn(text);
+    const seasonMatch = base.match(/(\d{4})-(\d{2})/) || base.match(/(\d{2})\/(\d{2})/);
     if (!seasonMatch) return isKorean ? text : translateCompEn(text);
     const seasonShort = seasonMatch[0].length === 7
       ? `${seasonMatch[1].slice(2)}/${seasonMatch[2]}`
       : seasonMatch[0];
-    return isKorean ? `${seasonShort} 시즌 ${weekMatch[1]}주차` : `${seasonShort} Season · Week ${weekMatch[1]}`;
+    const weekKo = isMakeup ? '연기경기주차' : `${weekMatch[1]}주차`;
+    const weekEn = isMakeup ? 'Makeup Week' : `Week ${weekMatch[1]}`;
+    const movedKo = movedMatch ? ` (${movedMatch[1]}주차에서 이동)` : '';
+    const movedEn = movedMatch ? ` (moved from Week ${movedMatch[1]})` : '';
+    return isKorean ? `${seasonShort} 시즌 ${weekKo}${movedKo}` : `${seasonShort} Season · ${weekEn}${movedEn}`;
   }
 
   // 결과 문자열("3 : 1 승" 등) 끝의 승/패/무 표기를 언어에 맞게 변환
@@ -17914,10 +17922,12 @@
 
   // 전적 비교 창의 "상대전적(이전경기)" 목록 — 치주물루가 낀 경기에서만 만듭니다.
   // 주차 키(roundKey)별 메모를 찾는 대신 computeH2HHistory()(상대팀별 통산 기록)에서 이 상대를 찾아,
-  // 과거 시즌·컵대회 기록(source가 'season'이 아닌 것)을 모두 보여줍니다.
-  // 이번 시즌(26/27) 경기는 바로 위 "이번 시즌 맞대결"에 이미 나오므로 제외하고, 같은 경기가 여러 라운드 메모에
-  // 중복으로 적혀 있어도 한 번만 나오게 합니다. 치주물루가 없는 매치업은 null → 아무것도 표시하지 않습니다.
-  function getPastSeasonMeetingsForMatch(homeEn, homeKo, awayEn, awayKo) {
+  // 과거 시즌·컵대회 기록(source가 'season'이 아닌 것)과 이번 시즌(26/27)에 이미 치른 맞대결을 합산해서 보여줍니다.
+  //  - 이번 시즌 경기는 지금 보고 있는 경기(roundKey)보다 앞선 주차만 넣습니다(보고 있는 경기 자신과 이후 경기는 제외).
+  //  - 이번 시즌 경기는 확정 스코어가 있는 roundsData/scheduledRounds 기록으로 만들고, 메모(26/27 ...)에 적힌 같은 경기는
+  //    중복되므로 제외합니다. 같은 경기가 여러 라운드 메모에 적혀 있어도 한 번만 나오게 합니다.
+  // 치주물루가 없는 매치업은 null → 아무것도 표시하지 않습니다.
+  function getPastSeasonMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey) {
     const homeIsMine = isMyTeamName(homeEn, homeKo);
     const awayIsMine = isMyTeamName(awayEn, awayKo);
     if (!homeIsMine && !awayIsMine) return null;
@@ -17927,11 +17937,34 @@
     const rec = computeH2HHistory().find(r => r.nameEn === oppEn || r.nameKo === oppKo);
     if (!rec) return null;
 
+    const posOf = k => parseInt(String(k || '').replace('round', ''), 10);
+    const curPos = roundKey ? posOf(roundKey) : NaN;
+    const oppShort = Object.keys(HIST_TEAM_EN).find(k => String(rec.nameKo || '').indexOf(k) === 0) || rec.nameKo;
+
+    // 1) 이번 시즌에 이미 치른 맞대결 (최근 경기가 위로)
+    const thisSeason = rec.matches
+      .filter(m => m.source === 'season' && (isNaN(curPos) || posOf(m.roundKey) < curPos))
+      .sort((x, y) => posOf(y.roundKey) - posOf(x.roundKey))
+      .map(m => {
+        const pos = posOf(m.roundKey);
+        const fromNo = (m.movedFromWeek && typeof regularWeekNumber === 'function') ? regularWeekNumber(m.movedFromWeek) : null;
+        const wk = ((typeof weekLabelKo === 'function') ? weekLabelKo(pos) : `${pos}주차`)
+          + (fromNo ? ` (${fromNo}주차에서 이동)` : '');
+        const scoreText = m.homeAway === 'H'
+          ? `치주물루 ${m.myGoals} : ${m.oppGoals} ${oppShort}`
+          : `${oppShort} ${m.oppGoals} : ${m.myGoals} 치주물루`;
+        const forfeit = m.forfeit ? '(몰수승)' : '';
+        const result = m.result === 'W' ? `치주물루 승${forfeit}`
+                     : (m.result === 'D' ? '무승부' : `${oppShort} 승${forfeit}`);
+        return { comp: `26/27 시즌 ${wk}`, score: scoreText, result };
+      });
+
+    // 2) 과거 시즌·컵대회 기록
     const seen = new Set();
-    const list = [];
+    const list = thisSeason.slice();
     rec.matches.forEach(m => {
-      if (m.source === 'season') return;                       // 이번 시즌 경기(확정 스코어)는 위 블록에 있음
-      if (/^\s*26\/27/.test(m.comp || '')) return;             // 메모에 적힌 이번 시즌 경기도 제외
+      if (m.source === 'season') return;                       // 이번 시즌 경기는 위에서 이미 처리
+      if (/^\s*26\/27/.test(m.comp || '')) return;             // 메모에 적힌 이번 시즌 경기도 제외(중복 방지)
       const dupKey = (m.comp || '') + '|' + (m.scoreText || '');
       if (seen.has(dupKey)) return;
       seen.add(dupKey);
@@ -18334,7 +18367,7 @@
             <div class="mc-form-title lbl" data-en="Season Head-to-Head" data-ko="이번 시즌 맞대결">${isKorean ? '이번 시즌 맞대결' : 'Season Head-to-Head'}</div>
             ${h2hHtml}
           </div>
-          ${priorMeetingsSectionHtml(getPastSeasonMeetingsForMatch(homeEn, homeKo, awayEn, awayKo))}
+          ${priorMeetingsSectionHtml(getPastSeasonMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey))}
           ${matchRelatedHtml(homeEn, homeKo, awayEn, awayKo, roundKey)}
         </div>
       </div>
