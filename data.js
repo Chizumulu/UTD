@@ -1699,8 +1699,10 @@ const scheduledRounds = {
     { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-11-14", kickoffTime: "15:00", homeScore: 6, awayScore: 0, scorersHome: "HENDERSON KANYIKA (4골), CLIFFORD CHISALE (2골)", scorersAway: "없음" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-11-15", kickoffTime: "15:00", homeScore: 2, awayScore: 0, scorersHome: "JOMOLE PHIRI, AUSTIN HARAWA", scorersAway: "없음" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-11-18", kickoffTime: "15:00" }, // 11/15(일) → 11/18(수)로 변경
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-11-17", kickoffTime: "15:00" },
-    { byeKo: "치하메 올스타즈 FC", byeEn: "Chihame All Stars FC" }
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-11-17", kickoffTime: "15:00", postponed: true, movedToWeek: 20 }, // 17주차 → 19주차(round20)로 연기, 11/27(금)에 진행
+    { byeKo: "치하메 올스타즈 FC", byeEn: "Chihame All Stars FC" },
+    { byeKo: "마푸 스타즈 FC", byeEn: "Mafu Stars FC" }, // 마푸 vs 치주물루가 19주차로 연기되어 17주차는 휴식
+    { byeKo: "치주물루 유나이티드 FC", byeEn: "Chizumulu United FC" } // 〃
   ],
   // ── 정규 18주차 (엑셀 "Week 18") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round19: [
@@ -1715,14 +1717,14 @@ const scheduledRounds = {
   ],
   // ── 정규 19주차 (엑셀 "Week 19") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round20: [
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-11-27", kickoffTime: "15:00", movedFromWeek: 18 }, // 17주차(round18)에서 연기된 경기 (킥오프 시간은 기존 값 유지, 확정 시 수정)
     { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
     { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-11-29", kickoffTime: "15:00" },
     { homeKo: "치하메 올스타즈 FC", homeEn: "Chihame All Stars FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-11-29", kickoffTime: "15:00" },
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-12-01", kickoffTime: "15:00" },
-    { byeKo: "마푸 스타즈 FC", byeEn: "Mafu Stars FC" }
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-12-01", kickoffTime: "15:00" }
   ],
   // ── 정규 20주차 (엑셀 "Week 20") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round21: [

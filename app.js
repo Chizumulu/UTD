@@ -20054,24 +20054,32 @@
     showNewsPopupIfNeeded() || showMatchdayPopupIfNeeded();
   }
 
-  // ===== 뉴스 안내 팝업 (2026/27 FA컵 신설 소식 · 2026-11-12부터 7일간) =====
+  // ===== 뉴스 안내 팝업 (치주물루 vs 마푸 경기 11/27(금) 일정 변경 안내 · 2026-11-17부터 7일간 노출) =====
   // 접속 안내 팝업이 뜬 경우엔 그게 닫힌 다음(closeDisclaimer 안에서 호출) 두 번째로 뜨고,
   // 접속 안내 팝업이 이미 숨김 기간이라 안 뜬 경우엔 진입 시 바로 뜹니다.
-  const NEWS_POPUP_KEY = 'nrfa-news-popup-facup2627-hide-until';
+  const NEWS_POPUP_KEY = 'nrfa-news-popup-chizumulu-mafu-1127-hide-until';
   const NEWS_POPUP_HIDE_DAYS = 14;
-  // 체크박스와 별개로, 이 소식 자체를 요청일(2026-11-12)로부터 7일 뒤에는
-  // 아무도 다시 보지 않게 하드 마감시각을 둡니다. 이 시각이 지나면 팝업 자체가 뜨지 않습니다.
-  const NEWS_POPUP_EXPIRES_AT = new Date('2026-11-19T00:00:00+09:00').getTime();
+  // 체크박스와 별개로, 11/17부터 7일간(11/23까지) 노출하고, 11/24 0시(KST)부터는 팝업 자체가 뜨지 않도록 하드 마감시각을 둡니다.
+  const NEWS_POPUP_EXPIRES_AT = new Date('2026-11-24T00:00:00+09:00').getTime();
 
   function showNewsPopupIfNeeded() {
     const modal = document.getElementById('newsPopupModal');
     if (!modal) return false;
-    if (Date.now() >= NEWS_POPUP_EXPIRES_AT) return false; // 7일 지남 - 자동 종료
+    if (Date.now() >= NEWS_POPUP_EXPIRES_AT) return false; // 경기일 지남 - 자동 종료
     try {
       const hideUntil = localStorage.getItem(NEWS_POPUP_KEY);
       if (hideUntil && Date.now() < Number(hideUntil)) {
         return false; // 아직 숨김 기간이 지나지 않음
       }
+    } catch (e) {}
+    // 일정 변경 팝업의 팀 로고 (경기일 팝업과 같은 getTeamLogo 사용)
+    try {
+      [['rsHomeLogo', 'Chizumulu United FC'], ['rsAwayLogo', 'Mafu Stars FC']].forEach(function(p) {
+        const img = document.getElementById(p[0]);
+        const src = (typeof getTeamLogo === 'function') ? getTeamLogo(p[1]) : '';
+        if (img && src) { img.src = src; img.style.display = ''; }
+        else if (img) { img.style.display = 'none'; }
+      });
     } catch (e) {}
     showModalAnimated(modal);
     return true;
@@ -20191,15 +20199,6 @@
 
   // 뉴스 팝업 안의 선수 이름을 누르면 팝업을 닫고(체크박스 상태는 그대로 반영) 바로
   // 해당 선수의 상세 모달을 이어서 띄웁니다.
-  // FA컵 신설 팝업의 문구를 누르면 팝업을 닫고 컵대회 화면(FA컵)으로 이동합니다.
-  function openCupFromNewsPopup() {
-    closeNewsPopup(true);
-    if (typeof showCupView === 'function') {
-      showCupView();
-      window.scrollTo(0, 0);
-    }
-  }
-
   function openPlayerFromNewsPopup(number) {
     closeNewsPopup(true);
     if (typeof openSquadPlayerModal === 'function') {

@@ -17332,3 +17332,55 @@ tr[data-a11y-btn]:focus-visible, td[data-a11y-btn]:focus-visible { outline-offse
   .cup-tl-item { grid-template-columns: 1fr; gap: 0; }
   .cup-tier { flex-wrap: wrap; }
 }
+
+/* ===== 경기 일정 변경 팝업 (newsPopupModal) ===== */
+.rs-popup { max-width: 400px; }
+.rs-popup .news-popup-close-x { background: rgba(255,255,255,0.22); }
+.rs-popup .news-popup-close-x:hover { background: rgba(255,255,255,0.36); }
+.rs-head {
+  background: linear-gradient(135deg, var(--color-navy-deep) 0%, var(--color-navy-light) 100%);
+  padding: 22px 20px 20px; text-align: center; color: #fff;
+}
+.rs-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 11px; border-radius: 999px;
+  background: rgba(var(--color-gold-rgb), 0.2);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.55);
+  color: var(--color-gold-light); font-size: 12px; font-weight: 800; letter-spacing: 0.2px;
+}
+.rs-eyebrow svg { width: 14px; height: 14px; flex: 0 0 auto; }
+.rs-title { margin: 10px 0 0; font-size: 20px; font-weight: 900; line-height: 1.3; color: #fff; }
+.rs-body { padding: 18px 16px 18px; overflow-y: visible; }
+.rs-match {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px;
+  padding: 16px 10px; margin-bottom: 12px;
+  background: var(--color-bg-stripe); border: 1px solid var(--color-border-chip);
+  border-radius: var(--radius-md);
+}
+.rs-team {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0;
+  text-align: center; font-size: 13px; font-weight: 800; line-height: 1.3;
+  color: var(--color-text-darkest);
+}
+.rs-team img { width: 46px; height: 46px; object-fit: contain; }
+.rs-team span { overflow-wrap: anywhere; }
+.rs-vs { font-size: 12px; font-weight: 800; color: var(--color-text-muted); letter-spacing: 0.5px; }
+.rs-move {
+  display: grid; grid-template-columns: 1fr auto 1.35fr; align-items: stretch; gap: 8px;
+  margin-bottom: 16px;
+}
+.rs-arrow { width: 22px; height: 22px; align-self: center; color: var(--color-gold-strong); }
+.rs-from, .rs-to {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 11px 8px; border-radius: var(--radius-md); text-align: center;
+}
+.rs-from { background: transparent; border: 1px dashed var(--color-border-chip); }
+.rs-to {
+  background: rgba(var(--color-gold-rgb), 0.2);
+  border: 1px solid var(--color-gold-strong);
+}
+.rs-tag { font-size: 10.5px; font-weight: 800; color: var(--color-text-soft); letter-spacing: 0.3px; }
+.rs-to .rs-tag { color: var(--color-gold-strong); }
+.rs-week { font-size: 16px; font-weight: 900; color: var(--color-text-darkest); }
+.rs-from .rs-week { color: var(--color-text-muted); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.rs-date { font-size: 13px; font-weight: 800; color: var(--color-text-dark); }
