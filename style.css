@@ -17391,3 +17391,11 @@ html[lang="ny"] #langBtnNy { display: none; }
 @media (max-width: 720px) {
   #langBtnNy { display: none !important; }
 }
+
+/* ===== 언어 버튼 국기 아이콘 (SVG라 Windows에서도 국기가 깨지지 않음) ===== */
+.lang-btn .lang-flag {
+  width: 20px; height: 14px; flex: 0 0 auto; display: block;
+  border-radius: 2.5px; box-shadow: 0 0 0 1px rgba(255,255,255,0.35);
+}
+html[data-lang="ko"] .lang-btn .lang-flag-kr { display: none; }
+html[data-lang="en"] .lang-btn .lang-flag-uk { display: none; }
