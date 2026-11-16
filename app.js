@@ -19308,6 +19308,14 @@
       history.replaceState(history.state, '', u.pathname + u.search + u.hash);
     } catch (e) {}
   }
+  // 언어 버튼의 국기: 한국어 화면이면 영국 국기(영어로 이동), 영어 화면이면 태극기(한국어로 이동).
+  // CSS(data-lang)에만 맡기지 않고 인라인 display로 직접 켜고 끕니다.
+  function syncLangFlags() {
+    const uk = document.querySelector('#langBtn .lang-flag-uk');
+    const kr = document.querySelector('#langBtn .lang-flag-kr');
+    if (uk) uk.style.display = isKorean ? '' : 'none';
+    if (kr) kr.style.display = isKorean ? 'none' : '';
+  }
   // 치체와어 버튼 문구("Onani mu Chichewa")는 한/영 화면 모두 치체와어 그대로 고정입니다.
   // 치체와어 버전(?lang=ny)으로 이동합니다. 치체와어는 lang-ny.js가 페이지를 불러올 때 적용하므로
   // 주소에 lang=ny를 붙여 다시 불러옵니다. (현재 보던 #/경로 해시는 그대로 유지)
@@ -19331,6 +19339,7 @@
       el.title = isKorean ? el.getAttribute('data-ko-name') : el.getAttribute('data-en-name');
     });
     document.getElementById('langBtnText').textContent = isKorean ? 'View in English' : '한국어로 보기';
+    syncLangFlags();
     applyAttrLang();
     updateSeasonInfo();
     equalizeTitleLines();
@@ -20243,6 +20252,7 @@
       el.title = isKorean ? el.getAttribute('data-ko-name') : el.getAttribute('data-en-name');
     });
     document.getElementById('langBtnText').textContent = isKorean ? 'View in English' : '한국어로 보기';
+    syncLangFlags();
     applyAttrLang();
 
     applyTheme(isDarkTheme() ? 'dark' : 'light');
