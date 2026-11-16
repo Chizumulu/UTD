@@ -17384,3 +17384,10 @@ tr[data-a11y-btn]:focus-visible, td[data-a11y-btn]:focus-visible { outline-offse
 .rs-week { font-size: 16px; font-weight: 900; color: var(--color-text-darkest); }
 .rs-from .rs-week { color: var(--color-text-muted); text-decoration: line-through; text-decoration-thickness: 1.5px; }
 .rs-date { font-size: 13px; font-weight: 800; color: var(--color-text-dark); }
+
+/* ===== 치체와어 버전 버튼 (PC 사이드바 전용) ===== */
+#langBtnNyText { white-space: nowrap; }
+html[lang="ny"] #langBtnNy { display: none; }
+@media (max-width: 720px) {
+  #langBtnNy { display: none !important; }
+}

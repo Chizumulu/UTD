@@ -19308,6 +19308,18 @@
       history.replaceState(history.state, '', u.pathname + u.search + u.hash);
     } catch (e) {}
   }
+  // 치체와어 버튼 문구("Onani mu Chichewa")는 한/영 화면 모두 치체와어 그대로 고정입니다.
+  // 치체와어 버전(?lang=ny)으로 이동합니다. 치체와어는 lang-ny.js가 페이지를 불러올 때 적용하므로
+  // 주소에 lang=ny를 붙여 다시 불러옵니다. (현재 보던 #/경로 해시는 그대로 유지)
+  function goChichewa() {
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.set('lang', 'ny');
+      window.location.href = u.pathname + u.search + u.hash;
+    } catch (e) {
+      window.location.href = '?lang=ny';
+    }
+  }
   function toggleLang() {
     isKorean = !isKorean;
     syncLangAttr();
