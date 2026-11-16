@@ -4231,15 +4231,44 @@ function computeTeamStrengths() {
 }
 
 // Knuth 알고리즘 기반 포아송 난수 생성기
-function poissonRandom(lambda) {
+// rand(선택): 0~1 난수 함수. 생략하면 Math.random(기존과 동일).
+function poissonRandom(lambda, rand) {
+  const rnd = rand || Math.random;
   const L = Math.exp(-lambda);
   let k = 0;
   let p = 1;
   do {
     k += 1;
-    p *= Math.random();
+    p *= rnd();
   } while (p > L);
   return k - 1;
+}
+
+// ===== 시드 난수 (공통 난수열: Common Random Numbers) =====
+// 우승 확률 기준값과 '승/무/패일 때' 확률은 서로 다른 시뮬레이션이라, 난수가 다르면
+// 이겨도 확률이 내려가는 것처럼 보이는 무작위 오차가 생깁니다.
+// (시뮬레이션 번호, 경기 번호)마다 독립된 난수열을 만들어 쓰면, 결과를 고정한 경기 말고는
+// 모든 경기가 기준 시뮬레이션과 똑같이 나와서 그 오차가 사라집니다.
+function mcMulberry32(a) {
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function mcMixSeed(base, sim, fxIdx) {
+  let h = (base ^ Math.imul(sim + 1, 0x9E3779B1)) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x85EBCA6B) >>> 0;
+  h = (h ^ Math.imul(fxIdx + 1, 0xC2B2AE35)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 0x27D4EB2F) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
+}
+// 문자열 → 32비트 정수 (FNV-1a)
+function mcHashString(str) {
+  let h = 0x811C9DC5;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
 }
 
 // ============================================================
@@ -4598,7 +4627,7 @@ function getDCRho(precomputedTrack) {
 // 조정된 결합확률 격자에서 직접 (홈골, 원정골) 쌍을 뽑아 저득점 스코어 간
 // 상관관계를 시뮬레이션에도 반영합니다. ρ=0이면 결과 분포가 독립 샘플링과
 // 동일하므로, 이 함수는 ρ가 실제로 적용될 때만 사용됩니다.
-function sampleDixonColesScore(expectedHomeGoals, expectedAwayGoals, rho, maxGoals) {
+function sampleDixonColesScore(expectedHomeGoals, expectedAwayGoals, rho, maxGoals, rand) {
   const MAX_GOALS = maxGoals || 8;
   const cellsH = [];
   const cellsA = [];
@@ -4613,7 +4642,7 @@ function sampleDixonColesScore(expectedHomeGoals, expectedAwayGoals, rho, maxGoa
       cellsH.push(h); cellsA.push(a); cumP.push(acc);
     }
   }
-  const r = Math.random() * acc;
+  const r = (rand || Math.random)() * acc;
   for (let i = 0; i < cumP.length; i++) {
     if (r <= cumP[i]) return { h: cellsH[i], a: cellsA[i] };
   }
@@ -5310,7 +5339,9 @@ function listRemainingFixturesForWhatIf() {
 // data.js는 워커(predict-worker.js)도 importScripts로 불러오므로 워커도 이 값을 그대로 씁니다.
 const LEAGUE_RULES = { promote: 1, relegate: 3 };
 
-function runMonteCarloSimulation(iterations, overrides) {
+// seed(선택): 정수를 주면 그 값으로, 생략하면 현재 리그 데이터(순위표·남은 대진)로 자동 결정됩니다.
+//   같은 데이터면 기준 예측과 '만약에/승무패별' 시뮬레이션이 같은 난수열을 공유합니다.
+function runMonteCarloSimulation(iterations, overrides, seed) {
   const N = iterations || 4000;
   const fixtures = generateRemainingFixtures();
   // 결과 고정: 남은 경기에 실제로 존재하는 대진만, 유효한 값(H/D/A)만 받아들입니다.
@@ -5398,6 +5429,11 @@ function runMonteCarloSimulation(iterations, overrides) {
   // 승자승 계산용: 이미 확정된 경기(시뮬레이션 시작 시점) + 반복마다 새로 뽑은 남은 경기 결과
   const baseH2HMatches = getLeagueMatchesForTiebreak();
 
+  // 공통 난수열의 기준 시드: 직접 받았으면 그 값, 아니면 리그 데이터에서 계산(결과 고정 여부와 무관).
+  const mcBaseSeed = (typeof seed === 'number' && isFinite(seed))
+    ? (seed >>> 0)
+    : mcHashString(JSON.stringify(baseStats) + '|' + fixtureIds.join(','));
+
   for (let sim = 0; sim < N; sim++) {
     const simH2HMatches = [];
     const state = {};
@@ -5428,12 +5464,15 @@ function runMonteCarloSimulation(iterations, overrides) {
       const homeExpected = applyGoalCorrection(homeBaseline * homeAttackAdj * awayDefenseAdj, fxCorrection.mode, fxCorrection.homeFactor, fxCorrection.homeOffset);
       const awayExpected = applyGoalCorrection(awayBaseline * awayAttackAdj * homeDefenseAdj, fxCorrection.mode, fxCorrection.awayFactor, fxCorrection.awayOffset);
 
+      // 이 (시뮬레이션, 경기) 전용 난수열 — 다른 경기의 결과 고정/기각 샘플링이 난수를 얼마나
+      // 쓰든 이 경기의 첫 번째 뽑기는 항상 같습니다.
+      const fxRand = mcMulberry32(mcMixSeed(mcBaseSeed, sim, fxIdx));
       const drawScore = () => {
         if (dc.active && dc.rho !== 0) {
-          const sampled = sampleDixonColesScore(homeExpected, awayExpected, dc.rho);
+          const sampled = sampleDixonColesScore(homeExpected, awayExpected, dc.rho, undefined, fxRand);
           return { h: sampled.h, a: sampled.a };
         }
-        return { h: poissonRandom(homeExpected), a: poissonRandom(awayExpected) };
+        return { h: poissonRandom(homeExpected, fxRand), a: poissonRandom(awayExpected, fxRand) };
       };
       let drawn = drawScore();
       const forced = forcedByIdx[fxIdx];
