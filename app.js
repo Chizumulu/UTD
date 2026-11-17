@@ -2632,6 +2632,10 @@
 
   // ===== 킥오프 일시 포맷 (말라위 표준시 UTC+2 → KST UTC+9 병기) =====
   const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
+  // 접속한 기기의 시간대가 한국(Asia/Seoul)인지. 한국에서 접속했을 때만 현지(CAT) 시간을 숨기고 KST만 보여주는 데 씁니다.
+  const IS_SEOUL_TZ = (() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone === 'Asia/Seoul'; } catch (e) { return false; }
+  })();
   // ===== 득점자 이름을 클릭 가능한 링크로 렌더링 =====
   // scorerText 예: "STEVEN PHIRI, DICKIES NYIRENDA (2골)"
   // topScorersData 에 등록된 선수(=득점 순위표에 있는 선수)는 클릭 시
@@ -4288,6 +4292,16 @@
       ? `<div class="ti-next-match-countdown" data-kickoff-utc="${kickoffMs}">${countdownScoreboardHtml(kickoffMs)}</div>`
       : '';
     const h2hHtml = isMyTeamName(team.nameEn, team.nameKo) ? nextMatchH2HSummaryHtml(nm.h2h) : '';
+    // 우리 팀이 원정을 갈 때만 이동 정보(배 + 도로)를 보여줍니다. 홈경기에서는 표시하지 않습니다.
+    // 원정이면 경기장 = 상대 홈구장이므로 그 구장 기준으로 getVenueRouteInfo()를 씁니다.
+    const travelInfo = (isMyTeamName(team.nameEn, team.nameKo) && nm.homeAway !== 'H')
+      ? getVenueRouteInfo(getTeamVenue(nm.oppEn))
+      : null;
+    const travelHtml = travelInfo ? `
+          <div class="ti-travel-single">
+            <span class="ti-fdr-single-label lbl" data-en="Away Travel" data-ko="원정 이동">${isKorean ? '원정 이동' : 'Away Travel'}</span>
+            <span class="ti-travel-val">🚢 ${travelInfo.boatTime} + 🚌 ${travelInfo.roadKm}km ${travelInfo.roadTime} → <b>${travelInfo.totalTime}</b></span>
+          </div>` : '';
     // 승/무/패 확률 미니 예측도 우리 팀(치주물루) 카드에서만, 상대가 이번 시즌 리그 소속일 때만 보여줍니다.
     const predictHtml = (isMyTeamName(team.nameEn, team.nameKo) && leagueData.some(t => t.nameEn === nm.oppEn))
       ? nextMatchPredictHtml(team, nm)
@@ -4312,33 +4326,80 @@
       ? matchWeatherPlaceholderHtml(nextMatchHomeEn, nm.kickoffDate, nm.kickoffTime, 'ti-next-match-weather')
       : '';
 
-    return `
-      <div class="ti-next-match">
-        <div class="ti-next-match-label lbl" data-en="Next Match · ${wkEn(nextWeek, 'Week', ' ')}" data-ko="다음 경기 · ${wkKo(nextWeek)}">${isKorean ? `다음 경기 · ${wkKo(nextWeek)}` : `Next Match · ${wkEn(nextWeek, 'Week', ' ')}`}</div>
-        <div class="ti-next-match-body">
+    // 경기 시간 · 경기장을 경기결과 날짜 카드의 행 상단과 같은 한 줄로, 헤더 바로 아래에 보여줍니다.
+    // (시간은 굵게 + KST 보조 글씨, 그 옆에 경기장 이름). 날씨는 예전처럼 대진 아래 박스로 둡니다.
+    // 시간 정보가 없으면 예전 표시(킥오프 줄 + 경기장 줄)로 대체합니다.
+    let metaHtml = '', legacyMetaHtml = '';
+    if (nm.kickoffDate && nm.kickoffTime) {
+      const [ky, kmo, kd] = String(nm.kickoffDate).split('-').map(Number);
+      const [khh, kmm] = String(nm.kickoffTime).split(':').map(Number);
+      const kk = new Date(ky, kmo - 1, kd, khh + 7, kmm); // 말라위(CAT, UTC+2) → KST(UTC+9)
+      const kp = (n) => String(n).padStart(2, '0');
+      const kstTime = `${kp(kk.getHours())}:${kp(kk.getMinutes())}`;
+      const kstShift = kk.getDate() !== kd;
+      metaHtml = `
+          <div class="ti-nm-meta">
+            <div class="ti-nm-time${IS_SEOUL_TZ ? ' ti-nm-kst-only' : ''}"><b class="ti-nm-cat">${nm.kickoffTime}</b><small class="ti-nm-kst">KST ${kstTime}${kstShift ? ' <i>+1</i>' : ''}</small></div>
+            ${nextMatchVenueName ? `<span class="ti-nm-venue lbl" data-en="${nextMatchVenue.nameEn}" data-ko="${nextMatchVenue.nameKo}">${nextMatchVenueName}</span>` : ''}
+          </div>`;
+    } else {
+      legacyMetaHtml = (kickoffTxt ? `<div class="ti-next-match-kickoff">${kickoffTxt}</div>` : '')
+        + (nextMatchVenueName ? `<div class="ti-next-match-venue">${svgIcon('stadium')} ${nextMatchVenueName}</div>` : '');
+    }
+
+    // 대진 영역은 홈팀이 왼쪽, 원정팀이 오른쪽. 가운데 VS 위의 배지는 예전처럼 우리 팀 기준 홈/원정을 한글로 표시합니다.
+    const nmIsHome = nm.homeAway === 'H';
+    const myTeamBlock = (home) => `
           <div class="ti-next-match-team">
             <img class="team-logo" src="${team.logoSrc}" alt="${team.nameEn}">
             <span class="lbl" data-en="${team.nameEn}" data-ko="${team.nameKo}">${isKorean ? team.nameKo : team.nameEn}</span>
             ${rankBadge(myRank)}
             ${myFormHtml}
-          </div>
-          <div class="ti-next-match-vs">
-            <span class="ha-badge ${haClass}">${nm.homeAway}</span>
-            <span class="ti-next-match-vs-text">VS</span>
-          </div>
+          </div>`;
+    const oppTeamBlock = (home) => `
           <div class="ti-next-match-team">
             <img class="team-logo" data-en-name="${nm.oppEn}" data-ko-name="${nm.oppKo}" src="${nm.oppLogo}" alt="${nm.oppEn}">
             <span class="lbl" data-en="${nm.oppEn}" data-ko="${nm.oppKo}">${oppName}</span>
             ${rankBadge(oppRank)}
             ${oppFormHtml}
-          </div>
+          </div>`;
+    const nmLeftHtml = nmIsHome ? myTeamBlock(true) : oppTeamBlock(true);
+    const nmRightHtml = nmIsHome ? oppTeamBlock(false) : myTeamBlock(false);
+
+    // 헤더용 날짜 (주차는 큰 제목, 날짜는 작은 보조 글씨 — 경기결과 날짜 카드 헤더와 같은 디자인)
+    let nmDateKo = '', nmDateEn = '';
+    if (nm.kickoffDate) {
+      const [ny, nmo, nd] = String(nm.kickoffDate).split('-').map(Number);
+      if (ny && nmo && nd) {
+        const ndt = new Date(ny, nmo - 1, nd);
+        nmDateKo = `${nmo}월 ${nd}일 (${WEEKDAY_KO[ndt.getDay()]})`;
+        nmDateEn = `${ndt.toLocaleDateString('en-US', { weekday: 'short' })}, ${ndt.toLocaleDateString('en-US', { month: 'short' })} ${nd}`;
+      }
+    }
+
+    return `
+      <div class="ti-next-match">
+        <div class="ti-nm-top">
+          <div class="ti-next-match-label ti-nm-head">
+            <span class="ti-nm-title lbl" data-en="${wkEn(nextWeek, 'Week', ' ')}" data-ko="${wkKo(nextWeek)}">${isKorean ? wkKo(nextWeek) : wkEn(nextWeek, 'Week', ' ')}</span>
+            ${nmDateKo ? `<span class="ti-nm-sub lbl" data-en="${nmDateEn}" data-ko="${nmDateKo}">${isKorean ? nmDateKo : nmDateEn}</span>` : ''}
+            <span class="ti-nm-res lbl" data-en="NEXT" data-ko="예정">${isKorean ? '예정' : 'NEXT'}</span>
+          </div>${metaHtml}
         </div>
-        ${kickoffTxt ? `<div class="ti-next-match-kickoff">${kickoffTxt}</div>` : ''}
-        ${nextMatchVenueName ? `<div class="ti-next-match-venue">${svgIcon('stadium')} ${nextMatchVenueName}</div>` : ''}
+        <div class="ti-next-match-body">
+          ${nmLeftHtml}
+          <div class="ti-next-match-vs">
+            <span class="ha-badge ${haClass} lbl" data-en="${nmIsHome ? 'Home' : 'Away'}" data-ko="${nmIsHome ? '홈' : '원정'}">${isKorean ? (nmIsHome ? '홈' : '원정') : (nmIsHome ? 'Home' : 'Away')}</span>
+            <span class="ti-next-match-vs-text">VS</span>
+          </div>
+          ${nmRightHtml}
+        </div>
+        ${legacyMetaHtml}
         ${weatherHtml}
         ${countdownHtml}
         ${predictHtml}
         ${h2hHtml}
+        ${travelHtml}
         ${buildFdrNextMatchHtml(team, nm)}
         ${compareBtnHtml}
       </div>`;
@@ -9178,14 +9239,13 @@
 
   // 연기/이동된 경기의 배지 문구를 계산합니다.
   // - noBadge가 true면 배지를 아예 표시하지 않습니다(빈 문자열 반환)
-  // - movedToWeek가 있으면(=새 일정이 확정돼 다른 주차로 옮겨간 경기) "N주차 경기로 이동"
+  // - movedToWeek가 있으면(=새 일정이 확정돼 다른 주차로 옮겨간 경기) "N주차로 연기"
   // - postponed이면서 pendingResult가 true면(=아직 새 일정도 안 잡히고 결과 대기 상태) "경기 결과 미정"
   // - 그렇지 않고 postponed만 true면 "경기 연기"
   // - 넷 다 아니면 "경기 시작 전"
   function scheduledBadgeText(m, ko) {
     if (m.noBadge) return '';
-    if (m.movedToWeek && m.changed) return ko ? '변경됨' : 'Changed';
-    if (m.movedToWeek) return ko ? `${wkKo(m.movedToWeek)} 경기로 이동` : `Moved to ${wkEn(m.movedToWeek, 'Week', ' ')}`;
+    if (m.movedToWeek) return ko ? `${wkKo(m.movedToWeek)}로\n연기` : `Postponed to\n${wkEn(m.movedToWeek, 'Week', ' ')}`;
     if (m.postponed && m.pendingResult) return ko ? '경기 결과 미정' : 'Result Pending';
     if (m.postponed) return ko ? '경기 연기' : 'Postponed';
     return ko ? '경기 시작 전' : 'Upcoming';
@@ -9564,7 +9624,7 @@
     });
   }
 
-  // "N주차 경기로 이동" 배지를 눌렀을 때 해당 주차의 라운드 화면으로 이동합니다.
+  // "N주차로 연기" 배지를 눌렀을 때 해당 주차의 라운드 화면으로 이동합니다.
   function goToRoundWeek(weekNum) {
     const key = 'round' + weekNum;
     if (roundsData[key] || (scheduledRounds && scheduledRounds[key])) {
@@ -9730,7 +9790,8 @@
         const isDraw = m.homeScore === m.awayScore;
         const res = isDraw ? 'D' : (((isHomeTeam && homeWin) || (!isHomeTeam && awayWin)) ? 'W' : 'L');
         const resKo = res === 'W' ? '승' : (res === 'D' ? '무' : '패');
-        resBadge = `<span class="rmd-result-badge is-${res.toLowerCase()} lbl" data-en="${res}" data-ko="${resKo}">${isKorean ? resKo : res}</span>`;
+        // 승/무/패는 행 안의 칩 대신 날짜 카드 헤더 오른쪽(addDayCard)에 표시합니다.
+        m.__res = res;
         const key = m.__rk;
         const detailOk = !m.forfeit && (!matchLineups[key] || isMatchDetailAvailable(key, isHomeTeam ? m.awayKo : m.homeKo, m.forfeit));
         if (isMyTeamName(teamOpts.teamEn, teamOpts.teamKo) && detailOk && (matchLineups[key] || matchHighlights[key])) {
@@ -9770,12 +9831,14 @@
       } else {
         mid = `<span class="rmd-status is-upcoming lbl" data-en="Upcoming" data-ko="예정">${isKorean ? '예정' : 'Upcoming'}</span>`;
       }
+      // 구단정보 > 경기결과: 연기된 경기는 헤더 오른쪽에 승/무/패 자리와 같은 방식으로 "연기"를 표시합니다.
+      if (teamOpts && teamOpts.teamEn && !played && (m.movedToWeek || m.postponed)) m.__res = 'P';
 
       const row = document.createElement('div');
       row.className = 'rmd-row' + (played ? '' : ' is-scheduled') + (mine ? ' rmd-mine' : '') + ((teamOpts && teamOpts.teamEn) ? ' rmd-tv' : '');
       row.innerHTML = `
         <div class="rmd-meta">
-        <div class="rmd-time">${m.kickoffTime ? `<b>${m.kickoffTime}</b>${kst ? `<small>KST ${kst.time}${kst.shifted ? ' <i>+1</i>' : ''}</small>` : ''}` : '<b class="rmd-time-none">–</b>'}</div>
+        <div class="rmd-time${(IS_SEOUL_TZ && kst) ? ' rmd-kst-only' : ''}">${m.kickoffTime ? `<b class="rmd-t-cat">${m.kickoffTime}</b>${kst ? `<small class="rmd-t-kst">KST ${kst.time}${kst.shifted ? ' <i>+1</i>' : ''}</small>` : ''}` : '<b class="rmd-time-none">–</b>'}</div>
         <div class="rmd-venue">
           ${resBadge}
           ${venue ? `<span class="rmd-venue-name lbl" data-en="${venueEn}" data-ko="${venueKo}">${isKorean ? venueKo : venueEn}</span>` : ''}
@@ -9843,13 +9906,45 @@
       card.className = 'rmd-day' + (isToday ? ' is-today' : '');
       const head = document.createElement('div');
       head.className = 'rmd-day-head';
-      head.innerHTML = `<span class="rmd-day-title lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span>`
-        + (wkKoTxt ? `<span class="rmd-day-week lbl" data-en="${wkEnTxt}" data-ko="${wkKoTxt}">${isKorean ? wkKoTxt : wkEnTxt}</span>` : '')
-        + (isToday ? `<span class="rmd-today-pill lbl" data-en="TODAY" data-ko="오늘">${isKorean ? '오늘' : 'TODAY'}</span>` : '');
-      card.appendChild(head);
+      // 헤더는 "주차"를 큰 제목으로, 날짜를 작은 보조 글씨로 보여줍니다. (주차 텍스트가 없는 카드는 기존 그대로)
+      // 다른 주차에서 연기·변경되어 옮겨온 경기는 행 안의 배지 대신 보조 글씨 끝에 "· 9주차 연기"로 합쳐 보여줍니다.
+      let titleKo = ko, titleEn = en, subKo = '', subEn = '';
+      if (wkKoTxt) {
+        titleKo = wkKoTxt; titleEn = wkEnTxt;
+        subKo = ko; subEn = en;
+        const mv = list.filter(x => x.movedFromWeek);
+        if (mv.length) {
+          card.classList.add('rmd-moved-in-head');
+          const seen = new Set();
+          const koParts = [], enParts = [];
+          mv.forEach(x => {
+            const k = x.movedFromWeek + '|' + (x.changed ? 'c' : 'r');
+            if (seen.has(k)) return;
+            seen.add(k);
+            koParts.push(`${wkKo(x.movedFromWeek)} ${x.changed ? '변경' : '연기'}`);
+            enParts.push(`${x.changed ? 'Changed from' : 'Rescheduled from'} ${wkEn(x.movedFromWeek, 'Week', ' ')}`);
+          });
+          subKo = `${subKo} · ${koParts.join(', ')}`;
+          subEn = `${subEn} · ${enParts.join(', ')}`;
+        }
+      }
+      // 행을 먼저 만들어야 각 경기의 승/무/패(m.__res)가 정해집니다. (구단정보 > 경기결과에서만 값이 있음)
       const body = document.createElement('div');
       body.className = 'rmd-day-body';
       list.forEach(m => body.appendChild(buildRow(m)));
+      const resM = list.find(x => x.__res);
+      let resHtml = '';
+      if (resM) {
+        const r = resM.__res, rKo = r === 'W' ? '승' : (r === 'D' ? '무' : (r === 'P' ? '연기' : '패'));
+        const rEn = r === 'P' ? 'PPD' : r;
+        card.classList.add('rmd-res-' + r.toLowerCase());
+        resHtml = `<span class="rmd-day-res lbl" data-en="${rEn}" data-ko="${rKo}">${isKorean ? rKo : rEn}</span>`;
+      }
+      head.innerHTML = `<span class="rmd-day-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</span>`
+        + (subKo ? `<span class="rmd-day-week lbl" data-en="${subEn}" data-ko="${subKo}">${isKorean ? subKo : subEn}</span>` : '')
+        + (isToday ? `<span class="rmd-today-pill lbl" data-en="TODAY" data-ko="오늘">${isKorean ? '오늘' : 'TODAY'}</span>` : '')
+        + resHtml;
+      card.appendChild(head);
       card.appendChild(body);
       listEl.appendChild(card);
     };
@@ -10397,7 +10492,7 @@
         if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
         // movedToWeek가 채워졌고, 그 옮겨간 주차의 실제 경기가 이미 스코어까지 채워져
         // 완전히 끝났다면(=결과가 확정됐다면) 더 이상 "일정 재조율이 필요한 연기 경기"가
-        // 아니므로 이 목록에서 제외합니다. (원래 날짜의 카드에는 계속 "N주차 경기로 이동"
+        // 아니므로 이 목록에서 제외합니다. (원래 날짜의 카드에는 계속 "N주차로 연기"
         // 배지로 표시됩니다 — 이 목록에서만 빠지는 것입니다.)
         if (m.movedToWeek) {
           const targetKey = 'round' + m.movedToWeek;
