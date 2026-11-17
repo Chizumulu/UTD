@@ -18126,3 +18126,235 @@ button.mc-h2h-row:active,
   display: block;
   width: 36px;
 }
+
+
+/* =====================================================================
+   승격 레이스 뉴스 티커 (PC · 721px↑)
+   - 승격 레이스 바 한 칸 안에서 정보 슬라이드가 아래에서 올라왔다가 위로 사라집니다.
+   - 우승 확률 / 이 경기 결과별 우승 확률 / 순위 경쟁 / 상대 최근 / 오늘의 포인트
+   - 되돌리고 싶으면 이 블록과 app.js의 '승격 레이스 뉴스 티커' 부분을 이전 버전으로 되돌리면 됩니다.
+   ===================================================================== */
+@media (min-width: 721px) {
+  #rankView .promo-race-strip { position: relative; display: flex; flex-wrap: nowrap; align-items: center; gap: 0; overflow: hidden; padding: 0 12px 0 0; min-height: 40px; }
+  #rankView .promo-race-strip .prs-title { flex: none; padding: 0 18px; }
+  /* 상대 최근은 티커 슬라이드로 옮겼으므로 다음 경기 미리보기 줄에서는 숨깁니다 */
+  .nmp-head .nmp-form { display: none; }
+}
+
+.prs-ticker { flex: 1 1 auto; min-width: 0; position: relative; height: 38px; }
+.prs-ticker::before { content: ''; position: absolute; left: 0; top: 50%; width: 1px; height: 16px; transform: translateY(-50%); background: rgba(var(--color-tint-rgb), .16); }
+.prs-viewport { position: absolute; inset: 0; }
+
+/* 슬라이드: 평소엔 아래(+10px)에 숨어 있다가, 활성화되면 올라오고, 빠질 때는 위(-10px)로 사라집니다. */
+.prs-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 14px;
+  white-space: nowrap; opacity: 0; visibility: hidden; transform: translateY(10px); pointer-events: none; }
+.prs-slide.is-active { opacity: 1; visibility: visible; transform: none; pointer-events: auto;
+  transition: opacity .35s ease .08s, transform .42s cubic-bezier(.2, .8, .2, 1) .08s; }
+.prs-slide.is-leaving { opacity: 0; visibility: visible; transform: translateY(-10px);
+  transition: opacity .28s ease, transform .35s ease; }
+
+.prs-slide-in { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.prs-item-in { display: inline-flex; align-items: baseline; gap: 7px; }
+.prs-sep { align-self: center; width: 1px; height: 14px; margin: 0 14px; background: rgba(var(--color-tint-rgb), .16); }
+.prs-slide .prs-v { font-size: 16px; font-weight: 800; }
+.prs-slide .prs-scs .prs-sc b { font-size: 13.5px; font-weight: 800; }
+.prs-slide .prs-delta { font-weight: 500; }
+.prs-k-short { display: none; }
+.prs-opp { font-size: 13px; font-weight: 700; color: var(--color-text-darkest); }
+.prs-form { margin-left: 2px; }
+.prs-note-tag { font-size: var(--fs-2xs); font-weight: 700; padding: 2px 8px; border-radius: var(--radius-tag); background: rgba(var(--color-tint-rgb), .10); color: var(--color-brand-text); }
+.prs-note { font-size: 13px; font-weight: 600; color: var(--color-text-dark); }
+
+/* 우승 확률 추이 미니 그래프: 슬라이드가 나타날 때 선이 그려집니다 */
+.prs-spark { align-self: center; margin-left: 6px; color: var(--color-text-muted); overflow: visible; }
+.prs-spark.is-up { color: var(--color-green-text); }
+.prs-spark.is-down { color: var(--color-red-text); }
+.prs-slide.is-active .prs-spark path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: prs-draw .9s ease-out .3s forwards; }
+.prs-slide.is-active .prs-spark circle { animation: prs-pop .3s ease-out 1.1s both; }
+@keyframes prs-draw { to { stroke-dashoffset: 0; } }
+@keyframes prs-pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
+.prs-spark circle { transform-box: fill-box; transform-origin: center; }
+
+/* 컨트롤: 이전/다음 화살표 + 점 */
+.prs-ctrl { flex: none; display: inline-flex; align-items: center; gap: 4px; padding-left: 8px; }
+.promo-race-strip.is-single .prs-ctrl { display: none; }
+.prs-arrow { width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--color-text-faint);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s, color .2s; }
+.prs-arrow:hover { background: rgba(var(--color-tint-rgb), .10); color: var(--color-text-dark); }
+.prs-arrow:focus-visible, .prs-dot:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; }
+.prs-dots { display: inline-flex; align-items: center; gap: 5px; }
+.prs-dot { position: relative; width: 6px; height: 6px; padding: 0; border: 0; border-radius: 3px; background: rgba(var(--color-tint-rgb), .22); cursor: pointer; transition: width .3s ease, background .3s ease; }
+.prs-dot::after { content: ''; position: absolute; inset: -8px -3px; }
+.prs-dot.is-on { width: 16px; background: var(--color-teal); }
+
+/* 다음 슬라이드까지 남은 시간(바 맨 아래 얇은 선) */
+.prs-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; pointer-events: none; }
+.prs-progress i { display: block; height: 100%; width: 0; background: var(--color-teal); opacity: .5; transition: width .1s linear, opacity .2s; }
+.promo-race-strip.is-paused .prs-progress i { opacity: .2; }
+
+/* 좁은 PC 화면: 긴 설명 라벨은 짧게, 보조 정보는 생략 */
+@media (min-width: 721px) and (max-width: 1040px) {
+  .prs-k-long, .prs-opt { display: none; }
+  .prs-k-short { display: inline; }
+  .prs-sep { margin: 0 10px; }
+}
+@media (min-width: 721px) and (max-width: 900px) {
+  .prs-slide .prs-delta { display: none; }
+  .prs-slide .prs-sc { padding: 2px 6px; }
+}
+
+/* '동작 줄이기': 위치 이동·선 그리기 없이 부드럽게 바뀌기만 합니다 (자동 순환은 JS에서 멈춤) */
+@media (prefers-reduced-motion: reduce) {
+  .prs-slide, .prs-slide.is-active, .prs-slide.is-leaving { transform: none !important; transition: opacity .2s ease !important; }
+  .prs-slide.is-active .prs-spark path { animation: none !important; stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
+  .prs-slide.is-active .prs-spark circle { animation: none !important; }
+  .prs-progress { display: none; }
+}
+
+
+/* =====================================================================
+   다음경기 카드(PC): '다음 경기 미리보기' 펼침 버튼을 하단 줄(홈/원정 · 날씨 · 액션 아이콘) 가운데로 합쳐 한 줄로
+   - 미리보기 카드는 그대로 두고(JS·접근성 속성 그대로), 토글 줄만 하단 줄 위로 겹쳐 올립니다.
+   - 펼치면 내용은 이 줄 아래로 열립니다. 모바일(≤720px)은 기존 구조를 유지합니다.
+   - 줄 높이를 바꾸려면 --nmh-row 값 하나만 고치면 됩니다. (되돌리려면 이 블록만 지우세요.)
+   ===================================================================== */
+@media (min-width: 721px) {
+  .next-match-strip.nms-merged { --nmh-row: 44px; }
+  .next-match-strip.nms-merged .nmh-bottom { box-sizing: border-box; min-height: var(--nmh-row); padding-top: 6px; padding-bottom: 0; flex-wrap: nowrap; }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged {
+    position: relative; z-index: 1; margin-top: calc(var(--nmh-row) * -1); border-top: none; pointer-events: none;
+  }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-toggle {
+    pointer-events: auto; box-sizing: border-box; width: max-content; max-width: 46%; height: calc(var(--nmh-row) - 12px); margin: 7px auto 5px; padding: 0 10px 0 12px;
+    justify-content: center; gap: 3px; border-radius: 8px; background: transparent; transition: background .2s;
+  }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-toggle:hover { background: rgba(var(--color-tint-rgb), .06); }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-chevron { color: var(--color-text-faint); transition: transform .25s ease, color .2s; }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-toggle:hover .nmp-chevron { color: var(--color-teal-dark); }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged.is-open .nmp-toggle { padding-bottom: 0; }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-head { flex: none; flex-wrap: nowrap; }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-title { font-size: 12.5px; white-space: nowrap; }
+  /* '자세히 보기/접기' 글자는 빼고 화살표(⌄/⌃)만 남깁니다 */
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-toggle-txt { display: none; }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-body { pointer-events: auto; }
+}
+/* 좁은 PC 폭: '미리보기'만 남겨 가운데 버튼을 줄입니다 */
+@media (min-width: 721px) and (max-width: 900px) {
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-title-full { display: none; }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-title-short { display: inline; }
+}
+
+
+/* 승격 레이스 바가 숨김(hidden) 상태일 땐 위의 display:flex 규칙보다 우선해서 감춥니다 */
+#rankView .promo-race-strip[hidden] { display: none; }
+
+/* =====================================================================
+   승격 레이스 뉴스 티커 (모바일 ≤720px)
+   - 공간이 좁아서 왼쪽 '승격 레이스' 글자와 화살표는 숨기고(깃발+순위 배지만 남김), 점 + 좌우 스와이프로 넘깁니다.
+   - 긴 라벨·보조 정보·증감폭은 생략하고 핵심 숫자만 보여줍니다.
+   ===================================================================== */
+@media (max-width: 720px) {
+  #rankView .promo-race-strip { display: flex; position: relative; flex-wrap: nowrap; align-items: center; gap: 0; overflow: hidden;
+    width: 100%; margin: 4px 0 4px; padding: 0 8px 0 0; min-height: 34px; }
+  #rankView .promo-race-strip .prs-title { flex: none; padding: 0 6px 0 10px; gap: 4px; }
+  #rankView .promo-race-strip .prs-title-txt { display: none; }
+  .prs-ticker { height: 34px; touch-action: pan-y; }
+  .prs-slide { padding: 0 6px; }
+  .prs-slide-in { gap: 6px; }
+  .prs-slide .prs-v { font-size: 14px; }
+  .prs-k, .prs-sub, .prs-opp, .prs-note { font-size: 11.5px; }
+  .prs-slide .prs-scs .prs-sc b { font-size: 12.5px; }
+  .prs-sc { padding: 2px 5px; gap: 3px; }
+  .prs-scs { gap: 3px; }
+  .prs-slide[data-key="form"] .prs-k { display: none; }
+  .prs-sc .prs-delta, .prs-sub, .prs-opt, .prs-k-long, .prs-k-short { display: none; }
+  .prs-sep { margin: 0 8px; }
+  .prs-form { gap: 2px; }
+  .prs-form .nmp-form-dot { width: 16px; height: 16px; font-size: 9px; }
+  .prs-arrow { display: none; }
+  .prs-ctrl { padding-left: 4px; }
+  .prs-dots { gap: 4px; }
+  .prs-dot.is-on { width: 12px; }
+  .prs-note-tag { display: none; }
+  .prs-note { white-space: normal; line-height: 1.25; text-align: center; font-size: 12px; }
+  .prs-spark { width: 44px; margin-left: 2px; }
+}
+@media (max-width: 420px) { .prs-spark { display: none; } }
+@media (max-width: 720px) { .next-match-strip.nms-merged { margin-bottom: 0; } }
+
+
+/* 티커: 상대 전적 · 순위 변동 · 선두 동향 · 기록 슬라이드 */
+.prs-wdl { display: inline-flex; gap: 6px; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.prs-wdl .w { color: var(--color-green-text); }
+.prs-wdl .d { color: var(--color-text-muted); }
+.prs-wdl .l { color: var(--color-red-text); }
+.prs-delta.prs-delta-lg { font-size: 15px; font-weight: 800; }
+.prs-sub-strong { font-size: 13px; font-weight: 700; color: var(--color-text-darkest); }
+.prs-rankchg { align-items: baseline; }
+
+/* 모바일: 우측 점(페이지 표시)은 숨기고 좌우 스와이프로만 넘깁니다 */
+@media (max-width: 720px) {
+  .prs-ctrl { display: none; }
+  .prs-sub-strong, .prs-wdl { font-size: 12.5px; }
+}
+
+
+/* =====================================================
+   토스 감성 ① 차분한 모션 (5번)
+   - 계속 반짝이거나 흔들리는 "장식용" 무한 애니메이션은 멈춥니다.
+   - 라이브 점, 로딩 스피너·스켈레톤처럼 "상태를 알려주는" 애니메이션은 그대로 둡니다.
+   - 되돌리려면 이 블록 전체를 지우면 됩니다.
+   ===================================================== */
+:root {
+  --ease-toss: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.banner::before,
+.banner::after,
+.fan-badge::after,
+tr.promo,
+tr.releg,
+tr.promo .rank-cell::after,
+tr.releg .rank-cell::after,
+tr.my-team td.team::after,
+.rmc-pending-badge.rmc-postponed-badge::before,
+.app-sidebar::before,
+.next-match-strip.nms-matchday::before {
+  animation: none !important;
+}
+
+/* =====================================================
+   토스 감성 ② 눌렀을 때 살짝 들어가는 느낌
+   - transform 대신 개별 속성 scale 을 써서 기존 transform(가운데 정렬 등)과 충돌하지 않게 했습니다.
+   - :where() 로 우선순위를 0 으로 낮춰서, 이미 눌림 효과가 있는 요소는 기존 규칙이 우선합니다.
+   ===================================================== */
+:where(
+  .cup-chip, .cup-back-btn, .export-img-btn, .home-match-more-btn, .mc-rel-chip,
+  .nmp-chip, .points-pace-chip, .predict-refresh-btn, .rmc-detail-btn, .rmc-highlight-btn,
+  .round-half-btn, .round-mode-btn, .round-mode-chip, .sc-chip-btn, .sc-toggle-btn,
+  .scatter-compare-btn, .scorers-mode-btn, .share-btn, .sp-filter-btn, .spm-comp-btn,
+  .ta-more-btn, .ta-nav-chip, .tc-swap-btn, .ti-fullrec-btn, .ti-impact-chip, .ti-lb-btn,
+  .venue-mode-btn, .venue-sort-btn, .wi-btn, .wi-chip, .wi-run, .lineup-view-btn,
+  .archive-week-nav
+):active {
+  scale: 0.96;
+  transition: scale 0.12s var(--ease-toss);
+}
+
+/* 카드처럼 큰 요소는 더 살짝만 */
+:where(.pcard, .round-bye-card[data-team-link]):active {
+  scale: 0.985;
+  transition: scale 0.14s var(--ease-toss);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(
+    .cup-chip, .cup-back-btn, .export-img-btn, .home-match-more-btn, .mc-rel-chip,
+    .nmp-chip, .points-pace-chip, .predict-refresh-btn, .rmc-detail-btn, .rmc-highlight-btn,
+    .round-half-btn, .round-mode-btn, .round-mode-chip, .sc-chip-btn, .sc-toggle-btn,
+    .scatter-compare-btn, .scorers-mode-btn, .share-btn, .sp-filter-btn, .spm-comp-btn,
+    .ta-more-btn, .ta-nav-chip, .tc-swap-btn, .ti-fullrec-btn, .ti-impact-chip, .ti-lb-btn,
+    .venue-mode-btn, .venue-sort-btn, .wi-btn, .wi-chip, .wi-run, .lineup-view-btn,
+    .archive-week-nav, .pcard, .round-bye-card[data-team-link]
+  ):active { scale: none; }
+}

@@ -3440,7 +3440,7 @@
   //  - 다음 경기 승/무/패별 우승 확률 : '만약에 시뮬레이터'와 같은 overrides 방식으로 3번 더 시뮬레이션(워커)
   // 워커 계산은 비용이 있으므로 화면에 먼저 즉시 계산분만 그리고, 비동기 값이 도착하면 다시 그립니다.
   // 결과는 (승점·경기수·다음 경기·data 버전)이 같은 동안 localStorage에 캐시해서, 재방문 시 재계산하지 않습니다.
-  const PRS_CACHE_KEY = 'prs-cache-v3'; // v3: 지난주 대비 계산 방식 변경(이전 캐시의 잘못된 값을 버리기 위해 키를 올림)
+  const PRS_CACHE_KEY = 'prs-cache-v4'; // v4: 티커용 spark(추이 미니 그래프) 값 추가 · v3: 지난주 대비 계산 방식 변경
   const prsState = { model: null, running: false, timer: null, failedSig: null };
 
   function prsSignature(ranked, fx) {
@@ -3502,7 +3502,18 @@
         //   "▼35%p" 같은 엉뚱한 값이 나옵니다. 그래서 간이 모델 안에서의 변화율(직전 라운드 → 최근 라운드)만
         //   가져와 정식 값에 적용합니다: 직전 정식값(추정) = 직전 간이값 × (정식 현재값 / 간이 현재값).
         let delta = null;
+        let spark = null;
         const hist = await ensureTitleProbabilityHistory();
+        if (hist && hist.length >= 2) {
+          // 티커의 미니 그래프: 간이 모델 추이를 정식 값 스케일로 맞춰서(마지막 점 = 현재 정식 값) 최근 8개 라운드만 씁니다.
+          const raw = hist.map(h => h.championPct[myEn]).filter(v => typeof v === 'number');
+          const lastRaw = raw.length ? raw[raw.length - 1] : 0;
+          if (raw.length >= 2) {
+            const k = lastRaw >= 1 ? (basePct / lastRaw) : 1;
+            spark = raw.slice(-8).map(v => Math.min(100, v * k));
+            if (lastRaw < 1) spark[spark.length - 1] = basePct;
+          }
+        }
         if (hist && hist.length >= 2) {
           const prev = hist[hist.length - 2].championPct[myEn];
           const last = hist[hist.length - 1].championPct[myEn];
@@ -3532,7 +3543,7 @@
             scen[view] = p === null ? 0 : p;
           }
         }
-        prsState.model = { sig, base: basePct, delta, scen };
+        prsState.model = { sig, base: basePct, delta, scen, spark };
         prsSaveCache(prsState.model);
       } catch (err) {
         console.warn('승격 레이스 계산 실패', err);
@@ -3552,12 +3563,196 @@
     return `<em class="prs-delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'}${Math.abs(d).toFixed(1)}${unit}</em>`;
   }
 
+  // ===== 승격 레이스 뉴스 티커 =====
+  // 한 줄 바 안에서 슬라이드가 하나씩 아래에서 올라왔다가 위로 사라집니다.
+  //   우승 확률(+추이 미니 그래프) → 이 경기 결과별 우승 확률 → 순위 경쟁 → 상대 최근 → 오늘의 포인트
+  // - 티커 DOM은 한 번만 만들고, 워커 계산이 끝나서 다시 그릴 때는 슬라이드 내용만 갈아끼웁니다(현재 슬라이드 유지).
+  // - 마우스를 올리거나 키보드 포커스가 있으면 멈추고, 점/화살표로 직접 이동할 수 있습니다.
+  // - 탭이 숨겨져 있으면 멈추고, '동작 줄이기' 설정이면 자동 순환 없이 직접 넘길 때만 바뀝니다.
+  const PRS_DWELL_MS = 4000;       // 슬라이드 하나가 머무는 시간
+  const PRS_DWELL_LONG_MS = 5500;  // 우승 확률 / 결과별 우승 확률은 읽을 숫자가 많아서 조금 더 오래
+  const PRS_TICK_MS = 100;
+  const PRS_EXTRA_MAX = 3;         // '해당될 때만 나오는' 슬라이드는 한 번에 최대 3개까지만
+  const prsTicker = { idx: 0, key: null, elapsed: 0, paused: false, timer: null, slides: [], html: {}, dotsSig: '' };
+
+  function prsReduceMotion() {
+    try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
+  }
+
+  // 숫자 count-up (슬라이드가 나타날 때 0 → 값). data-count / data-dec / data-suf 를 가진 요소가 대상입니다.
+  function prsCountUp(node) {
+    if (!node || prsReduceMotion()) return;
+    node.querySelectorAll('[data-count]').forEach(n => {
+      const to = parseFloat(n.getAttribute('data-count'));
+      if (!isFinite(to)) return;
+      const dec = parseInt(n.getAttribute('data-dec') || '0', 10);
+      const suf = n.getAttribute('data-suf') || '';
+      if (n._prsRaf) cancelAnimationFrame(n._prsRaf);
+      const t0 = performance.now(), dur = 650;
+      const step = (now) => {
+        const p = Math.min(1, (now - t0) / dur);
+        const e = 1 - Math.pow(1 - p, 3);
+        n.textContent = (to * e).toFixed(dec) + suf;
+        if (p < 1) n._prsRaf = requestAnimationFrame(step); else n._prsRaf = null;
+      };
+      n._prsRaf = requestAnimationFrame(step);
+    });
+  }
+
+  // 우승 확률 추이 미니 그래프 (최근 라운드들, 마지막 점 = 현재 값)
+  function prsSparkSvg(vals, trend) {
+    if (!vals || vals.length < 2) return '';
+    const w = 64, h = 20, pad = 3;
+    const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    const span = (mx - mn) || 1;
+    const pts = vals.map((v, i) => [
+      pad + (w - pad * 2) * (i / (vals.length - 1)),
+      mx === mn ? h / 2 : h - pad - (h - pad * 2) * ((v - mn) / span)
+    ]);
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    const last = pts[pts.length - 1];
+    const cls = trend > 0.05 ? 'up' : (trend < -0.05 ? 'down' : 'flat');
+    return `<svg class="prs-spark is-${cls}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><path d="${d}" pathLength="1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.3" fill="currentColor"/></svg>`;
+  }
+
+  function prsGoTo(idx) {
+    const el = document.getElementById('promoRaceStrip');
+    const T = prsTicker;
+    if (!el || !T.slides.length) return;
+    idx = ((idx % T.slides.length) + T.slides.length) % T.slides.length;
+    const vp = el.querySelector('.prs-viewport');
+    if (!vp) return;
+    const key = T.slides[idx].key;
+    const target = vp.querySelector('.prs-slide[data-key="' + key + '"]');
+    if (!target) return;
+    const prev = vp.querySelector('.prs-slide.is-active');
+    T.idx = idx; T.key = key; T.elapsed = 0;
+    if (prev !== target) {
+      if (prev) {
+        prev.classList.remove('is-active');
+        prev.classList.add('is-leaving');
+        setTimeout(() => prev.classList.remove('is-leaving'), 420);
+      }
+      target.classList.remove('is-leaving');
+      target.classList.add('is-active');
+      target.setAttribute('aria-hidden', 'false');
+      if (prev) prev.setAttribute('aria-hidden', 'true');
+      prsCountUp(target);
+    }
+    el.querySelectorAll('.prs-dot').forEach((d, i) => {
+      const on = i === idx;
+      d.classList.toggle('is-on', on);
+      if (on) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current');
+    });
+    const bar = el.querySelector('.prs-progress i');
+    if (bar) bar.style.width = '0%';
+  }
+
+  // dir: +1 다음, -1 이전. 계산 중(pending)인 슬라이드는 건너뜁니다.
+  function prsStep(dir) {
+    const T = prsTicker;
+    const n = T.slides.length;
+    if (n < 2) return;
+    let i = T.idx;
+    for (let k = 0; k < n; k++) {
+      i = (i + dir + n) % n;
+      if (!T.slides[i].pending) { prsGoTo(i); return; }
+    }
+  }
+
+  function prsTick() {
+    const el = document.getElementById('promoRaceStrip');
+    const T = prsTicker;
+    if (!el || el.hidden || T.paused || document.hidden || prsReduceMotion() || T.slides.length < 2) return;
+    T.elapsed += PRS_TICK_MS;
+    const cur = T.slides[T.idx];
+    const dwell = cur && cur.dwell ? cur.dwell : PRS_DWELL_MS;
+    const bar = el.querySelector('.prs-progress i');
+    if (bar) bar.style.width = Math.min(100, (T.elapsed / dwell) * 100) + '%';
+    if (T.elapsed >= dwell) prsStep(1);
+  }
+
+  function prsBindTickerOnce(el) {
+    if (el._prsBound) return;
+    el._prsBound = true;
+    const pause = () => { prsTicker.paused = true; el.classList.add('is-paused'); };
+    const resume = () => { prsTicker.paused = false; el.classList.remove('is-paused'); };
+    // 마우스일 때만 '올리면 멈춤'(터치는 탭 뒤에도 hover가 남아서 영영 멈춰 버리므로 제외),
+    // 키보드 포커스(:focus-visible)일 때도 멈춥니다.
+    el.addEventListener('pointerenter', (ev) => { if (ev.pointerType === 'mouse') pause(); });
+    el.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse' && !el.contains(document.activeElement)) resume(); });
+    el.addEventListener('focusin', (ev) => { try { if (ev.target.matches(':focus-visible')) pause(); } catch (e) { pause(); } });
+    el.addEventListener('focusout', () => { setTimeout(() => { if (!el.contains(document.activeElement) && !el.matches(':hover')) resume(); }, 0); });
+    // 모바일: 티커를 좌우로 밀어서 이전/다음 정보로 넘깁니다.
+    let sx = null, sy = null;
+    el.addEventListener('touchstart', (ev) => { const t = ev.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
+    el.addEventListener('touchend', (ev) => {
+      if (sx === null) return;
+      const t = ev.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      sx = sy = null;
+      if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.5) prsStep(dx < 0 ? 1 : -1);
+    }, { passive: true });
+    el.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button');
+      if (!btn || !el.contains(btn)) return;
+      if (btn.classList.contains('prs-prev')) prsStep(-1);
+      else if (btn.classList.contains('prs-next-btn')) prsStep(1);
+      else if (btn.classList.contains('prs-dot')) prsGoTo(parseInt(btn.getAttribute('data-i'), 10));
+    });
+    if (!prsTicker.timer) prsTicker.timer = setInterval(prsTick, PRS_TICK_MS);
+  }
+
+  // 슬라이드 목록을 DOM에 반영합니다(있는 슬라이드는 내용만 교체, 없어진 슬라이드는 제거).
+  function prsApplySlides(el, slides) {
+    const T = prsTicker;
+    const vp = el.querySelector('.prs-viewport');
+    const dotsEl = el.querySelector('.prs-dots');
+    const keys = slides.map(s => s.key);
+    // 사라진 슬라이드 제거
+    Array.from(vp.children).forEach(n => { if (keys.indexOf(n.getAttribute('data-key')) < 0) { n.remove(); delete T.html[n.getAttribute('data-key')]; } });
+    slides.forEach((s, i) => {
+      let node = vp.querySelector('.prs-slide[data-key="' + s.key + '"]');
+      let changed = false;
+      if (!node) {
+        node = document.createElement('div');
+        node.className = 'prs-slide';
+        node.setAttribute('data-key', s.key);
+        node.setAttribute('aria-hidden', 'true');
+        vp.appendChild(node);
+        changed = true;
+      }
+      if (T.html[s.key] !== s.html) { node.innerHTML = s.html; T.html[s.key] = s.html; changed = true; }
+      if (vp.children[i] !== node) vp.insertBefore(node, vp.children[i] || null);
+      // 지금 보이는 슬라이드의 값이 계산 완료로 바뀌었으면 count-up을 다시 보여줍니다.
+      if (changed && node.classList.contains('is-active')) prsCountUp(node);
+    });
+    T.slides = slides.map(s => ({ key: s.key, dwell: s.dwell, pending: s.pending }));
+    const sig = slides.map(s => s.key + ':' + s.label).join('|');
+    if (T.dotsSig !== sig) {
+      T.dotsSig = sig;
+      dotsEl.innerHTML = slides.map((s, i) => `<button type="button" class="prs-dot" data-i="${i}" aria-label="${wiEsc(s.label)}" title="${wiEsc(s.label)}"></button>`).join('');
+    }
+    // 현재 슬라이드 유지, 없으면(처음/사라짐) 계산이 끝난 첫 슬라이드부터
+    let idx = T.key ? keys.indexOf(T.key) : -1;
+    if (idx < 0) {
+      idx = slides.findIndex(s => !s.pending);
+      if (idx < 0) idx = 0;
+      T.key = null;
+    }
+    const active = vp.querySelector('.prs-slide.is-active');
+    if (!active || T.key === null) prsGoTo(idx);
+    else { T.idx = idx; el.querySelectorAll('.prs-dot').forEach((d, i) => d.classList.toggle('is-on', i === idx)); }
+    const multi = slides.length > 1;
+    el.classList.toggle('is-single', !multi);
+  }
+
   function renderPromoRaceStrip() {
     const el = document.getElementById('promoRaceStrip');
     if (!el) return;
+    // 결과별 우승 확률은 이제 티커 안에 있으므로 다음경기 카드 하단 칸은 항상 비워 둡니다.
     const impactSlot = document.getElementById('nmsImpact');
-    const setImpact = (html) => { if (impactSlot) { impactSlot.innerHTML = html || ''; impactSlot.hidden = !html; } };
-    const hide = () => { el.hidden = true; el.innerHTML = ''; setImpact(''); };
+    if (impactSlot) { impactSlot.innerHTML = ''; impactSlot.hidden = true; }
+    const hide = () => { el.hidden = true; el.innerHTML = ''; prsTicker.html = {}; prsTicker.dotsSig = ''; prsTicker.key = null; prsTicker.slides = []; };
     try {
       const info = getMyRankedTeam();
       const ranked = getRankedTeams('all');
@@ -3605,32 +3800,41 @@
       const pendingHtml = '<span class="prs-skel" aria-hidden="true"></span><span class="prs-sr">' + (isKorean ? '계산 중' : 'Calculating') + '</span>';
       // 같은 데이터로 계산이 실패했을 때만 '–'로 고정합니다(무한 재시도 방지).
       const noWorker = alive && needsModel && prsState.failedSig === sig;
+      const waiting = needsModel && !noWorker; // 계산 결과를 기다리는 중
 
-      // --- 3) 우승 확률 + 지난주 대비 ---
+      const countB = (v, cls) => `<b class="prs-v prs-count ${cls || ''}" data-count="${v}" data-dec="1" data-suf="%">${v.toFixed(1)}%</b>`;
+      const slides = [];
+
+      // --- 슬라이드 1) 우승 확률 + 지난주 대비 + 미니 그래프 ---
       let probHtml;
       if (mn.title.status === 'clinched') {
         probHtml = `<b class="prs-v is-lead">${isKorean ? '우승 확정' : 'Clinched'}</b>`;
       } else if (mn.title.status === 'eliminated') {
         probHtml = `<b class="prs-v is-out">${isKorean ? '탈락' : 'Out'}</b>`;
       } else if (model) {
-        probHtml = `<b class="prs-v">${model.base.toFixed(1)}%</b>${prsDeltaHtml(model.delta)}${model.delta !== null && model.delta !== undefined ? `<span class="prs-sub">${isKorean ? '지난주 대비' : 'vs last wk'}</span>` : ''}`;
+        const hasDelta = model.delta !== null && model.delta !== undefined;
+        probHtml = `${countB(model.base)}${prsDeltaHtml(model.delta)}${hasDelta ? `<span class="prs-sub">${isKorean ? '지난주보다' : 'vs last wk'}</span>` : ''}${prsSparkSvg(model.spark, model.delta)}`;
       } else {
         probHtml = noWorker ? '<b class="prs-v">–</b>' : pendingHtml;
       }
       const probTip = isKorean
         ? '몬테카를로 4,000회 시뮬레이션 기준 1위(승격) 확률. 증감은 직전 라운드 시점 확률(추이 차트의 간이 모델) 대비이며, 추이 차트의 마지막 선과 같은 기준이에요.'
         : 'Chance of finishing 1st (promotion) from 4,000 Monte Carlo runs. Change is vs. the previous round in the trend chart (simplified model), matching the last segment of that chart.';
+      slides.push({
+        key: 'odds', dwell: PRS_DWELL_LONG_MS, pending: alive && waiting,
+        label: isKorean ? '우승 확률' : 'Title odds',
+        html: `<span class="prs-slide-in" title="${wiEsc(probTip)}"><span class="prs-k">${isKorean ? '우승 확률' : 'Title odds'}</span>${probHtml}</span>`
+      });
 
-      // --- 4) 다음 경기 승/무/패별 우승 확률 ---
-      let nextHtml = '';
+      // --- 슬라이드 2) 다음 경기 승/무/패별 우승 확률 ---
+      const heroPrimary = pickNextMatchesForStrip(t).primary;
       if (fx && alive) {
         const oppName = homeMatchTeamName(fx.oppEn, fx.oppKo);
-        const haTxt = fx.homeAway === 'H' ? (isKorean ? '홈' : 'H') : (isKorean ? '원정' : 'A');
         const labels = { W: isKorean ? '승' : 'W', D: isKorean ? '무' : 'D', L: isKorean ? '패' : 'L' };
         const chips = ['W', 'D', 'L'].map(k => {
           if (model && model.scen) {
             const p = model.scen[k];
-            return `<span class="prs-sc is-${k}"><i>${labels[k]}</i><b>${p.toFixed(1)}%</b>${prsDeltaHtml(p - model.base)}</span>`;
+            return `<span class="prs-sc is-${k}"><i>${labels[k]}</i>${countB(p)}${prsDeltaHtml(p - model.base)}</span>`;
           }
           return `<span class="prs-sc is-${k}"><i>${labels[k]}</i>${noWorker ? '<b>–</b>' : '<span class="prs-skel prs-skel-sm" aria-hidden="true"></span>'}</span>`;
         }).join('');
@@ -3638,33 +3842,199 @@
           ? `다음 경기(vs ${oppName})를 이기거나 비기거나 졌을 때의 우승 확률과, 현재 확률 대비 변화예요.`
           : `Title chance if the next match (vs ${oppName}) is won, drawn or lost, and the change from the current chance.`;
         // 위 카드가 이 리그 경기를 보여주고 있으면 "이 경기", 컵 경기가 먼저면 상대 이름을 붙여서 구분합니다.
-        const heroPrimary = pickNextMatchesForStrip(t).primary;
         const heroIsThis = !heroPrimary || heroPrimary.comp !== 'cup';
         const lbl = heroIsThis
-          ? (isKorean ? '이 경기 결과별 우승 확률' : 'Title odds by result')
-          : (isKorean ? `다음 리그 경기 vs ${oppName} 결과별 우승 확률` : `Title odds by result · next league match vs ${oppName}`);
-        nextHtml = `
-          <span class="prs-next" title="${scTip}">
-            <span class="prs-next-lbl">${lbl}</span>
-            <span class="prs-scs">${chips}</span>
-          </span>`;
+          ? (isKorean ? '이 경기 결과에 따른 우승 확률' : 'Title odds by result')
+          : (isKorean ? `다음 리그 경기(vs ${oppName}) 결과에 따른 우승 확률` : `Title odds by result · next league match vs ${oppName}`);
+        slides.push({
+          key: 'scen', dwell: PRS_DWELL_LONG_MS, pending: waiting || !(model && model.scen),
+          label: isKorean ? '결과별 우승 확률' : 'Odds by result',
+          html: `<span class="prs-slide-in" title="${wiEsc(scTip)}"><span class="prs-k prs-k-long">${lbl}</span><span class="prs-k prs-k-short">${isKorean ? '결과별' : 'By result'}</span><span class="prs-scs">${chips}</span></span>`
+        });
       }
 
-      // 다음 리그 경기 일정이 아직 없을 때(라운드 사이): 추측으로 보여주지 않고 안내만 남깁니다.
-      // (다음 리그 경기 일정이 없으면 다음경기 카드 하단 칸은 비워 둡니다)
+      // --- 슬라이드 3) 순위 경쟁: 승점차 · 남은 경기 · 매직넘버 ---
+      let magicHtml = '';
+      if (alive && mn.title.number > 0) {
+        magicHtml = `<span class="prs-sep prs-opt" aria-hidden="true"></span><span class="prs-item-in prs-opt"><span class="prs-k">${isKorean ? '승격 확정까지' : 'To clinch'}</span><b class="prs-v">${isKorean ? mn.title.number + '점' : mn.title.number + ' pts'}</b></span>`;
+      }
+      slides.push({
+        key: 'race', dwell: PRS_DWELL_MS, pending: false,
+        label: isKorean ? '순위 경쟁' : 'The race',
+        html: `<span class="prs-slide-in"><span class="prs-item-in" title="${wiEsc(gapTip)}"><span class="prs-k">${gapKey}</span><b class="prs-v ${gapCls}">${gapVal}</b></span><span class="prs-sep" aria-hidden="true"></span><span class="prs-item-in"><span class="prs-k">${isKorean ? '남은 경기' : 'Games left'}</span><b class="prs-v">${mn.remainingGames}</b></span>${magicHtml}</span>`
+      });
 
+      // --- 슬라이드 4) 상대 최근 5경기 ---
+      try {
+        const opp = heroPrimary && heroPrimary.oppEn ? heroPrimary : (fx ? { oppEn: fx.oppEn, oppKo: fx.oppKo } : null);
+        const form = (opp && typeof computeFormGuide === 'function') ? computeFormGuide(opp.oppEn, opp.oppKo) : null;
+        const rf = form && form.recentForm ? form.recentForm : [];
+        if (rf.length) {
+          const cnt = { W: 0, D: 0, L: 0 };
+          rf.forEach(m => { if (cnt[m.result] !== undefined) cnt[m.result]++; });
+          const dots = rf.map(m => {
+            const lbl = m.result === 'W' ? (isKorean ? '승' : 'W') : (m.result === 'L' ? (isKorean ? '패' : 'L') : (isKorean ? '무' : 'D'));
+            return `<i class="nmp-form-dot is-${m.result}">${lbl}</i>`;
+          }).join('');
+          const oppName = homeMatchTeamName(opp.oppEn, opp.oppKo);
+          const recTxt = isKorean
+            ? `${cnt.W}승 ${cnt.D}무 ${cnt.L}패`
+            : `${cnt.W}W ${cnt.D}D ${cnt.L}L`;
+          slides.push({
+            key: 'form', dwell: PRS_DWELL_MS, pending: false,
+            label: isKorean ? '상대 최근' : 'Opponent form',
+            html: `<span class="prs-slide-in"><span class="prs-k">${isKorean ? '상대 최근' : 'Opp. form'}</span><b class="prs-opp">${wiEsc(oppName)}</b><span class="nmp-form prs-form">${dots}</span><span class="prs-sub prs-opt">${recTxt}</span></span>`
+          });
+        }
+      } catch (e) { /* 상대 최근을 못 만들어도 나머지 슬라이드는 보여줍니다 */ }
+
+      // --- 해당될 때만 나오는 슬라이드 풀 ---
+      // 항상 나오는 슬라이드(우승 확률·결과별·순위 경쟁·상대 최근) 뒤에, 아래 후보 중 지금 의미 있는 것만
+      // 우선순위대로 최대 PRS_EXTRA_MAX개만 돌립니다. (한 바퀴가 너무 길어지지 않게)
+      //   우선순위: 오늘의 포인트 > 기록 한 줄 > 순위 변동 > 상대 전적 > 선두 동향
+      const extraPool = {};
+      const tName = (en, ko) => wiEsc(homeMatchTeamName(en, ko));
+
+      // (a) 오늘의 포인트: 6점짜리 > 승리 시 우승 확률 배수 > 확정까지 최소 승수
+      if (alive) {
+        let note = '';
+        const six = fx ? sixPointerInfo(t.nameEn, fx.oppEn) : null;
+        if (six) {
+          note = isKorean
+            ? (six.zone === 'top' ? '다음 경기는 상위권 경쟁팀끼리의 6점짜리 승부예요' : '다음 경기는 강등권 경쟁팀끼리의 6점짜리 승부예요')
+            : (six.zone === 'top' ? 'Next up: a 6-pointer in the top-3 race' : 'Next up: a 6-pointer in the relegation race');
+        }
+        if (!note && model && model.scen && model.base >= 0.5) {
+          const ratio = model.scen.W / model.base;
+          if (ratio >= 1.5) {
+            note = isKorean ? `이번 경기를 이기면 우승 확률이 ${ratio.toFixed(1)}배로 올라가요` : `A win would multiply your title odds by ${ratio.toFixed(1)}`;
+          }
+        }
+        if (!note && typeof mn.title.wins === 'number' && mn.title.wins > 0) {
+          note = isKorean ? `승격 확정까지 최소 ${mn.title.wins}승이 필요해요` : `${mn.title.wins} more win${mn.title.wins > 1 ? 's' : ''} needed to clinch promotion`;
+        }
+        if (note) {
+          extraPool.note = {
+            key: 'note', dwell: PRS_DWELL_MS, pending: false,
+            label: isKorean ? '오늘의 포인트' : 'Key point',
+            html: `<span class="prs-slide-in"><span class="prs-note-tag">${isKorean ? '포인트' : 'Note'}</span><span class="prs-note">${wiEsc(note)}</span></span>`
+          };
+        }
+      }
+
+      // (b) 기록 한 줄: 연승 / 무패 / 연패 (우리 팀 현재 흐름)
+      try {
+        const g = (typeof computeFormGuide === 'function') ? computeFormGuide(t.nameEn, t.nameKo) : null;
+        if (g && g.sequence && g.sequence.length) {
+          let lossRun = 0;
+          for (let i = g.sequence.length - 1; i >= 0 && g.sequence[i].result === 'L'; i--) lossRun++;
+          const ws = g.currentWinStreak, ub = g.currentUnbeatenStreak;
+          let rec = '';
+          if (ws >= 2) {
+            const best = g.longestWinStreak && g.longestWinStreak.count === ws;
+            rec = isKorean ? `${ws}연승 중이에요${best ? ', 시즌 최다 연승이에요' : ''}` : `${ws} straight wins${best ? ' · season best' : ''}`;
+          } else if (ub >= 4) {
+            rec = isKorean ? `${ub}경기 연속 무패 행진 중이에요` : `Unbeaten in ${ub} straight`;
+          } else if (lossRun >= 2) {
+            rec = isKorean ? `${lossRun}경기 연속 패배 중, 반등이 필요해요` : `${lossRun} straight defeats, time to bounce back`;
+          }
+          if (rec) {
+            extraPool.record = {
+              key: 'record', dwell: PRS_DWELL_MS, pending: false,
+              label: isKorean ? '기록' : 'Record',
+              html: `<span class="prs-slide-in"><span class="prs-note-tag">${isKorean ? '기록' : 'Record'}</span><span class="prs-note">${wiEsc(rec)}</span></span>`
+            };
+          }
+        }
+      } catch (e) { /* 기록을 못 만들어도 나머지는 보여줍니다 */ }
+
+      // (c) 순위 변동: 직전 라운드 대비 내 순위 (순위표의 ▲▼ 와 같은 기준)
+      try {
+        const rc = (typeof getRankChangeDisplayData === 'function') ? getRankChangeDisplayData() : null;
+        const prevRank = rc && rc.previousRanks ? rc.previousRanks[t.nameEn] : undefined;
+        if (typeof prevRank === 'number' && prevRank !== info.rank) {
+          const d = prevRank - info.rank;   // 양수 = 상승
+          const up = d > 0;
+          const delta = `<em class="prs-delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'}${Math.abs(d)}</em>`;
+          extraPool.rank = {
+            key: 'rank', dwell: PRS_DWELL_MS, pending: false,
+            label: isKorean ? '순위 변동' : 'Rank change',
+            html: `<span class="prs-slide-in prs-rankchg"><span class="prs-k">${isKorean ? '지난 라운드보다' : 'Since last round'}</span>${delta.replace('prs-delta', 'prs-delta prs-delta-lg')}<span class="prs-sub-strong">${isKorean ? `${prevRank}위 → ${info.rank}위` : `${prevRank} → ${info.rank}`}</span></span>`
+          };
+        }
+      } catch (e) { /* 순위 변동을 못 만들어도 나머지는 보여줍니다 */ }
+
+      // (d) 상대 전적: 다음 경기 상대와의 통산 전적
+      try {
+        const opp = heroPrimary && heroPrimary.oppEn ? heroPrimary : (fx ? { oppEn: fx.oppEn, oppKo: fx.oppKo } : null);
+        const list = (opp && typeof computeH2HHistory === 'function') ? computeH2HHistory() : null;
+        const rec = list ? list.find(r => r.nameEn === opp.oppEn || r.nameKo === opp.oppKo) : null;
+        if (rec && rec.played > 0) {
+          const gd = rec.goalsFor - rec.goalsAgainst;
+          const gdTxt = gd > 0 ? '+' + gd : String(gd);
+          const u = isKorean ? ['승', '무', '패'] : ['W', 'D', 'L'];
+          extraPool.h2h = {
+            key: 'h2h', dwell: PRS_DWELL_MS, pending: false,
+            label: isKorean ? '상대 전적' : 'Head to head',
+            html: `<span class="prs-slide-in"><span class="prs-k">${isKorean ? '상대 전적' : 'H2H'}</span><b class="prs-opp">${tName(opp.oppEn, opp.oppKo)}</b><span class="prs-wdl"><b class="w">${rec.won}${u[0]}</b><b class="d">${rec.drawn}${u[1]}</b><b class="l">${rec.lost}${u[2]}</b></span><span class="prs-sub prs-opt">${isKorean ? '득실 ' : 'GD '}${gdTxt}</span></span>`
+          };
+        }
+      } catch (e) { /* 상대 전적을 못 만들어도 나머지는 보여줍니다 */ }
+
+      // (e) 선두 동향: 선두(내가 1위면 2위 추격자)의 우승 확률 + 최근 폼
+      try {
+        const rival = info.rank === 1 ? ranked[1] : leader;
+        const prow = predictionCache && predictionCache.results ? predictionCache.results.find(r => r.nameEn === rival.nameEn) : null;
+        if (alive && rival && prow && typeof prow.championPct === 'number') {
+          const rg = (typeof computeFormGuide === 'function') ? computeFormGuide(rival.nameEn, rival.nameKo) : null;
+          const rf = rg && rg.recentForm ? rg.recentForm : [];
+          const dots = rf.map(m => {
+            const lbl = m.result === 'W' ? (isKorean ? '승' : 'W') : (m.result === 'L' ? (isKorean ? '패' : 'L') : (isKorean ? '무' : 'D'));
+            return `<i class="nmp-form-dot is-${m.result}">${lbl}</i>`;
+          }).join('');
+          const role = info.rank === 1 ? (isKorean ? '추격 2위' : '2nd') : (isKorean ? '선두' : 'Leader');
+          extraPool.leader = {
+            key: 'leader', dwell: PRS_DWELL_MS, pending: false,
+            label: isKorean ? (info.rank === 1 ? '추격팀 동향' : '선두 동향') : (info.rank === 1 ? 'Chaser' : 'Leader'),
+            html: `<span class="prs-slide-in"><span class="prs-k">${role}</span><b class="prs-opp">${tName(rival.nameEn, rival.nameKo)}</b><span class="prs-k prs-opt">${isKorean ? '우승 확률' : 'Title odds'}</span><b class="prs-v">${prow.championPct.toFixed(1)}%</b>${dots ? `<span class="nmp-form prs-form prs-opt">${dots}</span>` : ''}</span>`
+          };
+        }
+      } catch (e) { /* 선두 동향을 못 만들어도 나머지는 보여줍니다 */ }
+
+      // 우선순위대로 최대 PRS_EXTRA_MAX개 고르고, 화면에는 정해진 흐름 순서로 붙입니다.
+      const PRS_EXTRA_PRIORITY = ['note', 'record', 'rank', 'h2h', 'leader'];
+      const PRS_EXTRA_ORDER = ['rank', 'h2h', 'leader', 'record', 'note'];
+      const picked = PRS_EXTRA_PRIORITY.filter(k => extraPool[k]).slice(0, PRS_EXTRA_MAX);
+      PRS_EXTRA_ORDER.forEach(k => { if (picked.indexOf(k) >= 0) slides.push(extraPool[k]); });
+
+      // --- 티커 뼈대(한 번만) + 슬라이드 반영 ---
       el.hidden = false;
-      el.setAttribute('aria-busy', String(needsModel && !noWorker));
-      el.innerHTML = `
-        <span class="prs-title">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M5 21V4m0 0h12l-2.5 4L17 12H5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>${isKorean ? '승격 레이스' : 'Promotion Race'}</span>
-          <span class="prs-rank">${rankTxt}</span>
-        </span>
-        <span class="prs-item" title="${gapTip}"><span class="prs-k">${gapKey}</span><b class="prs-v ${gapCls}">${gapVal}</b></span>
-        <span class="prs-item"><span class="prs-k">${isKorean ? '남은 경기' : 'Games left'}</span><b class="prs-v">${mn.remainingGames}</b></span>
-        <span class="prs-item" title="${probTip}"><span class="prs-k">${isKorean ? '우승 확률' : 'Title odds'}</span>${probHtml}</span>`;
-      setImpact(nextHtml);
+      el.setAttribute('aria-live', 'off');   // 자동으로 바뀌는 내용을 스크린리더가 계속 읽지 않도록
+      el.setAttribute('aria-busy', String(waiting));
+      if (!el.querySelector('.prs-ticker')) {
+        el.innerHTML = `
+          <span class="prs-title">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M5 21V4m0 0h12l-2.5 4L17 12H5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="prs-title-txt"></span>
+            <span class="prs-rank"></span>
+          </span>
+          <div class="prs-ticker" role="group" aria-roledescription="carousel"><div class="prs-viewport"></div></div>
+          <div class="prs-ctrl">
+            <button type="button" class="prs-arrow prs-prev"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span class="prs-dots"></span>
+            <button type="button" class="prs-arrow prs-next-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <span class="prs-progress" aria-hidden="true"><i></i></span>`;
+        prsTicker.html = {}; prsTicker.dotsSig = ''; prsTicker.key = null;
+      }
+      prsBindTickerOnce(el);
+      el.setAttribute('aria-label', isKorean ? '승격 레이스' : 'Promotion race');
+      el.querySelector('.prs-title-txt').textContent = isKorean ? '승격 레이스' : 'Promotion Race';
+      el.querySelector('.prs-rank').textContent = rankTxt;
+      el.querySelector('.prs-ticker').setAttribute('aria-label', isKorean ? '승격 레이스 정보 (자동으로 넘어가요)' : 'Promotion race info (rotates automatically)');
+      el.querySelector('.prs-prev').setAttribute('aria-label', isKorean ? '이전 정보' : 'Previous');
+      el.querySelector('.prs-next-btn').setAttribute('aria-label', isKorean ? '다음 정보' : 'Next');
+      prsApplySlides(el, slides);
     } catch (e) {
       console.warn('renderPromoRaceStrip failed', e);
       hide();
@@ -8082,7 +8452,7 @@
     if (!el) return;
     const info = getMyRankedTeam();
     if (!info) { el.innerHTML = ''; return; }
-    el.innerHTML = `<div class="ti-card">${nextMatchOpponentHtml(info.team, info.rank)}</div>`;
+    el.innerHTML = `<div class="ti-next-mini">${nextMatchOpponentHtml(info.team, info.rank)}</div>`;
     hydrateWeatherWidgets();
   }
 
