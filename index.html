@@ -1771,12 +1771,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 <div id="disclaimerModal" class="modal-overlay" style="display: none;">
-  <div class="modal-content disclaimer-modal-content">
-    <div class="modal-header">
-      <h2 class="lbl" data-en="Notice" data-ko="주의사항">주의사항</h2>
+  <div class="modal-content disclaimer-modal-content dc-popup" role="alertdialog" aria-modal="true" aria-labelledby="dcTitle">
+    <div class="modal-header dc-hero">
+      <div class="dc-badge" aria-hidden="true">
+        <img id="dcCrest" alt="" style="display:none;" onerror="this.style.display='none';this.nextElementSibling.style.display=''">
+        <svg class="dc-badge-fallback" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7.9" r="1.2" fill="currentColor"/></svg>
+        <span class="dc-badge-tag lbl" data-en="FAN" data-ko="팬">팬</span>
+      </div>
+      <span class="dc-eyebrow lbl" data-en="Unofficial fan site" data-ko="비공식 팬사이트">비공식 팬사이트</span>
+      <h2 id="dcTitle" class="dc-title lbl" data-en="Notice" data-ko="주의사항">주의사항</h2>
     </div>
-    <div class="modal-body disclaimer-modal-body">
-      <p class="disclaimer-text lbl" data-en="This is not the official website of Chizumulu United FC. It is a fan site posting related information." data-ko="치주물루 유나이티드 FC의 공식사이트가 아니며<br>관련 정보를 게시한 팬사이트예요">치주물루 유나이티드 FC의 공식사이트가 아니며<br>관련 정보를 게시한 팬사이트예요</p>
+    <div class="modal-body disclaimer-modal-body dc-body">
+      <p class="dc-lead lbl" data-en="This is not the official website of Chizumulu United FC." data-ko="치주물루 유나이티드 FC의<br>공식사이트가 아니에요">치주물루 유나이티드 FC의<br>공식사이트가 아니에요</p>
+      <p class="dc-sub lbl" data-en="It's a fan site that posts related information." data-ko="관련 정보를 게시한 팬사이트예요">관련 정보를 게시한 팬사이트예요</p>
       <div class="disclaimer-dontshow-group">
         <label class="disclaimer-dontshow">
           <input type="checkbox" id="disclaimerDontShow" data-hide-mode="days" onchange="exclusiveDontShow(this)">
@@ -1787,7 +1794,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <span class="lbl" data-en="Don't show this again" data-ko="다시 보지 않기">다시 보지 않기</span>
         </label>
       </div>
-      <button class="disclaimer-confirm-btn lbl" data-en="OK" data-ko="확인" onclick="closeDisclaimer()">확인</button>
+      <button class="disclaimer-confirm-btn dc-confirm lbl" data-en="OK" data-ko="확인" onclick="closeDisclaimer()">확인</button>
     </div>
   </div>
 </div>

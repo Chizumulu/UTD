@@ -20607,6 +20607,17 @@
         return false; // 아직 숨김 기간이 지나지 않음
       }
     } catch (e) {}
+    // 상단 배지에 치주물루 엠블럼 표시 (없으면 info 아이콘 유지)
+    try {
+      const crest = document.getElementById('dcCrest');
+      const src = (typeof getTeamLogo === 'function') ? getTeamLogo('Chizumulu United FC') : '';
+      if (crest && src) {
+        crest.src = src;
+        crest.style.display = '';
+        const fb = crest.nextElementSibling;
+        if (fb) fb.style.display = 'none';
+      }
+    } catch (e) {}
     showModalAnimated(modal);
     return true;
   }

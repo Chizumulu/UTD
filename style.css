@@ -18358,3 +18358,83 @@ tr.my-team td.team::after,
     .archive-week-nav, .pcard, .round-bye-card[data-team-link]
   ):active { scale: none; }
 }
+
+
+/* ===== 접속 안내 팝업 (disclaimerModal) 리디자인 ===== */
+.dc-popup { max-width: 360px; }
+.modal-header.dc-hero {
+  position: relative; overflow: hidden;
+  flex-direction: column; justify-content: center; gap: 0;
+  padding: 28px 20px 24px; text-align: center;
+  background: linear-gradient(135deg, var(--color-navy-deep) 0%, var(--color-navy) 55%, var(--color-navy-light) 100%);
+}
+/* 은은한 빛 번짐 (움직임 없음) */
+.dc-hero::before {
+  content: ""; position: absolute; top: -70px; left: 50%;
+  width: 240px; height: 240px; margin-left: -120px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0) 68%);
+  pointer-events: none;
+}
+.dc-hero > * { position: relative; }
+.dc-badge {
+  position: relative; width: 68px; height: 68px; border-radius: 50%;
+  background: #fff; color: var(--color-navy);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 6px rgba(255,255,255,0.16), 0 8px 20px rgba(0,0,0,0.25);
+  animation: dcBadgeIn .5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.dc-badge img { width: 42px; height: 42px; object-fit: contain; }
+.dc-badge-fallback { width: 34px; height: 34px; }
+.dc-badge-tag {
+  position: absolute; right: -8px; bottom: -4px;
+  padding: 2px 7px; border-radius: 999px;
+  background: var(--color-gold-strong); color: #fff;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px; line-height: 1.3;
+  border: 2px solid var(--color-navy);
+}
+.dc-eyebrow {
+  margin-top: 16px; padding: 4px 11px; border-radius: 999px;
+  background: rgba(var(--color-gold-rgb), 0.2);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.55);
+  color: var(--color-gold-light); font-size: 12px; font-weight: 800; letter-spacing: 0.2px;
+  animation: dcFadeUp .4s .08s ease both;
+}
+.modal-header.dc-hero h2.dc-title {
+  margin: 10px 0 0; font-size: 22px; font-weight: 900; letter-spacing: -0.4px; color: #fff;
+  animation: dcFadeUp .4s .14s ease both;
+}
+.dc-body { padding: 22px 20px 20px; text-align: center; }
+.dc-lead {
+  margin: 0; font-size: 17px; font-weight: 800; line-height: 1.5; letter-spacing: -0.3px;
+  color: var(--color-text-darkest);
+  animation: dcFadeUp .4s .2s ease both;
+}
+.dc-sub {
+  margin: 8px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--color-text-muted);
+  animation: dcFadeUp .4s .26s ease both;
+}
+.dc-body .disclaimer-dontshow-group { margin-top: 20px; animation: dcFadeUp .4s .32s ease both; }
+.dc-confirm {
+  padding: 14px; font-size: 15px; border-radius: var(--radius-lg);
+  box-shadow: 0 6px 16px rgba(var(--color-navy-rgb), 0.28);
+  transition: background .2s ease, transform .12s ease;
+  animation: dcFadeUp .4s .38s ease both;
+}
+.dc-confirm:active { transform: scale(0.98); }
+@keyframes dcBadgeIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes dcFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (max-width: 720px) {
+  /* 시트 모드: 손잡이와 겹치지 않게 위쪽 여백 확보 */
+  .sheet-modal > .modal-content > .modal-header.dc-hero { padding-top: 30px; }
+  .dc-body { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-badge, .dc-eyebrow, .dc-title, .dc-lead, .dc-sub,
+  .dc-body .disclaimer-dontshow-group, .dc-confirm { animation: none !important; }
+}
