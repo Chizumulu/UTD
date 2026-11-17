@@ -386,7 +386,7 @@
     });
     h += '</tbody></table></div>';
     h += '<div class="ti-note">' + t(
-      '* 승점·득실차·득점은 값이 클수록 좋고, 실점은 클수록 나쁩니다. 음수(−)가 거리가 늘수록 원정팀 승점·득실차가 줄어든다는 뜻이에요. p가 0.05 미만이면 우연이라 보기 어려운 수준입니다.',
+      '* 승점·득실차·득점은 값이 클수록 좋고, 실점은 클수록 나빠요. 음수(−)가 거리가 늘수록 원정팀 승점·득실차가 줄어든다는 뜻이에요. p가 0.05 미만이면 우연이라 보기 어려운 수준이에요.',
       '* Higher points / goal difference / goals for are better; for goals against, higher is worse. A negative value means results drop as the trip gets longer. p < 0.05 is unlikely to be chance.') + '</div>';
 
     // 구간별
@@ -403,12 +403,12 @@
     h += '<div class="ti-legend"><span><i class="ti-dot" style="background:' + th.xgOver + '"></i>' + t('원정승', 'Away win') + '</span><span><i class="ti-dot" style="background:' + th.xgNeutral + '"></i>' + t('무승부', 'Draw') + '</span><span><i class="ti-dot" style="background:' + th.xgUnder + '"></i>' + t('원정패', 'Away loss') + '</span><span><i class="ti-dash" style="border-color:' + th.xgMineRing + '"></i>' + t('추세선', 'Trend') + '</span></div>';
 
     h += '<div class="ti-foot">' + t(
-      '거리는 OSRM 도로 경로(편도) 기준이고, 치주물루가 낀 경기는 항구↔섬 직선 뱃길을 더했습니다. "전력 보정"은 두 팀의 시즌 평균 득실차(해당 경기 제외) 차이를, "같은 팀 안 비교"는 원정팀 고정효과와 홈팀 전력을 함께 통제한 값입니다. 표본이 작을수록 우연의 영향이 크니 참고용으로 봐주세요.',
+      '거리는 OSRM 도로 경로(편도) 기준이고, 치주물루가 낀 경기는 항구↔섬 직선 뱃길을 더했어요. "전력 보정"은 두 팀의 시즌 평균 득실차(해당 경기 제외) 차이를, "같은 팀 안 비교"는 원정팀 고정효과와 홈팀 전력을 함께 통제한 값이에요. 표본이 작을수록 우연의 영향이 크니 참고용으로 봐주세요.',
       'Distances are one-way OSRM road routes; matches involving Chizumulu add the straight-line boat leg. "Strength-adjusted" controls for the gap between both teams\' season goal difference (excluding that match); "within-team" controls for away-team fixed effects and host strength. With small samples, chance matters a lot — treat as indicative.') + '</div>';
     h += '</details>';
     if (opts.assumed && opts.assumed.length) {
       h += '<div class="ti-foot">' + t(
-        '※ 가정: ' + opts.assumed.map(function (a) { return esc(a.name) + '은(는) 전 경기를 ' + esc(a.venue) + ' 기준'; }).join(', ') + '으로 계산했습니다.',
+        '※ 가정: ' + opts.assumed.map(function (a) { return esc(a.name) + '은(는) 전 경기를 ' + esc(a.venue) + ' 기준'; }).join(', ') + '으로 계산했어요.',
         'Assumption: ' + opts.assumed.map(function (a) { return esc(a.name) + ' is treated as playing every match at ' + esc(a.venue); }).join('; ') + '.') + '</div>';
     }
     if (res.skipped) {
@@ -564,7 +564,7 @@
     }
     h += '<div class="ti-table-wrap ti-club-wrap" id="tiClubTable">' + clubTableHtml(res, clubState.opts) + '</div>';
     h += '<div class="ti-note">' + t(
-      '* 거리는 모두 편도(원정팀 홈구장 → 경기 구장)이며 귀환 이동은 포함하지 않았습니다. 치주물루가 낀 경기는 항구↔치테코 구장 뱃길(직선거리)을 더한 값입니다. “남은 원정”은 일정이 확정된 미개최 경기, “시즌 예상”은 지금까지 거리와 남은 거리의 합계예요.',
+      '* 거리는 모두 편도(원정팀 홈구장 → 경기 구장)이며 귀환 이동은 포함하지 않았어요. 치주물루가 낀 경기는 항구↔치테코 구장 뱃길(직선거리)을 더한 값이에요. “남은 원정”은 일정이 확정된 미개최 경기, “시즌 예상”은 지금까지 거리와 남은 거리의 합계예요.',
       '* All distances are one way (away team\'s home venue → match venue); the return trip is not included. Matches involving Chizumulu add the straight-line boat leg (port ↔ Chiteko). "Remaining" counts scheduled matches not yet played; "Season est." = distance so far + remaining.') + '</div>';
     if (res.forfeits) {
       h += '<div class="ti-foot">' + t(
@@ -578,7 +578,7 @@
     }
     if (opts.assumed && opts.assumed.length) {
       h += '<div class="ti-foot">' + t(
-        '※ 가정: ' + opts.assumed.map(function (a) { return esc(a.name) + '은(는) 전 경기를 ' + esc(a.venue); }).join(', ') + ' 기준으로 계산했습니다.',
+        '※ 가정: ' + opts.assumed.map(function (a) { return esc(a.name) + '은(는) 전 경기를 ' + esc(a.venue); }).join(', ') + ' 기준으로 계산했어요.',
         'Assumption: ' + opts.assumed.map(function (a) { return esc(a.name) + ' is treated as playing every match at ' + esc(a.venue); }).join('; ') + '.') + '</div>';
     }
     if (res.skipped) {

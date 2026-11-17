@@ -391,15 +391,19 @@
       100% { opacity: 1; transform: scale(1) rotate(0deg); }
     }
   }
-  .league-logo:hover,
+  @media (hover: hover) {
+    .league-logo:hover,
   .club-logo:hover {
-    transform: translateY(-50%) scale(1.08);
-    filter: drop-shadow(0 4px 10px rgba(var(--color-black-rgb),0.3)) drop-shadow(0 0 14px rgba(var(--color-teal-rgb),0.55));
+      transform: translateY(-50%) scale(1.08);
+      filter: drop-shadow(0 4px 10px rgba(var(--color-black-rgb),0.3)) drop-shadow(0 0 14px rgba(var(--color-teal-rgb),0.55));
+    }
   }
   @media (max-width: 600px) {
-    .league-logo:hover,
+    @media (hover: hover) {
+      .league-logo:hover,
     .club-logo:hover {
-      transform: scale(1.08);
+        transform: scale(1.08);
+      }
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -705,10 +709,12 @@
     letter-spacing: 0.2px;
     transition: all 0.2s;
   }
-  .lang-btn:hover {
-    background: var(--color-gold);
-    color: var(--color-brand-text);
-    border-color: var(--color-gold);
+  @media (hover: hover) {
+    .lang-btn:hover {
+      background: var(--color-gold);
+      color: var(--color-brand-text);
+      border-color: var(--color-gold);
+    }
   }
   .lang-btn-icon {
     width: 13px;
@@ -730,9 +736,11 @@
     cursor: pointer;
     transition: all 0.2s;
   }
-  .theme-toggle-btn:hover {
-    background: var(--color-gold);
-    border-color: var(--color-gold);
+  @media (hover: hover) {
+    .theme-toggle-btn:hover {
+      background: var(--color-gold);
+      border-color: var(--color-gold);
+    }
   }
   .theme-toggle-btn:active {
     transform: scale(0.9);
@@ -833,8 +841,10 @@
   tbody tr:nth-child(even) {
     background: var(--color-bg-stripe);
   }
-  tbody tr:hover {
-    background: var(--color-bg-row-hover);
+  @media (hover: hover) {
+    tbody tr:hover {
+      background: var(--color-bg-row-hover);
+    }
   }
   td.team {
     color: var(--color-brand-text);
@@ -847,11 +857,17 @@
     border-radius: var(--radius-xs);
     transition: background 0.15s;
   }
-  td.team-clickable:hover,
   td.team-clickable:focus-visible {
     background: var(--color-bg-row-hover);
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+  @media (hover: hover) {
+    td.team-clickable:hover {
+      background: var(--color-bg-row-hover);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
   }
   td.team-clickable:focus-visible {
     outline: 2px solid var(--color-teal);
@@ -952,9 +968,13 @@
     border-radius: var(--radius-xs);
     transition: background 0.15s;
   }
-  .next-opp-clickable:hover,
   .next-opp-clickable:focus-visible {
     background: var(--color-bg-row-hover);
+  }
+  @media (hover: hover) {
+    .next-opp-clickable:hover {
+      background: var(--color-bg-row-hover);
+    }
   }
   .next-opp-clickable:focus-visible {
     outline: 2px solid var(--color-teal);
@@ -1046,10 +1066,12 @@
     transition: background 0.2s, color 0.2s, border-color 0.2s;
     box-shadow: 0 1px 3px rgba(var(--color-black-rgb), 0.08);
   }
-  .export-img-btn:hover {
-    background: var(--color-navy);
-    color: var(--color-white);
-    border-color: var(--color-navy);
+  @media (hover: hover) {
+    .export-img-btn:hover {
+      background: var(--color-navy);
+      color: var(--color-white);
+      border-color: var(--color-navy);
+    }
   }
   .export-img-btn:disabled {
     opacity: 0.6;
@@ -1071,10 +1093,12 @@
     margin-left: 0;
     font-size: 12.5px;
   }
-  .export-img-btn-top:hover {
-    background: var(--color-bg-btn-hover);
-    color: var(--color-teal-dark);
-    border-color: transparent;
+  @media (hover: hover) {
+    .export-img-btn-top:hover {
+      background: var(--color-bg-btn-hover);
+      color: var(--color-teal-dark);
+      border-color: transparent;
+    }
   }
   @media (max-width: 720px) {
     .content-row {
@@ -1411,9 +1435,11 @@
     position: relative;
     z-index: 1;
   }
-  .rank-filter-btn:hover {
-    background: var(--color-bg-btn-hover);
-    color: var(--color-brand-text);
+  @media (hover: hover) {
+    .rank-filter-btn:hover {
+      background: var(--color-bg-btn-hover);
+      color: var(--color-brand-text);
+    }
   }
   .rank-filter-btn.active {
     background: transparent;
@@ -1434,9 +1460,11 @@
     position: relative;
     z-index: 1;
   }
-  .scorers-mode-btn:hover {
-    background: var(--color-bg-btn-hover);
-    color: var(--color-brand-text);
+  @media (hover: hover) {
+    .scorers-mode-btn:hover {
+      background: var(--color-bg-btn-hover);
+      color: var(--color-brand-text);
+    }
   }
   .scorers-mode-btn.active {
     background: transparent;
@@ -1459,9 +1487,11 @@
     margin-left: auto;
     transition: all 0.2s;
   }
-  .share-btn:hover {
-    background: var(--color-bg-btn-hover);
-    color: var(--color-teal-dark);
+  @media (hover: hover) {
+    .share-btn:hover {
+      background: var(--color-bg-btn-hover);
+      color: var(--color-teal-dark);
+    }
   }
   .share-btn-icon {
     width: 14px;
@@ -1486,9 +1516,11 @@
   .postponed-btn {
     color: var(--color-red-text);
   }
-  .postponed-btn:hover {
-    background: rgba(var(--color-navy-rgb),0.06);
-    color: var(--color-red-text);
+  @media (hover: hover) {
+    .postponed-btn:hover {
+      background: rgba(var(--color-navy-rgb),0.06);
+      color: var(--color-red-text);
+    }
   }
   .postponed-modal-content {
     max-width: 460px;
@@ -1681,8 +1713,10 @@
     white-space: nowrap;
     transition: background 0.2s, transform 0.15s;
   }
-  .pwa-install-banner-btn:hover {
-    background: var(--color-navy-light);
+  @media (hover: hover) {
+    .pwa-install-banner-btn:hover {
+      background: var(--color-navy-light);
+    }
   }
   .pwa-install-banner-btn:active {
     transform: scale(0.96);
@@ -1699,8 +1733,10 @@
     opacity: 0.7;
     transition: opacity 0.2s;
   }
-  .pwa-install-banner-close:hover {
-    opacity: 1;
+  @media (hover: hover) {
+    .pwa-install-banner-close:hover {
+      opacity: 1;
+    }
   }
   @media (min-width: 640px) {
     .pwa-install-banner {
@@ -1770,12 +1806,14 @@
       box-shadow: 0 4px 12px rgba(var(--color-navy-rgb), 0.10);
       padding: 8px 16px;
     }
-    .share-btn:not(.round-share-btn):hover,
+    @media (hover: hover) {
+      .share-btn:not(.round-share-btn):hover,
     .export-img-btn-top:hover {
-      background: var(--color-teal-dark);
-      color: var(--color-white);
-      border-color: var(--color-teal-dark);
-      box-shadow: 0 6px 16px rgba(var(--color-navy-rgb), 0.18);
+        background: var(--color-teal-dark);
+        color: var(--color-white);
+        border-color: var(--color-teal-dark);
+        box-shadow: 0 6px 16px rgba(var(--color-navy-rgb), 0.18);
+      }
     }
   }
   @media (max-width: 720px) {
@@ -1903,8 +1941,10 @@
   tr.rank-1, tr.rank-2, tr.rank-3 {
     background: linear-gradient(90deg, var(--color-bg-rank-highlight) 0%, var(--color-surface) 60%);
   }
-  tr.rank-1:hover, tr.rank-2:hover, tr.rank-3:hover {
-    background: var(--color-bg-rank-highlight-hover);
+  @media (hover: hover) {
+    tr.rank-1:hover, tr.rank-2:hover, tr.rank-3:hover {
+      background: var(--color-bg-rank-highlight-hover);
+    }
   }
   tr.promo {
     box-shadow: inset 4px 0 0 var(--color-green);
@@ -1958,8 +1998,10 @@
     background: linear-gradient(90deg, var(--color-bg-myteam-1) 0%, var(--color-bg-myteam-2) 100%) !important;
     box-shadow: inset 4px 0 0 var(--color-teal);
   }
-  tr.my-team:hover {
-    background: var(--color-bg-myteam-hover) !important;
+  @media (hover: hover) {
+    tr.my-team:hover {
+      background: var(--color-bg-myteam-hover) !important;
+    }
   }
   tr.my-team td.team {
     color: var(--color-teal-dark);
@@ -2136,9 +2178,11 @@
     flex-shrink: 0;
     transition: all 0.2s;
   }
-  .view-toggle-btn:hover {
-    background: var(--color-bg-btn-hover);
-    color: var(--color-brand-text);
+  @media (hover: hover) {
+    .view-toggle-btn:hover {
+      background: var(--color-bg-btn-hover);
+      color: var(--color-brand-text);
+    }
   }
   .view-toggle-btn.active {
     background: var(--color-selected-bg);
@@ -2211,9 +2255,11 @@
     color: var(--color-teal-dark);
     text-decoration: none;
   }
-  .view-toggle-community:hover {
-    background: var(--color-bg-btn-hover);
-    color: var(--color-teal-dark);
+  @media (hover: hover) {
+    .view-toggle-community:hover {
+      background: var(--color-bg-btn-hover);
+      color: var(--color-teal-dark);
+    }
   }
   .view-toggle-community-icon {
     width: 14px;
@@ -2244,7 +2290,10 @@
     transition: var(--theme-transition), transform .1s ease;
     -webkit-tap-highlight-color: transparent;
   }
-  .stat-cat-pill:hover { background: var(--color-bg-btn-hover); }
+  @media (hover: hover) {
+    .stat-cat-pill:hover { background: var(--color-bg-btn-hover);
+    }
+  }
   .stat-cat-pill:active { transform: scale(.97); }
   .stat-cat-pill.active {
     background: var(--color-selected-bg);
@@ -2388,7 +2437,10 @@
     color: var(--color-teal-dark);
     cursor: pointer;
   }
-  .more-link:hover { text-decoration: underline; }
+  @media (hover: hover) {
+    .more-link:hover { text-decoration: underline;
+    }
+  }
   .more-link::after {
     content: "▾";
     display: inline-block;
@@ -2451,9 +2503,11 @@
   .sfs-quickstat:nth-child(4) { --sfs-accent: var(--color-teal); }
   .sfs-quickstat:nth-child(5) { --sfs-accent: var(--color-gold-strong); }
   .sfs-quickstat:nth-child(6) { --sfs-accent: var(--color-navy); }
-  .sfs-quickstat:hover {
-    background: rgba(var(--color-navy-rgb), 0.075);
-    box-shadow: 0 6px 14px rgba(var(--color-navy-rgb), 0.1);
+  @media (hover: hover) {
+    .sfs-quickstat:hover {
+      background: rgba(var(--color-navy-rgb), 0.075);
+      box-shadow: 0 6px 14px rgba(var(--color-navy-rgb), 0.1);
+    }
   }
   .sfs-quickstat b {
     font-size: 23px;
@@ -2506,8 +2560,10 @@
     border-radius: 8px;
     transition: background 0.15s ease;
   }
-  .sfs-donut-section .ti-pos-legend-item:hover {
-    background: rgba(var(--color-navy-rgb), 0.05);
+  @media (hover: hover) {
+    .sfs-donut-section .ti-pos-legend-item:hover {
+      background: rgba(var(--color-navy-rgb), 0.05);
+    }
   }
   .sfs-legend-row {
     display: flex;
@@ -2579,8 +2635,10 @@
     min-width: 0;
     transition: transform 0.2s ease, background 0.2s ease;
   }
-  .sfs-team-highlight-box:hover {
-    background: rgba(var(--color-white-rgb), .12);
+  @media (hover: hover) {
+    .sfs-team-highlight-box:hover {
+      background: rgba(var(--color-white-rgb), .12);
+    }
   }
   .sfs-team-highlight-box:nth-child(1) { --sfs-team-accent: var(--color-teal); }
   .sfs-team-highlight-box:nth-child(2) { --sfs-team-accent: #6fa8e0; }
@@ -2653,8 +2711,10 @@
     gap: 7px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  .sfs-highlight-box:not(.sfs-highlight-empty):hover {
-    box-shadow: 0 8px 18px rgba(var(--color-gold-rgb), 0.22);
+  @media (hover: hover) {
+    .sfs-highlight-box:not(.sfs-highlight-empty):hover {
+      box-shadow: 0 8px 18px rgba(var(--color-gold-rgb), 0.22);
+    }
   }
   .sfs-highlight-empty {
     align-items: center;
@@ -2786,8 +2846,10 @@
   .scatter-dot-label-mine {
     transition: opacity 0.25s ease;
   }
-  .scatter-marker-group:hover circle[stroke] {
-    filter: brightness(1.12);
+  @media (hover: hover) {
+    .scatter-marker-group:hover circle[stroke] {
+      filter: brightness(1.12);
+    }
   }
   .stats-col {
     min-width: 0;
@@ -2816,8 +2878,10 @@
     cursor: pointer;
     transition: background 0.2s ease;
   }
-  .venue-map-expand-btn:hover {
-    background: rgba(255,255,255,0.28);
+  @media (hover: hover) {
+    .venue-map-expand-btn:hover {
+      background: rgba(255,255,255,0.28);
+    }
   }
   .venue-map-expand-btn svg {
     flex-shrink: 0;
@@ -2916,9 +2980,11 @@
     white-space: nowrap;
     transition: background 0.2s, color 0.2s, border-color 0.2s;
   }
-  .venue-sort-btn:hover {
-    background: var(--color-bg-btn-hover);
-    color: var(--color-brand-text);
+  @media (hover: hover) {
+    .venue-sort-btn:hover {
+      background: var(--color-bg-btn-hover);
+      color: var(--color-brand-text);
+    }
   }
   .venue-sort-btn.active {
     background: rgba(var(--color-teal-rgb), 0.15);
@@ -2981,9 +3047,11 @@
     cursor: pointer;
     transition: var(--theme-transition), transform 0.15s ease, box-shadow 0.15s ease;
   }
-  .venue-list-item:hover {
-    background: var(--color-bg-row-hover);
-    box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.1);
+  @media (hover: hover) {
+    .venue-list-item:hover {
+      background: var(--color-bg-row-hover);
+      box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.1);
+    }
   }
   .venue-list-item.active {
     border-color: var(--color-teal);
@@ -3111,8 +3179,10 @@
     height: 44px;
     transform: translate(-50%, -50%);
   }
-  .info-icon-btn:hover {
-    background: rgba(var(--color-white-rgb),0.32);
+  @media (hover: hover) {
+    .info-icon-btn:hover {
+      background: rgba(var(--color-white-rgb),0.32);
+    }
   }
   .info-tooltip {
     display: none;
@@ -3179,9 +3249,11 @@
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     transition: background 0.2s, color 0.2s;
   }
-  .more-btn:hover {
-    background: var(--color-navy);
-    color: var(--color-white);
+  @media (hover: hover) {
+    .more-btn:hover {
+      background: var(--color-navy);
+      color: var(--color-white);
+    }
   }
 
   /* ===== Match Projections (Monte Carlo) ===== */
@@ -3220,8 +3292,10 @@
     margin-top: 12px;
     transition: background 0.2s;
   }
-  .predict-refresh-btn:hover {
-    background: rgba(var(--color-white-rgb),0.3);
+  @media (hover: hover) {
+    .predict-refresh-btn:hover {
+      background: rgba(var(--color-white-rgb),0.3);
+    }
   }
   .predict-refresh-btn:disabled {
     opacity: 0.6;
@@ -3342,9 +3416,11 @@
     transition: background 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s;
     user-select: none;
   }
-  .rank-hist-chip:hover {
-    background: var(--color-bg-btn-hover);
-    box-shadow: 0 3px 8px rgba(var(--color-navy-rgb),0.12);
+  @media (hover: hover) {
+    .rank-hist-chip:hover {
+      background: var(--color-bg-btn-hover);
+      box-shadow: 0 3px 8px rgba(var(--color-navy-rgb),0.12);
+    }
   }
   .rank-hist-chip.dimmed {
     opacity: 0.3;
@@ -3594,7 +3670,10 @@
     font-size: 26px; cursor: pointer; line-height: 1; padding: 0;
     opacity: 0.8; transition: opacity 0.2s;
   }
-  .close-btn:hover { opacity: 1; }
+  @media (hover: hover) {
+    .close-btn:hover { opacity: 1;
+    }
+  }
   .modal-body {
     overflow-y: auto;
     padding: 0;
@@ -3677,8 +3756,10 @@
     cursor: pointer;
     transition: background 0.2s;
   }
-  .disclaimer-confirm-btn:hover {
-    background: var(--color-navy-light);
+  @media (hover: hover) {
+    .disclaimer-confirm-btn:hover {
+      background: var(--color-navy-light);
+    }
   }
   /* ===== 뉴스 안내 팝업 (선수 대표팀 발탁 소식 등) ===== */
   .news-popup-content {
@@ -3707,8 +3788,10 @@
     justify-content: center;
     transition: background 0.2s;
   }
-  .news-popup-close-x:hover {
-    background: rgba(var(--color-black-rgb), 0.65);
+  @media (hover: hover) {
+    .news-popup-close-x:hover {
+      background: rgba(var(--color-black-rgb), 0.65);
+    }
   }
   .news-popup-image {
     display: block;
@@ -3747,9 +3830,13 @@
     cursor: pointer;
     transition: opacity 0.15s ease;
   }
-  .news-popup-player-link:hover,
   .news-popup-player-link:active {
     opacity: 0.7;
+  }
+  @media (hover: hover) {
+    .news-popup-player-link:hover {
+      opacity: 0.7;
+    }
   }
   @media (max-width: 720px) {
     .stats-grid {
@@ -3781,9 +3868,11 @@
     flex: 1;
     margin-top: 0;
   }
-  .rmc-detail-btn:hover {
-    background: var(--color-navy);
-    color: var(--color-white);
+  @media (hover: hover) {
+    .rmc-detail-btn:hover {
+      background: var(--color-navy);
+      color: var(--color-white);
+    }
   }
   .rmc-highlight-btn {
     flex: 1;
@@ -3802,9 +3891,11 @@
     text-decoration: none;
     transition: background 0.2s, opacity 0.2s;
   }
-  .rmc-highlight-btn:hover {
-    background: #d90000;
-    border-color: #d90000;
+  @media (hover: hover) {
+    .rmc-highlight-btn:hover {
+      background: #d90000;
+      border-color: #d90000;
+    }
   }
   .rmc-highlight-btn svg {
     flex-shrink: 0;
@@ -4056,9 +4147,11 @@
     text-underline-offset: 3px;
     transition: color 0.2s, text-decoration-color 0.2s;
   }
-  .player-name-link:hover {
-    color: var(--color-brand-text);
-    text-decoration-color: var(--color-brand-text);
+  @media (hover: hover) {
+    .player-name-link:hover {
+      color: var(--color-brand-text);
+      text-decoration-color: var(--color-brand-text);
+    }
   }
   .player-modal-content {
     max-width: 460px;
@@ -4282,7 +4375,10 @@
     opacity: 1;
     transition: background 0.15s ease;
   }
-  .spm-close:hover { background: rgba(0,0,0,0.45); }
+  @media (hover: hover) {
+    .spm-close:hover { background: rgba(0,0,0,0.45);
+    }
+  }
 
   .spm-content {
     max-width: 460px;
@@ -4855,8 +4951,10 @@
     box-shadow: 0 3px 10px rgba(var(--color-navy-rgb),0.08);
     transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s;
   }
-  .squad-card:hover {
-    box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+  @media (hover: hover) {
+    .squad-card:hover {
+      box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+    }
   }
   .squad-card {
     cursor: pointer;
@@ -5295,8 +5393,10 @@
     opacity: 0.62;
     filter: grayscale(60%);
   }
-  .squad-former-card:hover {
-    opacity: 0.9;
+  @media (hover: hover) {
+    .squad-former-card:hover {
+      opacity: 0.9;
+    }
   }
   .squad-former-status-badge {
     flex-shrink: 0;
@@ -5340,8 +5440,10 @@
     cursor: pointer;
     transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s;
   }
-  .ti-scorer-card:hover {
-    box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+  @media (hover: hover) {
+    .ti-scorer-card:hover {
+      box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+    }
   }
   .ti-scorer-card.rank-1 { background: linear-gradient(180deg, var(--color-bg-rank-highlight) 0%, var(--color-surface) 65%); }
   .ti-scorer-card-rank {
@@ -5512,10 +5614,12 @@
     height: 15px;
     flex-shrink: 0;
   }
-  .team-info-social-link:hover {
-    background: var(--color-gold);
-    color: var(--color-brand-text);
-    border-color: var(--color-gold);
+  @media (hover: hover) {
+    .team-info-social-link:hover {
+      background: var(--color-gold);
+      color: var(--color-brand-text);
+      border-color: var(--color-gold);
+    }
   }
   @media (max-width: 720px) {
     .team-info-social-link {
@@ -5574,10 +5678,12 @@
     transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s;
   }
   .ti-switch-arrow svg { width: 18px; height: 18px; }
-  .ti-switch-arrow:hover {
-    background: var(--color-teal);
-    color: var(--color-white);
-    border-color: var(--color-teal);
+  @media (hover: hover) {
+    .ti-switch-arrow:hover {
+      background: var(--color-teal);
+      color: var(--color-white);
+      border-color: var(--color-teal);
+    }
   }
   .ti-switch-arrow:active { transform: translateY(0) scale(0.88); }
   .ti-switch-current {
@@ -5594,8 +5700,10 @@
     cursor: pointer;
     transition: var(--theme-transition), box-shadow 0.15s;
   }
-  .ti-switch-current:hover {
-    box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.1);
+  @media (hover: hover) {
+    .ti-switch-current:hover {
+      box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.1);
+    }
   }
   .ti-switch-logo {
     width: 26px;
@@ -5666,9 +5774,11 @@
     text-align: left;
     transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
   }
-  .other-team-grid-item:hover {
-    box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.12);
-    background: var(--color-bg-btn-hover);
+  @media (hover: hover) {
+    .other-team-grid-item:hover {
+      box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.12);
+      background: var(--color-bg-btn-hover);
+    }
   }
   .other-team-grid-item-current {
     border-color: var(--color-teal);
@@ -5852,9 +5962,11 @@
     flex-shrink: 0;
     transition: all 0.2s;
   }
-  .team-info-tab-btn:hover {
-    background: var(--color-bg-btn-hover);
-    color: var(--color-brand-text);
+  @media (hover: hover) {
+    .team-info-tab-btn:hover {
+      background: var(--color-bg-btn-hover);
+      color: var(--color-brand-text);
+    }
   }
   .team-info-tab-btn:active {
     transform: scale(0.94);
@@ -5926,8 +6038,10 @@
     box-shadow: 0 3px 10px rgba(255,0,0,0.25);
     transition: transform 0.15s ease, opacity 0.15s ease;
   }
-  .ti-yt-channel-btn:hover {
-    opacity: 0.88;
+  @media (hover: hover) {
+    .ti-yt-channel-btn:hover {
+      opacity: 0.88;
+    }
   }
 
   .ti-overview-grid {
@@ -6369,9 +6483,11 @@
     cursor: pointer;
     transition: var(--theme-transition), transform 0.15s;
   }
-  .nms-action-btn:hover {
-    background: var(--color-teal);
-    color: var(--color-white);
+  @media (hover: hover) {
+    .nms-action-btn:hover {
+      background: var(--color-teal);
+      color: var(--color-white);
+    }
   }
   @media (max-width: 600px) {
     .next-match-strip {
@@ -6418,9 +6534,11 @@
     box-sizing: border-box;
     transition: var(--theme-transition), transform 0.15s, filter 0.15s;
   }
-  .next-match-live-bar:hover {
-    transform: translateY(1px);
-    filter: brightness(1.08);
+  @media (hover: hover) {
+    .next-match-live-bar:hover {
+      transform: translateY(1px);
+      filter: brightness(1.08);
+    }
   }
   .nmlb-dot {
     width: 7px;
@@ -7516,8 +7634,10 @@
   .ti-award-card-row-scroll .ti-award-card-item {
     flex: 0 0 100px;
   }
-  .ti-award-card-item:hover {
-    box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+  @media (hover: hover) {
+    .ti-award-card-item:hover {
+      box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+    }
   }
   .ti-award-card-badge {
     position: absolute;
@@ -7661,8 +7781,10 @@
     cursor: pointer;
     transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s;
   }
-  .ti-gk-card-item:hover {
-    box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+  @media (hover: hover) {
+    .ti-gk-card-item:hover {
+      box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.14);
+    }
   }
   .ti-gk-card-number {
     position: absolute;
@@ -7812,9 +7934,11 @@
     cursor: pointer;
     transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
   }
-  .ti-appear-mini-card:hover {
-    box-shadow: 0 5px 12px rgba(var(--color-navy-rgb),0.12);
-    background: var(--color-surface);
+  @media (hover: hover) {
+    .ti-appear-mini-card:hover {
+      box-shadow: 0 5px 12px rgba(var(--color-navy-rgb),0.12);
+      background: var(--color-surface);
+    }
   }
   .ti-appear-mini-rank {
     position: absolute;
@@ -8064,8 +8188,10 @@
     cursor: pointer;
     transition: transform 0.15s, box-shadow 0.15s, background 0.15s, border-color 0.15s;
   }
-  .ti-impact-chip:hover {
-    box-shadow: 0 5px 12px rgba(var(--color-navy-rgb),0.12);
+  @media (hover: hover) {
+    .ti-impact-chip:hover {
+      box-shadow: 0 5px 12px rgba(var(--color-navy-rgb),0.12);
+    }
   }
   .ti-impact-chip-active {
     background: var(--color-bg-rank-highlight);
@@ -8443,7 +8569,9 @@
     text-decoration: none;
     transition: var(--theme-transition), transform 0.15s ease;
   }
-  .ti-yt-card:hover {
+  @media (hover: hover) {
+    .ti-yt-card:hover {
+    }
   }
   .ti-yt-thumb-wrap {
     position: relative;
@@ -8564,9 +8692,11 @@
     flex-shrink: 0;
     transition: all 0.2s;
   }
-  .round-tab-btn:hover {
-    background: var(--color-bg-btn-hover);
-    color: var(--color-brand-text);
+  @media (hover: hover) {
+    .round-tab-btn:hover {
+      background: var(--color-bg-btn-hover);
+      color: var(--color-brand-text);
+    }
   }
   .round-tab-btn.active {
     background: var(--color-selected-bg);
@@ -8601,9 +8731,11 @@
     cursor: pointer;
     transition: all 0.2s;
   }
-  .round-half-btn:hover {
-    background: var(--color-bg-btn-hover);
-    color: var(--color-brand-text);
+  @media (hover: hover) {
+    .round-half-btn:hover {
+      background: var(--color-bg-btn-hover);
+      color: var(--color-brand-text);
+    }
   }
   .round-half-btn.active {
     background: var(--color-selected-bg);
@@ -8942,10 +9074,15 @@
     cursor: pointer;
     transition: background 0.15s ease;
   }
-  button.rmc-pending-badge.rmc-moved-badge:hover,
   button.rmc-pending-badge.rmc-moved-badge:focus-visible {
     background: rgba(var(--color-tint-rgb), 0.2);
     outline: none;
+  }
+  @media (hover: hover) {
+    button.rmc-pending-badge.rmc-moved-badge:hover {
+      background: rgba(var(--color-tint-rgb), 0.2);
+      outline: none;
+    }
   }
   /* 다른 주차에서 이 주차로 옮겨온 경기 카드에 붙는 안내 배지
      ("N주차에서 연기된 경기") - 완료된 경기 카드 상단에 표시 */
@@ -9024,10 +9161,12 @@
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
   }
-  .rmc-compare-btn:hover {
-    background: var(--color-teal);
-    color: var(--color-white);
-    border-color: var(--color-teal);
+  @media (hover: hover) {
+    .rmc-compare-btn:hover {
+      background: var(--color-teal);
+      color: var(--color-white);
+      border-color: var(--color-teal);
+    }
   }
 
   /* ===== 예정 경기 프리뷰 블록 (리그 일정 카드 안) =====
@@ -9731,9 +9870,11 @@
   border-left: 3px solid transparent;
   transition: var(--theme-transition), transform 0.25s ease, box-shadow 0.25s ease, border-left-color 0.25s ease;
 }
-.ti-card:hover {
-  border-left-color: var(--color-teal);
-  box-shadow: 0 12px 26px rgba(var(--color-navy-rgb), 0.16);
+@media (hover: hover) {
+  .ti-card:hover {
+    border-left-color: var(--color-teal);
+    box-shadow: 0 12px 26px rgba(var(--color-navy-rgb), 0.16);
+  }
 }
 
 /* ===== Spotlight 카드 — 커서를 따라 은은하게 번지는 글로우 =====
@@ -9777,7 +9918,10 @@
     transform: none !important;
     transition: none !important;
   }
-  .ti-card:hover { transform: none; }
+  @media (hover: hover) {
+    .ti-card:hover { transform: none;
+    }
+  }
   .ti-tab-indicator { transition: none; }
 }
 
@@ -10042,10 +10186,12 @@
     transition: background 0.18s ease, color 0.18s ease,
                 border-left-color 0.18s ease, transform 0.12s ease;
   }
-  .app-sidebar .view-toggle-btn:hover,
+  @media (hover: hover) {
+    .app-sidebar .view-toggle-btn:hover,
   .app-sidebar .view-toggle-community:hover {
-    background: rgba(255,255,255,.07);
-    color: #fff;
+      background: rgba(255,255,255,.07);
+      color: #fff;
+    }
   }
   .app-sidebar .view-toggle-btn:active,
   .app-sidebar .view-toggle-community:active {
@@ -10108,11 +10254,13 @@
     backdrop-filter: none;
     justify-content: flex-start;
   }
-  .app-sidebar .side-controls .lang-btn:hover,
+  @media (hover: hover) {
+    .app-sidebar .side-controls .lang-btn:hover,
   .app-sidebar .side-controls .theme-toggle-btn:hover {
-    background: rgba(255,255,255,.07);
-    color: #fff;
-    border: none;
+      background: rgba(255,255,255,.07);
+      color: #fff;
+      border: none;
+    }
   }
   .app-sidebar .side-controls svg {
     width: 14px;
@@ -10256,10 +10404,12 @@
   .view-toggle-label-short {
     display: block;
   }
-  .view-toggle-btn:hover {
-    background: rgba(255,255,255,.12);
-    border-color: rgba(255,255,255,.28);
-    color: #fff;
+  @media (hover: hover) {
+    .view-toggle-btn:hover {
+      background: rgba(255,255,255,.12);
+      border-color: rgba(255,255,255,.28);
+      color: #fff;
+    }
   }
   .view-toggle-btn.active {
     background: #fff;
@@ -10644,9 +10794,11 @@
   font-weight: 600;
   line-height: 1;
 }
-.home-match-more-btn:hover {
-  color: var(--color-brand-text);
-  text-decoration: underline;
+@media (hover: hover) {
+  .home-match-more-btn:hover {
+    color: var(--color-brand-text);
+    text-decoration: underline;
+  }
 }
 @media (max-width: 480px) {
   .home-match-more-btn { right: 10px; bottom: 6px; }
@@ -10861,9 +11013,11 @@
   font-weight: 700;
   line-height: 1;
 }
-.mini-rank-more-btn:hover {
-  color: var(--color-brand-text);
-  text-decoration: underline;
+@media (hover: hover) {
+  .mini-rank-more-btn:hover {
+    color: var(--color-brand-text);
+    text-decoration: underline;
+  }
 }
 
 
@@ -10895,7 +11049,10 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
-.squad-view-toggle-btn:hover { color: var(--color-brand-text); }
+@media (hover: hover) {
+  .squad-view-toggle-btn:hover { color: var(--color-brand-text);
+  }
+}
 .squad-view-toggle-btn.is-active {
   background: var(--color-surface);
   color: var(--color-brand-text);
@@ -10938,7 +11095,10 @@
 }
 .sqt-th-num { text-align: right !important; }
 .sqt-th-sortable { cursor: pointer; }
-.sqt-th-sortable:hover { background: var(--color-navy-light); }
+@media (hover: hover) {
+  .sqt-th-sortable:hover { background: var(--color-navy-light);
+  }
+}
 .sqt-th-sortable[aria-sort]::after {
   content: ' \25B2';
   font-size: var(--fs-2xs);
@@ -10948,7 +11108,10 @@
 
 .sqt-row { --sqt-bg: var(--color-surface); cursor: pointer; }
 .sqt-row:nth-child(even) { --sqt-bg: var(--color-bg-stripe); }
-.sqt-row:hover { --sqt-bg: var(--color-bg-row-hover); }
+@media (hover: hover) {
+  .sqt-row:hover { --sqt-bg: var(--color-bg-row-hover);
+  }
+}
 .sqt-row td {
   background: var(--sqt-bg);
   padding: 7px 10px;
@@ -11095,7 +11258,10 @@
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .pp-card-gk { background: linear-gradient(165deg, #0d8f87 0%, #075e59 100%); }
-.pp-card:hover { box-shadow: 0 5px 12px rgba(var(--color-navy-rgb), 0.35); }
+@media (hover: hover) {
+  .pp-card:hover { box-shadow: 0 5px 12px rgba(var(--color-navy-rgb), 0.35);
+  }
+}
 .pp-card-photo {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
@@ -11254,7 +11420,10 @@
     font-size: 14px; font-weight: 600; line-height: 1.35;
     cursor: pointer;
   }
-  .lineup-side-row:hover .lsr-name { text-decoration: underline; }
+  @media (hover: hover) {
+    .lineup-side-row:hover .lsr-name { text-decoration: underline;
+    }
+  }
   .lsr-num { flex: 0 0 26px; text-align: right; font-variant-numeric: tabular-nums; }
   .lsr-pos { flex: 0 0 30px; opacity: 0.85; font-weight: 700; }
   .lsr-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -11419,7 +11588,10 @@
   font-weight: 700;
 }
 .ti-assist-combo-name { cursor: pointer; }
-.ti-assist-combo-name:hover { text-decoration: underline; }
+@media (hover: hover) {
+  .ti-assist-combo-name:hover { text-decoration: underline;
+  }
+}
 .ti-assist-combo-arrow { color: var(--color-text-faint); font-weight: 600; }
 .ti-assist-combo-count { margin-left: auto; color: var(--color-teal-dark); font-weight: 700; white-space: nowrap; }
 .ti-assist-combo-together { margin-left: 6px; color: var(--color-text-faint); font-size: 11px; font-weight: 600; }
@@ -11568,7 +11740,10 @@
 .ti-am-table th, .ti-am-table td { padding: 6px 8px; text-align: center; white-space: nowrap; }
 .ti-am-table thead th { font-weight: 700; color: var(--color-text-darkest); }
 .ti-am-table .lineup-squad-link { cursor: pointer; }
-.ti-am-table .lineup-squad-link:hover { text-decoration: underline; }
+@media (hover: hover) {
+  .ti-am-table .lineup-squad-link:hover { text-decoration: underline;
+  }
+}
 .ti-am-corner { text-align: left !important; font-size: var(--fs-xs); font-weight: 600; color: var(--color-text-faint); }
 .ti-am-rowhead {
   position: sticky; left: 0; z-index: 1;
@@ -11598,7 +11773,10 @@
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
-.ti-fullrec-btn:hover { background: var(--color-bg-btn-hover); border-color: var(--color-teal); }
+@media (hover: hover) {
+  .ti-fullrec-btn:hover { background: var(--color-bg-btn-hover); border-color: var(--color-teal);
+  }
+}
 .ti-fullrec-btn:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; }
 .ti-scorer-card-row + .ti-fullrec-wrap { margin: 8px 2px 14px; }
 
@@ -11633,7 +11811,10 @@
 }
 .fullrec-name small { font-size: var(--fs-xs); font-weight: 600; color: var(--color-text-faint); }
 .fullrec-name.lineup-squad-link, .fullrec-combo-name .lineup-squad-link { cursor: pointer; }
-.fullrec-name.lineup-squad-link:hover, .fullrec-combo-name .lineup-squad-link:hover { text-decoration: underline; }
+@media (hover: hover) {
+  .fullrec-name.lineup-squad-link:hover, .fullrec-combo-name .lineup-squad-link:hover { text-decoration: underline;
+  }
+}
 .fullrec-combo-name { gap: 8px; align-items: center; }
 .fullrec-arrow { color: var(--color-text-faint); font-weight: 600; }
 .fullrec-sub { font-size: var(--fs-xs); font-weight: 600; color: var(--color-text-faint); white-space: nowrap; }
@@ -11659,7 +11840,10 @@
   display: flex; flex-direction: column; gap: 8px; min-width: 0;
   box-shadow: 0 3px 10px rgba(var(--color-navy-rgb), 0.06);
 }
-.ti-club-row:hover { background: var(--color-bg-stripe); }
+@media (hover: hover) {
+  .ti-club-row:hover { background: var(--color-bg-stripe);
+  }
+}
 .ti-club-row-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .ti-club-photo {
   flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
@@ -11831,7 +12015,11 @@
 .nmp-slot-cap { position: absolute; right: -5px; top: -5px; width: 14px; height: 14px; border-radius: 50%; background: var(--color-gold); color: #1b1b1b; font-style: normal; font-size: 8.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 .nmp-slot-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65); }
 .nmp-slot-cnt { font-size: var(--fs-2xs); font-weight: 600; color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
-.nmp-slot:hover .nmp-slot-dot, .nmp-slot:focus-visible .nmp-slot-dot { transform: scale(1.08); }
+.nmp-slot:focus-visible .nmp-slot-dot { transform: scale(1.08); }
+@media (hover: hover) {
+  .nmp-slot:hover .nmp-slot-dot { transform: scale(1.08);
+  }
+}
 .nmp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .nmp-chip { border: 0; border-radius: var(--radius-xs); padding: 5px 10px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; background: rgba(128, 128, 140, 0.14); color: var(--color-text-darkest); }
 
@@ -11839,7 +12027,10 @@
 .nmp-kp-list { display: flex; flex-direction: column; gap: 6px; }
 .nmp-kp-group-title { margin: 12px 0 6px; font-size: var(--fs-xs); font-weight: 600; color: var(--color-text-faint); }
 .nmp-kp { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; border-radius: 12px; padding: 8px 12px 8px 8px; font-family: inherit; cursor: pointer; background: rgba(128, 128, 140, 0.10); color: var(--color-text-darkest); }
-.nmp-kp:hover { background: rgba(128, 128, 140, 0.18); }
+@media (hover: hover) {
+  .nmp-kp:hover { background: rgba(128, 128, 140, 0.18);
+  }
+}
 .nmp-kp-opp { background: rgba(var(--color-red-rgb), 0.08); }
 .nmp-kp-photo { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 50%; overflow: hidden; background: rgba(128, 128, 140, 0.25); display: flex; align-items: center; justify-content: center; }
 .nmp-kp-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
@@ -11984,8 +12175,10 @@
   text-overflow: ellipsis;
   transition: var(--theme-transition);
 }
-.tc-select:hover {
-  border-color: var(--color-teal);
+@media (hover: hover) {
+  .tc-select:hover {
+    border-color: var(--color-teal);
+  }
 }
 .tc-select:focus-visible {
   outline: 2px solid var(--color-teal);
@@ -12005,11 +12198,13 @@
   cursor: pointer;
   transition: background 0.2s, color 0.2s, transform 0.25s, border-color 0.2s;
 }
-.tc-swap-btn:hover {
-  background: var(--color-teal);
-  border-color: var(--color-teal);
-  color: var(--color-white);
-  transform: rotate(180deg);
+@media (hover: hover) {
+  .tc-swap-btn:hover {
+    background: var(--color-teal);
+    border-color: var(--color-teal);
+    color: var(--color-white);
+    transform: rotate(180deg);
+  }
 }
 .tc-swap-btn:focus-visible {
   outline: 2px solid var(--color-teal);
@@ -12160,8 +12355,10 @@
     align-self: center;
     transform: rotate(90deg);
   }
-  .tc-swap-btn:hover {
-    transform: rotate(270deg);
+  @media (hover: hover) {
+    .tc-swap-btn:hover {
+      transform: rotate(270deg);
+    }
   }
 }
 
@@ -12192,10 +12389,12 @@
     white-space: nowrap;
     transition: all 0.2s;
   }
-  .side-community-btn:hover {
-    background: var(--color-gold);
-    color: var(--color-brand-text);
-    border-color: var(--color-gold);
+  @media (hover: hover) {
+    .side-community-btn:hover {
+      background: var(--color-gold);
+      color: var(--color-brand-text);
+      border-color: var(--color-gold);
+    }
   }
 }
 
@@ -12409,7 +12608,10 @@ button.mc-h2h-row {
   cursor: pointer;
   transition: background .15s, color .15s;
 }
-button.side-season-seg:hover { background: rgba(255,255,255,.14); color: #fff; }
+@media (hover: hover) {
+  button.side-season-seg:hover { background: rgba(255,255,255,.14); color: #fff;
+  }
+}
 /* 지금 보고 있는 시즌: 골드 톤으로 강조 (클릭 불가) */
 .side-season-active {
   cursor: default;
@@ -12492,7 +12694,10 @@ body.season-archive .side-live-badge { display: none !important; }
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
 }
-.ti-prevseason-btn:hover { box-shadow: 0 6px 16px rgba(var(--color-teal-rgb), 0.38); filter: brightness(1.05); }
+@media (hover: hover) {
+  .ti-prevseason-btn:hover { box-shadow: 0 6px 16px rgba(var(--color-teal-rgb), 0.38); filter: brightness(1.05);
+  }
+}
 .ti-prevseason-btn:active { transform: translateY(0); }
 .ti-prevseason-btn:focus-visible { outline: 2px solid var(--color-navy); outline-offset: 2px; }
 .ti-prevseason-arrow { font-size: 20px; line-height: 1; font-weight: 600; }
@@ -12566,7 +12771,10 @@ body.season-archive #viewToggleWrap > :not(.archive-nav-btn) { display: none !im
   background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
   box-shadow: 0 4px 12px rgba(var(--color-navy-rgb), 0.3);
 }
-.archive-club-cur-btn:hover { box-shadow: 0 6px 16px rgba(var(--color-navy-rgb), 0.4); }
+@media (hover: hover) {
+  .archive-club-cur-btn:hover { box-shadow: 0 6px 16px rgba(var(--color-navy-rgb), 0.4);
+  }
+}
 
 /* 25/26 화면 상단 카드: 왼쪽 협회(NRFA) 로고 */
 .archive-hero-logo { width: 64px; height: 64px; flex: none; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(var(--color-black-rgb), 0.2)); }
@@ -12622,7 +12830,10 @@ body.season-archive #viewToggleWrap > :not(.archive-nav-btn) { display: none !im
   border: none; border-left: 3px solid transparent; cursor: pointer; font: inherit;
   padding: 14px 14px 13px; min-width: 0;
 }
-.archive-hl-card:hover { border-left-color: var(--color-teal); }
+@media (hover: hover) {
+  .archive-hl-card:hover { border-left-color: var(--color-teal);
+  }
+}
 .archive-hl-title {
   font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.3px; color: var(--color-teal-dark);
 }
@@ -12706,10 +12917,16 @@ body.season-archive #viewToggleWrap > :not(.archive-nav-btn) { display: none !im
   border: 1px solid var(--color-border-light);
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
-.scatter-compare-btn:hover { background: var(--color-bg-btn-hover); border-color: var(--color-selected-bg); }
+@media (hover: hover) {
+  .scatter-compare-btn:hover { background: var(--color-bg-btn-hover); border-color: var(--color-selected-bg);
+  }
+}
 /* 선택됨 상태는 사이트 공통 토큰 사용 (기존 회색 #8a94a6 + 흰 글씨는 대비가 약 3:1이었음) */
-.scatter-compare-btn.active,
-.scatter-compare-btn.active:hover { background: var(--color-selected-bg); border-color: var(--color-selected-bg); color: var(--color-selected-fg); }
+.scatter-compare-btn.active { background: var(--color-selected-bg); border-color: var(--color-selected-bg); color: var(--color-selected-fg); }
+@media (hover: hover) {
+  .scatter-compare-btn.active:hover { background: var(--color-selected-bg); border-color: var(--color-selected-bg); color: var(--color-selected-fg);
+  }
+}
 /* 설명: PC에서도 모바일과 같은 안내 박스 스타일 (버튼 오른쪽에 내용 길이만큼만 차지) */
 .scatter-compare-note {
   flex: 0 1 auto;
@@ -13320,8 +13537,10 @@ body.season-archive #viewToggleWrap > :not(.archive-nav-btn) { display: none !im
   color: var(--color-text-dark);
   border-bottom-color: var(--color-border-light);
 }
-:root[data-theme="dark"] .leaflet-bar a:hover {
-  background: var(--color-bg-btn-hover);
+@media (hover: hover) {
+  :root[data-theme="dark"] .leaflet-bar a:hover {
+    background: var(--color-bg-btn-hover);
+  }
 }
 :root[data-theme="dark"] .leaflet-container .leaflet-control-attribution {
   background: rgba(30, 34, 48, 0.8);
@@ -13364,7 +13583,10 @@ body {
   box-shadow: 0 2px 6px rgba(var(--color-navy-rgb), 0.28);
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.pcard:hover { box-shadow: 0 6px 14px rgba(var(--color-navy-rgb), 0.35); }
+@media (hover: hover) {
+  .pcard:hover { box-shadow: 0 6px 14px rgba(var(--color-navy-rgb), 0.35);
+  }
+}
 .pcard::before {
   content: '';
   position: absolute; left: 0; right: 0; top: 0; height: 40%;
@@ -13492,7 +13714,10 @@ body {
   .ti-room-value { font-size: 26px; }
 }
 .ti-room-item.is-link { cursor: pointer; }
-.ti-room-item.is-link:hover { box-shadow: 0 6px 16px rgba(var(--color-navy-rgb), 0.14); }
+@media (hover: hover) {
+  .ti-room-item.is-link:hover { box-shadow: 0 6px 16px rgba(var(--color-navy-rgb), 0.14);
+  }
+}
 .ti-room-item.is-link:focus-visible { outline: 2px solid var(--color-navy); outline-offset: 2px; }
 .ti-room-go { position: absolute; right: 12px; bottom: 8px; font-size: 20px; font-weight: 600; color: var(--color-text-faint); }
 
@@ -13526,7 +13751,10 @@ body {
 .spm-form-sw.res-d { background: #8fa0b8; }
 .spm-form-sw.res-l { background: var(--color-red); }
 .spm-form-col.is-link { cursor: pointer; border-radius: 6px; }
-.spm-form-col.is-link:hover { background: rgba(var(--color-navy-rgb), 0.07); }
+@media (hover: hover) {
+  .spm-form-col.is-link:hover { background: rgba(var(--color-navy-rgb), 0.07);
+  }
+}
 .spm-form-col.is-link:focus-visible { outline: 2px solid var(--color-navy); outline-offset: 1px; }
 .spm-form-sum { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
 
@@ -13536,7 +13764,10 @@ body {
 
 .ti-sponsor-card { position: relative; display: flex; align-items: center; gap: 14px; margin: 0; text-decoration: none; color: inherit;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; animation: tiSponsorIn 0.4s ease both; animation-delay: calc(var(--i, 0) * 45ms); }
-.ti-sponsor-card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(var(--color-navy-rgb), 0.16); }
+@media (hover: hover) {
+  .ti-sponsor-card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(var(--color-navy-rgb), 0.16);
+  }
+}
 .ti-sponsor-card:focus-visible { outline: 3px solid var(--color-gold-strong); outline-offset: 2px; }
 .ti-sponsor-card:active { transform: translateY(-1px); }
 
@@ -13547,7 +13778,10 @@ body {
 .ti-sponsor-name { font-size: 14.5px; font-weight: 700; color: var(--color-text-darkest); word-break: keep-all; }
 .ti-sponsor-desc { font-size: 12.5px; line-height: 1.5; color: var(--color-text-muted); word-break: keep-all; }
 .ti-sponsor-arrow { flex: 0 0 auto; font-size: 14px; font-weight: 700; color: var(--color-text-faint); opacity: 0.45; transition: transform 0.18s ease, opacity 0.18s ease, color 0.18s ease; }
-.ti-sponsor-card:hover .ti-sponsor-arrow { opacity: 1; color: var(--color-navy); transform: translate(2px, -2px); }
+@media (hover: hover) {
+  .ti-sponsor-card:hover .ti-sponsor-arrow { opacity: 1; color: var(--color-navy); transform: translate(2px, -2px);
+  }
+}
 
 /* 메인 · 용품 스폰서: 위쪽 색 띠 + 가운데 정렬된 큰 로고 */
 .ti-sponsor-card.is-featured { flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; border: 1.5px solid rgba(var(--color-navy-rgb), 0.22); }
@@ -13559,8 +13793,14 @@ body {
 .ti-sponsor-card.is-featured .ti-sponsor-name { font-size: 20px; font-weight: 800; }
 .ti-sponsor-cta { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--color-navy); background: var(--color-bg-stripe); transition: background 0.18s ease, color 0.18s ease; }
 .ti-sponsor-cta i { font-style: normal; transition: transform 0.18s ease; }
-.ti-sponsor-card.is-featured:hover .ti-sponsor-cta { background: var(--color-navy); color: #fff; }
-.ti-sponsor-card.is-featured:hover .ti-sponsor-cta i { transform: translateX(3px); }
+@media (hover: hover) {
+  .ti-sponsor-card.is-featured:hover .ti-sponsor-cta { background: var(--color-navy); color: #fff;
+  }
+}
+@media (hover: hover) {
+  .ti-sponsor-card.is-featured:hover .ti-sponsor-cta i { transform: translateX(3px);
+  }
+}
 
 /* 메인 스폰서: 금색 강조 */
 .ti-sponsor-card.is-main { border-color: var(--color-gold-strong); box-shadow: 0 8px 26px rgba(var(--color-navy-rgb), 0.14), 0 0 0 3px rgba(var(--color-navy-rgb), 0.04); }
@@ -13572,7 +13812,10 @@ body {
 @keyframes tiSponsorIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .ti-sponsor-card { animation: none; transition: none; }
-  .ti-sponsor-card:hover { transform: none; }
+  @media (hover: hover) {
+    .ti-sponsor-card:hover { transform: none;
+    }
+  }
 }
 @media (max-width: 560px) {
   .ti-sponsor-grid { grid-template-columns: 1fr; }
@@ -13588,7 +13831,10 @@ body {
 .ti-lb-img { max-width: 92vw; max-height: 78vh; border-radius: 8px; object-fit: contain; }
 .ti-lb-cap { color: #fff; font-size: 14px; font-weight: 600; text-align: center; }
 .ti-lb-btn { position: absolute; width: 44px; height: 44px; border: none; border-radius: 50%; background: rgba(255, 255, 255, 0.16); color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
-.ti-lb-btn:hover { background: rgba(255, 255, 255, 0.3); }
+@media (hover: hover) {
+  .ti-lb-btn:hover { background: rgba(255, 255, 255, 0.3);
+  }
+}
 .ti-lb-close { top: 14px; right: 14px; }
 .ti-lb-prev { left: 12px; top: 50%; transform: translateY(-50%); }
 .ti-lb-next { right: 12px; top: 50%; transform: translateY(-50%); }
@@ -13611,7 +13857,10 @@ body {
   .wi-select { max-width: 190px; padding: 6px 8px; border: 1px solid var(--color-border-light); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-brand-text); font: inherit; font-size: 13px; font-weight: 600; }
   .wi-presets { display: flex; flex-wrap: wrap; gap: 6px; }
   .wi-chip { padding: 5px 11px; border: 1px solid var(--color-teal); border-radius: var(--radius-xs); background: var(--color-surface); color: var(--color-teal-dark); font: inherit; font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
-  .wi-chip:hover:not(:disabled) { background: rgba(var(--color-teal-rgb), 0.12); }
+  @media (hover: hover) {
+    .wi-chip:hover:not(:disabled) { background: rgba(var(--color-teal-rgb), 0.12);
+    }
+  }
   .wi-chip-ghost { border-color: var(--color-border-light); color: var(--color-text-legend); }
   .wi-chip.is-on { background: var(--color-teal); color: #fff; }
   .wi-metric { display: inline-flex; gap: 4px; margin-left: auto; }
@@ -13770,7 +14019,10 @@ body {
   .sc-chip-danger { background: var(--color-red); }
   table.sc-table tr.sc-toggle-row td { height: auto; padding: 0; border-bottom: 0; background: var(--color-bg-table-alt); }
   .sc-toggle-btn { width: 100%; padding: 10px 8px; border: 0; background: none; color: var(--color-text-secondary); font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
-  .sc-toggle-btn:hover { color: var(--color-text-darkest); }
+  @media (hover: hover) {
+    .sc-toggle-btn:hover { color: var(--color-text-darkest);
+    }
+  }
   .mc-ti-margin { margin: 2px 0 10px; font-size: 12.5px; line-height: 1.5; color: var(--color-text-secondary); }
   .mc-ti-margin strong { color: var(--color-text-darkest); }
 
@@ -13786,7 +14038,10 @@ body {
   .sp-filter-btn { border: 1px solid var(--color-border-chip); background: var(--color-surface); color: var(--color-text-secondary); border-radius: var(--radius-xs); padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
   .sp-filter-btn.active { background: var(--color-text-darkest); color: var(--color-surface); border-color: var(--color-text-darkest); }
   table.scorer-pace-table th.sp-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
-  table.scorer-pace-table th.sp-sortable:hover { text-decoration: underline; }
+  @media (hover: hover) {
+    table.scorer-pace-table th.sp-sortable:hover { text-decoration: underline;
+    }
+  }
   table.scorer-pace-table th.sp-sortable.active { color: var(--color-gold-strong); }
   table.scorer-pace-table .sp-arrow { display: inline-block; min-width: 10px; margin-left: 2px; font-size: 9px; }
   table.scorer-pace-table td.sp-trend { padding-left: 8px; padding-right: 8px; }
@@ -13830,7 +14085,10 @@ body {
 .round-mode-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 12px; }
 .round-mode-seg { order: 1; display: inline-flex; gap: 4px; padding: 4px; background: var(--color-surface); border-radius: var(--radius-md); box-shadow: 0 6px 18px rgba(var(--color-navy-rgb), 0.12); }
 .round-mode-btn { border: 0; background: transparent; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--color-text-toggle); padding: 8px 16px; min-height: 36px; border-radius: var(--radius-xs); cursor: pointer; transition: all 0.2s; }
-.round-mode-btn:hover { background: var(--color-bg-btn-hover); color: var(--color-brand-text); }
+@media (hover: hover) {
+  .round-mode-btn:hover { background: var(--color-bg-btn-hover); color: var(--color-brand-text);
+  }
+}
 .round-mode-btn.active { background: var(--color-selected-bg); color: var(--color-selected-fg); box-shadow: var(--color-selected-shadow); }
 .round-mode-bar .round-half-bar { order: 2; margin-bottom: 0; }
 .round-mode-actions { order: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-left: auto; }
@@ -13892,7 +14150,10 @@ body {
 .mgp-assist .mgp-lbl { font-size: 13px; font-weight: 600; opacity: 0.85; }
 .mgp-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mgp-name.lineup-squad-link { cursor: pointer; }
-.mgp-name.lineup-squad-link:hover { text-decoration: underline; }
+@media (hover: hover) {
+  .mgp-name.lineup-squad-link:hover { text-decoration: underline;
+  }
+}
 
 /* ===== 경기 상세: 오른쪽 열이 좁을 때 최근 상대 전적을 세로 카드형으로 (가로 스크롤/잘림 방지) ===== */
 .match-detail-right { container-type: inline-size; }
@@ -13992,7 +14253,10 @@ body {
   border-radius: var(--radius-lg);
   transition: background .15s, transform .15s;
 }
-.home-match-item.is-clickable:hover { background: var(--color-bg-table-alt); }
+@media (hover: hover) {
+  .home-match-item.is-clickable:hover { background: var(--color-bg-table-alt);
+  }
+}
 .home-match-item.is-clickable:active { transform: translateY(0); }
 .home-match-item.is-clickable:focus-visible { outline: 2px solid var(--color-teal-dark); outline-offset: 2px; }
 
@@ -14155,7 +14419,10 @@ body {
   cursor: pointer;
   transition: background .18s ease, border-color .18s ease, transform .12s ease;
 }
-.side-cup-btn:hover { background: rgba(var(--color-gold-rgb), .28); border-color: rgba(var(--color-gold-rgb), .7); }
+@media (hover: hover) {
+  .side-cup-btn:hover { background: rgba(var(--color-gold-rgb), .28); border-color: rgba(var(--color-gold-rgb), .7);
+  }
+}
 .side-cup-btn:active { transform: scale(.98); }
 .side-cup-btn:focus-visible, .cup-toggle-mobile:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
 .side-cup-icon { width: 17px; height: 17px; flex-shrink: 0; }
@@ -14498,7 +14765,10 @@ summary.ti-bye-flow-toggle,
 .forf-match { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
   background: var(--color-surface); border: 1px solid var(--color-border-light); border-radius: var(--radius-md);
   padding: 10px 12px; transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease; }
-.forf-match:hover { background: rgba(var(--color-navy-rgb), 0.045); }
+@media (hover: hover) {
+  .forf-match:hover { background: rgba(var(--color-navy-rgb), 0.045);
+  }
+}
 .forf-match:active { transform: scale(0.995); }
 .forf-match:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; }
 .forf-match-mine { border-left: 3px solid var(--color-teal); }
@@ -14996,7 +15266,10 @@ body {
 .rmd-sub-flag.is-loss { color: var(--color-text-muted); }
 .rmd-logo { flex: none; width: 38px; height: 38px; object-fit: contain; }
 .rmd-team[data-team-link] { cursor: pointer; }
-.rmd-team[data-team-link]:hover .rmd-team-name > .lbl:first-child { text-decoration: underline; text-underline-offset: 3px; }
+@media (hover: hover) {
+  .rmd-team[data-team-link]:hover .rmd-team-name > .lbl:first-child { text-decoration: underline; text-underline-offset: 3px;
+  }
+}
 .rmd-team[data-team-link]:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 3px; border-radius: var(--radius-sm); }
 
 /* 가운데: 스코어 · 상태 · 스코어 (모든 행에서 같은 폭이라 열이 정렬됨) */
@@ -15031,7 +15304,11 @@ button.rmd-status-link {
   font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
-.rmd-toggle:hover, .rmd-toggle:focus-visible { background: var(--color-bg-table-alt); color: var(--color-text-dark); }
+.rmd-toggle:focus-visible { background: var(--color-bg-table-alt); color: var(--color-text-dark); }
+@media (hover: hover) {
+  .rmd-toggle:hover { background: var(--color-bg-table-alt); color: var(--color-text-dark);
+  }
+}
 .rmd-toggle svg { transition: transform 0.2s; }
 .rmd-row.is-open .rmd-toggle svg { transform: rotate(180deg); }
 .rmd-row.is-open .rmd-toggle { color: var(--color-teal); }
@@ -15050,7 +15327,11 @@ button.rmd-status-link {
   font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
-.rmd-pvbtn:hover, .rmd-pvbtn:focus-visible { background: var(--color-bg-table-alt); color: var(--color-text-dark); }
+.rmd-pvbtn:focus-visible { background: var(--color-bg-table-alt); color: var(--color-text-dark); }
+@media (hover: hover) {
+  .rmd-pvbtn:hover { background: var(--color-bg-table-alt); color: var(--color-text-dark);
+  }
+}
 .rmd-pvbtn svg { transition: transform 0.2s; }
 .rmd-row.is-pv-open .rmd-pvbtn svg { transform: rotate(180deg); }
 .rmd-row.is-pv-open .rmd-pvbtn { color: var(--color-teal); }
@@ -15067,7 +15348,11 @@ button.rmd-status-link {
   cursor: pointer; white-space: nowrap;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
-.rmd-btn:hover, .rmd-btn:focus-visible { background: var(--color-teal); border-color: var(--color-teal); color: var(--color-white); }
+.rmd-btn:focus-visible { background: var(--color-teal); border-color: var(--color-teal); color: var(--color-white); }
+@media (hover: hover) {
+  .rmd-btn:hover { background: var(--color-teal); border-color: var(--color-teal); color: var(--color-white);
+  }
+}
 
 /* 목록 폭이 좁을 때(모바일, 또는 사이드바 때문에 본문이 좁은 PC/태블릿):
    한 경기를 3줄(시간·구장 / 팀·스코어 / 주차·버튼)로 쌓음. 뷰포트가 아니라 목록 자체 폭 기준입니다. */
@@ -15146,10 +15431,18 @@ button.rmd-status-link {
   cursor: pointer; white-space: nowrap;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
-.rmd-act-btn:hover, .rmd-act-btn:focus-visible { background: var(--color-teal); border-color: var(--color-teal); color: var(--color-white); }
+.rmd-act-btn:focus-visible { background: var(--color-teal); border-color: var(--color-teal); color: var(--color-white); }
+@media (hover: hover) {
+  .rmd-act-btn:hover { background: var(--color-teal); border-color: var(--color-teal); color: var(--color-white);
+  }
+}
 .rmd-act-btn svg { flex-shrink: 0; }
 .rmd-act-btn.rmd-act-hl { background: #ff0000; border-color: #ff0000; color: var(--color-white); }
-.rmd-act-btn.rmd-act-hl:hover, .rmd-act-btn.rmd-act-hl:focus-visible { background: #d90000; border-color: #d90000; }
+.rmd-act-btn.rmd-act-hl:focus-visible { background: #d90000; border-color: #d90000; }
+@media (hover: hover) {
+  .rmd-act-btn.rmd-act-hl:hover { background: #d90000; border-color: #d90000;
+  }
+}
 .rmd-act-caster { font-size: 11.5px; font-weight: 500; opacity: 0.9; }
 
 /* PC: 마지막 칸(버튼) 없이 5칸 고정 → 팀명/스코어 위치가 행마다 같음. 버튼은 아래 줄 전체 폭에 오른쪽 정렬 */
@@ -15167,8 +15460,16 @@ button.rmd-status-link {
   font-size: 13px; font-weight: 600; white-space: nowrap;
 }
 .rmd-tv .rmd-end .rmd-act-hl { background: #ff0000; border-color: #ff0000; color: var(--color-white); }
-.rmd-tv .rmd-end .rmd-act-hl:hover, .rmd-tv .rmd-end .rmd-act-hl:focus-visible { background: #d90000; border-color: #d90000; }
-.rmd-tv .rmd-end .rmd-toggle:hover, .rmd-tv .rmd-end .rmd-toggle:focus-visible { background: var(--color-bg-table-alt); }
+.rmd-tv .rmd-end .rmd-act-hl:focus-visible { background: #d90000; border-color: #d90000; }
+@media (hover: hover) {
+  .rmd-tv .rmd-end .rmd-act-hl:hover { background: #d90000; border-color: #d90000;
+  }
+}
+.rmd-tv .rmd-end .rmd-toggle:focus-visible { background: var(--color-bg-table-alt); }
+@media (hover: hover) {
+  .rmd-tv .rmd-end .rmd-toggle:hover { background: var(--color-bg-table-alt);
+  }
+}
 .rmd-row.is-open.rmd-tv .rmd-end .rmd-toggle { color: var(--color-teal); border-color: var(--color-teal); }
 
 /* 좁은 폭(모바일): 일반 버튼은 같은 폭으로 나눠 채우고, 하이라이트는 아래 전체 폭 */
@@ -15200,7 +15501,11 @@ button.rmd-status-link {
   background: var(--color-surface); color: var(--color-text-dark);
   font-size: 13px; font-weight: 600; white-space: nowrap;
 }
-.rmd-end-detail .rmd-toggle:hover, .rmd-end-detail .rmd-toggle:focus-visible { background: var(--color-bg-table-alt); }
+.rmd-end-detail .rmd-toggle:focus-visible { background: var(--color-bg-table-alt); }
+@media (hover: hover) {
+  .rmd-end-detail .rmd-toggle:hover { background: var(--color-bg-table-alt);
+  }
+}
 .rmd-row.is-open .rmd-end-detail .rmd-toggle { color: var(--color-teal); border-color: var(--color-teal); }
 @container rmdlist (max-width: 959px) {
   .rmd-end.rmd-end-detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
@@ -15253,7 +15558,10 @@ button.rmd-status-link {
   padding: 8px 14px; min-height: 38px; border-radius: var(--radius-xs);
   cursor: pointer; white-space: nowrap; transition: all 0.2s;
 }
-.predict-tab:hover { background: var(--color-bg-btn-hover); color: var(--color-brand-text); }
+@media (hover: hover) {
+  .predict-tab:hover { background: var(--color-bg-btn-hover); color: var(--color-brand-text);
+  }
+}
 .predict-tab.active { background: var(--color-selected-bg); color: var(--color-selected-fg); box-shadow: var(--color-selected-shadow); }
 .predict-panel { display: none; width: 100%; min-width: 0; }
 .predict-panel.active { display: block; }
@@ -15591,7 +15899,10 @@ button.rmd-status-link {
   cursor: pointer;
   opacity: 0.6;
 }
-.venue-route-legend .vrl-close:hover { opacity: 1; background: rgba(120, 130, 150, 0.2); }
+@media (hover: hover) {
+  .venue-route-legend .vrl-close:hover { opacity: 1; background: rgba(120, 130, 150, 0.2);
+  }
+}
 .venue-route-legend .vrl-title { font-weight: 700; font-size: 13px; }
 .venue-route-legend .vrl-sub { opacity: 0.7; margin-bottom: 4px; }
 .venue-route-legend .vrl-row { display: flex; align-items: center; gap: 6px; }
@@ -15703,7 +16014,10 @@ button.rmd-status-link {
   background: transparent; color: var(--color-text-secondary);
   font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
 }
-.matchday-popup-btn-secondary:hover { background: var(--color-bg-btn-hover); }
+@media (hover: hover) {
+  .matchday-popup-btn-secondary:hover { background: var(--color-bg-btn-hover);
+  }
+}
 
 /* 경기일 팝업: 낮은 화면(가로 모드·작은 폰)에서도 하단 버튼이 항상 보이도록 목록만 스크롤 */
 .matchday-popup-content { display: flex; flex-direction: column; }
@@ -15739,7 +16053,10 @@ button.rmd-status-link {
   border-radius: var(--radius-md);
   transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
-.disclaimer-dontshow-group .disclaimer-dontshow:hover { background: var(--color-bg-btn-hover); }
+@media (hover: hover) {
+  .disclaimer-dontshow-group .disclaimer-dontshow:hover { background: var(--color-bg-btn-hover);
+  }
+}
 .disclaimer-dontshow-group .disclaimer-dontshow input {
   -webkit-appearance: none; appearance: none;
   flex: 0 0 auto;
@@ -16172,7 +16489,10 @@ button.rmc-pending-badge:active {
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s ease, transform 0.1s ease;
 }
-.share-toast-action:hover { background: rgba(var(--color-white-rgb), 0.24); }
+@media (hover: hover) {
+  .share-toast-action:hover { background: rgba(var(--color-white-rgb), 0.24);
+  }
+}
 .share-toast-action:active { transform: scale(0.96); }
 
 /* ----- 안내 시트 ----- */
@@ -16231,9 +16551,15 @@ button.rmc-pending-badge:active {
 }
 .notice-sheet-btn:active { transform: scale(0.97); }
 .notice-sheet-ok { background: var(--color-selected-bg); color: var(--color-selected-fg); }
-.notice-sheet-ok:hover { background: var(--color-navy-light); }
+@media (hover: hover) {
+  .notice-sheet-ok:hover { background: var(--color-navy-light);
+  }
+}
 .notice-sheet-copy { background: var(--color-bg-btn-hover); color: var(--color-brand-text); }
-.notice-sheet-copy:hover { background: var(--color-border-chip); }
+@media (hover: hover) {
+  .notice-sheet-copy:hover { background: var(--color-border-chip);
+  }
+}
 @media (max-width: 720px) {
   /* 기존 바텀시트의 손잡이는 어두운 헤더 위 흰색이라, 헤더가 없는 이 시트에서는 밝은 면 위에서 보이는 색으로 바꿉니다 */
   .notice-sheet-modal.sheet-modal > .modal-content::before {
@@ -16378,7 +16704,10 @@ html.celebrate-lock { overflow: hidden; }
   transition: transform 0.12s ease, filter 0.15s ease;
   animation: celebrateRise 0.45s ease 1s both;
 }
-.celebrate-btn:hover { filter: brightness(1.08); }
+@media (hover: hover) {
+  .celebrate-btn:hover { filter: brightness(1.08);
+  }
+}
 .celebrate-btn:active { transform: scale(0.98); }
 .celebrate-confetti {
   position: absolute;
@@ -16701,7 +17030,10 @@ html.celebrate-lock { overflow: hidden; }
 .ti-more-sum::-webkit-details-marker { display: none; }
 .ti-more-sum::after { content: " ▾"; }
 .ti-more[open] > .ti-more-sum::after { content: " ▴"; }
-.ti-more-sum:hover { background: var(--color-bg-btn-hover); color: var(--color-brand-text); }
+@media (hover: hover) {
+  .ti-more-sum:hover { background: var(--color-bg-btn-hover); color: var(--color-brand-text);
+  }
+}
 .ti-sub { margin: 16px 2px 6px; font-size: 13px; font-weight: 700; color: var(--color-text-dark); }
 :root[data-theme="dark"] .ti-sub { color: var(--color-text-chip); }
 .ti-table-wrap { overflow-x: auto; margin-top: 10px; }
@@ -16741,7 +17073,10 @@ html.celebrate-lock { overflow: hidden; }
 .ti-club-table thead th { padding: 4px 4px 6px; vertical-align: bottom; }
 .ti-club-table .ti-sort-btn { display: inline-block; background: none; border: 0; padding: 4px 6px; font: inherit; color: var(--color-white); line-height: 1.3; cursor: pointer; border-radius: var(--radius-xs); }
 .ti-club-table .ti-sort-btn small { display: block; font-size: 10.5px; font-weight: 500; opacity: 0.8; }
-.ti-club-table .ti-sort-btn:hover { background: rgba(255, 255, 255, 0.2); }
+@media (hover: hover) {
+  .ti-club-table .ti-sort-btn:hover { background: rgba(255, 255, 255, 0.2);
+  }
+}
 .ti-club-table th.ti-sorted .ti-sort-btn { background: rgba(255, 255, 255, 0.18); font-weight: 800; }
 .ti-sort-arrow { font-size: 9px; }
 .ti-club-table .ti-club-name { text-align: left; position: sticky; left: 0; z-index: 1; background: var(--color-surface); padding-left: 4px; }
@@ -16756,7 +17091,10 @@ html.celebrate-lock { overflow: hidden; }
 /* ===== 구단 위치: 지도 보기 / 원정거리 보기 전환 ===== */
 .venue-mode-wrap { display: flex; gap: 4px; padding: 4px; margin: 0 0 12px; background: var(--color-bg-stripe); border: 1px solid var(--color-border-chip); border-radius: var(--radius-xs); }
 .venue-mode-btn { flex: 1 1 0; background: transparent; color: var(--color-text-toggle); border: 0; padding: 8px 12px; border-radius: var(--radius-xs); cursor: pointer; font-size: 13px; font-weight: 700; white-space: nowrap; transition: background 0.2s, color 0.2s; }
-.venue-mode-btn:hover { color: var(--color-brand-text); }
+@media (hover: hover) {
+  .venue-mode-btn:hover { color: var(--color-brand-text);
+  }
+}
 .venue-mode-btn.active { background: var(--color-surface); color: var(--color-teal-dark); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 :root[data-theme="dark"] .venue-mode-btn.active { color: var(--color-teal-light); }
 .ti-sort-arrow.ti-sort-idle { opacity: 0.6; }
@@ -16926,7 +17264,11 @@ html.celebrate-lock { overflow: hidden; }
 .ta-sum-value { text-align: right; min-width: 0; }
 .ta-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
 .ta-nav-chip { min-width: 0; white-space: nowrap; text-align: center; padding: 7px 4px; border: 0; border-radius: 999px; background: var(--color-bg-btn-hover); color: var(--color-text-soft); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.ta-nav-chip:hover, .ta-nav-chip:focus-visible { color: var(--color-stat-value); }
+.ta-nav-chip:focus-visible { color: var(--color-stat-value); }
+@media (hover: hover) {
+  .ta-nav-chip:hover { color: var(--color-stat-value);
+  }
+}
 .ti-section-title[id^="taSec"] { scroll-margin-top: 64px; }
 .ta-badge { display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 999px; background: var(--color-bg-btn-hover); color: var(--color-text-muted); font-size: 10px; font-weight: 700; white-space: nowrap; vertical-align: middle; }
 .ta-caution { margin-top: 10px; }
@@ -16934,14 +17276,21 @@ html.celebrate-lock { overflow: hidden; }
 /* ---- 전력분석 UX 개선 ---- */
 .ta-sec-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ta-top-link { flex: none; padding: 3px 9px; border: 0; border-radius: 999px; background: transparent; color: var(--color-text-muted); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
-.ta-top-link:hover, .ta-top-link:focus-visible { background: var(--color-bg-btn-hover); color: var(--color-stat-value); }
+.ta-top-link:focus-visible { background: var(--color-bg-btn-hover); color: var(--color-stat-value); }
+@media (hover: hover) {
+  .ta-top-link:hover { background: var(--color-bg-btn-hover); color: var(--color-stat-value);
+  }
+}
 .ta-nav-chip:focus-visible, .ta-top-link:focus-visible, .ta-more-btn:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; }
 .ta-chips-sm .ta-chip { min-width: 46px; padding: 3px 7px; }
 .ta-chips-sm .ta-chip-main { font-size: 11.5px; }
 .ta-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .ta-table th { white-space: nowrap; }
 .ta-more-btn { display: block; width: 100%; margin-top: 8px; padding: 8px 0; border: 0; border-radius: var(--radius-md); background: var(--color-bg-btn-hover); color: var(--color-text-soft); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.ta-more-btn:hover { color: var(--color-stat-value); }
+@media (hover: hover) {
+  .ta-more-btn:hover { color: var(--color-stat-value);
+  }
+}
 .ta-card-compact { padding: 12px 14px; margin-top: 10px; }
 .ta-subtitle-first { margin-top: 0; }
 .ta-progress { position: relative; height: 8px; margin-top: 4px; border-radius: 4px; background: var(--color-bg-table-alt); }
@@ -17075,7 +17424,10 @@ tr[data-a11y-btn]:focus-visible, td[data-a11y-btn]:focus-visible { outline-offse
 .mcenter-mvp-ic .ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .mcenter-mvp-main { display: flex; flex-direction: column; min-width: 0; }
 .mcenter-mvp-name { font-size: 16px; font-weight: 800; color: var(--color-text-dark); cursor: pointer; }
-.mcenter-mvp-name:hover { text-decoration: underline; }
+@media (hover: hover) {
+  .mcenter-mvp-name:hover { text-decoration: underline;
+  }
+}
 .mcenter-mvp-sub { font-size: var(--fs-xs); color: var(--color-text-soft); }
 
 /* 타임라인 막대 */
@@ -17107,7 +17459,10 @@ tr[data-a11y-btn]:focus-visible, td[data-a11y-btn]:focus-visible { outline-offse
 .mcenter-ev-body { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-width: 0; font-size: 15px; color: var(--color-text-dark); }
 .mcenter-ev-goal .mcenter-name { font-weight: 800; }
 .mcenter-name.lineup-squad-link { cursor: pointer; }
-.mcenter-name.lineup-squad-link:hover { text-decoration: underline; }
+@media (hover: hover) {
+  .mcenter-name.lineup-squad-link:hover { text-decoration: underline;
+  }
+}
 .mcenter-assist { font-size: 13px; color: var(--color-teal-dark); font-weight: 600; }
 .mcenter-in { color: var(--color-green-text); font-weight: 700; }
 .mcenter-out { color: var(--color-red-text); font-weight: 700; }
@@ -17340,7 +17695,10 @@ tr[data-a11y-btn]:focus-visible, td[data-a11y-btn]:focus-visible { outline-offse
 /* ===== 경기 일정 변경 팝업 (newsPopupModal) ===== */
 .rs-popup { max-width: 400px; }
 .rs-popup .news-popup-close-x { background: rgba(255,255,255,0.22); }
-.rs-popup .news-popup-close-x:hover { background: rgba(255,255,255,0.36); }
+@media (hover: hover) {
+  .rs-popup .news-popup-close-x:hover { background: rgba(255,255,255,0.36);
+  }
+}
 .rs-head {
   background: linear-gradient(135deg, var(--color-navy-deep) 0%, var(--color-navy-light) 100%);
   padding: 22px 20px 20px; text-align: center; color: #fff;
@@ -17423,10 +17781,16 @@ button.rmd-status-link::after {
   content: "›"; display: inline-block; margin-left: 3px;
   font-weight: 500; transition: transform 0.15s;
 }
-button.rmd-status-link:hover,
 button.rmd-status-link:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
-button.rmd-status-link:hover::after,
+@media (hover: hover) {
+  button.rmd-status-link:hover { text-decoration: underline; text-underline-offset: 3px;
+  }
+}
 button.rmd-status-link:focus-visible::after { transform: translateX(2px); }
+@media (hover: hover) {
+  button.rmd-status-link:hover::after { transform: translateX(2px);
+  }
+}
 button.rmd-status-link:active { opacity: 0.6; }
 @media (prefers-reduced-motion: reduce) { button.rmd-status-link::after { transition: none; } }
 /* 위쪽 `.rmd-mid.is-single .rmd-status { white-space: normal }` 규칙이 더 강해서 줄바꿈이 무시되던 문제 수정 */
@@ -17606,4 +17970,159 @@ button.rmd-status-link:active { opacity: 0.6; }
     padding-top: 12px;
     border-top: 1px solid var(--color-border-light);
   }
+}
+
+
+/* =====================================================================
+   눌림 피드백 통일 (토스 느낌)
+   - 눌리면 살짝 작아지고(scale) 버튼은 배경이 약간 어두워집니다.
+   - transform 대신 개별 속성 scale을 써서 기존 transform(가운데 정렬·hover 이동 등)을 건드리지 않습니다.
+   - 기존 transition 값은 유지한 채 scale/filter만 덧붙였습니다.
+   - hover 효과는 마우스가 있는 환경(@media (hover: hover))에서만 적용되도록 위쪽 규칙을 옮겼습니다.
+   ===================================================================== */
+.rmd-act-btn,
+.rmd-btn,
+.rmd-toggle,
+.predict-tab,
+.rank-filter-btn,
+.mini-rank-more-btn,
+.ti-yt-channel-btn,
+.rmd-team[data-team-link],
+.rmd-bye-row[data-team-link],
+.rmc-team[data-team-link],
+.venue-list-item,
+.squad-card,
+.ti-scorer-card,
+.other-team-grid-item,
+.ti-award-card-item,
+.ti-gk-card-item,
+.ti-appear-mini-card,
+.sqt-row,
+.pp-card,
+.ti-club-row,
+button.mc-h2h-row,
+.archive-hl-card,
+.ti-room-item.is-link,
+.hr-item-sum { -webkit-tap-highlight-color: transparent; }
+
+.rmd-act-btn { transition: background 0.2s, color 0.2s, border-color 0.2s, scale 0.12s ease, filter 0.12s ease; }
+.rmd-btn { transition: background 0.2s, color 0.2s, border-color 0.2s, scale 0.12s ease, filter 0.12s ease; }
+.rmd-toggle { transition: background 0.2s, color 0.2s, scale 0.12s ease, filter 0.12s ease; }
+.predict-tab { transition: all 0.2s; }
+.rank-filter-btn { transition: color 0.2s, scale 0.12s ease, filter 0.12s ease; }
+.mini-rank-more-btn { transition: color 0.15s, scale 0.12s ease, filter 0.12s ease; }
+.ti-yt-channel-btn { transition: transform 0.15s ease, opacity 0.15s ease, scale 0.12s ease, filter 0.12s ease; }
+.rmd-team[data-team-link] { transition: scale 0.12s ease; }
+.rmd-bye-row[data-team-link] { transition: scale 0.12s ease; }
+.rmc-team[data-team-link] { transition: scale 0.12s ease; }
+.venue-list-item { transition: var(--theme-transition), transform 0.15s ease, box-shadow 0.15s ease, scale 0.12s ease; }
+.squad-card { transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s, scale 0.12s ease; }
+.ti-scorer-card { transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s, scale 0.12s ease; }
+.other-team-grid-item { transition: transform 0.15s, box-shadow 0.15s, background 0.2s, scale 0.12s ease; }
+.ti-award-card-item { transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s, scale 0.12s ease; }
+.ti-gk-card-item { transition: var(--theme-transition), transform 0.15s, box-shadow 0.15s, scale 0.12s ease; }
+.ti-appear-mini-card { transition: transform 0.15s, box-shadow 0.15s, background 0.15s, scale 0.12s ease; }
+.sqt-row { transition: scale 0.12s ease; }
+.pp-card { transition: transform 0.15s, box-shadow 0.15s, scale 0.12s ease; }
+.ti-club-row { transition: scale 0.12s ease; }
+button.mc-h2h-row { transition: background 0.2s, scale 0.12s ease; }
+.archive-hl-card { transition: scale 0.12s ease; }
+.ti-room-item.is-link { transition: scale 0.12s ease; }
+.hr-item-sum { transition: scale 0.12s ease; }
+
+/* 버튼: 눌림 .97 + 살짝 어둡게 */
+.rmd-act-btn:active,
+.rmd-btn:active,
+.rmd-toggle:active,
+.predict-tab:active,
+.rank-filter-btn:active,
+.mini-rank-more-btn:active,
+.ti-yt-channel-btn:active {
+  scale: 0.97;
+  filter: brightness(0.95);
+}
+
+/* 목록 행·카드: 더 은은하게 .985 */
+.rmd-team[data-team-link]:active,
+.rmd-bye-row[data-team-link]:active,
+.rmc-team[data-team-link]:active,
+.venue-list-item:active,
+.squad-card:active,
+.ti-scorer-card:active,
+.other-team-grid-item:active,
+.ti-award-card-item:active,
+.ti-gk-card-item:active,
+.ti-appear-mini-card:active,
+.sqt-row:active,
+.pp-card:active,
+.ti-club-row:active,
+button.mc-h2h-row:active,
+.archive-hl-card:active,
+.ti-room-item.is-link:active,
+.hr-item-sum:active {
+  scale: 0.985;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rmd-act-btn:active,
+  .rmd-btn:active,
+  .rmd-toggle:active,
+  .predict-tab:active,
+  .rank-filter-btn:active,
+  .mini-rank-more-btn:active,
+  .ti-yt-channel-btn:active,
+  .rmd-team[data-team-link]:active,
+  .rmd-bye-row[data-team-link]:active,
+  .rmc-team[data-team-link]:active,
+  .venue-list-item:active,
+  .squad-card:active,
+  .ti-scorer-card:active,
+  .other-team-grid-item:active,
+  .ti-award-card-item:active,
+  .ti-gk-card-item:active,
+  .ti-appear-mini-card:active,
+  .sqt-row:active,
+  .pp-card:active,
+  .ti-club-row:active,
+  button.mc-h2h-row:active,
+  .archive-hl-card:active,
+  .ti-room-item.is-link:active,
+  .hr-item-sum:active { scale: none; }
+}
+
+
+/* =====================================================================
+   구단정보 탭 바: 가로로 더 있다는 힌트 (가장자리 페이드)
+   - 다른 가로 스크롤 영역과 같은 .scroll-fade-wrap 방식을 씁니다.
+   - 화면에 달라붙는(sticky) 역할은 바깥 틀이 맡고, 탭 바는 그 안에서 스크롤만 합니다.
+   ===================================================================== */
+.scroll-fade-wrap.ti-tab-fade {
+  position: sticky;
+  top: 8px;
+  z-index: 6;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 18px;
+}
+.ti-tab-fade > .team-info-tab-bar,
+.ti-tab-fade > .team-info-tab-bar.ti-has-indicator {
+  position: relative;   /* 슬라이딩 표시(.ti-tab-indicator)의 기준 */
+  top: auto;
+  z-index: auto;
+  margin-bottom: 0;
+}
+@media (max-width: 720px) {
+  .scroll-fade-wrap.ti-tab-fade { top: 4px; }
+}
+@media (min-width: 881px) and (max-width: 1440px) {
+  .scroll-fade-wrap.ti-tab-fade { margin-bottom: 14px; }
+}
+
+
+/* 모바일(≤880px)에서는 위쪽 "모바일 메인 메뉴" 규칙이 모든 .scroll-fade-wrap의 가장자리 페이드를 꺼 둡니다.
+   구단정보 탭 바는 탭이 화면 밖으로 이어진다는 힌트가 꼭 필요해서 이 틀만 다시 켭니다. */
+.scroll-fade-wrap.ti-tab-fade::before,
+.scroll-fade-wrap.ti-tab-fade::after {
+  display: block;
+  width: 36px;
 }

@@ -83,7 +83,7 @@
   var SMALL_SAMPLE = 5;
   function smallBadge(ctx, n) {
     return n < SMALL_SAMPLE
-      ? ' <span class="ta-badge" title="' + esc(lang(ctx)('경기 수가 ' + SMALL_SAMPLE + '경기 미만이라 우연의 영향이 큽니다', 'Fewer than ' + SMALL_SAMPLE + ' games — results are noisy')) + '">' + lang(ctx)('표본 적음', 'Small sample') + '</span>'
+      ? ' <span class="ta-badge" title="' + esc(lang(ctx)('경기 수가 ' + SMALL_SAMPLE + '경기 미만이라 우연의 영향이 커요', 'Fewer than ' + SMALL_SAMPLE + ' games — results are noisy')) + '">' + lang(ctx)('표본 적음', 'Small sample') + '</span>'
       : '';
   }
   // 상대 유형 중 가장 강한/고전한 유형 (경기 2 이상인 유형만 비교)
@@ -663,14 +663,14 @@
   function renderTiers(ctx, data) {
     var T = lang(ctx);
     var t = data.tiers;
-    if (!t.all.g) return card(T('상대 유형별 성적', 'Results by Opponent Level'), empty(T('아직 집계할 경기가 없습니다.', 'No matches to analyse yet.')));
+    if (!t.all.g) return card(T('상대 유형별 성적', 'Results by Opponent Level'), empty(T('아직 집계할 경기가 없어요.', 'No matches to analyse yet.')));
     var tierName = { top: T('상위권', 'Top'), mid: T('중위권', 'Middle'), bottom: T('하위권', 'Bottom') };
     var rows = t.tiers.map(function (x) {
       var a = x.agg;
       var range = !x.from ? '' : (x.from === x.to ? T(x.from + '위', '#' + x.from) : T(x.from + '~' + x.to + '위', '#' + x.from + '-' + x.to));
       if (!a.g) {
         return '<div class="ta-tier-row"><div class="ta-tier-head"><b>' + tierName[x.key] + '</b> <span class="ta-dim">' + range + '</span></div>' +
-          '<div class="ta-dim">' + T('아직 맞붙은 경기가 없습니다.', 'No matches yet.') + '</div></div>';
+          '<div class="ta-dim">' + T('아직 맞붙은 경기가 없어요.', 'No matches yet.') + '</div></div>';
       }
       return '<div class="ta-tier-row">' +
         '<div class="ta-tier-head"><b>' + tierName[x.key] + '</b> <span class="ta-dim">' + range + '</span>' +
@@ -688,14 +688,14 @@
       var bn = tierName[ex.best.key], wn = tierName[ex.worst.key];
       var bp = fmt2(ex.best.agg.ppg), wp = fmt2(ex.worst.agg.ppg);
       insight = '<div class="ta-insight">' + (ex.small
-        ? T('유형별 경기 수가 적어 참고용입니다. 지금까지는 ' + bn + ' 상대에게 가장 좋은 성적(' + bp + '점/경기), ' + wn + ' 상대에게 가장 부진한 성적(' + wp + '점/경기)을 냈습니다.',
+        ? T('유형별 경기 수가 적어 참고용이에요. 지금까지는 ' + bn + ' 상대에게 가장 좋은 성적(' + bp + '점/경기), ' + wn + ' 상대에게 가장 부진한 성적(' + wp + '점/경기)을 냈어요.',
             'Small samples, so indicative only: so far the best return is against ' + bn + ' teams (' + bp + ' pts/g) and the weakest against ' + wn + ' teams (' + wp + ' pts/g).')
-        : T('가장 강한 상대 유형은 ' + bn + '(' + bp + '점/경기), 가장 고전한 유형은 ' + wn + '(' + wp + '점/경기)입니다.',
+        : T('가장 강한 상대 유형은 ' + bn + '(' + bp + '점/경기), 가장 고전한 유형은 ' + wn + '(' + wp + '점/경기)예요.',
             'Best against ' + bn + ' (' + bp + ' pts/g); toughest against ' + wn + ' (' + wp + ' pts/g).')) + '</div>';
     }
 
-    var note = T('상대 구분은 현재 리그 순위 기준이며, 우리 팀을 뺀 ' + t.rank.othersTotal + '팀을 3등분했습니다.', 'Opponents are grouped by current league rank, splitting the ' + t.rank.othersTotal + ' other teams into thirds (our own team excluded).') +
-      (t.forfeits ? ' ' + T('몰수 경기 ' + t.forfeits + '경기는 제외했습니다.', t.forfeits + ' forfeit match(es) excluded.') : '');
+    var note = T('상대 구분은 현재 리그 순위 기준이며, 우리 팀을 뺀 ' + t.rank.othersTotal + '팀을 3등분했어요.', 'Opponents are grouped by current league rank, splitting the ' + t.rank.othersTotal + ' other teams into thirds (our own team excluded).') +
+      (t.forfeits ? ' ' + T('몰수 경기 ' + t.forfeits + '경기는 제외했어요.', t.forfeits + ' forfeit match(es) excluded.') : '');
     return card(T('상대 유형별 성적', 'Results by Opponent Level'), rows + insight, note);
   }
 
@@ -704,7 +704,7 @@
     var T = lang(ctx);
     var title = T('득점 패턴 네트워크', 'Scoring Network');
     var nw = data.network;
-    if (!nw.totalGoals) return card(title, empty(T('라인업에 기록된 골이 아직 없습니다.', 'No goals recorded in lineups yet.')));
+    if (!nw.totalGoals) return card(title, empty(T('라인업에 기록된 골이 아직 없어요.', 'No goals recorded in lineups yet.')));
     var baseName = makeNamer(ctx);
     var view = groupNetworkNodes(nw);
     var name = function (k, full) { return k === OTHER_KEY ? T('기타 ' + view.grouped + '명', 'Others (' + view.grouped + ')') : baseName(k, full); };
@@ -770,14 +770,14 @@
       '<div class="ta-tile"><div class="ta-tile-label">' + T('도움 없음/미기록', 'No assist') + '</div><div class="ta-tile-value">' + nw.unassistedTotal + '</div></div></div>';
 
     var groupNote = view.grouped
-      ? '<div class="ta-note">' + T('득점·도움에 관여한 선수 ' + view.total + '명 중 상위 ' + NETWORK_TOP_N + '명만 표시하고 나머지 ' + view.grouped + '명은 "기타"로 묶었습니다.',
+      ? '<div class="ta-note">' + T('득점·도움에 관여한 선수 ' + view.total + '명 중 상위 ' + NETWORK_TOP_N + '명만 표시하고 나머지 ' + view.grouped + '명은 "기타"로 묶었어요.',
           'Showing the top ' + NETWORK_TOP_N + ' of ' + view.total + ' involved players; the other ' + view.grouped + ' are grouped as "Others".') + '</div>'
       : '';
-    var hint = '<div class="ta-note ta-hint">' + T('선수를 누르면 그 선수와 이어진 연결만 강조됩니다. 화살표는 도움을 준 선수에서 골을 넣은 선수 방향이고, 굵을수록 합작이 많습니다.',
+    var hint = '<div class="ta-note ta-hint">' + T('선수를 누르면 그 선수와 이어진 연결만 강조돼요. 화살표는 도움을 준 선수에서 골을 넣은 선수 방향이고, 굵을수록 합작이 많아요.',
       'Tap a player to highlight their links. Arrows point from the assister to the scorer; thicker means more combinations.') + '</div>';
 
     return card(title, chips + '<div class="ta-network-wrap">' + svg + '</div>' + groupNote + hint,
-      T('라인업에 골·도움이 입력된 경기 기준입니다. 최강 콤비·합작률은 아래 카드에서 볼 수 있습니다.',
+      T('라인업에 골·도움이 입력된 경기 기준이에요. 최강 콤비·합작률은 아래 카드에서 볼 수 있어요.',
         'Based on matches with goals and assists entered in the lineups. Top duos and duo rates are in the card below.'));
   }
 
@@ -794,7 +794,7 @@
         '<span class="ta-progress-mark" style="left:' + Math.round(GOAL_TIME_MIN_SHARE * 100) + '%"></span></div>' +
         '<div class="ta-progress-legend"><span>' + pct(gt.share) + '</span><span>' + T('목표 ' + pct(GOAL_TIME_MIN_SHARE) + ' 이상이면 분포 표시', 'Shown once ' + pct(GOAL_TIME_MIN_SHARE) + '+') + '</span></div>';
       return '<div class="ti-card ta-card ta-card-compact">' + head + prog +
-        '<div class="ta-note">' + T('아직 시간 입력이 부족해 분포는 숨겨 두었습니다. ', 'Not enough goal times yet, so the distribution is hidden. ') +
+        '<div class="ta-note">' + T('아직 시간 입력이 부족해 분포는 숨겨 두었어요. ', 'Not enough goal times yet, so the distribution is hidden. ') +
         (names ? T('시간 미입력 골이 있는 경기: ', 'Matches with untimed goals: ') + esc(names) + '.' : '') + '</div></div>';
     }
     var max = Math.max.apply(null, gt.bands) || 1;
@@ -802,7 +802,7 @@
       var label = b[1] === 999 ? T('76분~', '76+') : T(b[0] + '~' + b[1] + '분', b[0] + '-' + b[1] + "'");
       return '<div class="ta-slot"><span class="ta-slot-pos">' + label + '</span>' + bar(gt.bands[i] / max) + '<span class="ta-slot-others">' + gt.bands[i] + T('골', '') + '</span></div>';
     }).join('');
-    return card('', head + rows, T('시간이 입력된 ' + gt.timed + '골 기준이며, 전·후반 추가시간 골은 각각 45분·90분대에 넣었습니다. 시간 미입력 골 ' + (gt.total - gt.timed) + '개는 제외했습니다.',
+    return card('', head + rows, T('시간이 입력된 ' + gt.timed + '골 기준이며, 전·후반 추가시간 골은 각각 45분·90분대에 넣었어요. 시간 미입력 골 ' + (gt.total - gt.timed) + '개는 제외했어요.',
       'Based on the ' + gt.timed + ' goals with a time; stoppage-time goals count in the 45th/90th-minute band. ' + (gt.total - gt.timed) + ' untimed goals excluded.'));
   }
 
@@ -827,29 +827,29 @@
       out.push(T('최근 ' + ra.g + '경기 ' + record(ctx, ra) + ' (경기당 ' + fmt1(ra.gfpg) + '득점 ' + fmt1(ra.gapg) + '실점).',
         'Last ' + ra.g + ': ' + record(ctx, ra) + ' (' + fmt1(ra.gfpg) + ' scored, ' + fmt1(ra.gapg) + ' conceded per game).'));
     }
-    if (a.gapg <= lg.gpg - 0.3) out.push(T('실점이 경기당 ' + fmt1(a.gapg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')보다 적은 단단한 수비입니다.',
+    if (a.gapg <= lg.gpg - 0.3) out.push(T('실점이 경기당 ' + fmt1(a.gapg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')보다 적은 단단한 수비예요.',
       'Solid defence: ' + fmt1(a.gapg) + ' conceded per game vs league average ' + fmt1(lg.gpg) + '.'));
-    else if (a.gapg >= lg.gpg + 0.3) out.push(T('실점이 경기당 ' + fmt1(a.gapg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')보다 많아 수비가 흔들립니다.',
+    else if (a.gapg >= lg.gpg + 0.3) out.push(T('실점이 경기당 ' + fmt1(a.gapg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')보다 많아 수비가 흔들려요.',
       'Leaky: ' + fmt1(a.gapg) + ' conceded per game vs league average ' + fmt1(lg.gpg) + '.'));
-    if (a.gfpg >= lg.gpg + 0.3) out.push(T('경기당 ' + fmt1(a.gfpg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')을 웃도는 공격력입니다.',
+    if (a.gfpg >= lg.gpg + 0.3) out.push(T('경기당 ' + fmt1(a.gfpg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')을 웃도는 공격력이에요.',
       'Strong attack: ' + fmt1(a.gfpg) + ' scored per game vs league average ' + fmt1(lg.gpg) + '.'));
-    else if (a.gfpg <= lg.gpg - 0.3) out.push(T('경기당 ' + fmt1(a.gfpg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')보다 득점이 적습니다.',
+    else if (a.gfpg <= lg.gpg - 0.3) out.push(T('경기당 ' + fmt1(a.gfpg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')보다 득점이 적어요.',
       'Low-scoring: ' + fmt1(a.gfpg) + ' per game vs league average ' + fmt1(lg.gpg) + '.'));
     if (r.scorers.length && a.gf >= 4) {
       var s0 = r.scorers[0];
       var share = s0.goals / a.gf;
-      if (share >= 0.4) out.push(T((ctx.isKorean ? s0.nameKo : s0.nameEn) + ' 한 명이 팀 득점의 ' + pct(share) + '(' + s0.goals + '골)를 책임집니다.',
+      if (share >= 0.4) out.push(T((ctx.isKorean ? s0.nameKo : s0.nameEn) + ' 한 명이 팀 득점의 ' + pct(share) + '(' + s0.goals + '골)를 책임져요.',
         (ctx.isKorean ? s0.nameKo : s0.nameEn) + ' accounts for ' + pct(share) + ' of the team\'s goals (' + s0.goals + ').'));
     }
     if (r.next) {
       var oppVenue = r.next.meHome ? r.away : r.home;
       var oppAt = r.next.meHome ? T('원정', 'away') : T('홈', 'home');
-      if (oppVenue.g >= 2) out.push(T('다음 경기에서 상대는 ' + oppAt + ' 경기 ' + record(ctx, oppVenue) + '(경기당 ' + fmt2(oppVenue.ppg) + '점)입니다.',
+      if (oppVenue.g >= 2) out.push(T('다음 경기에서 상대는 ' + oppAt + ' 경기 ' + record(ctx, oppVenue) + '(경기당 ' + fmt2(oppVenue.ppg) + '점)이에요.',
         'In the next meeting they play ' + oppAt + ': ' + record(ctx, oppVenue) + ' (' + fmt2(oppVenue.ppg) + ' pts/g).'));
     }
     if (r.myTierAgg.g >= 2) {
       var tn = { top: T('상위권', 'top-third'), mid: T('중위권', 'mid-table'), bottom: T('하위권', 'bottom-third') }[r.tierKey];
-      out.push(T('우리는 이번 시즌 ' + tn + ' 상대에게 ' + record(ctx, r.myTierAgg) + '(경기당 ' + fmt2(r.myTierAgg.ppg) + '점)입니다.',
+      out.push(T('우리는 이번 시즌 ' + tn + ' 상대에게 ' + record(ctx, r.myTierAgg) + '(경기당 ' + fmt2(r.myTierAgg.ppg) + '점)이에요.',
         'We are ' + record(ctx, r.myTierAgg) + ' (' + fmt2(r.myTierAgg.ppg) + ' pts/g) against ' + tn + ' opponents this season.'));
     }
     return out;
@@ -858,7 +858,7 @@
   function renderOpponentReportBody(ctx, myGames, oppEn) {
     var T = lang(ctx);
     var r = computeOpponentReport(ctx, oppEn, myGames);
-    if (!r) return empty(T('팀 정보를 찾을 수 없습니다.', 'Team not found.'));
+    if (!r) return empty(T('팀 정보를 찾을 수 없어요.', 'Team not found.'));
     var t = r.team, a = r.agg, lg = r.league;
     var oppName = ctx.isKorean ? t.nameKo : t.nameEn;
     var gd = (t.goalsFor || 0) - (t.goalsAgainst || 0);
@@ -915,14 +915,14 @@
       ins.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '';
 
     return head + next + form + stats + venue + scorers + h2h + insHtml +
-      (r.forfeits ? '<div class="ta-note">' + T('상대의 몰수 경기 ' + r.forfeits + '경기는 통계에서 제외했습니다.', r.forfeits + ' forfeit match(es) of this team excluded.') + '</div>' : '');
+      (r.forfeits ? '<div class="ta-note">' + T('상대의 몰수 경기 ' + r.forfeits + '경기는 통계에서 제외했어요.', r.forfeits + ' forfeit match(es) of this team excluded.') + '</div>' : '');
   }
 
   function renderOpponentReport(ctx, data) {
     var T = lang(ctx);
     var title = T('상대별 한 장 리포트', 'Opponent Scouting Report');
     var others = (ctx.rankedTeams || []).filter(function (t) { return t.nameEn !== ctx.myEn; });
-    if (!others.length) return card(title, empty(T('비교할 팀이 없습니다.', 'No teams to compare.')));
+    if (!others.length) return card(title, empty(T('비교할 팀이 없어요.', 'No teams to compare.')));
     var valid = others.some(function (t) { return t.nameEn === selectedOpp; });
     if (!valid) selectedOpp = defaultOpponent(ctx);
     var nx = nextFixtureAgainst(ctx, null);
@@ -934,7 +934,7 @@
     var select = '<label class="ta-select-wrap"><span class="ta-dim">' + T('상대 팀', 'Opponent') + '</span>' +
       '<select class="ta-select" id="taOpponentSelect">' + opts + '</select></label>';
     return card(title, select + '<div id="taOpponentReport">' + renderOpponentReportBody(ctx, data.games, selectedOpp) + '</div>',
-      T('확정된 경기 결과 기준입니다.', 'Based on confirmed match results.'));
+      T('확정된 경기 결과 기준이에요.', 'Based on confirmed match results.'));
   }
 
 
@@ -1077,7 +1077,7 @@
     }).join('');
     var dotsA = axA.map(function (x, i) { var q = pt(i, x.v); return '<circle class="ta-radar-dot-a" cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="3.4"></circle>'; }).join('');
     var dotsB = axB.map(function (x, i) { var q = pt(i, x.v); return '<rect class="ta-radar-dot-b" x="' + (q[0] - 3.2).toFixed(1) + '" y="' + (q[1] - 3.2).toFixed(1) + '" width="6.4" height="6.4"></rect>'; }).join('');
-    var aria = T('레이더 차트: ' + nameA + ' 선수와 ' + nameB + ' 선수의 여섯 가지 지표 비교. 정확한 수치는 아래 비교표에 있습니다.',
+    var aria = T('레이더 차트: ' + nameA + ' 선수와 ' + nameB + ' 선수의 여섯 가지 지표 비교. 정확한 수치는 아래 비교표에 있어요.',
       'Radar chart comparing ' + nameA + ' and ' + nameB + ' on six metrics. Exact figures are in the table below.');
     var svg = '<svg class="ta-radar" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(aria) + '">' +
       rings + spokes +
@@ -1139,11 +1139,11 @@
     if (tg.both.g >= 2 && tg.all.g && tg.both.g < tg.all.g) {
       var diff = tg.both.ppg - tg.all.ppg;
       insight = '<div class="ta-insight">' + T(
-        '두 선수가 함께 뛴 <b>' + tg.both.g + '경기</b>의 승점은 경기당 <b>' + fmt2(tg.both.ppg) + '점</b>으로, 시즌 평균(' + fmt2(tg.all.ppg) + '점)보다 ' + (Math.abs(diff) < 0.05 ? '비슷합니다.' : (diff > 0 ? fmt2(diff) + '점 높습니다.' : fmt2(-diff) + '점 낮습니다.')),
+        '두 선수가 함께 뛴 <b>' + tg.both.g + '경기</b>의 승점은 경기당 <b>' + fmt2(tg.both.ppg) + '점</b>으로, 시즌 평균(' + fmt2(tg.all.ppg) + '점)보다 ' + (Math.abs(diff) < 0.05 ? '비슷해요.' : (diff > 0 ? fmt2(diff) + '점 높아요.' : fmt2(-diff) + '점 낮아요.')),
         'In the <b>' + tg.both.g + ' games</b> both played, the team averaged <b>' + fmt2(tg.both.ppg) + ' pts/game</b> vs. ' + fmt2(tg.all.ppg) + ' for the season' + (Math.abs(diff) < 0.05 ? ' — about the same.' : (diff > 0 ? ' (+' + fmt2(diff) + ').' : ' (−' + fmt2(-diff) + ').'))) + '</div>';
     }
     var caution = '<div class="ta-note ta-caution">' + T(
-      '선수가 뛴 경기의 팀 성적은 그 선수 때문이라고 단정할 수 없습니다(상대·일정·다른 선수의 영향이 섞여 있습니다). 출전 시간(분)은 기록이 없어 경기 수 기준입니다.',
+      '선수가 뛴 경기의 팀 성적은 그 선수 때문이라고 단정할 수 없어요(상대·일정·다른 선수의 영향이 섞여 있어요). 출전 시간(분)은 기록이 없어 경기 수 기준이에요.',
       'Team results in games a player featured in are not caused by that player alone — opponents, fixtures and teammates all contribute. Minutes are not recorded, so figures are per appearance.') + '</div>';
     return renderRadar(ctx, pdata, A, B, nA, nB) + table + together + insight + caution;
   }
@@ -1152,7 +1152,7 @@
     var T = lang(ctx);
     var title = T('선수 비교', 'Player Comparison');
     var pdata = data.players;
-    if (!pdata || pdata.list.length < 2) return card(title, empty(T('비교할 선수가 아직 부족합니다. 라인업이 입력된 경기에서 2명 이상 출전하면 표시됩니다.', 'Not enough players yet — needs lineup data with at least two players.')));
+    if (!pdata || pdata.list.length < 2) return card(title, empty(T('비교할 선수가 아직 부족해요. 라인업이 입력된 경기에서 2명 이상 출전하면 표시돼요.', 'Not enough players yet — needs lineup data with at least two players.')));
     ensurePlayerSelection(pdata);
     var name = makeNamer(ctx);
     function opts(sel) {
@@ -1164,7 +1164,7 @@
       '<label class="ta-select-wrap"><span class="ta-dim"><i class="ta-leg-a" aria-hidden="true"></i> ' + T('선수 A', 'Player A') + '</span><select class="ta-select" id="taPlayerA">' + opts(selectedPlayerA) + '</select></label>' +
       '<label class="ta-select-wrap"><span class="ta-dim"><i class="ta-leg-b" aria-hidden="true"></i> ' + T('선수 B', 'Player B') + '</span><select class="ta-select" id="taPlayerB">' + opts(selectedPlayerB) + '</select></label></div>';
     return card(title, selects + '<div id="taPlayerStatus" class="sr-only" role="status" aria-live="polite"></div><div id="taPlayerCompare">' + renderPlayerCompareBody(ctx, pdata, selectedPlayerA, selectedPlayerB) + '</div>',
-      T('라인업이 입력된 ' + pdata.teamN + '경기 기준입니다. 레이더의 골·도움은 선수단 최고치 대비, 나머지는 절대 비율입니다.',
+      T('라인업이 입력된 ' + pdata.teamN + '경기 기준이에요. 레이더의 골·도움은 선수단 최고치 대비, 나머지는 절대 비율이에요.',
         'Based on the ' + pdata.teamN + ' games with lineups. Radar goals/assists are relative to the squad best; other axes are absolute ratios.'));
   }
 
@@ -1173,8 +1173,8 @@
     var T = lang(ctx);
     var title = T('교체 활용 현황', 'Substitution Usage');
     var s = data.subs;
-    if (!s.matches) return card(title, empty(T('라인업이 입력된 경기가 없습니다.', 'No lineup data yet.')));
-    if (!s.recordedGames) return card(title, empty(T('교체 투입이 기록된 경기가 아직 없습니다.', 'No substitutions recorded yet.')));
+    if (!s.matches) return card(title, empty(T('라인업이 입력된 경기가 없어요.', 'No lineup data yet.')));
+    if (!s.recordedGames) return card(title, empty(T('교체 투입이 기록된 경기가 아직 없어요.', 'No substitutions recorded yet.')));
     var name = makeNamer(ctx);
     var share = s.totalGoals ? s.subGoals / s.totalGoals : 0;
 
@@ -1207,10 +1207,10 @@
     var minsTxt = '<div class="ta-note">' + T('투입 시점: 전반 ' + mins.first + ' · 후반 ' + mins.second + ' · 시각 미기록 ' + mins.unknown,
       'Entry time: 1st half ' + mins.first + ' · 2nd half ' + mins.second + ' · unknown ' + mins.unknown) + '</div>';
 
-    var caution = '<div class="ta-note ta-caution">' + T('교체 인원별 성적은 단순 비교입니다. 뒤지고 있는 경기에서 교체를 더 쓰는 경향이 섞여 있어, 교체가 결과를 바꿨다는 뜻으로 읽을 수 없습니다.',
+    var caution = '<div class="ta-note ta-caution">' + T('교체 인원별 성적은 단순 비교예요. 뒤지고 있는 경기에서 교체를 더 쓰는 경향이 섞여 있어, 교체가 결과를 바꿨다는 뜻으로 읽을 수 없어요.',
       'Results by number of subs is a plain comparison. Teams tend to use more subs when trailing, so it does not show that subs changed the result.') + '</div>';
     return card(title, tiles + table + bucketTable + caution + minsTxt,
-      T('"0명"은 교체 투입은 없고 남은 벤치 명단이 입력된 경기이며, 둘 다 비어 있으면 "미입력"으로 따로 셉니다. 경기 수가 적어 참고용으로 보세요.',
+      T('"0명"은 교체 투입은 없고 남은 벤치 명단이 입력된 경기이며, 둘 다 비어 있으면 "미입력"으로 따로 세어요. 경기 수가 적어 참고용으로 보세요.',
         '"0" means no substitutes came on and the unused-bench list is entered; if both are empty the game is counted as "Not entered". Small sample — treat as indicative.'));
   }
 
@@ -1219,7 +1219,7 @@
     var T = lang(ctx);
     var title = T('선발 조합·포메이션', 'Starting XI & Formation');
     var L = data.lineup;
-    if (!L.matches) return card(title, empty(T('라인업이 입력된 경기가 없습니다.', 'No lineup data yet.')));
+    if (!L.matches) return card(title, empty(T('라인업이 입력된 경기가 없어요.', 'No lineup data yet.')));
     var name = makeNamer(ctx);
 
     var formTable;
@@ -1227,7 +1227,7 @@
       // 한 가지뿐이면 표 대신 한 줄로 접고, 2종류 이상이 입력되면 아래 표가 펼쳐집니다.
       var f0 = L.formations[0], a0 = f0.agg;
       formTable = '<div class="ta-subtitle">' + T('포메이션', 'Formation') + '</div>' +
-        '<div class="ta-insight">' + T('기록된 ' + a0.g + '경기 모두 <b>' + esc(f0.formation) + '</b> — ' + record(ctx, a0) + ' · ' + fmt2(a0.ppg) + '점/경기 · 득실 ' + a0.gf + '-' + a0.ga + '. 다른 포메이션이 입력되면 비교표가 펼쳐집니다.',
+        '<div class="ta-insight">' + T('기록된 ' + a0.g + '경기 모두 <b>' + esc(f0.formation) + '</b> — ' + record(ctx, a0) + ' · ' + fmt2(a0.ppg) + '점/경기 · 득실 ' + a0.gf + '-' + a0.ga + '. 다른 포메이션이 입력되면 비교표가 펼쳐져요.',
           'All ' + a0.g + ' recorded matches used <b>' + esc(f0.formation) + '</b> — ' + record(ctx, a0) + ' · ' + fmt2(a0.ppg) + ' pts/g · GF-GA ' + a0.gf + '-' + a0.ga + '. A comparison table appears once other formations are entered.') + '</div>';
     } else {
       var formRows = L.formations.map(function (f) {
@@ -1254,7 +1254,7 @@
     }).join('');
     var last = L.changes[L.changes.length - 1];
     var lastTxt = last && last.changes !== null
-      ? '<div class="ta-insight">' + T('가장 최근 경기(' + roundName(ctx, last.game.roundKey) + ')는 직전 경기보다 선발 ' + last.changes + '명이 바뀌었습니다',
+      ? '<div class="ta-insight">' + T('가장 최근 경기(' + roundName(ctx, last.game.roundKey) + ')는 직전 경기보다 선발 ' + last.changes + '명이 바뀌었어요',
           'Latest match (' + roundName(ctx, last.game.roundKey) + '): ' + last.changes + ' change(s) to the starting XI') +
         (last.ins.length ? T(' — 투입: ', ' — in: ') + esc(last.ins.map(function (n) { return name(n, true); }).join(', ')) : '') +
         (last.outs.length ? T(' / 제외: ', ' / out: ') + esc(last.outs.map(function (n) { return name(n, true); }).join(', ')) : '') + '.</div>'
@@ -1266,7 +1266,7 @@
       : '';
     var change = '<div class="ta-subtitle">' + T('라인업 변동', 'Lineup Rotation') + ' <span class="ta-dim">' + T('평균 ' + fmt1(L.avgChanges) + '명 변경', 'avg ' + fmt1(L.avgChanges) + ' changes') + '</span></div>' +
       '<div class="ta-chips ta-chips-sm">' + chips + '</div>' +
-      '<div class="ta-note ta-hint">' + T('칩 색은 경기 결과(초록 승 · 회색 무 · 빨강 패), 숫자는 직전 경기 대비 바뀐 선발 인원입니다.', 'Chip colour is the result (green win · grey draw · red loss); the number is starters changed vs the previous match.') + '</div>' + lastTxt + stab;
+      '<div class="ta-note ta-hint">' + T('칩 색은 경기 결과(초록 승 · 회색 무 · 빨강 패), 숫자는 직전 경기 대비 바뀐 선발 인원이에요.', 'Chip colour is the result (green win · grey draw · red loss); the number is starters changed vs the previous match.') + '</div>' + lastTxt + stab;
 
     var unitName = { def: T('수비라인 (GK+포백)', 'Defence (GK + back four)'), mid: T('중원', 'Midfield'), att: T('공격진', 'Attack') };
     var units = ['def', 'mid', 'att'].map(function (k) {
@@ -1281,12 +1281,12 @@
 
     var rx = L.repeatXI;
     var xi = '<div class="ta-note">' + (rx.length >= 2
-      ? T('선발 11명이 완전히 같았던 경기는 최대 ' + rx.length + '번(' + rx.map(function (g) { return roundName(ctx, g.roundKey); }).join(', ') + ')입니다.',
+      ? T('선발 11명이 완전히 같았던 경기는 최대 ' + rx.length + '번(' + rx.map(function (g) { return roundName(ctx, g.roundKey); }).join(', ') + ')이에요.',
           'The identical XI was used at most ' + rx.length + ' times (' + rx.map(function (g) { return roundName(ctx, g.roundKey); }).join(', ') + ').')
-      : T('선발 11명이 완전히 같았던 경기는 없습니다.', 'No two matches used the identical XI.')) + '</div>';
+      : T('선발 11명이 완전히 같았던 경기는 없어요.', 'No two matches used the identical XI.')) + '</div>';
 
     return card(title, formTable + slots + change + unitsHtml + xi,
-      T('라인업이 입력된 ' + L.matches + '경기 기준이며, 포지션 표기(LCB/RCB 등)는 입력된 라인업 그대로입니다.',
+      T('라인업이 입력된 ' + L.matches + '경기 기준이며, 포지션 표기(LCB/RCB 등)는 입력된 라인업 그대로예요.',
         'Based on the ' + L.matches + ' matches with lineups; position labels are as entered.'));
   }
 
@@ -1302,12 +1302,12 @@
     var ex = tierExtremes(data);
     add(T('가장 강한 상대 유형', 'Best opponent level'), ex
       ? '<b>' + tierName[ex.best.key] + '</b> <span class="ta-dim">' + fmt2(ex.best.agg.ppg) + T('점/경기 · ', ' pts/g · ') + ex.best.agg.g + T('경기', ' games') + '</span>' + smallBadge(ctx, ex.best.agg.g)
-      : '<span class="ta-dim">' + T('비교할 경기가 아직 부족합니다', 'Not enough games to compare yet') + '</span>');
+      : '<span class="ta-dim">' + T('비교할 경기가 아직 부족해요', 'Not enough games to compare yet') + '</span>');
 
     var e = data.network.edges[0];
     add(T('최강 콤비', 'Top combo'), e && e.count >= 2
       ? '<b>' + esc(name(e.from) + ' → ' + name(e.to)) + '</b> <span class="ta-dim">' + e.count + T('골', ' goals') + '</span>'
-      : '<span class="ta-dim">' + T('반복된 콤비가 아직 없습니다', 'No repeated combo yet') + '</span>');
+      : '<span class="ta-dim">' + T('반복된 콤비가 아직 없어요', 'No repeated combo yet') + '</span>');
 
     var f = data.lineup.formations[0];
     add(T('주 포메이션', 'Main formation'), f
@@ -1388,7 +1388,7 @@
         var st = rootEl.querySelector('#taPlayerStatus');
         if (st) {
           var nm = makeNamer(ctx);
-          st.textContent = (ctx.isKorean ? '비교 대상이 ' : 'Now comparing ') + nm(selectedPlayerA, true) + (ctx.isKorean ? ' 선수와 ' : ' and ') + nm(selectedPlayerB, true) + (ctx.isKorean ? ' 선수로 바뀌었습니다.' : '.');
+          st.textContent = (ctx.isKorean ? '비교 대상이 ' : 'Now comparing ') + nm(selectedPlayerA, true) + (ctx.isKorean ? ' 선수와 ' : ' and ') + nm(selectedPlayerB, true) + (ctx.isKorean ? ' 선수로 바뀌었어요.' : '.');
         }
       };
       selA.addEventListener('change', function () { redrawPlayers(selA); });

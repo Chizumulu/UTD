@@ -5776,19 +5776,19 @@ function buildAiPredictionNarrative(params) {
 
   if (isDrawFav) {
     lines.push(isKorean
-      ? `두 팀의 전력이 팽팽해 무승부 확률(${favPctRounded}%)이 가장 높게 나옵니다.`
+      ? `두 팀의 전력이 팽팽해 무승부 확률(${favPctRounded}%)이 가장 높게 나와요.`
       : `Both sides look evenly matched, and a draw is the single most likely result (${favPctRounded}%).`);
   } else if (favPctRounded < 45) {
     lines.push(isKorean
-      ? `${favName} 쪽이 근소하게 앞서지만(승률 ${favPctRounded}%) 어느 쪽으로도 기울 수 있는 접전으로 보입니다.`
+      ? `${favName} 쪽이 근소하게 앞서지만(승률 ${favPctRounded}%) 어느 쪽으로도 기울 수 있는 접전으로 보여요.`
       : `${favName} has a slight edge (${favPctRounded}% win chance), but this looks like a close, even contest.`);
   } else if (favPctRounded < 60) {
     lines.push(isKorean
-      ? `${favName}이(가) 다소 우세한 것으로 예측됩니다(승률 ${favPctRounded}%).`
+      ? `${favName}이(가) 다소 우세한 것으로 예측돼요(승률 ${favPctRounded}%).`
       : `${favName} is projected as the moderate favorite (${favPctRounded}% win chance).`);
   } else {
     lines.push(isKorean
-      ? `${favName}의 우세가 뚜렷한 경기입니다(승률 ${favPctRounded}%).`
+      ? `${favName}의 우세가 뚜렷한 경기예요(승률 ${favPctRounded}%).`
       : `${favName} looks like a clear favorite here (${favPctRounded}% win chance).`);
   }
 
@@ -5797,14 +5797,14 @@ function buildAiPredictionNarrative(params) {
   if (Math.abs(atkDiff) >= 0.15) {
     const strongerAtk = atkDiff > 0 ? homeName : awayName;
     lines.push(isKorean
-      ? `${strongerAtk}의 공격력 지수가 리그 평균 대비 더 높아 득점 기대치를 끌어올립니다.`
+      ? `${strongerAtk}의 공격력 지수가 리그 평균 대비 더 높아 득점 기대치를 끌어올려요.`
       : `${strongerAtk}'s attack rating sits well above league average, lifting its expected goals.`);
   }
   const defDiff = pred.awayDefense - pred.homeDefense; // 값이 낮을수록(실점 적을수록) 수비가 좋음
   if (Math.abs(defDiff) >= 0.15) {
     const strongerDef = defDiff > 0 ? homeName : awayName;
     lines.push(isKorean
-      ? `${strongerDef}의 실점률이 낮은 편이라 상대 공격을 억제할 가능성이 있습니다.`
+      ? `${strongerDef}의 실점률이 낮은 편이라 상대 공격을 억제할 가능성이 있어요.`
       : `${strongerDef} concedes at a below-average rate, which could keep the opposition quiet.`);
   }
 
@@ -5814,7 +5814,7 @@ function buildAiPredictionNarrative(params) {
     const gap = Math.abs(homeRank - awayRank);
     if (gap >= 3) {
       lines.push(isKorean
-        ? `순위상으로도 ${higher}이(가) ${gap}계단 앞서 있어 이변이 없다면 순위대로 흐를 가능성이 있습니다.`
+        ? `순위상으로도 ${higher}이(가) ${gap}계단 앞서 있어 이변이 없다면 순위대로 흐를 가능성이 있어요.`
         : `${higher} also sits ${gap} places higher in the table, so the standings favor the same outcome.`);
     }
   }
@@ -5825,17 +5825,17 @@ function buildAiPredictionNarrative(params) {
     const aGood = aForm.w >= Math.ceil(aForm.n * 0.6);
     if (hGood && !aGood) {
       lines.push(isKorean
-        ? `${homeName}은(는) 최근 ${hForm.n}경기 ${hForm.w}승으로 상승세라는 점도 긍정적인 요소입니다.`
+        ? `${homeName}은(는) 최근 ${hForm.n}경기 ${hForm.w}승으로 상승세라는 점도 긍정적인 요소예요.`
         : `${homeName} also arrives in good form, with ${hForm.w} wins in its last ${hForm.n} games.`);
     } else if (aGood && !hGood) {
       lines.push(isKorean
-        ? `${awayName}은(는) 최근 ${aForm.n}경기 ${aForm.w}승으로 상승세라는 점도 변수입니다.`
+        ? `${awayName}은(는) 최근 ${aForm.n}경기 ${aForm.w}승으로 상승세라는 점도 변수예요.`
         : `${awayName} arrives in good form too, with ${aForm.w} wins in its last ${aForm.n} games, which is a potential upset factor.`);
     }
   }
 
   lines.push(isKorean
-    ? `예상 스코어는 ${homeName} ${pred.predictedHomeGoals} : ${pred.predictedAwayGoals} ${awayName}입니다.`
+    ? `예상 스코어는 ${homeName} ${pred.predictedHomeGoals} : ${pred.predictedAwayGoals} ${awayName}, 이렇게 봤어요.`
     : `Most likely scoreline: ${homeName} ${pred.predictedHomeGoals} - ${pred.predictedAwayGoals} ${awayName}.`);
 
   return lines;
@@ -6596,7 +6596,7 @@ const cupTournaments = [
     logoSrc: './fam-logo.png',
     chipKo: 'FA컵', chipEn: 'FA Cup',
     status: 'upcoming',
-    descKo: '말라위축구협회(FAM)가 주최하는 컵대회입니다. 32강 이전은 지역 플레이오프로 치르고, 32강부터 결승까지는 토너먼트로 진행됩니다. 1부 16개 팀은 32강에 자동 진출합니다.',
+    descKo: '말라위축구협회(FAM)가 주최하는 컵대회예요. 32강 이전은 지역 플레이오프로 치르고, 32강부터 결승까지는 토너먼트로 진행돼요. 1부 16개 팀은 32강에 자동 진출해요.',
     descEn: 'A cup competition organised by the Football Association of Malawi (FAM). Regional play-offs are held before the Round of 32, and a knockout bracket runs from the Round of 32 to the final. The 16 top-flight teams advance automatically to the Round of 32.',
     // 값 형식: 문자열 | 문자열 배열(줄바꿈) | { tag, name, sub, meta, badge } 목록(등급·단계 표시) | { note } 작은 주석 | { teams: [영문팀명…] } 로고 칩
     infoKo: [
@@ -6696,7 +6696,7 @@ const cupTournaments = [
     logoSrc: './ddds.webp',
     chipKo: '음벨와컵', chipEn: "M'mbelwa Cup",
     status: 'upcoming',
-    descKo: 'NRFA가 주최하는 컵대회입니다. 대진과 일정이 발표되는 대로 이곳에 업데이트됩니다.',
+    descKo: 'NRFA가 주최하는 컵대회예요. 대진과 일정이 발표되는 대로 이곳에 업데이트돼요.',
     descEn: 'A cup competition organised by the NRFA. Draw and fixtures will appear here as soon as they are announced.',
     rounds: []
   }
