@@ -12647,6 +12647,7 @@
   }
 
   function renderMagicNumberStats() {
+    try { renderRaceAnswer(); } catch (e) { console.error('renderRaceAnswer failed:', e); }
     const tbody = document.getElementById('magicNumberStatsBody');
     if (!tbody) return;
     const ranked = getRankedTeams('all');
@@ -12816,6 +12817,110 @@
         ${pathFinderRaceCardHtml(safetyResult, teamByEnMap, '잔류까지 경로', 'Path to safety')}
       </div>`;
     attachImageFallback();
+  }
+
+  // ===== 경우의 수 탭: 질문 하나 + 큰 답 하나 =====
+  // 계산은 PathFinderEngine(안전 경로 = 매직넘버와 같은 가정)을 그대로 쓰고, 여기서는 "지금 가장 궁금한 한 가지"만 크게 보여줍니다.
+  // 근거가 되는 카드들은 index.html의 "자세히 보기"(#raceMore) 안에 접혀 있습니다.
+  let raceQuestion = null; // 'title' | 'safety' | null(null이면 현재 순위로 자동 선택)
+
+  function setRaceQuestion(q) {
+    raceQuestion = (q === 'safety') ? 'safety' : 'title';
+    renderRaceAnswer();
+  }
+
+  function renderRaceAnswer() {
+    const section = document.getElementById('raceAnswer');
+    const body = document.getElementById('raceAnswerBody');
+    const pathBox = document.getElementById('raceAnswerPath');
+    if (!section || !body) return;
+    const hide = () => { section.hidden = true; body.innerHTML = ''; if (pathBox) pathBox.innerHTML = ''; };
+    if (typeof PathFinderEngine === 'undefined' || typeof scheduledRounds === 'undefined') { hide(); return; }
+    const mine = getMyRankedTeam();
+    if (!mine) { hide(); return; }
+    const ranked = getRankedTeams('all');
+    const context = getMagicNumberContext(ranked);
+    if (!context) { hide(); return; }
+
+    // 질문을 고르지 않았다면 강등권 근처일 때는 잔류, 그 외에는 우승·승격을 먼저 보여줍니다.
+    const mode = raceQuestion || (mine.rank >= context.safeSlots - 1 ? 'safety' : 'title');
+    const result = PathFinderEngine.computePathFinder(
+      mine.team.nameEn, mode, ranked, scheduledRounds, context.seasonGames,
+      mode === 'title' ? context.promoteSlots : context.safeSlots
+    );
+    if (!result) { hide(); return; }
+
+    section.hidden = false;
+    section.querySelectorAll('.race-q-chip').forEach(btn => {
+      const on = btn.dataset.raceQ === mode;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', String(on));
+    });
+
+    const safest = result.safest;
+    const easiest = result.easiest;
+    const left = result.remainingGames;
+    const kicker = mode === 'title'
+      ? (isKorean ? '우승·승격을 확정하려면' : 'To clinch promotion')
+      : (isKorean ? '잔류를 확정하려면' : 'To clinch safety');
+    const ctx = isKorean
+      ? `현재 ${mine.rank}위 · 승점 ${mine.team.pts} · 남은 ${left}경기`
+      : `Now ${mine.rank}${['th','st','nd','rd'][(mine.rank % 100 > 10 && mine.rank % 100 < 14) ? 0 : (mine.rank % 10 < 4 ? mine.rank % 10 : 0)]} · ${mine.team.pts} pts · ${left} left`;
+
+    const shortResults = (r) => {
+      if (!r) return '';
+      const p = [];
+      if (r.wins > 0) p.push(isKorean ? `${r.wins}승` : `${r.wins}W`);
+      if (r.draws > 0) p.push(isKorean ? `${r.draws}무` : `${r.draws}D`);
+      return p.join(' ');
+    };
+    const maxGain = left * 3;
+    let big, sub;
+    if (safest.pointsNeeded <= 0) {
+      big = isKorean ? '이미 확정' : 'Clinched';
+      sub = isKorean ? '남은 경기 결과와 상관없이 목표를 달성했어요.' : 'You have reached it regardless of the remaining results.';
+    } else if (!safest.resultsNeeded) {
+      big = isKorean ? '혼자선 어려워요' : 'Not on your own';
+      sub = isKorean
+        ? `라이벌이 남은 경기를 전부 이긴다면 ${left}경기를 전승해도(+${maxGain}점) 부족해요. 라이벌이 승점을 잃어야 해요.`
+        : `If the rival wins out, even winning all ${left} games (+${maxGain} pts) falls short. The rival has to drop points.`;
+    } else {
+      big = isKorean ? `승점 ${safest.pointsNeeded}점` : `${safest.pointsNeeded} pts`;
+      sub = isKorean
+        ? `남은 ${left}경기에서 ${shortResults(safest.resultsNeeded)}이면 충분해요.`
+        : `${shortResults(safest.resultsNeeded)} over your last ${left} games is enough.`;
+    }
+    let best = '';
+    if (safest.pointsNeeded > 0 && easiest && easiest.pointsNeeded < safest.pointsNeeded) {
+      const bestTxt = easiest.pointsNeeded <= 0
+        ? (isKorean ? '라이벌이 더 이상 승점을 못 딴다면 이미 확정이에요.' : 'If rivals gain no more points, you have already clinched it.')
+        : (isKorean
+            ? `라이벌이 더 이상 승점을 못 딴다면 ${easiest.pointsNeeded}점${easiest.resultsNeeded ? `(${shortResults(easiest.resultsNeeded)})` : ''}이면 돼요.`
+            : `If rivals gain no more points, ${easiest.pointsNeeded} pts${easiest.resultsNeeded ? ` (${shortResults(easiest.resultsNeeded)})` : ''} is enough.`);
+      best = `<p class="race-answer-best">${bestTxt}</p>`;
+    }
+    const h2h = (result.headToHeadRemaining || 0) > 0
+      ? `<p class="race-answer-note">${isKorean
+          ? `${result.rival.nameKo}와(과) 직접 맞대결이 ${result.headToHeadRemaining}경기 남아 있어 실제 필요 승점은 더 낮을 수 있어요.`
+          : `${result.headToHeadRemaining} head-to-head game(s) vs ${result.rival.nameEn} remain, so the real requirement may be lower.`}</p>`
+      : '';
+
+    body.innerHTML = `
+      <p class="race-answer-ctx">${ctx}</p>
+      <p class="race-answer-kicker">${kicker}</p>
+      <div class="race-answer-big">${big}</div>
+      <p class="race-answer-sub">${sub}</p>
+      ${best}${h2h}`;
+
+    // 근거: 같은 질문의 경로 카드(가장 쉬운 경로 / 가장 안전한 경로)를 "자세히 보기" 맨 위에 둡니다.
+    if (pathBox) {
+      const teamByEnMap = {};
+      leagueData.forEach(t => { teamByEnMap[t.nameEn] = t; });
+      pathBox.innerHTML = mode === 'title'
+        ? pathFinderRaceCardHtml(result, teamByEnMap, '우승·승격까지 경로', 'Path to promotion')
+        : pathFinderRaceCardHtml(result, teamByEnMap, '잔류까지 경로', 'Path to safety');
+      attachImageFallback();
+    }
   }
 
   // ===== 팀 순위 렌더링 (League Table) =====

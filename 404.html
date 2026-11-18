@@ -25,98 +25,105 @@
 </script>
 
 <style>
+  /* 토스식 에러 화면: 한 화면 한 메시지, 큰 제목, 하단 고정 전체 폭 버튼 (그라데이션·그림자·이모지 없음) */
   .page-404-wrap {
     width: 100%;
-    max-width: 460px;
+    max-width: 480px;
     margin: 0 auto;
+    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 48px 20px 40px;
+    padding: 0 20px;
+  }
+  .page-404-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 48px 4px 24px;
   }
   .page-404-logo {
-    width: 96px;
-    height: 96px;
-    margin-bottom: 18px;
-    filter: drop-shadow(0 4px 10px rgba(var(--color-navy-rgb),0.25));
+    width: 72px;
+    height: 72px;
+    margin-bottom: 28px;
   }
   .page-404-code {
-    font-size: 56px;
-    font-weight: 900;
-    color: var(--color-navy);
-    letter-spacing: 1px;
-    line-height: 1;
-    margin-bottom: 6px;
-  }
-  :root[data-theme="dark"] .page-404-code {
-    color: var(--color-brand-text);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
   }
   .page-404-title {
-    font-size: 17px;
-    font-weight: 800;
-    color: var(--color-text-dark);
-    margin-bottom: 8px;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--color-text-darkest);
+    margin: 0 0 12px;
+    word-break: keep-all;
   }
   .page-404-desc {
-    font-size: 13.5px;
-    font-weight: 500;
-    color: var(--color-text-muted);
+    font-size: 15px;
+    font-weight: 400;
     line-height: 1.6;
-    margin-bottom: 28px;
+    color: var(--color-text-muted);
+    margin: 0;
+    word-break: keep-all;
   }
   .page-404-actions {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 0 max(16px, env(safe-area-inset-bottom));
   }
   .page-404-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 11px 22px;
-    border-radius: 22px;
-    font-size: 13.5px;
-    font-weight: 700;
+    justify-content: center;
+    min-height: 52px;
+    border-radius: var(--radius-xl);
+    font-size: 16px;
+    font-weight: 600;
     text-decoration: none;
-    transition: var(--theme-transition), transform 0.15s;
+    transition: var(--theme-transition), transform 0.12s ease;
   }
+  .page-404-btn:active { transform: scale(0.97); }
   .page-404-btn-primary {
-    background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
-    color: var(--color-white);
-    box-shadow: 0 6px 16px rgba(var(--color-navy-rgb),0.3);
+    background: var(--color-selected-bg);
+    color: var(--color-selected-fg);
   }
   .page-404-btn-secondary {
-    background: var(--color-surface);
-    color: var(--color-brand-text);
-    box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.12);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 15px;
+    font-weight: 500;
   }
-  .page-404-btn:hover {
-    transform: translateY(-1px);
+  .page-404-btn:focus-visible {
+    outline: 2px solid var(--color-navy-light);
+    outline-offset: 2px;
   }
-  .page-404-ball {
-    font-size: 22px;
-    margin-bottom: 10px;
+  @media (prefers-reduced-motion: reduce) {
+    .page-404-btn { transition: none; }
+    .page-404-btn:active { transform: none; }
   }
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="page-404-wrap">
-    <img class="page-404-logo" src="/UTD/dd.svg" alt="Chizumulu United FC">
-    <div class="page-404-ball">⚽</div>
-    <div class="page-404-code">404</div>
-    <div class="page-404-title">페이지를 찾을 수 없습니다</div>
-    <p class="page-404-desc">
-      요청하신 페이지가 삭제되었거나 주소가 변경되었을 수 있어요.<br>
-      아래 버튼으로 팬사이트 메인으로 돌아가 보세요.
-    </p>
+  <main class="page-404-wrap">
+    <div class="page-404-body">
+      <img class="page-404-logo" src="/UTD/dd.svg" alt="Chizumulu United FC">
+      <div class="page-404-code">404</div>
+      <h1 class="page-404-title">페이지를 찾을 수 없어요</h1>
+      <p class="page-404-desc">주소가 바뀌었거나 삭제된 페이지예요.<br>메인에서 순위와 경기 일정을 확인해 보세요.</p>
+    </div>
     <div class="page-404-actions">
       <a class="page-404-btn page-404-btn-primary" href="/UTD/">메인으로 돌아가기</a>
       <a class="page-404-btn page-404-btn-secondary" href="https://gall.dcinside.com/mgallery/board/lists/?id=chizumuluunitedfc" target="_blank" rel="noopener noreferrer">커뮤니티 바로가기</a>
     </div>
-  </div>
+  </main>
 </div>
 </body>
 </html>

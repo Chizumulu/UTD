@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '002',
-    data: '002',
-    app: '002',
+    style: '005',
+    data: '005',
+    app: '005',
     report: '001',
     archive: '200',
     predictWorker: '220',
@@ -1332,6 +1332,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 
   <div class="predict-panel" data-predict-panel="race" role="tabpanel">
+  <!-- 한 번에 한 질문: 질문을 고르면 큰 답 하나만 보이고, 근거(표·카드)는 아래 "자세히 보기"로 접어 둡니다. app.js의 renderRaceAnswer()가 채웁니다. -->
+  <section class="race-answer" id="raceAnswer" aria-live="polite" hidden>
+    <div class="race-q-chips" role="group" aria-label="질문 선택" data-aria-ko="질문 선택" data-aria-en="Choose a question">
+      <button type="button" class="race-q-chip" data-race-q="title" aria-pressed="false" onclick="setRaceQuestion('title')"><span class="lbl" data-en="Win promotion?" data-ko="우승·승격하려면?">우승·승격하려면?</span></button>
+      <button type="button" class="race-q-chip" data-race-q="safety" aria-pressed="false" onclick="setRaceQuestion('safety')"><span class="lbl" data-en="Stay up?" data-ko="잔류하려면?">잔류하려면?</span></button>
+    </div>
+    <div class="race-answer-body" id="raceAnswerBody"></div>
+  </section>
+  <div class="race-more" id="raceMore">
+    <div class="race-more-body">
+    <div id="raceAnswerPath"></div>
   <div class="scatter-card rpm-card">
     <div class="stats-title">
       <span class="lbl" data-en="Final Rank Probability" data-ko="순위별 확률표">순위별 확률표</span>
@@ -1410,6 +1421,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
     </div>
   </section>
+    </div>
+  </div>
   </div>
 
   <div class="predict-panel" data-predict-panel="model" role="tabpanel">
