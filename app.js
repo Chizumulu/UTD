@@ -4680,14 +4680,14 @@
             <span class="ti-travel-val">🚢 ${travelInfo.boatTime} + 🚌 ${travelInfo.roadKm}km ${travelInfo.roadTime} → <b>${travelInfo.totalTime}</b></span>
           </div>` : '';
     // 승/무/패 확률 미니 예측도 우리 팀(치주물루) 카드에서만, 상대가 이번 시즌 리그 소속일 때만 보여줍니다.
-    const predictHtml = (isMyTeamName(team.nameEn, team.nameKo) && leagueData.some(t => t.nameEn === nm.oppEn))
+    const predictHtml = leagueData.some(t => t.nameEn === nm.oppEn)
       ? nextMatchPredictHtml(team, nm)
       : '';
 
     // 상대가 이번 시즌 리그 소속일 때만(=폼 데이터가 있을 때만) 두 팀의 최근 폼을
     // 각자 자신의 팀 컬럼(로고/이름 아래)에 붙여서 보여줍니다. 우리 팀 카드에서만 노출합니다.
     const oppIsCurrentLeagueTeam = leagueData.some(t => t.nameEn === nm.oppEn);
-    const showFormBadges = isMyTeamName(team.nameEn, team.nameKo) && oppIsCurrentLeagueTeam;
+    const showFormBadges = oppIsCurrentLeagueTeam;
     const myFormHtml = showFormBadges ? nextMatchTeamFormHtml(team.nameEn, team.nameKo) : '';
     const oppFormHtml = showFormBadges ? nextMatchTeamFormHtml(nm.oppEn, nm.oppKo) : '';
 
@@ -4699,9 +4699,7 @@
     const compareBtnHtml = `<button type="button" class="rmc-compare-btn ti-next-match-compare-btn lbl" data-en="Compare Teams" data-ko="전적 비교" onclick="openMatchCompareModal('${escAttr(nextMatchHomeEn)}', '${escAttr(nextMatchHomeKo)}', '${escAttr(nextMatchAwayEn)}', '${escAttr(nextMatchAwayKo)}', '${escAttr(nm.roundKey)}')">${isKorean ? '전적 비교' : 'Compare Teams'}</button>`;
 
     // 우리 팀(치주물루)의 다음 경기 카드에서만 킥오프 현지 날씨 예보를 함께 보여줍니다.
-    const weatherHtml = isMyTeamName(team.nameEn, team.nameKo)
-      ? matchWeatherPlaceholderHtml(nextMatchHomeEn, nm.kickoffDate, nm.kickoffTime, 'ti-next-match-weather')
-      : '';
+    const weatherHtml = matchWeatherPlaceholderHtml(nextMatchHomeEn, nm.kickoffDate, nm.kickoffTime, 'ti-next-match-weather');
 
     // 경기 시간 · 경기장을 경기결과 날짜 카드의 행 상단과 같은 한 줄로, 헤더 바로 아래에 보여줍니다.
     // (시간은 굵게 + KST 보조 글씨, 그 옆에 경기장 이름). 날씨는 예전처럼 대진 아래 박스로 둡니다.
@@ -17219,7 +17217,7 @@
           ${scorersHtml}
         </div>
         <div class="ti-section">
-          <div class="ti-card">
+          <div class="ti-next-mini">
             ${nextMatchHtml}
           </div>
         </div>

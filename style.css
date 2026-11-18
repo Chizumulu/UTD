@@ -18473,3 +18473,11 @@ tr.my-team td.team::after,
   .dc-badge, .dc-eyebrow, .dc-title, .dc-lead, .dc-sub,
   .dc-body .disclaimer-dontshow-group, .dc-confirm { animation: none !important; }
 }
+
+/* 다음경기 카드(PC): 하단 줄(원정 · 날씨 · 미리보기 · 아이콘) 세로 높이 축소 (44px → 32px)
+   - 더 줄이거나 되돌리려면 --nmh-row 값만 고치세요. (되돌리려면 이 블록만 지우면 됩니다.) */
+@media (min-width: 721px) {
+  .next-match-strip.nms-merged { --nmh-row: 32px; }
+  .next-match-strip.nms-merged .nmh-bottom { padding-top: 4px; }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-toggle { margin: 4px auto 4px; height: calc(var(--nmh-row) - 8px); }
+}
