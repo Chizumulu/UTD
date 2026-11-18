@@ -1646,6 +1646,15 @@ const matchDetails = {
       scorersHome: "WYSON NYIRENDA",
       scorersAway: "없음"
     }
+  ],
+  // 정규 17주차(round18) — 순서는 roundsData.round18과 같습니다. (칠룸바 vs 에우티니, 친테체 vs 라이플리는 몰수승이라 득점자 "없음", 치주물루 vs 마푸는 연기라 제외)
+  round18: [
+    { match: "루비리 3 : 치폴로폴로 1", scorersHome: "JONATHAN PHIRI (2골), SILVESTER SMART", scorersAway: "PATRICK KANYENDA" },
+    { match: "음벨와 3 : 젠다 2", scorersHome: "RODERICK MALUZI, BLESSINGS NYASULU, MASSA YOLLAM", scorersAway: "ROBARCO KANDIADO, WYSON NYIRENDA" },
+    { match: "칠룸바 3 : 에우티니 0", scorersHome: "없음", scorersAway: "없음" },
+    { match: "치바비 6 : 에크웬데니 0", scorersHome: "HENDERSON KANYIKA (4골), CLIFFORD CHISALE (2골)", scorersAway: "없음" },
+    { match: "비전 2 : 루베 0", scorersHome: "JOMOLE PHIRI, AUSTIN HARAWA", scorersAway: "없음" },
+    { match: "친테체 3 : 라이플리 0", scorersHome: "없음", scorersAway: "없음" }
   ]
 };
 
@@ -1687,23 +1696,11 @@ const seasonOpeningNotice = {
 const scheduledRounds = {
   // 15주차는 전체 라운드가 종료되어 roundsData.round15로 옮겨졌습니다.
   // 정규 16주차(round17)도 전체 라운드가 종료되어 roundsData.round17로 옮겨졌습니다. (에크웬데니 vs 칠룸바는 연기되어 roundsData.round17에 postponed로 남아 있음, 새 일정 미정)
+  // 정규 17주차(round18)도 전 경기가 종료되어 roundsData.round18로 옮겨졌습니다. (치주물루 vs 마푸는 19주차(round20)로 연기되어 roundsData.round18에 postponed로 남아 있음)
   // (치하메 vs 친테체는 연기경기주차로 이동 — roundsData.round16 참고)
   // 연기경기주차(round16)는 모든 경기가 끝나 roundsData.round16으로 옮겨졌습니다.
   // ★ 후반기(2차전) 일정: 엑셀 Week 16~29 → round17~round30 (연기경기주차가 round16이라 키가 한 칸씩 밀립니다).
   //   30주차(round31)는 날짜 미정이라 대진만 있습니다(1차전 홈/원정 반전). 킥오프 시간은 15:00으로 일괄 입력한 임시값이니, 확정되면 경기별로 수정해주세요.
-  // ── 정규 17주차 (엑셀 "Week 17") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
-  round18: [
-    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-11-14", kickoffTime: "15:00", homeScore: 3, awayScore: 1, scorersHome: "JONATHAN PHIRI (2골), SILVESTER SMART", scorersAway: "PATRICK KANYENDA" },
-    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-11-15", kickoffTime: "15:00", homeScore: 3, awayScore: 2, scorersHome: "RODERICK MALUZI, BLESSINGS NYASULU, MASSA YOLLAM", scorersAway: "ROBARCO KANDIADO, WYSON NYIRENDA" },
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-11-18", kickoffTime: "15:00" }, // 11/14(토) → 11/18(수)로 변경
-    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-11-14", kickoffTime: "15:00", homeScore: 6, awayScore: 0, scorersHome: "HENDERSON KANYIKA (4골), CLIFFORD CHISALE (2골)", scorersAway: "없음" },
-    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-11-15", kickoffTime: "15:00", homeScore: 2, awayScore: 0, scorersHome: "JOMOLE PHIRI, AUSTIN HARAWA", scorersAway: "없음" },
-    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-11-18", kickoffTime: "15:00" }, // 11/15(일) → 11/18(수)로 변경
-    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-11-17", kickoffTime: "15:00", postponed: true, movedToWeek: 20 }, // 17주차 → 19주차(round20)로 연기, 11/27(금)에 진행
-    { byeKo: "치하메 올스타즈 FC", byeEn: "Chihame All Stars FC" },
-    { byeKo: "마푸 스타즈 FC", byeEn: "Mafu Stars FC" }, // 마푸 vs 치주물루가 19주차로 연기되어 17주차는 휴식
-    { byeKo: "치주물루 유나이티드 FC", byeEn: "Chizumulu United FC" } // 〃
-  ],
   // ── 정규 18주차 (엑셀 "Week 18") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round19: [
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-11-21", kickoffTime: "15:00" },
@@ -2093,7 +2090,23 @@ const roundsData = {
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 1, awayScore: 2, scorersHome: "DANIEL CHISOKWE", scorersAway: "JOLLEN KANYINJI, TAWONGA CHIHANA" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-11-08", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "WYSON NYIRENDA", scorersAway: "없음" },
     { byeKo: "치폴로폴로 보이즈 FC", byeEn: "Chipolopolo Boys FC" }
+  ],
+  // ── 정규 17주차 (round18) — 전 경기 종료, scheduledRounds에서 옮겨옴 (11월 14~18일) ──
+  //  - 칠룸바 vs 에우티니, 친테체 vs 라이플리: 에우티니·라이플리의 몰수패 → 상대팀 3:0 몰수승 (득점자 없음)
+  //  - 치주물루 vs 마푸: 19주차(round20)로 연기 (11/27) — 이 항목은 movedToWeek만 남깁니다.
+  round18: [
+    { homeKo: "루비리 FC", homeEn: "Luviri FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-11-14", kickoffTime: "15:00", homeScore: 3, awayScore: 1, scorersHome: "JONATHAN PHIRI (2골), SILVESTER SMART", scorersAway: "PATRICK KANYENDA" },
+    { homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-11-15", kickoffTime: "15:00", homeScore: 3, awayScore: 2, scorersHome: "RODERICK MALUZI, BLESSINGS NYASULU, MASSA YOLLAM", scorersAway: "ROBARCO KANDIADO, WYSON NYIRENDA" },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-11-18", kickoffTime: "15:00", changed: true, homeScore: 3, awayScore: 0, forfeit: true }, // 11/14(토) → 11/18(수), 에우티니 몰수패
+    { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "에크웬데니 FC", awayEn: "Ekwendeni FC", kickoffDate: "2026-11-14", kickoffTime: "15:00", homeScore: 6, awayScore: 0, scorersHome: "HENDERSON KANYIKA (4골), CLIFFORD CHISALE (2골)", scorersAway: "없음" },
+    { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-11-15", kickoffTime: "15:00", homeScore: 2, awayScore: 0, scorersHome: "JOMOLE PHIRI, AUSTIN HARAWA", scorersAway: "없음" },
+    { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "라이플리 FC", awayEn: "Raiply FC", kickoffDate: "2026-11-18", kickoffTime: "15:00", changed: true, homeScore: 3, awayScore: 0, forfeit: true }, // 11/15(일) → 11/18(수), 라이플리 몰수패
+    { homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-11-17", kickoffTime: "15:00", postponed: true, movedToWeek: 20 }, // 17주차 → 19주차(round20)로 연기, 11/27(금)에 진행
+    { byeKo: "치하메 올스타즈 FC", byeEn: "Chihame All Stars FC" },
+    { byeKo: "마푸 스타즈 FC", byeEn: "Mafu Stars FC" }, // 마푸 vs 치주물루가 19주차로 연기되어 17주차는 휴식
+    { byeKo: "치주물루 유나이티드 FC", byeEn: "Chizumulu United FC" } // 〃
   ]
+
 };
 
 // ============================================================
