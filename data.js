@@ -3445,10 +3445,16 @@ function computeTopScorers() {
       if (nameAliases[key]) key = nameAliases[key];
 
       if (!goalsByPlayer[key]) {
-        goalsByPlayer[key] = { goals: 0, team, goalsByRound: {} };
+        goalsByPlayer[key] = { goals: 0, team, goalsByRound: {}, pkGoals: 0, pkGoalsByRound: {} };
       }
       goalsByPlayer[key].goals += goals;
       if (!isNaN(roundNum)) goalsByPlayer[key].goalsByRound[roundNum] = (goalsByPlayer[key].goalsByRound[roundNum] || 0) + goals;
+      // PK 골은 따로도 집계합니다 (득점 순위의 "PK 제외" 토글용). 표기: "(PK)" = 1골, "(PK 2골)" = PK로만 2골.
+      // goals(전체 득점)는 그대로 두고, PK 제외 값은 goals - pkGoals 로 계산합니다.
+      if (/PK/i.test(note)) {
+        goalsByPlayer[key].pkGoals += goals;
+        if (!isNaN(roundNum)) goalsByPlayer[key].pkGoalsByRound[roundNum] = (goalsByPlayer[key].pkGoalsByRound[roundNum] || 0) + goals;
+      }
     });
   }
 
@@ -3490,7 +3496,7 @@ function computeTopScorers() {
 
   return Object.keys(goalsByPlayer)
     .map(key => {
-      const { goals, team, goalsByRound } = goalsByPlayer[key];
+      const { goals, team, goalsByRound, pkGoals, pkGoalsByRound } = goalsByPlayer[key];
       const info = playerDirectory[key] || { nameKo: toTitleCase(key), nameEn: toTitleCase(key) };
 
       // 치주물루 유나이티드 소속 선수라면 squadData 에서 선수 사진을 찾아 연결합니다
@@ -3510,7 +3516,9 @@ function computeTopScorers() {
         teamLogo: team.logoSrc,
         photoSrc,
         goals,
-        goalsByRound // { 라운드번호: 그 라운드 득점 } — 득점 페이스 보기에서 씁니다
+        goalsByRound, // { 라운드번호: 그 라운드 득점 } — 득점 페이스 보기에서 씁니다
+        pkGoals,      // 이 중 PK 골 수 ("PK 제외" 토글에서 씁니다)
+        pkGoalsByRound
       };
     })
     .sort((a, b) => b.goals - a.goals);

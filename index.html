@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '051',
-    data: '071',
-    app: '051',
+    style: '001',
+    data: '001',
+    app: '001',
     report: '001',
     archive: '200',
     predictWorker: '220',
@@ -1209,6 +1209,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <button class="scorers-mode-btn lbl" data-mode="team" data-en="By Team" data-ko="팀별로 보기" onclick="setScorersGroupMode('team')">팀별로 보기</button>
   <button class="scorers-mode-btn lbl" data-mode="multi" data-en="Multi-Goal Games" data-ko="다득점 기록" onclick="setScorersGroupMode('multi')">다득점 기록</button>
   <button class="scorers-mode-btn lbl" data-mode="pace" data-en="Scoring Pace" data-ko="득점 페이스" onclick="setScorersGroupMode('pace')">득점 페이스</button>
+  <span class="scorers-nopk-sep" id="scorersNoPkSep" aria-hidden="true"></span>
+  <button type="button" class="scorers-nopk-btn" id="scorersNoPkBtn" aria-pressed="false" onclick="toggleScorersExcludePk()" title="PK로 넣은 골을 빼고 순위를 매겨요" data-title-ko="PK로 넣은 골을 빼고 순위를 매겨요" data-title-en="Rank without penalty goals"><span class="scorers-nopk-box" aria-hidden="true"></span><span class="lbl" data-en="Exclude PK" data-ko="PK 제외">PK 제외</span></button>
 </div>
 <table id="scorersTable">
   <thead>

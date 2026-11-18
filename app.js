@@ -11007,7 +11007,48 @@
     renderScorersTable();
   }
 
+  // "PK 제외" 토글: 켜면 전체/팀별/득점 페이스 보기가 PK 골을 뺀 득점으로 순위를 다시 매깁니다.
+  // (다득점 기록은 경기 단위 기록이라 이 토글과 무관해서 토글 자체를 숨깁니다.)
+  let scorersExcludePk = false;
+
+  function toggleScorersExcludePk() {
+    scorersExcludePk = !scorersExcludePk;
+    syncScorersNoPkBtn();
+    renderScorersTable();
+  }
+
+  function syncScorersNoPkBtn() {
+    const btn = document.getElementById('scorersNoPkBtn');
+    if (!btn) return;
+    btn.classList.toggle('is-on', scorersExcludePk);
+    btn.setAttribute('aria-pressed', scorersExcludePk ? 'true' : 'false');
+    // 다득점 기록 모드에서는 적용 대상이 아니라 토글과 구분선을 함께 숨깁니다.
+    const hide = (scorersGroupMode === 'multi');
+    btn.style.display = hide ? 'none' : '';
+    const sep = document.getElementById('scorersNoPkSep');
+    if (sep) sep.style.display = hide ? 'none' : '';
+  }
+
+  // 현재 토글 상태에 맞는 선수 목록. 꺼져 있으면 원본 그대로, 켜져 있으면 PK 골을 뺀 복사본이고
+  // 남은 골이 0인 선수는 빠집니다. goals/goalsByRound를 바꿔 주기 때문에 렌더러는 이 목록만 쓰면 됩니다.
+  function getScorersList() {
+    if (!scorersExcludePk) return topScorersData;
+    return topScorersData
+      .map(p => {
+        const pk = p.pkGoals || 0;
+        if (!pk) return p;
+        const byRound = Object.assign({}, p.goalsByRound);
+        Object.keys(p.pkGoalsByRound || {}).forEach(r => {
+          byRound[r] = (byRound[r] || 0) - p.pkGoalsByRound[r];
+          if (byRound[r] <= 0) delete byRound[r];
+        });
+        return Object.assign({}, p, { goals: p.goals - pk, goalsByRound: byRound });
+      })
+      .filter(p => p.goals > 0);
+  }
+
   function renderScorersTable() {
+    syncScorersNoPkBtn();
     if (scorersGroupMode === 'team') {
       renderScorersTableByTeam();
       return;
@@ -11024,7 +11065,7 @@
     const tbody = document.getElementById('scorersTableBody');
     tbody.innerHTML = '';
 
-    const sorted = topScorersData.slice().sort((a, b) => (b.goals - a.goals) || playerMineFirst(a, b));
+    const sorted = getScorersList().slice().sort((a, b) => (b.goals - a.goals) || playerMineFirst(a, b));
 
     let displayRank = 1;
     let prevGoals = null;
@@ -11120,7 +11161,8 @@
     if (!wrap) return;
     bindScorerPaceControls();
 
-    if (!topScorersData.length) {
+    const paceList = getScorersList();
+    if (!paceList.length) {
       wrap.innerHTML = `<div class="multigoal-empty">${isKorean ? '득점 데이터가 아직 없어요.' : 'No scorer data yet.'}</div>`;
       refreshScrollFadeHints();
       return;
@@ -11131,14 +11173,18 @@
     const seasonGames = (ctx && ctx.seasonGames) || 28;
     const teamInfo = {};
     ranked.forEach(t => { teamInfo[t.nameEn] = { played: t.played, gf: t.goalsFor }; });
+    // PK 제외 중이면 팀 비중의 분모(팀 득점)에서도 그 팀의 PK 골을 뺍니다.
+    if (scorersExcludePk) {
+      topScorersData.forEach(p => { if (p.pkGoals && teamInfo[p.teamEn]) teamInfo[p.teamEn].gf -= p.pkGoals; });
+    }
 
     // 최근 N개 라운드 / 추이 차트 범위(1주차 ~ 가장 마지막 득점 라운드)
     const roundSet = new Set();
-    topScorersData.forEach(p => Object.keys(p.goalsByRound || {}).forEach(r => roundSet.add(Number(r))));
+    paceList.forEach(p => Object.keys(p.goalsByRound || {}).forEach(r => roundSet.add(Number(r))));
     const recentRounds = Array.from(roundSet).sort((x, y) => y - x).slice(0, SCORER_PACE_RECENT_ROUNDS);
     const maxRound = roundSet.size ? Math.max.apply(null, Array.from(roundSet)) : 0;
 
-    const rows = topScorersData.map(p => {
+    const rows = paceList.map(p => {
       const info = teamInfo[p.teamEn] || { played: 0, gf: 0 };
       const gpg = info.played > 0 ? p.goals / info.played : 0;
       const recent = recentRounds.reduce((sum, r) => sum + ((p.goalsByRound && p.goalsByRound[r]) || 0), 0);
@@ -11254,8 +11300,9 @@
   function renderScorersTableByTeam() {
     const tbody = document.getElementById('scorersTableBody');
     tbody.innerHTML = '';
+    const teamModeList = getScorersList();
 
-    if (topScorersData.length === 0) {
+    if (teamModeList.length === 0) {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td colspan="3" style="padding:24px; color:var(--color-text-faint);">${isKorean ? '득점 데이터가 아직 없어요.' : 'No scorer data yet.'}</td>`;
       tbody.appendChild(tr);
@@ -11264,7 +11311,7 @@
     }
 
     const groups = {};
-    topScorersData.forEach(p => {
+    teamModeList.forEach(p => {
       const key = p.teamEn || p.teamKo;
       if (!groups[key]) {
         groups[key] = { teamEn: p.teamEn, teamKo: p.teamKo, teamLogo: p.teamLogo, players: [] };

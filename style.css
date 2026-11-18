@@ -14037,6 +14037,36 @@ body {
   .sp-toolbar { display: flex; justify-content: flex-end; padding: 0 4px 10px; }
   .sp-filter-btn { border: 1px solid var(--color-border-chip); background: var(--color-surface); color: var(--color-text-secondary); border-radius: var(--radius-xs); padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
   .sp-filter-btn.active { background: var(--color-text-darkest); color: var(--color-surface); border-color: var(--color-text-darkest); }
+  /* 득점 순위 탭 바 안의 "PK 제외" 토글: 모드 버튼(라디오)과 구분되도록 구분선 + 체크박스 모양.
+     상태 클래스는 .active 대신 .is-on — 슬라이딩 인디케이터(updateSegIndicator)가 .active만 따라가기 때문입니다. */
+  .scorers-nopk-sep { align-self: stretch; width: 1px; margin: 7px 5px; background: var(--color-border-light); flex-shrink: 0; }
+  .scorers-nopk-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: transparent; color: var(--color-text-toggle);
+    border: none; padding: 7px 14px 7px 11px; border-radius: var(--radius-xs);
+    cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap;
+    position: relative; z-index: 1; transition: color 0.2s, background 0.2s;
+  }
+  .scorers-nopk-box {
+    position: relative; flex-shrink: 0; width: 15px; height: 15px; box-sizing: border-box;
+    border: 1.6px solid currentColor; border-radius: 4px; opacity: 0.75;
+    transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+  }
+  .scorers-nopk-box::after {
+    content: ""; position: absolute; left: 3.5px; top: 0.5px; width: 4px; height: 7.5px;
+    border: solid var(--color-surface); border-width: 0 1.8px 1.8px 0;
+    transform: rotate(45deg) scale(0); transition: transform 0.18s var(--ease-toss, ease);
+  }
+  .scorers-nopk-btn.is-on { color: var(--color-brand-text); }
+  .scorers-nopk-btn.is-on .scorers-nopk-box { background: var(--color-gold-strong); border-color: var(--color-gold-strong); opacity: 1; }
+  .scorers-nopk-btn.is-on .scorers-nopk-box::after { transform: rotate(45deg) scale(1); }
+  @media (hover: hover) {
+    .scorers-nopk-btn:hover { background: var(--color-bg-btn-hover); color: var(--color-brand-text); }
+  }
+  @media (max-width: 720px) {
+    .rank-filter-wrap > .scorers-nopk-btn { flex: 0 0 auto; padding: 7px 7px 7px 6px; gap: 5px; font-size: 11.5px; }
+    .scorers-nopk-sep { margin: 7px 2px; }
+  }
   table.scorer-pace-table th.sp-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
   @media (hover: hover) {
     table.scorer-pace-table th.sp-sortable:hover { text-decoration: underline;
@@ -17761,6 +17791,11 @@ html[lang="ny"] #langBtnNy { display: none; }
 }
 html[data-lang="ko"] .lang-btn .lang-flag-kr { display: none; }
 html[data-lang="en"] .lang-btn .lang-flag-uk { display: none; }
+/* 치체와어 화면: 언어 버튼이 "View in English"로 가는 버튼이라 영국 국기를 보여줍니다.
+   (치체와어는 isKorean이 false라 영어 화면과 같은 규칙으로 태극기가 켜지고, syncLangFlags가
+   인라인 display로 켜고 끄기 때문에 여기서는 !important로 덮어씁니다.) */
+html[lang="ny"] .lang-btn .lang-flag-kr { display: none !important; }
+html[lang="ny"] .lang-btn .lang-flag-uk { display: block !important; }
 
 /* 주차 옆 "(N주차 연기)"로 합친 카드는 행 안의 연기 배지를 숨김 */
 .rmd-day.rmd-moved-in-head .rmd-moved { display: none; }
