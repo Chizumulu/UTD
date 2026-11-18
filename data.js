@@ -1059,12 +1059,12 @@ const matchDetails = {
   round1: [
     {
       match: "치바비 3 : 루베 0",
-      scorersHome: "CLIFFORD CHISALE, ADJOY SHABANI, HENDERSON KANJIKA",
+      scorersHome: "CLIFFORD CHISALE, ADJOY SHABANI, HENDERSON KANJIKA (PK)",
       scorersAway: "없음"
     },
     {
       match: "비전 4 : 라이플리 3",
-      scorersHome: "JOMOLE PHIRI (3골), NATHAN MSISKA",
+      scorersHome: "JOMOLE PHIRI (2골), JOMOLE PHIRI (PK), NATHAN MSISKA",
       scorersAway: "PEARSON NYIRENDA, KONDWANI CHIRWA, ZACHARIAH MPHAMBA"
     },
     {
@@ -1454,7 +1454,7 @@ const matchDetails = {
     },
     {
       match: "에우티니 5 : 루베 2",
-      scorersHome: "ELIAS BOTTOMAN, JACK GAMA (2골), MUSA PHIRI",
+      scorersHome: "ELIAS BOTTOMAN, JACK GAMA (3골), MUSA PHIRI",
       scorersAway: "RHEMA MAKAMO, FORTUNE CHILAMBO"
     }
   ],
@@ -2005,7 +2005,7 @@ const roundsData = {
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-09-20", kickoffTime: "14:30", homeScore: 1, awayScore: 2, scorersHome: "JIMMY KALANJE", scorersAway: "ISSA HASSAN, MARKO PHIRI (자책골)" },
     { byeKo: "비전 S 아카데미", byeEn: "Vision S Academy" },
     // 10주차에서 연기됐던 에우티니 vs 루베 마스터즈 경기가 11주차 경기로 확정되었습니다.
-    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-16", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 5, awayScore: 2, scorersHome: "ELIAS BOTTOMAN, JACK GAMA (2골), MUSA PHIRI", scorersAway: "RHEMA MAKAMO, FORTUNE CHILAMBO" }
+    { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "루베 마스터즈 FC", awayEn: "Lube Masters FC", kickoffDate: "2026-09-16", kickoffTime: "14:30", movedFromWeek: 10, homeScore: 5, awayScore: 2, scorersHome: "ELIAS BOTTOMAN, JACK GAMA (3골), MUSA PHIRI", scorersAway: "RHEMA MAKAMO, FORTUNE CHILAMBO" }
   ],
   // 12주차는 전체 라운드가 종료되어 roundsData.round12로 옮겨졌습니다.
   // 단, 칠룸바 vs 치하메 / 치폴로폴로 vs 루베 경기는 연기(postponed)되어 스코어가 아직 없습니다.
@@ -3155,10 +3155,12 @@ const nameAliases = {
   "NORMAN NDHLOVU": "NORMAN NDLOVU",
   // 친테체 선수단 명단 기준 철자로 통일
   "ESSAU DOBIE": "ESAU DOBBIE",
+  "ESAU DOBIE": "ESAU DOBBIE", // 외부 원본(득점 순위 사이트) 표기: s 한 개 + b 한 개
   // 2026-11-07: 실시간 기록에서 "Easu Dobbie"로 들어온 표기도 같은 선수로 통일
   "EASU DOBBIE": "ESAU DOBBIE",
   // 루비리 선수단 명단 기준 철자로 통일
   "PHILIMON PHIRI": "PHILLIMON PHIRI",
+  "THULASON SHABA": "THURASON SHABA", // 외부 원본 표기 (r↔l 차이)
   "TYSON SOKO": "TYSON LUSO SOKO",
   // 젠다 선수단 명단 기준 통일
   "ALICK CHAVULA": "ALEXANDER CHAVULA",
@@ -3182,7 +3184,20 @@ const nameAliases = {
   "TAWONGA CHIHANA": "TAONGA CHIHANA",
   "MASSA PEREKANI": "MASAUTSO PELEKANI", // 동일인 (Massa = Masautso)
   "SHAIBU JALAH": "SHAIBU JAHALI", // 동일인 (철자 차이)
-  "KONDE NYIRENDA": "EDWIN NYIRENDA" // 동일인 (명단상 Edwin Konde Nyirenda)
+  "KONDE NYIRENDA": "EDWIN NYIRENDA", // 동일인 (명단상 Edwin Konde Nyirenda)
+  // 2026-11-18: Everyleague(사이트) 표기와 data.js 표기가 다른 선수 — data.js 표기를 기준으로 통일
+  "BONIFACE MWANDIRA": "BORNFACE MWANDIRA",
+  "EMMANUEL MLOTHA": "EMMANUEL MIOTHA",
+  "JASON MOYO": "JASTON MOYO",
+  "KINGSLEY MKANDAWIRE": "KING MKANDAWIRE",
+  "KUMBUKANI CHIBAKA": "KUMBUKANI BANYA",
+  "LUMBANI KAMANGA": "LIMBANI KAMANGA",
+  "MASSA YOLAMU": "MASSA YOLLAM",
+  "MOFFATT MVULA": "MOFFAT MVULA",
+  "RICHARD SAKA": "RICHARD SAKALA",
+  "RODRICK MLAUZI": "RODERICK MALUZI",
+  "SIMONE PHIRI": "SEMEON PHIRI",
+  "WAYTON NYIRENDA": "WYSON NYIRENDA",
 };
 
 // 우리 선수단(squadData)의 aliasesEn(영문 별칭)을 위 nameAliases 에 자동으로 합칩니다.
