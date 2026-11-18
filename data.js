@@ -3260,7 +3260,7 @@ const playerDirectory = {
   "MASSA YOLLAM": { nameKo: "마사 욜람", nameEn: "Massa Yollam" },
   "LUKE JERE": { nameKo: "루크 제레", nameEn: "Luke Jere" },
   "JASTON MOYO": { nameKo: "재스톤 모요", nameEn: "Jaston Moyo" },
-  "JONATHAN PHIRI": { nameKo: "조나단 피리", nameEn: "Jonathan Phiri" },
+  "JONATHAN PHIRI": { nameKo: "이재명", nameEn: "Jonathan Phiri" }, // TEMP-CANARY: 테스트 후 "조나단 피리"로 복구
   "LEMA MAKATO": { nameKo: "레마 마카토", nameEn: "Lema Makato" },
   "LOTTIE BANDA JUMA": { nameKo: "로티 반다", nameEn: "Lottie Banda Juma" },
   "TAONGA CHIHANA": { nameKo: "타웡가 치하나", nameEn: "Taonga Chihana" },
