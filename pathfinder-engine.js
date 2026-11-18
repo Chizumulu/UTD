@@ -65,6 +65,11 @@
     sortedRoundKeys(scheduledRounds).forEach(key => {
       (scheduledRounds[key] || []).forEach(match => {
         if (isBye(match) || isPlayed(match)) return;
+        // 다른 라운드로 옮겨진 연기 경기(postponed + movedToWeek)는 새 라운드 쪽에 같은 경기가
+        // movedFromWeek와 함께 또 들어있으므로, 원래 라운드의 껍데기는 건너뜁니다.
+        // (건너뛰지 않으면 같은 경기가 두 번 세어져 "필요한 승리" 목록에 같은 상대가 두 번 뜹니다.)
+        // 새 일정이 아직 없는 연기 경기(movedToWeek 없음)는 여전히 치러야 할 경기이므로 그대로 둡니다.
+        if (match.postponed && match.movedToWeek) return;
         const isHome = match.homeEn === teamEn;
         const isAway = match.awayEn === teamEn;
         if (!isHome && !isAway) return;
