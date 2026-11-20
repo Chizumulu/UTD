@@ -124,8 +124,10 @@ function makeProposal(item, match) {
   if (homeCount !== homeScore || awayCount !== awayScore) return null;
 
   const sourceId = String(item.rawUpdateId || item.sourceMessageId || "");
-  const matchKey = normalize(home) + "|" + normalize(away) + "|" +
-    String(match.dateText || item.sourceTimestamp || "").slice(0, 10);
+  const dateSource = String(match.dateText || item.sourceTimestamp || "");
+  const parsedDate = Date.parse(dateSource);
+  const matchDay = Number.isFinite(parsedDate) ? new Date(parsedDate).toISOString().slice(0, 10) : dateSource.slice(0, 10);
+  const matchKey = normalize(home) + "|" + normalize(away) + "|" + matchDay;
   return {
     sourceId,
     matchKey,
