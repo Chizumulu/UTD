@@ -640,8 +640,8 @@
       });
       html += '</div>';
     }
-    html += '<div class="cup-sentinel" id="cupSentinel"></div><div class="cup-sticky" id="cupSticky">';
-    html += '<div class="cup-hero">' +
+    let heroHtml = '';
+    heroHtml += '<div class="cup-hero">' +
       (c.logoSrc ? '<img class="cup-hero-logo" src="' + cupEsc(c.logoSrc) + '" alt="' + cupEsc((ko ? c.organizerKo : c.organizerEn) || '') + '">' :
       '<svg class="cup-hero-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v4.5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 6H4.5v1.2A3 3 0 0 0 7.5 10.2M17 6h2.5v1.2a3 3 0 0 1-3 3M12 13.5V17M8.5 20h7M10 17h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>') +
       (c.logoSrc2 ? '<img class="cup-hero-logo cup-hero-logo2" src="' + cupEsc(c.logoSrc2) + '" alt="' + cupEsc(ko ? c.nameKo : c.nameEn) + '">' : '') +
@@ -739,14 +739,14 @@
     const bracketHtml = cupBracketHtml(c);
     const roundsList = (c.rounds || []).filter(function (r) { return r && r.matches && r.matches.length; });
     const panels = [
-      { id: 'about', ko: '소개', en: 'About', html: kvBlock(ko ? '대회 안내' : 'About', rowsAbout) },
+      { id: 'about', ko: '소개', en: 'About', html: heroHtml + kvBlock(ko ? '대회 안내' : 'About', rowsAbout) },
       { id: 'schedule', ko: '일정', en: 'Schedule', html: scheduleBlock(ko ? '일정' : 'Schedule', schedRows) },
       { id: 'teams', ko: '참가팀', en: 'Teams', html: kvBlock(ko ? '참가 팀' : 'Teams', rowsTeams) + topFlightHtml },
       { id: 'prize', ko: '상금', en: 'Prize', html: kvBlock(ko ? '상금' : 'Prize money', rowsPrize) },
       { id: 'bracket', ko: '대진표', en: 'Bracket', html: '__BRACKET__' }
     ].filter(function (t) { return t.html; });
     if (!panels.some(function (t) { return t.id === cupTab; })) cupTab = panels.length ? panels[0].id : 'about';
-    html += '</div><div class="cup-tabs-sticky" id="cupTabsSticky"><div class="cup-tabs-wrap rank-filter-wrap" id="cupTabsWrap" role="tablist">' + panels.map(function (t) {
+    html += '<div class="cup-tabs-sticky" id="cupTabsSticky"><div class="cup-tabs-wrap rank-filter-wrap" id="cupTabsWrap" role="tablist">' + panels.map(function (t) {
       return '<button type="button" role="tab" class="rank-filter-btn cup-tab-btn' + (t.id === cupTab ? ' active' : '') + '" data-cup-tab="' + t.id + '"' +
         ' aria-selected="' + (t.id === cupTab ? 'true' : 'false') + '" onclick="setCupTab(\'' + t.id + '\')">' + (ko ? t.ko : t.en) + '</button>';
     }).join('') + '</div></div>';   // 탭 바만 화면에 고정(대회 설명 배너는 스크롤되어 사라짐)

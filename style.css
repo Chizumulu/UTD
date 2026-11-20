@@ -18665,3 +18665,6 @@ tr.my-team td.team::after,
   .cup-hero-desc { margin-top: 8px; font-size: 13.5px; line-height: 1.65; color: rgba(238,242,251,.88); word-break: keep-all; }
   .cup-hero .cup-status { margin-top: 12px; }
 }
+
+/* 컵대회: 배너는 '소개' 탭 안에 들어가므로 위쪽 간격만 정리 */
+.cup-panel .cup-hero { margin-top: 4px; }
