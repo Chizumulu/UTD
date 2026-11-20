@@ -230,7 +230,9 @@ async function handleAction(payload, env) {
     return;
   }
 
-  const response = await fetch("https://api.github.com/repos/" + encodeURIComponent(env.GITHUB_REPOSITORY) + "/dispatches", {
+  const [owner, repository] = String(env.GITHUB_REPOSITORY || "").split("/");
+  if (!owner || !repository || !env.GITHUB_TOKEN) throw new Error("GitHub dispatch settings are incomplete");
+  const response = await fetch("https://api.github.com/repos/" + encodeURIComponent(owner) + "/" + encodeURIComponent(repository) + "/dispatches", {
     method: "POST",
     headers: {
       authorization: "Bearer " + env.GITHUB_TOKEN,
@@ -255,6 +257,7 @@ async function signedPayload(id, action, env) {
 }
 
 async function sign(value, secret) {
+  if (!secret || secret.length < 32) throw new Error("Signing secret must be at least 32 characters");
   const key = await crypto.subtle.importKey(
     "raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
@@ -263,6 +266,7 @@ async function sign(value, secret) {
 }
 
 async function verifyMetaSignature(raw, supplied, secret) {
+  if (!secret || !supplied) return false;
   const expected = "sha256=" + await sign(raw, secret);
   return constantTimeEqual(supplied, expected);
 }
