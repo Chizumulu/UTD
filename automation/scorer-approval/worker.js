@@ -92,6 +92,7 @@ function makeProposal(item, match) {
   if (!match || !["full_time", "finished", "ended"].includes(String(match.status || "").toLowerCase())) return null;
   const home = String(match.homeTeam || "").trim();
   const away = String(match.awayTeam || "").trim();
+  if (match.homeScore == null || match.awayScore == null) return null;
   const homeScore = Number(match.homeScore);
   const awayScore = Number(match.awayScore);
   if (!home || !away || !Number.isInteger(homeScore) || !Number.isInteger(awayScore)) return null;
