@@ -425,6 +425,15 @@
     return cups.find(function (x) { return x.id === cupSelectedId; }) || cups[0] || null;
   }
   let cupTab = 'about', cupStickyObs = null;
+  // data.js 에 divisionTwo 가 없을 때 쓰는 FA컵 2부 12팀 기본값 (data.js 의 divisionTwo 가 있으면 그쪽이 우선)
+  const CUP_FA_DIV2_FALLBACK = [
+    { en: 'Songwe Border United FC', ko: '송궤 보더 유나이티드 FC' }, { en: 'Mzuzu City Hammers FC', ko: '음주주 시티 해머스 FC' },
+    { en: 'Extreme FC', ko: '익스트림 FC' }, { en: 'FOMO FC', ko: '포모 FC' },
+    { en: 'Embangweni United FC', ko: '엠방궤니 유나이티드 FC' }, { en: 'Ntaja United FC', ko: '은타자 유나이티드 FC' },
+    { en: 'Chilobwe United FC', ko: '칠롭웨 유나이티드 FC', logo: '칠롭웨.webp' }, { en: 'Namitete Zitha FC', ko: '나미테테 지타 FC' },
+    { en: 'Ndirande Stars FC', ko: '은디란데 스타스 FC' }, { en: 'Mighty Tigers FC', ko: '마이티 타이거스 FC' },
+    { en: 'Bangwe All Stars FC', ko: '방궤 올 스타스 FC' }, { en: 'Changalume Barracks FC', ko: '창갈루메 배럭스 FC' }
+  ];
   function setCupTab(id) {
     cupTab = id;
     document.querySelectorAll('#cupTabsWrap .cup-tab-btn').forEach(function (b) {
@@ -726,16 +735,20 @@
     const rowsTeams = allInfo.filter(function (r) { return !PRIZE_RE.test(String(r[0])) && TEAM_RE.test(String(r[0])); });
     const rowsAbout = allInfo.filter(function (r) { return rowsPrize.indexOf(r) < 0 && rowsTeams.indexOf(r) < 0; });
     // 1부 리그(32강 자동 진출) 팀 목록: 대진표 뼈대의 첫 라운드 entrants 를 그대로 보여줍니다.
-    let topFlightHtml = '';
-    const firstRound = Array.isArray(c.bracket) && c.bracket[0];
-    if (firstRound && Array.isArray(firstRound.entrants) && firstRound.entrants.length) {
-      topFlightHtml = '<section class="cup-info"><dl class="cup-kv"><div class="cup-kv-row"><dt>' +
-        (ko ? '1부 리그 32강 자동 진출 팀 (' + firstRound.entrants.length + '팀)' : 'Top flight · Auto Round of 32 (' + firstRound.entrants.length + ')') + '</dt>' +
-        '<dd><div class="cup-team-chips">' + firstRound.entrants.map(function (e) {
+    const teamListSection = function (titleKo, titleEn, list) {
+      if (!Array.isArray(list) || !list.length) return '';
+      return '<section class="cup-info"><dl class="cup-kv"><div class="cup-kv-row"><dt>' +
+        (ko ? titleKo : titleEn) + ' (' + list.length + (ko ? '팀' : '') + ')</dt>' +
+        '<dd><div class="cup-team-chips">' + list.map(function (e) {
           const t = leagueData.find(function (x) { return x.nameEn === e.en; });
-          return '<span class="cup-team-chip">' + (t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '') + '<span>' + cupEsc(ko ? (e.ko || e.en) : e.en) + '</span></span>';
+          const lg = e.logo || (t && t.logoSrc);
+          return '<span class="cup-team-chip">' + (lg ? '<img src="' + cupEsc(lg) + '" alt="">' : '') + '<span>' + cupEsc(ko ? (e.ko || e.en) : e.en) + '</span></span>';
         }).join('') + '</div></dd></div></dl></section>';
-    }
+    };
+    // 1부: 대진표 뼈대 첫 라운드의 entrants / 2부: c.divisionTwo
+    const firstRound = Array.isArray(c.bracket) && c.bracket[0];
+    const topFlightHtml = teamListSection('1부 리그 32강 자동 진출 팀', 'Top flight · Auto Round of 32', firstRound && firstRound.entrants) +
+      teamListSection('2부 리그 참가 팀', 'Second tier', (Array.isArray(c.divisionTwo) && c.divisionTwo.length) ? c.divisionTwo : (c.id === 'faCup2627' ? CUP_FA_DIV2_FALLBACK : null));
     const bracketHtml = cupBracketHtml(c);
     const roundsList = (c.rounds || []).filter(function (r) { return r && r.matches && r.matches.length; });
     const panels = [

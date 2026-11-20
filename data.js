@@ -6784,6 +6784,21 @@ const cupTournaments = [
       { labelKo: '4강', labelEn: 'Semi-finals', count: 2, dateKo: '3/6–7', dateEn: '6–7 Mar' },
       { labelKo: '결승', labelEn: 'Final', count: 1, dateKo: '3/20', dateEn: '20 Mar' }
     ],
+    // 2부(내셔널 디비전 리그) 참가 12팀 — 참가팀 탭에 표시됩니다.
+    divisionTwo: [
+      { en: 'Songwe Border United FC', ko: '송궤 보더 유나이티드 FC' },
+      { en: 'Mzuzu City Hammers FC', ko: '음주주 시티 해머스 FC' },
+      { en: 'Extreme FC', ko: '익스트림 FC' },
+      { en: 'FOMO FC', ko: '포모 FC' },
+      { en: 'Embangweni United FC', ko: '엠방궤니 유나이티드 FC' },
+      { en: 'Ntaja United FC', ko: '은타자 유나이티드 FC' },
+      { en: 'Chilobwe United FC', ko: '칠롭웨 유나이티드 FC', logo: '칠롭웨.webp' },
+      { en: 'Namitete Zitha FC', ko: '나미테테 지타 FC' },
+      { en: 'Ndirande Stars FC', ko: '은디란데 스타스 FC' },
+      { en: 'Mighty Tigers FC', ko: '마이티 타이거스 FC' },
+      { en: 'Bangwe All Stars FC', ko: '방궤 올 스타스 FC' },
+      { en: 'Changalume Barracks FC', ko: '창갈루메 배럭스 FC' }
+    ],
     rounds: []
   },
   {
