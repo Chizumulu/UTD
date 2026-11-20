@@ -436,28 +436,26 @@
       p.classList.toggle('is-on', on); p.hidden = !on;
     });
     updateSegIndicator(document.getElementById('cupTabsWrap'));
-    // 탭을 바꾸면 내용 맨 위가 보이도록 (헤더가 붙어 있는 위치까지만) 올려줍니다.
-    const st = document.getElementById('cupSticky'), sen = document.getElementById('cupSentinel');
-    if (st && sen && sen.getBoundingClientRect().top < 0) window.scrollTo(0, window.scrollY + sen.getBoundingClientRect().top);
+    // 탭을 바꾸면 탭 바 바로 아래 내용 맨 위가 보이도록, 이미 스크롤된 경우에만 올려줍니다.
+    const st = document.getElementById('cupTabsSticky');
+    if (st) {
+      const stuckTop = parseFloat(st.style.top) || 0, r = st.getBoundingClientRect();
+      if (r.top <= stuckTop + 1) {
+        const panel = document.querySelector('#cupViewContent .cup-panel.is-on');
+        if (panel) { const y = panel.getBoundingClientRect().top - r.height - stuckTop - 8; if (y < 0) window.scrollBy(0, y); }
+      }
+    }
   }
-  // 상단 대회 정보(.cup-sticky)를 화면에 고정합니다. 위쪽 메뉴가 붙어 있으면 그 아래에 붙고,
-  // 스크롤해서 붙은 상태가 되면 설명 글을 접어 화면을 덜 가립니다.
+  // 탭 바(.cup-tabs-sticky)만 화면 위에 고정합니다. 위쪽 메뉴가 붙어 있으면 그 아래에 붙습니다.
   function setupCupSticky() {
-    const st = document.getElementById('cupSticky'), sen = document.getElementById('cupSentinel');
-    if (!st || !sen) return;
+    const st = document.getElementById('cupTabsSticky');
+    if (!st) return;
     let top = 8;
     const nav = document.getElementById('viewToggleFade');
     if (nav && nav.offsetParent !== null && getComputedStyle(nav).position === 'sticky') {
       top = (parseFloat(getComputedStyle(nav).top) || 0) + nav.getBoundingClientRect().height + 8;
     }
     st.style.top = Math.round(top) + 'px';
-    if (cupStickyObs) cupStickyObs.disconnect();
-    if ('IntersectionObserver' in window) {
-      cupStickyObs = new IntersectionObserver(function (es) {
-        st.classList.toggle('is-stuck', !es[0].isIntersecting && es[0].boundingClientRect.top < 0);
-      }, { rootMargin: '-' + Math.round(top) + 'px 0px 0px 0px', threshold: 0 });
-      cupStickyObs.observe(sen);
-    }
   }
   window.addEventListener('resize', function () { if (cupMode) setupCupSticky(); });
   function selectCup(id) {
@@ -748,10 +746,10 @@
       { id: 'bracket', ko: '대진표', en: 'Bracket', html: '__BRACKET__' }
     ].filter(function (t) { return t.html; });
     if (!panels.some(function (t) { return t.id === cupTab; })) cupTab = panels.length ? panels[0].id : 'about';
-    html += '<div class="cup-tabs-wrap rank-filter-wrap" id="cupTabsWrap" role="tablist">' + panels.map(function (t) {
+    html += '</div><div class="cup-tabs-sticky" id="cupTabsSticky"><div class="cup-tabs-wrap rank-filter-wrap" id="cupTabsWrap" role="tablist">' + panels.map(function (t) {
       return '<button type="button" role="tab" class="rank-filter-btn cup-tab-btn' + (t.id === cupTab ? ' active' : '') + '" data-cup-tab="' + t.id + '"' +
         ' aria-selected="' + (t.id === cupTab ? 'true' : 'false') + '" onclick="setCupTab(\'' + t.id + '\')">' + (ko ? t.ko : t.en) + '</button>';
-    }).join('') + '</div></div>';   // ← .cup-sticky 닫기
+    }).join('') + '</div></div>';   // 탭 바만 화면에 고정(대회 설명 배너는 스크롤되어 사라짐)
 
     let bracketPanel = bracketHtml;
 

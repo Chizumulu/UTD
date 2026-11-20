@@ -18637,3 +18637,31 @@ tr.my-team td.team::after,
 .side-cup-btn.is-on .side-cup-soon { display: none; }
 @keyframes sideCupBlink { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .25; transform: scale(.94); } }
 @media (prefers-reduced-motion: reduce) { .side-cup-soon { animation: none; } }
+
+/* 컵대회: 배너는 일반 흐름, 탭 바만 고정 (위 .cup-sticky 규칙 덮어쓰기) */
+.cup-sticky { position: static; padding-bottom: 0; margin-bottom: 0; }
+.cup-sticky .cup-hero { margin-bottom: 10px; }
+.cup-tabs-sticky { position: sticky; top: 8px; z-index: 30; padding: 4px 0 6px; margin-bottom: 8px; }
+.cup-tabs-sticky .cup-tabs-wrap { margin-bottom: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.cup-tabs-sticky .cup-tabs-wrap::-webkit-scrollbar { display: none; }
+
+/* 컵대회 탭: 모바일에서 가로 꽉 채우고 버튼을 크게 */
+@media (max-width: 880px) {
+  .cup-tabs-sticky .cup-tabs-wrap { width: 100%; display: flex; gap: 4px; padding: 5px; overflow-x: auto; }
+  .cup-tabs-wrap .cup-tab-btn {
+    flex: 1 1 0; min-width: 0; padding: 13px 4px; font-size: var(--fs-md, 15px); font-weight: 700; text-align: center;
+  }
+}
+
+/* 컵대회 배너: 모바일에서는 로고를 위 한 줄, 글은 그 아래 전체 폭으로 */
+@media (max-width: 880px) {
+  .cup-hero { flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 16px 16px 18px; }
+  .cup-hero > .cup-hero-logo, .cup-hero > .cup-hero-icon { margin: 0; }
+  .cup-hero .cup-hero-logo { width: 40px; height: 40px; }
+  .cup-hero .cup-hero-logo2 { width: auto; height: 40px; max-width: 110px; }
+  .cup-hero > div { flex: 1 1 100%; min-width: 0; }
+  .cup-hero-eyebrow { font-size: 12px; margin-bottom: 4px; }
+  .cup-hero-title { font-size: 20px; line-height: 1.3; word-break: keep-all; }
+  .cup-hero-desc { margin-top: 8px; font-size: 13.5px; line-height: 1.65; color: rgba(238,242,251,.88); word-break: keep-all; }
+  .cup-hero .cup-status { margin-top: 12px; }
+}
