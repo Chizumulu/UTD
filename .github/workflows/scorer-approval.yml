@@ -16,6 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+          token: ${{ secrets.SCORER_GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -28,9 +29,9 @@ jobs:
           mkdir -p work
           node -e "const e=require(process.env.GITHUB_EVENT_PATH); require('node:fs').writeFileSync('work/scorer-proposal.json', JSON.stringify(e.client_payload.proposal));"
           node automation/scorer-approval/apply-approved-proposal.mjs
-      - name: Create a reviewable pull request
+      - name: Create and merge the approved data pull request
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.SCORER_GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PROPOSAL_ID: ${{ github.event.client_payload.proposal.id }}
           MATCH_LABEL: ${{ github.event.client_payload.proposal.home }} vs ${{ github.event.client_payload.proposal.away }}
@@ -46,4 +47,7 @@ jobs:
           git add data.js
           git commit -m "Update approved match scorers"
           git push origin "$BRANCH"
-          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Update scorers: $MATCH_LABEL" --body "A scorer update was approved in WhatsApp. Please review the data.js diff before merging."
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Update scorers: $MATCH_LABEL" --body "This data.js update was approved in WhatsApp. The workflow will merge it if GitHub allows the PR to merge."
+          PR_NUMBER="$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json number --jq .number)"
+          HEAD_SHA="$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)"
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge" -f sha="$HEAD_SHA" -f merge_method=squash
