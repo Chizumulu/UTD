@@ -424,6 +424,42 @@
     const cups = getCups();
     return cups.find(function (x) { return x.id === cupSelectedId; }) || cups[0] || null;
   }
+  let cupTab = 'about', cupStickyObs = null;
+  function setCupTab(id) {
+    cupTab = id;
+    document.querySelectorAll('#cupTabsWrap .cup-tab-btn').forEach(function (b) {
+      const on = b.getAttribute('data-cup-tab') === id;
+      b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('#cupViewContent .cup-panel').forEach(function (p) {
+      const on = p.getAttribute('data-cup-panel') === id;
+      p.classList.toggle('is-on', on); p.hidden = !on;
+    });
+    updateSegIndicator(document.getElementById('cupTabsWrap'));
+    // 탭을 바꾸면 내용 맨 위가 보이도록 (헤더가 붙어 있는 위치까지만) 올려줍니다.
+    const st = document.getElementById('cupSticky'), sen = document.getElementById('cupSentinel');
+    if (st && sen && sen.getBoundingClientRect().top < 0) window.scrollTo(0, window.scrollY + sen.getBoundingClientRect().top);
+  }
+  // 상단 대회 정보(.cup-sticky)를 화면에 고정합니다. 위쪽 메뉴가 붙어 있으면 그 아래에 붙고,
+  // 스크롤해서 붙은 상태가 되면 설명 글을 접어 화면을 덜 가립니다.
+  function setupCupSticky() {
+    const st = document.getElementById('cupSticky'), sen = document.getElementById('cupSentinel');
+    if (!st || !sen) return;
+    let top = 8;
+    const nav = document.getElementById('viewToggleFade');
+    if (nav && nav.offsetParent !== null && getComputedStyle(nav).position === 'sticky') {
+      top = (parseFloat(getComputedStyle(nav).top) || 0) + nav.getBoundingClientRect().height + 8;
+    }
+    st.style.top = Math.round(top) + 'px';
+    if (cupStickyObs) cupStickyObs.disconnect();
+    if ('IntersectionObserver' in window) {
+      cupStickyObs = new IntersectionObserver(function (es) {
+        st.classList.toggle('is-stuck', !es[0].isIntersecting && es[0].boundingClientRect.top < 0);
+      }, { rootMargin: '-' + Math.round(top) + 'px 0px 0px 0px', threshold: 0 });
+      cupStickyObs.observe(sen);
+    }
+  }
+  window.addEventListener('resize', function () { if (cupMode) setupCupSticky(); });
   function selectCup(id) {
     cupSelectedId = id;
     renderCupView();
@@ -467,6 +503,77 @@
   function cupEsc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  // ── 원화로 보기 토글 ─────────────────────────────────────────────────────────
+  // 환산 문구는 항상 HTML에 그려 두고, #cupViewContent 의 .show-krw 클래스로만 보이고 숨깁니다.
+  // (재렌더 없이 토글되므로 펼쳐 둔 접기 영역 등이 그대로 유지됩니다.) 선택은 localStorage에 기억합니다.
+  let cupShowKrw = false;
+  try { cupShowKrw = localStorage.getItem('cupShowKrw') === '1'; } catch (e) {}
+  function applyCupKrw() {
+    const root = document.getElementById('cupViewContent');
+    if (root) root.classList.toggle('show-krw', cupShowKrw);
+    const btn = document.getElementById('cupKrwToggle');
+    if (btn) {
+      btn.classList.toggle('is-on', cupShowKrw);
+      btn.setAttribute('aria-checked', cupShowKrw ? 'true' : 'false');
+    }
+  }
+  function toggleCupKrw() {
+    cupShowKrw = !cupShowKrw;
+    try { localStorage.setItem('cupShowKrw', cupShowKrw ? '1' : '0'); } catch (e) {}
+    applyCupKrw();
+  }
+  // ── 콰차(MWK) → 원화(KRW) 환산 (상금 표시용, 참고값) ─────────────────────────
+  // 기준: 2026-11 중순. 환율이 크게 바뀌면 아래 세 숫자만 고치면 됩니다.
+  //   공식: RBM 고시 중간값 약 1,734 MWK/USD / 비공식(실질): 현지 송금·거래 사례 약 4,000~5,000 중간값 / 원·달러 약 1,335원
+  const CUP_KRW_PER_USD = 1335;
+  const CUP_MWK_PER_USD_OFFICIAL = 1734;
+  const CUP_MWK_PER_USD_PARALLEL = 4500;
+  const CUP_KRW_PER_MWK_OFFICIAL = CUP_KRW_PER_USD / CUP_MWK_PER_USD_OFFICIAL;   // ≈ 0.77
+  const CUP_KRW_PER_MWK_PARALLEL = CUP_KRW_PER_USD / CUP_MWK_PER_USD_PARALLEL;   // ≈ 0.30
+  // 'K150M', 'K12.3M', 'K200K–300K' 같은 문자열 속 금액을 찾는 정규식 (뒤의 단위 M/K가 있어야 금액으로 봅니다)
+  const CUP_MWK_RE = /K?(\d+(?:\.\d+)?)\s?([MK])(?![A-Za-z])/g;
+  function cupMwkToNumber(num, unit) { return parseFloat(num) * (unit === 'M' ? 1e6 : 1e3); }
+  function cupFormatKrw(n) {
+    if (isKorean) {
+      if (n >= 1e8) {
+        let eok = Math.floor(n / 1e8), man = Math.round((n % 1e8) / 1e4);
+        if (man >= 10000) { eok += 1; man = 0; }
+        return eok + '억' + (man ? ' ' + man.toLocaleString('en-US') + '만' : '') + '원';
+      }
+      if (n >= 1e4) {
+        const man = n / 1e4;
+        return (man >= 100 ? Math.round(man).toLocaleString('en-US') : String(Math.round(man * 10) / 10)) + '만원';
+      }
+      return Math.round(n).toLocaleString('en-US') + '원';
+    }
+    if (n >= 1e6) return '₩' + String(Math.round(n / 1e5) / 10) + 'M';
+    if (n >= 1e3) return '₩' + String(Math.round(n / 100) / 10) + 'K';
+    return '₩' + Math.round(n);
+  }
+  // 'K200K–300K' 같은 범위는 '15.4만~23.1만원'처럼 앞뒤를 같이 환산합니다.
+  function cupKrwOf(text, rate) {
+    const vals = [];
+    String(text == null ? '' : text).replace(CUP_MWK_RE, function (m, num, unit) { vals.push(cupMwkToNumber(num, unit) * rate); return m; });
+    if (!vals.length) return '';
+    if (vals.length === 1) return cupFormatKrw(vals[0]);
+    const a = cupFormatKrw(vals[0]), b = cupFormatKrw(vals[vals.length - 1]);
+    return isKorean ? a.replace(/원$/, '') + '~' + b : a + '–' + b;
+  }
+  // meta(오른쪽 금액) 아래에 붙는 두 줄짜리 환산 표시
+  function cupKrwMetaHtml(meta) {
+    const off = cupKrwOf(meta, CUP_KRW_PER_MWK_OFFICIAL);
+    if (!off) return '';
+    const par = cupKrwOf(meta, CUP_KRW_PER_MWK_PARALLEL);
+    const ko = isKorean;
+    return '<small class="cup-krw"><span class="cup-krw-line">' + (ko ? '공식환율 ' : 'Official rate ') + '≈ ' + cupEsc(off) + '</span>' +
+      '<span class="cup-krw-line cup-krw-alt">' + (ko ? '비공식환율 ' : 'Unofficial rate ') + '≈ ' + cupEsc(par) + '</span></small>';
+  }
+  // 이름·주석 문장 속 금액(예: 'K2M', 'K466M') 뒤에는 공식 환율 환산만 짧게 붙입니다.
+  function cupEscWithKrw(text) {
+    return cupEsc(text).replace(CUP_MWK_RE, function (m, num, unit) {
+      return m + '<span class="cup-krw-inline">(≈' + cupFormatKrw(cupMwkToNumber(num, unit) * CUP_KRW_PER_MWK_OFFICIAL) + ')</span>';
     });
   }
   function cupTeamHtml(nameEn, nameKoOverride, away) {
@@ -535,10 +642,12 @@
       });
       html += '</div>';
     }
+    html += '<div class="cup-sentinel" id="cupSentinel"></div><div class="cup-sticky" id="cupSticky">';
     html += '<div class="cup-hero">' +
       (c.logoSrc ? '<img class="cup-hero-logo" src="' + cupEsc(c.logoSrc) + '" alt="' + cupEsc((ko ? c.organizerKo : c.organizerEn) || '') + '">' :
       '<svg class="cup-hero-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v4.5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 6H4.5v1.2A3 3 0 0 0 7.5 10.2M17 6h2.5v1.2a3 3 0 0 1-3 3M12 13.5V17M8.5 20h7M10 17h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>') +
-      '<div><div class="cup-hero-eyebrow">' + cupEsc((ko ? c.organizerKo : c.organizerEn) || c.organizerEn || 'NRFA') + ' CUP</div>' +
+      (c.logoSrc2 ? '<img class="cup-hero-logo cup-hero-logo2" src="' + cupEsc(c.logoSrc2) + '" alt="' + cupEsc(ko ? c.nameKo : c.nameEn) + '">' : '') +
+      '<div><div class="cup-hero-eyebrow">' + (c.eyebrowEn ? cupEsc(c.eyebrowEn) : cupEsc((ko ? c.organizerKo : c.organizerEn) || c.organizerEn || 'NRFA') + ' CUP') + '</div>' +
       '<h2 class="cup-hero-title">' + cupEsc(ko ? c.nameKo : c.nameEn) + '</h2>' +
       '<p class="cup-hero-desc">' + cupEsc(ko ? c.descKo : c.descEn) + '</p>' +
       '<span class="cup-status' + (c.status === 'live' ? ' is-live' : '') + '">' + (ko ? st[0] : st[1]) + '</span></div></div>';
@@ -546,6 +655,13 @@
     const infoRows = ko ? c.infoKo : c.infoEn, schedRows = ko ? c.scheduleKo : c.scheduleEn;
     // 값 하나를 화면용 HTML로 바꿉니다: 문자열 / 문자열 배열 / { tag, name, sub, meta, badge } 목록 / { note } / { teams }
     const kvValue = function (v) {
+      if (v && !Array.isArray(v) && Array.isArray(v.folds)) {
+        return '<div class="cup-folds">' + v.folds.map(function (f) {
+          return '<details class="cup-fold"><summary><span class="cup-fold-title">' + cupEsc(f.title || '') + '</span>' +
+            (f.meta ? '<span class="cup-fold-meta">' + cupEsc(f.meta) + '</span>' : '') + '</summary>' +
+            '<div class="cup-fold-body">' + kvValue(f.list) + '</div></details>';
+        }).join('') + '</div>';
+      }
       if (v && !Array.isArray(v) && Array.isArray(v.teams)) {
         return '<div class="cup-team-chips">' + v.teams.map(function (en) {
           const t = leagueData.find(function (x) { return x.nameEn === en; });
@@ -555,22 +671,36 @@
       }
       if (Array.isArray(v) && v.some(function (x) { return x && typeof x === 'object'; })) {
         return '<ul class="cup-tiers">' + v.map(function (x) {
-          if (x && x.note) return '<li class="cup-tier-note">' + cupEsc(x.note) + '</li>';
+          if (x && x.note) return '<li class="cup-tier-note">' + cupEscWithKrw(x.note) + '</li>';
           if (!x || typeof x !== 'object') return '<li class="cup-tier-note">' + cupEsc(x) + '</li>';
           return '<li class="cup-tier' + (x.hl ? ' is-hl' : '') + '">' +
             (x.tag ? '<b class="cup-tier-tag">' + cupEsc(x.tag) + '</b>' : '') +
-            '<span class="cup-tier-main"><span class="cup-tier-name">' + cupEsc(x.name || '') + '</span>' +
-            (x.sub ? '<small>' + cupEsc(x.sub) + '</small>' : '') + '</span>' +
+            '<span class="cup-tier-main"><span class="cup-tier-name">' + cupEscWithKrw(x.name || '') + '</span>' +
+            (x.sub ? '<small>' + cupEscWithKrw(x.sub) + '</small>' : '') + '</span>' +
             (x.badge ? '<span class="cup-tier-badge">' + cupEsc(x.badge) + '</span>' : '') +
-            (x.meta ? '<span class="cup-tier-meta">' + cupEsc(x.meta) + '</span>' : '') + '</li>';
+            (x.meta ? '<span class="cup-tier-meta">' + cupEsc(x.meta) + cupKrwMetaHtml(x.meta) + '</span>' : '') + '</li>';
         }).join('') + '</ul>';
       }
       return Array.isArray(v) ? v.map(cupEsc).join('<br>') : cupEsc(v);
     };
+    // 원화로 보기 토글: 콰차 금액(meta)이 든 첫 번째 목록, 즉 '본선 상금' 항목 맨 위에 한 번만 넣습니다.
+    let krwToggleDone = false;
+    const krwToggleHtml = function () {
+      return '<div class="cup-krw-bar"><span class="cup-krw-bar-text">' + (ko ? '원화로 보기' : 'Show in KRW') + '</span>' +
+        '<button type="button" id="cupKrwToggle" class="cup-krw-switch' + (cupShowKrw ? ' is-on' : '') + '" role="switch" aria-checked="' + (cupShowKrw ? 'true' : 'false') + '"' +
+        ' aria-label="' + (ko ? '원화로 보기' : 'Show in KRW') + '" onclick="toggleCupKrw()"><i></i></button></div>';
+    };
+    const hasMwkMeta = function (v) {
+      return Array.isArray(v) && v.some(function (x) { return x && typeof x === 'object' && x.meta && String(x.meta).search(CUP_MWK_RE) >= 0; });
+    };
     const kvBlock = function (title, rows) {
       if (!Array.isArray(rows) || !rows.length) return '';
       return '<section class="cup-info"><h3 class="cup-round-title">' + title + '</h3><dl class="cup-kv">' +
-        rows.map(function (r) { return '<div class="cup-kv-row"><dt>' + cupEsc(r[0]) + '</dt><dd>' + kvValue(r[1]) + '</dd></div>'; }).join('') +
+        rows.map(function (r) {
+          let pre = '';
+          if (!krwToggleDone && hasMwkMeta(r[1])) { krwToggleDone = true; pre = krwToggleHtml(); }
+          return '<div class="cup-kv-row"><dt>' + cupEsc(r[0]) + '</dt><dd>' + pre + kvValue(r[1]) + '</dd></div>';
+        }).join('') +
         '</dl></section>';
     };
     // 일정: 세로 타임라인. 끝난 일정은 흐리게, 아직 안 끝난 첫 일정에는 '다음' 표시, 결승은 골드로 강조합니다.
@@ -591,31 +721,70 @@
             (isNext ? '<em class="cup-tl-next">' + (ko ? '다음' : 'Next') + '</em>' : '') + '</span></li>';
         }).join('') + '</ol></section>';
     };
-    html += '<div class="cup-info-grid">' + kvBlock(ko ? '대회 안내' : 'About', infoRows) + scheduleBlock(ko ? '일정' : 'Schedule', schedRows) + '</div>';
+    // 탭 분류: 행 제목으로 '참가 팀' / '상금' / 나머지(소개)로 나눕니다.
+    const TEAM_RE = /참가\s*팀|participating|teams/i, PRIZE_RE = /상금|지원금|prize/i;
+    const allInfo = Array.isArray(infoRows) ? infoRows : [];
+    const rowsPrize = allInfo.filter(function (r) { return PRIZE_RE.test(String(r[0])); });
+    const rowsTeams = allInfo.filter(function (r) { return !PRIZE_RE.test(String(r[0])) && TEAM_RE.test(String(r[0])); });
+    const rowsAbout = allInfo.filter(function (r) { return rowsPrize.indexOf(r) < 0 && rowsTeams.indexOf(r) < 0; });
+    // 1부 리그(32강 자동 진출) 팀 목록: 대진표 뼈대의 첫 라운드 entrants 를 그대로 보여줍니다.
+    let topFlightHtml = '';
+    const firstRound = Array.isArray(c.bracket) && c.bracket[0];
+    if (firstRound && Array.isArray(firstRound.entrants) && firstRound.entrants.length) {
+      topFlightHtml = '<section class="cup-info"><dl class="cup-kv"><div class="cup-kv-row"><dt>' +
+        (ko ? '1부 리그 32강 자동 진출 팀 (' + firstRound.entrants.length + '팀)' : 'Top flight · Auto Round of 32 (' + firstRound.entrants.length + ')') + '</dt>' +
+        '<dd><div class="cup-team-chips">' + firstRound.entrants.map(function (e) {
+          const t = leagueData.find(function (x) { return x.nameEn === e.en; });
+          return '<span class="cup-team-chip">' + (t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '') + '<span>' + cupEsc(ko ? (e.ko || e.en) : e.en) + '</span></span>';
+        }).join('') + '</div></dd></div></dl></section>';
+    }
+    const bracketHtml = cupBracketHtml(c);
+    const roundsList = (c.rounds || []).filter(function (r) { return r && r.matches && r.matches.length; });
+    const panels = [
+      { id: 'about', ko: '소개', en: 'About', html: kvBlock(ko ? '대회 안내' : 'About', rowsAbout) },
+      { id: 'schedule', ko: '일정', en: 'Schedule', html: scheduleBlock(ko ? '일정' : 'Schedule', schedRows) },
+      { id: 'teams', ko: '참가팀', en: 'Teams', html: kvBlock(ko ? '참가 팀' : 'Teams', rowsTeams) + topFlightHtml },
+      { id: 'prize', ko: '상금', en: 'Prize', html: kvBlock(ko ? '상금' : 'Prize money', rowsPrize) },
+      { id: 'bracket', ko: '대진표', en: 'Bracket', html: '__BRACKET__' }
+    ].filter(function (t) { return t.html; });
+    if (!panels.some(function (t) { return t.id === cupTab; })) cupTab = panels.length ? panels[0].id : 'about';
+    html += '<div class="cup-tabs-wrap rank-filter-wrap" id="cupTabsWrap" role="tablist">' + panels.map(function (t) {
+      return '<button type="button" role="tab" class="rank-filter-btn cup-tab-btn' + (t.id === cupTab ? ' active' : '') + '" data-cup-tab="' + t.id + '"' +
+        ' aria-selected="' + (t.id === cupTab ? 'true' : 'false') + '" onclick="setCupTab(\'' + t.id + '\')">' + (ko ? t.ko : t.en) + '</button>';
+    }).join('') + '</div></div>';   // ← .cup-sticky 닫기
 
-    html += cupBracketHtml(c);
+    let bracketPanel = bracketHtml;
 
-    const rounds = (c.rounds || []).filter(function (r) { return r && r.matches && r.matches.length; });
+    const rounds = roundsList;
+    let rhtml = '';
     if (!rounds.length) {
-      html += '<div class="cup-empty"><div class="cup-empty-title">' + (ko ? '대진 발표 대기 중' : 'Draw not announced yet') + '</div>' +
+      rhtml += '<div class="cup-empty"><div class="cup-empty-title">' + (ko ? '대진 발표 대기 중' : 'Draw not announced yet') + '</div>' +
         '<p>' + (ko ? '대진표와 경기 일정이 나오면 이곳에 표시돼요.' : 'The bracket and fixtures will be shown here once available.') + '</p>' +
         '<button type="button" class="cup-back-btn" onclick="showView(\'rank\')">' + (ko ? '리그 메인으로' : 'Back to league') + '</button></div>';
     } else {
       rounds.forEach(function (r) {
-        html += '<section class="cup-round"><h3 class="cup-round-title">' + cupEsc(ko ? (r.labelKo || r.labelEn) : (r.labelEn || r.labelKo)) + '</h3><div class="cup-match-list">';
+        rhtml += '<section class="cup-round"><h3 class="cup-round-title">' + cupEsc(ko ? (r.labelKo || r.labelEn) : (r.labelEn || r.labelKo)) + '</h3><div class="cup-match-list">';
         r.matches.forEach(function (m) {
           const played = m.homeScore != null && m.awayScore != null;
           const mid = played
             ? '<div class="cup-score">' + m.homeScore + ' : ' + m.awayScore + (m.pso ? '<small>PSO ' + cupEsc(m.pso) + '</small>' : '') + '</div>'
             : '<div class="cup-when">' + cupEsc(m.date || 'TBD') + (m.time ? '<br>' + cupEsc(m.time) : '') + '</div>';
           const venue = ko ? (m.venueKo || m.venueEn) : (m.venueEn || m.venueKo);
-          html += '<div class="cup-match">' + cupTeamHtml(m.home, m.homeKo, false) + '<div class="cup-match-mid">' + mid + '</div>' +
+          rhtml += '<div class="cup-match">' + cupTeamHtml(m.home, m.homeKo, false) + '<div class="cup-match-mid">' + mid + '</div>' +
             cupTeamHtml(m.away, m.awayKo, true) + (venue ? '<div class="cup-venue">' + cupEsc(venue) + '</div>' : '') + '</div>';
         });
-        html += '</div></section>';
+        rhtml += '</div></section>';
       });
     }
+    bracketPanel += rhtml;
+    html += '<div class="cup-panels">' + panels.map(function (t) {
+      return '<div class="cup-panel' + (t.id === cupTab ? ' is-on' : '') + '" data-cup-panel="' + t.id + '"' + (t.id === cupTab ? '' : ' hidden') + '>' +
+        (t.id === 'bracket' ? bracketPanel : t.html) + '</div>';
+    }).join('') + '</div>';
     root.innerHTML = html;
+    applyCupKrw();
+    setupCupSticky();
+    updateSegIndicator(document.getElementById('cupTabsWrap'));
   }
 
   function showView(view) {
@@ -2687,7 +2856,9 @@
     }).join(', ');
   }
 
-  function formatKickoff(nextMatch) {
+  // 한국(Asia/Seoul) 시간대 기기에서는 KST만, 그 외에는 CAT · KST를 함께 보여줍니다.
+  // forceBoth=true 이면(공유 문구 등 다른 사람에게 보내는 텍스트) 시간대와 상관없이 둘 다 표기합니다.
+  function formatKickoff(nextMatch, forceBoth) {
     if (!nextMatch.kickoffDate || !nextMatch.kickoffTime) return '';
     const [y, mo, d] = nextMatch.kickoffDate.split('-').map(Number);
     const [hh, mm] = nextMatch.kickoffTime.split(':').map(Number);
@@ -2706,6 +2877,12 @@
     const kstMonthEn = kstDate.toLocaleDateString('en-US', { month: 'short' });
     const kstTime = `${String(kstDate.getHours()).padStart(2, '0')}:${String(kstDate.getMinutes()).padStart(2, '0')}`;
     const dayShifted = kstD !== d;
+
+    if (IS_SEOUL_TZ && !forceBoth) {
+      return isKorean
+        ? `${kstMo}.${kstD}(${kstWeekdayKo}) ${kstTime} KST`
+        : `${kstWeekdayEn}, ${kstMonthEn} ${kstD} · ${kstTime} KST`;
+    }
 
     if (isKorean) {
       if (!dayShifted) {
@@ -3096,7 +3273,7 @@
     if (!nm) return;
     const oppName = isKorean ? nm.oppKo : nm.oppEn;
     const haTxt = nm.homeAway === 'H' ? (isKorean ? '홈' : 'Home') : (isKorean ? '원정' : 'Away');
-    const kickoffTxt = formatKickoff(nm).replace(/<br>\s*/g, ' / ');
+    const kickoffTxt = formatKickoff(nm, true).replace(/<br>\s*/g, ' / ');
     const compTxt = nm.comp === 'cup' ? (isKorean ? `[${nm.compKo}${nm.roundLabelKo ? ' ' + nm.roundLabelKo : ''}] ` : `[${nm.compEn}${nm.roundLabelEn ? ' ' + nm.roundLabelEn : ''}] `) : '';
     const text = isKorean
       ? `⚽ 치주물루 유나이티드 FC 다음 경기\n${compTxt}${haTxt} vs ${oppName}\n${kickoffTxt}`
@@ -16890,6 +17067,142 @@
     }
   }
 
+  // ===== 선수 모달: 팀 성적과의 관계 =====
+  // 새로 입력할 데이터 없이 matchLineups(리그 라인업·결과)만으로 계산합니다.
+  //  1) 선발 vs 결장: 이 선수가 선발인 경기와 명단에도 없던 경기의 팀 성적
+  //     (교체로만 뛴 경기는 어느 쪽에도 넣지 않습니다. computeKeyPlayerImpact와 같은 기준)
+  //  2) 골 넣은 경기: 이 선수가 골을 넣은 경기의 팀 승/무/패
+  //  3) 함께 선발: 같은 경기에 같이 선발이었던 선수 중, 그때 팀 성적(경기당 승점)이 좋았던 순
+  //     (거의 매 경기 선발인 선수가 항상 1~2위가 되지 않도록 횟수가 아니라 성적으로 정렬)
+  // 인과가 아니라 "그때 팀 성적이 어땠나"의 기록이라 표본이 적으면 참고용 문구를 붙입니다.
+  const SPM_IMPACT_SAMPLE_OK = 5;
+  const SPM_IMPACT_PARTNERS = 3;
+  const SPM_IMPACT_PARTNER_MIN = 4;   // 함께 선발이 이보다 적으면 우연일 수 있어 제외
+  function computeSquadPlayerTeamResults(statsKey) {
+    const key = String(statsKey);
+    const keyOf = (p) => String(p.statKey || p.number);
+    const rec = () => ({ n: 0, w: 0, d: 0, l: 0 });
+    const add = (r, outcome) => { r.n++; if (outcome === 'W') r.w++; else if (outcome === 'D') r.d++; else r.l++; };
+    const started = rec(), absent = rec(), scored = rec();
+    const partners = {};
+    Object.keys(matchLineups || {}).forEach(roundKey => {
+      const lu = matchLineups[roundKey];
+      const parsed = lu ? parseLineupResult(lu.result) : null;
+      if (!parsed) return;
+      const me = (lu.starters || []).find(p => keyOf(p) === key);
+      const sub = (lu.subsIn || []).find(p => keyOf(p) === key);
+      if (me) {
+        add(started, parsed.outcome);
+        (lu.starters || []).forEach(p => {
+          const k = keyOf(p);
+          if (k === key) return;
+          if (!partners[k]) partners[k] = rec();
+          add(partners[k], parsed.outcome);
+        });
+      } else if (!sub) {
+        add(absent, parsed.outcome);
+      }
+      const goals = ((me && me.goals) || []).length + ((sub && sub.goals) || []).length;
+      if (goals > 0) add(scored, parsed.outcome);
+    });
+    const ppg = (r) => r.n ? (r.w * 3 + r.d) / r.n : 0;
+    const partnerList = Object.keys(partners)
+      .map(k => Object.assign({ key: k }, partners[k]))
+      .filter(r => r.n >= SPM_IMPACT_PARTNER_MIN)
+      .sort((a, b) => (ppg(b) - ppg(a)) || (b.n - a.n))
+      .slice(0, SPM_IMPACT_PARTNERS);
+    return { started, absent, scored, partners: partnerList, ppg };
+  }
+
+  function renderSquadPlayerTeamResults(statsKey, hasNumber) {
+    const titleEl = document.getElementById('squadPlayerModalImpactTitle');
+    const bodyEl = document.getElementById('squadPlayerModalImpactBody');
+    if (!titleEl || !bodyEl) return;
+    const hide = () => { titleEl.style.display = 'none'; bodyEl.style.display = 'none'; bodyEl.innerHTML = ''; };
+    if (!hasNumber || typeof parseLineupResult !== 'function') { hide(); return; }
+
+    const r = computeSquadPlayerTeamResults(statsKey);
+    if (r.started.n === 0 && r.scored.n === 0) { hide(); return; }
+
+    const former = (typeof formerSquadData !== 'undefined' && Array.isArray(formerSquadData)) ? formerSquadData : [];
+    const resolvePerson = (key) => {
+      const isFormerKey = /^F\d+$/.test(key);
+      const num = isFormerKey ? parseInt(key.slice(1), 10) : parseInt(key, 10);
+      const p = (isFormerKey ? former : squadData).find(x => x.number === num);
+      return { num, name: p ? (isKorean ? p.nameKo : (p.nameEn || p.nameKo)) : '#' + num };
+    };
+    const recordText = (x) => isKorean ? `${x.w}승 ${x.d}무 ${x.l}패` : `${x.w}W ${x.d}D ${x.l}L`;
+    const gamesText = (n) => isKorean ? `${n}경기` : `${n} ${n === 1 ? 'match' : 'matches'}`;
+    const ppgText = (x) => isKorean ? `경기당 승점 ${r.ppg(x).toFixed(2)}` : `${r.ppg(x).toFixed(2)} pts/game`;
+
+    const items = [];
+    let barPct = null;
+
+    // 1) 선발 vs 결장
+    if (r.started.n > 0) {
+      const cell = (labelKo, labelEn, x, emptyKo, emptyEn) => `
+        <div class="spm-impact-cell">
+          <span class="spm-assist-item-label">${isKorean ? labelKo : labelEn}</span>
+          ${x.n > 0
+            ? `<span class="spm-impact-big">${recordText(x)}</span>
+               <span class="spm-impact-meta">${gamesText(x.n)} · ${ppgText(x)}</span>`
+            : `<span class="spm-impact-meta spm-impact-none">${isKorean ? emptyKo : emptyEn}</span>`}
+        </div>`;
+      const lowSample = r.absent.n > 0 && Math.min(r.started.n, r.absent.n) < SPM_IMPACT_SAMPLE_OK;
+      const noteParts = [isKorean ? '교체 출전만 한 경기는 제외' : 'Sub-only matches excluded'];
+      if (lowSample) noteParts.push(isKorean ? '표본이 적어 참고용' : 'small sample, for reference');
+      items.push(`
+        <div class="spm-assist-item">
+          <div class="spm-impact-compare">
+            ${cell('선발한 경기', 'When starting', r.started, '', '')}
+            ${cell('결장한 경기', 'When not in squad', r.absent, '결장한 경기 없음', 'Never missed')}
+          </div>
+          <div class="spm-assist-item-sub">${noteParts.join(' · ')}</div>
+        </div>`);
+    }
+
+    // 2) 골 넣은 경기
+    if (r.scored.n > 0) {
+      barPct = Math.round((r.scored.w / r.scored.n) * 100);
+      items.push(`
+        <div class="spm-assist-item spm-assist-item-ratio">
+          <div class="spm-assist-item-head">
+            <span class="spm-assist-item-label">${isKorean ? '골 넣은 경기 팀 승률' : 'Team Win Rate When Scoring'}</span>
+            <span class="spm-assist-ratio-value">${barPct}%</span>
+          </div>
+          <div class="spm-assist-bar" aria-hidden="true"><span class="spm-assist-bar-fill" style="width:0"></span></div>
+          <div class="spm-assist-item-sub">${gamesText(r.scored.n)} · ${recordText(r.scored)}</div>
+        </div>`);
+    }
+
+    // 3) 함께 선발한 선수
+    if (r.partners.length) {
+      const rows = r.partners.map(p => {
+        const who = resolvePerson(p.key);
+        return `
+          <div class="spm-impact-partner">
+            <span class="spm-assist-person">${escapeHtml(who.name)}<small>#${who.num}</small></span>
+            <span class="spm-impact-partner-rec">${gamesText(p.n)} · ${recordText(p)}</span>
+          </div>`;
+      }).join('');
+      items.push(`
+        <div class="spm-assist-item">
+          <span class="spm-assist-item-label">${isKorean ? '함께 선발했을 때 성적이 좋았던 선수' : 'Best Results Alongside'}</span>
+          <div class="spm-impact-partners">${rows}</div>
+          <div class="spm-assist-item-sub">${isKorean ? `함께 선발 ${SPM_IMPACT_PARTNER_MIN}경기 이상 기준 · 경기당 승점 순` : `Min. ${SPM_IMPACT_PARTNER_MIN} shared starts · ranked by pts/game`}</div>
+        </div>`);
+    }
+
+    bodyEl.innerHTML = items.join('');
+    titleEl.style.display = '';
+    bodyEl.style.display = '';
+
+    if (barPct !== null) {
+      const fill = bodyEl.querySelector('.spm-assist-bar-fill');
+      if (fill) requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = barPct + '%'; }));
+    }
+  }
+
   // ===== 스쿼드 선수 통산 기록 모달 (Squad Player Career Stats Modal) =====
   // 선수 상세 창의 리그/컵 기록 토글 상태
   let squadPlayerCompMode = 'league';
@@ -17115,12 +17428,13 @@
 
       if (!leagueOnly) {
         // 시즌 흐름 막대·도움 관계는 리그 기록 기준이라 리그 탭에서만 보여줍니다.
-        ['squadPlayerModalForm', 'squadPlayerModalFormTitle', 'squadPlayerModalAssistTitle', 'squadPlayerModalAssistBody'].forEach(id => {
+        ['squadPlayerModalForm', 'squadPlayerModalFormTitle', 'squadPlayerModalAssistTitle', 'squadPlayerModalAssistBody', 'squadPlayerModalImpactTitle', 'squadPlayerModalImpactBody'].forEach(id => {
           const el = document.getElementById(id); if (el) el.style.display = 'none';
         });
       } else {
         renderSquadPlayerSeasonChart(stats, player.number, hasNumber, isFormerPlayer);
         renderSquadPlayerAssistRelations(statsKey, hasNumber);
+        renderSquadPlayerTeamResults(statsKey, hasNumber);
       }
 
       const listEl = document.getElementById('squadPlayerTimeline');

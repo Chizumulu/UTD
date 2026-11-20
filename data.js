@@ -1704,11 +1704,12 @@ const scheduledRounds = {
   // ── 정규 18주차 (엑셀 "Week 18") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round19: [
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-11-21", kickoffTime: "15:00" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-21", kickoffTime: "15:00" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-21", kickoffTime: "15:00" },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-21", kickoffTime: "15:00", movedFromWeek: 22, changed: true }, // 21주차(round22) 경기가 18주차로 변경됨. 오늘 경기만 마잘리로 그라운드(칠룸바 venueHistory 19주차 참고)
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
-    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
+    { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-22", kickoffTime: "15:00", postponed: true }, // 연기 (새 일정 미정) — 확정되면 해당 주차에 새 항목을 추가하고 이 항목에 movedToWeek를 달아주세요.
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { byeKo: "루비리 FC", byeEn: "Luviri FC" }
   ],
@@ -1736,7 +1737,7 @@ const scheduledRounds = {
   ],
   // ── 정규 21주차 (엑셀 "Week 21") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round22: [
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-12-12", kickoffTime: "15:00" },
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-12-12", kickoffTime: "15:00", postponed: true, movedToWeek: 19, changed: true }, // 18주차(round19, 11/21)로 변경됨
     { homeKo: "치바비 리얼 스타즈 FC", homeEn: "Chibavi Real Stars FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-12-12", kickoffTime: "15:00" },
     { homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-12-12", kickoffTime: "15:00" },
     { homeKo: "친테체 유나이티드 FC", homeEn: "Chintheche United FC", awayKo: "젠다 유나이티드 FC", awayEn: "Jenda United FC", kickoffDate: "2026-12-12", kickoffTime: "15:00" },
@@ -2300,7 +2301,9 @@ const leagueData = [
     // 옛 홈구장(마잘리로 그라운드)에서 열렸던 것으로 남겨둡니다.
     // getTeamVenue(nameEn, weekNum)가 weekNum이 이 범위 안에 들면 아래 venue를 대신 씁니다.
     venueHistory: [
-      { fromWeek: 1, toWeek: 7, venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.382983254136427, lng: 34.21591084158308 } }
+      { fromWeek: 1, toWeek: 7, venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.382983254136427, lng: 34.21591084158308 } },
+      // 정규 18주차(round19) 칠룸바 vs 음벨와(11/21)만 마잘리로 그라운드에서 열립니다. 다음 홈경기(round20, 11/28)부터는 다시 치숨부입니다.
+      { fromWeek: 19, toWeek: 19, venue: { nameKo: "마잘리로 그라운드", nameEn: "Majaliro Ground", lat: -10.382983254136427, lng: 34.21591084158308 } }
     ]
   },
   {
@@ -6626,17 +6629,20 @@ const cupTournaments = [
   {
     id: 'faCup2627',
     year: 2026,
-    nameKo: '2026/27 FA컵',
-    nameEn: '2026/27 FA Cup',
+    nameKo: '26/27 대통령배 FA컵',
+    nameEn: '26/27 Presidential FA Cup',
     organizerKo: 'FAM', organizerEn: 'FAM',
+    eyebrowEn: 'Presidential FA Cup', // 컵 화면 맨 위 작은 문구 (없으면 "주최 CUP"으로 표시)
     logoSrc: './fam-logo.png',
-    chipKo: 'FA컵', chipEn: 'FA Cup',
+    logoSrc2: './fa-cup-logo.png', // 컵 화면 상단 두 번째 로고(FAM 로고 오른쪽). 없으면 표시 안 함
+    chipKo: '대통령배 FA컵', chipEn: 'Presidential FA Cup',
     status: 'upcoming',
-    descKo: '말라위축구협회(FAM)가 주최하는 컵대회예요. 32강 이전은 지역 플레이오프로 치르고, 32강부터 결승까지는 토너먼트로 진행돼요. 1부 16개 팀은 32강에 자동 진출해요.',
-    descEn: 'A cup competition organised by the Football Association of Malawi (FAM). Regional play-offs are held before the Round of 32, and a knockout bracket runs from the Round of 32 to the final. The 16 top-flight teams advance automatically to the Round of 32.',
+    descKo: '말라위 공화국 대통령과 말라위축구협회(FAM)가 주최하고 축구협회가 주관하는 컵대회예요. 32강 이전은 지역 플레이오프로 치르고, 32강부터 결승까지는 토너먼트로 진행돼요. 1부 16개 팀은 32강에 자동 진출해요. 초대 대회로, 모든 디비전 클럽에 전국 무대를 열어 주고 유망주 발굴과 풀뿌리 축구 발전을 도모해요.',
+    descEn: 'A cup competition hosted by the President of the Republic of Malawi and the Football Association of Malawi (FAM), and organised by FAM. Regional play-offs are held before the Round of 32, and a knockout bracket runs from the Round of 32 to the final. The 16 top-flight teams advance automatically to the Round of 32. The inaugural edition aims to give clubs at every level a national stage while promoting talent identification and grassroots development.',
     // 값 형식: 문자열 | 문자열 배열(줄바꿈) | { tag, name, sub, meta, badge } 목록(등급·단계 표시) | { note } 작은 주석 | { teams: [영문팀명…] } 로고 칩
     infoKo: [
-      ['주최', 'FAM (말라위축구협회)'],
+      ['주최', '말라위 공화국 대통령 · FAM (말라위축구협회)'],
+      ['주관', 'FAM (말라위축구협회)'],
       ['참가 팀', [
         { tag: '1부', name: '슈퍼 리그 오브 말라위', sub: 'Super League of Malawi', meta: '16팀', badge: '32강 자동 진출', hl: true },
         { tag: '2부', name: '내셔널 디비전 리그', sub: 'National Division League', meta: '12팀' },
@@ -6649,11 +6655,40 @@ const cupTournaments = [
       ['대회 방식', [
         { tag: '예선', name: '32강 이전: 지역 플레이오프' },
         { tag: '본선', name: '32강부터 결승까지 토너먼트' },
-        { tag: '시드', name: '1부 16개 팀은 32강 자동 진출' }
+        { tag: '예선 통과', name: '북부·중부·남부·동부 4개 권역에서 각 4팀, 총 16팀이 본선 진출' },
+        { tag: '시드', name: '1부 16개 팀은 32강 자동 진출' },
+        { tag: '시드', name: '프리미어십 1라운드 종료 시점 상위 8팀은 전국 추첨에서 시드 배정' }
       ]],
+      ['본선 상금', [
+        { tag: '우승', name: '우승팀', meta: 'K150M', hl: true },
+        { tag: '준우승', name: '준우승팀', meta: 'K80M' },
+        { tag: '4강', name: '준결승 탈락 2팀 (팀당)', meta: 'K30M' },
+        { tag: '8강', name: '8강 탈락 4팀 (팀당)', meta: 'K20M' },
+        { tag: '16강', name: '16강 탈락 8팀 (팀당)', meta: 'K12M' },
+        { note: '※ 전국 대회 본선 상금 합계 K466M (M = 100만 콰차)' },
+        { note: '※ 원화 환산은 참고용이에요. 공식환율(약 1,734콰차/달러)과 비공식환율(실질, 약 4,500콰차/달러 추정) 기준을 함께 표시하며, 원/달러 1,335원(2026년 11월 중순)을 적용했어요. 환율은 수시로 바뀌어요.' }
+      ]],
+      ['기타 상금 · 지원금', { folds: [
+        { title: '예선 지원금 (팀당)', list: [
+        { tag: '지구', name: '지구 리그(디스트릭트) 우승 31팀 (팀당)', sub: '전체 K62M', meta: 'K2M' },
+        { tag: '지역', name: '지역 리그 40팀 (팀당)', sub: '전체 K40M', meta: 'K1M' },
+        { tag: '예선', name: '지역 예선 참가 지원비', sub: '전체 K48M · 팀당 금액 미확인', meta: 'K48M' }
+      ] },
+        { title: '개인상 · 미디어상', list: [
+        { tag: '득점왕', name: '골든부트', meta: 'K2M' },
+        { tag: 'GK', name: '골든글러브 (최우수 골키퍼)', meta: 'K2M' },
+        { tag: 'MVP', name: '대회 최우수 선수', meta: 'K2M' },
+        { tag: '신인', name: '대회 신인상 (Discovery of the Tournament)', meta: 'K1M' },
+        { tag: 'POTM', name: '경기 최우수 선수 (대회 단계별)', meta: 'K200K–300K' },
+        { tag: '미디어', name: '대회를 취재하는 언론인 대상 미디어상', meta: 'K7M' },
+        { note: '※ 개인상 합계 K12.3M (미디어상 별도)' }
+      ] }
+      ] }],
+      ['참고', '카스텔 챌린지컵(Castel Challenge Cup)도 내년에 계속 개최될 예정이에요.'],
       ['선수 자격', 'Mpira Connect 등록 필수']
     ],
     infoEn: [
+      ['Host', 'President of the Republic of Malawi · FAM (Football Association of Malawi)'],
       ['Organiser', 'FAM (Football Association of Malawi)'],
       ['Teams', [
         { tag: 'T1', name: 'Super League of Malawi', meta: '16 teams', badge: 'Auto Round of 32', hl: true },
@@ -6667,8 +6702,36 @@ const cupTournaments = [
       ['Format', [
         { tag: 'Qualifying', name: 'Before Round of 32: regional play-offs' },
         { tag: 'Knockout', name: 'Round of 32 to the final' },
-        { tag: 'Seeded', name: '16 top-flight teams enter the Round of 32 automatically' }
+        { tag: 'Qualifiers', name: '4 teams from each of the Northern, Central, Southern and Eastern regions (16 in total) reach the national round' },
+        { tag: 'Seeded', name: '16 top-flight teams enter the Round of 32 automatically' },
+        { tag: 'Seeded', name: 'Top 8 Premiership teams after Round 1 of the 2026/27 season are seeded in the national draw' }
       ]],
+      ['Prize money', [
+        { tag: 'Winner', name: 'Champions', meta: 'K150M', hl: true },
+        { tag: 'Runner-up', name: 'Runners-up', meta: 'K80M' },
+        { tag: 'SF', name: 'Losing semi-finalists (each)', meta: 'K30M' },
+        { tag: 'QF', name: 'Quarter-final losers (each of 4)', meta: 'K20M' },
+        { tag: 'R16', name: 'Round of 16 losers (each of 8)', meta: 'K12M' },
+        { note: '* Total national-round prize money: K466M (M = million kwacha)' },
+        { note: '* KRW figures are indicative: official rate (about K1,734/USD) and an estimated unofficial rate (about K4,500/USD), at about ₩1,335/USD (mid-Nov 2026). Rates change often.' }
+      ]],
+      ['Other prizes & support', { folds: [
+        { title: 'Qualifying support (per team)', list: [
+        { tag: 'District', name: '31 district league champions (per team)', sub: 'Total K62M', meta: 'K2M' },
+        { tag: 'Regional', name: '40 regional league teams (per team)', sub: 'Total K40M', meta: 'K1M' },
+        { tag: 'Qualifiers', name: 'Regional qualifier participation', sub: 'Total K48M · per-team amount not confirmed', meta: 'K48M' }
+      ] },
+        { title: 'Individual & media awards', list: [
+        { tag: 'Boot', name: 'Golden Boot', meta: 'K2M' },
+        { tag: 'GK', name: 'Golden Glove', meta: 'K2M' },
+        { tag: 'MVP', name: 'Player of the Tournament', meta: 'K2M' },
+        { tag: 'Young', name: 'Discovery of the Tournament', meta: 'K1M' },
+        { tag: 'POTM', name: 'Player of the Match (by stage)', meta: 'K200K–300K' },
+        { tag: 'Media', name: 'Media awards for journalists covering the tournament', meta: 'K7M' },
+        { note: '* Individual awards total K12.3M (media awards separate)' }
+      ] }
+      ] }],
+      ['Note', 'The Castel Challenge Cup will also return next year.'],
       ['Eligibility', 'Mpira Connect registration required']
     ],
     // 일정 형식: [날짜, 내용, { end: 'YYYY-MM-DD'(끝난 일정은 흐리게), tag: '추첨' 같은 작은 표시, final: true(결승 강조) }]
