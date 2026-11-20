@@ -1,0 +1,10 @@
+name = "utd-scorer-approval"
+main = "worker.js"
+compatibility_date = "2026-11-21"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[[kv_namespaces]]
+binding = "APPROVALS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
