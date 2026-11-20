@@ -43,7 +43,7 @@ if (roundsData && Object.prototype.hasOwnProperty.call(roundsData, location.roun
   const roundsDecl = declarations.scheduledRounds;
   const roundNode = objectProperty(roundsDecl, location.roundKey);
   const fixtures = roundNode && roundNode.value && roundNode.value.type === "ArrayExpression" ? roundNode.value.elements : [];
-  const target = fixtures.filter(Boolean)[location.matchIndex];
+  const target = fixtures.filter(m => m && !m.byeKo && !m.byeEn)[location.matchIndex];
   if (!target) throw new Error("Could not locate the scheduled fixture in data.js.");
   edits.push(propertyEdit(source, target, "homeScore", proposal.homeScore));
   edits.push(propertyEdit(source, target, "awayScore", proposal.awayScore));
@@ -154,16 +154,17 @@ function formatScorers(goals) {
   const byPlayer = new Map();
   for (const g of goals) {
     const name = String(g.name).trim().toUpperCase();
-    const item = byPlayer.get(name) || { count: 0, ownGoal: true };
+    const ownGoal = Boolean(g.ownGoal);
+    const key = name + "|" + ownGoal;
+    const item = byPlayer.get(key) || { name, count: 0, ownGoal };
     item.count += Number(g.count || 1);
-    item.ownGoal = item.ownGoal && Boolean(g.ownGoal);
-    byPlayer.set(name, item);
+    byPlayer.set(key, item);
   }
-  return Array.from(byPlayer, ([name, info]) => {
+  return Array.from(byPlayer.values(), info => {
     const notes = [];
     if (info.count > 1) notes.push(info.count + "골");
     if (info.ownGoal) notes.push("자책골");
-    return name + (notes.length ? " (" + notes.join(" ") + ")" : "");
+    return info.name + (notes.length ? " (" + notes.join(" ") + ")" : "");
   }).join(", ") || "없음";
 }
 
