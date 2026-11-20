@@ -29,7 +29,7 @@ jobs:
           mkdir -p work
           node -e "const e=require(process.env.GITHUB_EVENT_PATH); require('node:fs').writeFileSync('work/scorer-proposal.json', JSON.stringify(e.client_payload.proposal));"
           node automation/scorer-approval/apply-approved-proposal.mjs
-      - name: Create and merge the approved data pull request
+      - name: Publish the approved data change
         env:
           GH_TOKEN: ${{ secrets.SCORER_GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -47,7 +47,10 @@ jobs:
           git add data.js
           git commit -m "Update approved match scorers"
           git push origin "$BRANCH"
-          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Update scorers: $MATCH_LABEL" --body "This data.js update was approved in WhatsApp. The workflow will merge it if GitHub allows the PR to merge."
-          PR_NUMBER="$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json number --jq .number)"
-          HEAD_SHA="$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)"
-          gh api --method PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge" -f sha="$HEAD_SHA" -f merge_method=squash
+          if git push origin HEAD:main; then
+            echo "Approved scorer data was committed to main."
+          else
+            echo "Direct push to main was blocked; opening a PR without bypassing repository rules."
+            git push origin "HEAD:refs/heads/$BRANCH"
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Update scorers: $MATCH_LABEL" --body "This scorer update was approved in WhatsApp. A direct update to main was blocked by repository rules, so this PR is ready for the required review."
+          fi
