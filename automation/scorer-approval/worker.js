@@ -222,7 +222,7 @@ function formatScorersForMessage(goals, side) {
   return Array.from(byPlayer.values(), player => {
     const suffix = player.count > 1 ? " " + player.count + "골" : " 1골";
     return player.name + suffix + (player.ownGoal ? " (자책골)" : "");
-  }).join("\\n") || "없음";
+  }).join("\n") || "없음";
 }
 
 async function handleAction(payload, env) {
