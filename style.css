@@ -18793,3 +18793,31 @@ tr.my-team td.team::after,
   .cup-kv-row:has(.cup-tiers) .cup-tier-meta { font-size: 18px; }
   .cup-kv-row:has(.cup-tiers) .cup-tier-name { font-size: 15px; }
 }
+
+/* =====================================================
+   라이브 티커(PC) · 토스 스타일 — 크기는 그대로, 카드/배지/여백만 다듬음
+   ===================================================== */
+@media (min-width: 721px) {
+  .llt-head { gap: 8px; margin-bottom: 12px; }
+  .llt-title { font-size: var(--fs-sm); font-weight: 700; letter-spacing: -0.01em; }
+  .llt-live-dot { width: 8px; height: 8px; }
+  .llt-card {
+    border-radius: 22px;
+    padding: 16px 22px 18px;
+    background: var(--color-surface, #fff);
+    box-shadow: 0 1px 2px rgba(var(--color-navy-rgb), .04), 0 6px 20px rgba(var(--color-navy-rgb), .07);
+    transition: box-shadow .2s ease, transform .2s ease;
+  }
+  .llt-card:hover { box-shadow: 0 2px 4px rgba(var(--color-navy-rgb), .05), 0 10px 26px rgba(var(--color-navy-rgb), .1); transform: translateY(-1px); }
+  .llt-card.is-our-team { box-shadow: 0 0 0 2px rgba(var(--color-teal-rgb), .4) inset, 0 6px 20px rgba(var(--color-navy-rgb), .06); }
+  .llt-card-top { margin-bottom: 14px; gap: 6px; }
+  .llt-minute, .llt-stale-badge, .llt-ended-badge { border-radius: 999px; font-weight: 700; padding: 3px 11px; }
+  .llt-minute { font-weight: 800; }
+  .llt-team { gap: 8px; }
+  .llt-team-name { font-weight: 700; letter-spacing: -0.01em; }
+  .llt-score { font-weight: 800; letter-spacing: 0.02em; }
+  .llt-goals { margin-top: 12px; padding-top: 12px; gap: 10px; border-top: 1px solid rgba(var(--color-navy-rgb), .07); }
+  .llt-goals-col { gap: 5px; }
+  .llt-goal-row { font-weight: 600; color: var(--color-text-secondary); }
+  .llt-goal-count { opacity: .6; }
+}

@@ -10602,6 +10602,10 @@
     listEl.innerHTML = '';
     const { addDayCard } = makeRoundRowTools(listEl, { teamEn, teamKo });
     const isTeam = (m) => m.homeEn === teamEn || m.homeKo === teamKo || m.awayEn === teamEn || m.awayKo === teamKo;
+    // 위쪽 "다음 경기" 카드와 같은 경기(같은 주차·같은 상대)는 목록에서 빼서 중복 표시를 막습니다.
+    const nextPv = (typeof computeNextMatchPreview === 'function') ? computeNextMatchPreview(teamEn, teamKo) : null;
+    const isNextDup = (m, rk) => !!(nextPv && !nextPv.isBye && m.isScheduled && !m.postponed && nextPv.roundKey === rk &&
+      (m.homeEn === nextPv.oppEn || m.awayEn === nextPv.oppEn));
     const pad2 = (n) => String(n).padStart(2, '0');
     const groups = new Map();
     const put = (gk, sortKey, rk, item) => {
@@ -10620,6 +10624,7 @@
           return;
         }
         if (!isTeam(m)) return;
+        if (isNextDup(m, rk)) return;
         m.__rk = rk;
         if (m.kickoffDate) put('d:' + m.kickoffDate, m.kickoffDate + ' 99', rk, { match: m });
         else put('wk:' + rk, roundDate + ' ' + pad2(wn), rk, { match: m });
@@ -17700,12 +17705,12 @@
           <div class="ti-section-title lbl" data-en="Top Scorers" data-ko="득점 순위">${isKorean ? '득점 순위' : 'Top Scorers'}</div>
           ${scorersHtml}
         </div>
+        ${halfReviewHtml}
         <div class="ti-section">
           <div class="ti-next-mini">
             ${nextMatchHtml}
           </div>
         </div>
-        ${halfReviewHtml}
         <div class="ti-section">
           <div class="ti-section-title lbl" data-en="Results" data-ko="경기 결과">${isKorean ? '경기 결과' : 'Results'}</div>
           <div class="round-match-list rmd-list" id="otherTeamResultsList"></div>
