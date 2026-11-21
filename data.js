@@ -1703,9 +1703,9 @@ const scheduledRounds = {
   //   30주차(round31)는 날짜 미정이라 대진만 있습니다(1차전 홈/원정 반전). 킥오프 시간은 15:00으로 일괄 입력한 임시값이니, 확정되면 경기별로 수정해주세요.
   // ── 정규 18주차 (엑셀 "Week 18") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round19: [
-    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-11-21", kickoffTime: "15:00" },
+    { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-11-21", kickoffTime: "15:00", homeScore: 2, awayScore: 1, scorersHome: "NORMAN NDLOVU (2골)", scorersAway: "ELIA MUNTHALI" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
-    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-21", kickoffTime: "15:00" },
+    { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-21", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "JOLLY KANYINJI", scorersAway: "없음" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-21", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "BENJAMIN MAPUNDA", scorersAway: "없음", movedFromWeek: 22, changed: true }, // 21주차(round22) 경기가 18주차로 변경됨. 오늘 경기만 마잘리로 그라운드(칠룸바 venueHistory 19주차 참고)
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
@@ -3352,6 +3352,8 @@ const playerDirectory = {
   "MLEZA LUKE NYIRONGO": { nameKo: "믈레자 니롱고", nameEn: "Mleza Luke Nyirongo" },
   "ANDREW KAMANGA": { nameKo: "앤드류 카망가", nameEn: "Andrew Kamanga" },
   "NORMAN NDLOVU": { nameKo: "노먼 은들로부", nameEn: "Norman Ndlovu" },
+  "JOLLY KANYINJI": { nameKo: "졸리 칸인지", nameEn: "Jolly Kanyinji" },
+  "ELIA MUNTHALI": { nameKo: "엘리아 문탈리", nameEn: "Elia Munthali" },
   "GLYN MSOWOYA": { nameKo: "글린 음소워야", nameEn: "Glyn Msowoya" },
   "FOSTER SICHALI": { nameKo: "포스터 시찰리", nameEn: "Foster Sichali" },
   "ELIAS BOTTOMAN": { nameKo: "엘리아스 보토만", nameEn: "Elias Bottoman" },
