@@ -170,12 +170,14 @@ async function sendApprovalMessage(proposal, env) {
     const suffix = g.count > 1 ? " x" + g.count : "";
     return (g.side === "home" ? "H" : "A") + " " + g.name + suffix;
   }).join(", ");
-  const buttons = ["approve", "reject", "hold"].map((action, index) => ({
-    type: "button",
-    sub_type: "quick_reply",
-    index: String(index),
-    parameters: [{ type: "payload", payload: await signedPayload(proposal.id, action, env) }]
-  }));
+  const buttons = await Promise.all(
+    ["approve", "reject", "hold"].map(async (action, index) => ({
+      type: "button",
+      sub_type: "quick_reply",
+      index: String(index),
+      parameters: [{ type: "payload", payload: await signedPayload(proposal.id, action, env) }]
+    }))
+  );
   const response = await fetch(base.replace(/\/$/, "") + "/" +
     encodeURIComponent(env.WHATSAPP_PHONE_NUMBER_ID) + "/messages", {
     method: "POST",
