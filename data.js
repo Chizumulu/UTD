@@ -1706,7 +1706,7 @@ const scheduledRounds = {
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-11-21", kickoffTime: "15:00" },
     { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-21", kickoffTime: "15:00" },
-    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-21", kickoffTime: "15:00", movedFromWeek: 22, changed: true }, // 21주차(round22) 경기가 18주차로 변경됨. 오늘 경기만 마잘리로 그라운드(칠룸바 venueHistory 19주차 참고)
+    { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-21", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "BENJAMIN MAPUNDA", scorersAway: "없음", movedFromWeek: 22, changed: true }, // 21주차(round22) 경기가 18주차로 변경됨. 오늘 경기만 마잘리로 그라운드(칠룸바 venueHistory 19주차 참고)
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-22", kickoffTime: "15:00", postponed: true }, // 연기 (새 일정 미정) — 확정되면 해당 주차에 새 항목을 추가하고 이 항목에 movedToWeek를 달아주세요.
@@ -6651,7 +6651,6 @@ const cupTournaments = [
         { tag: '별도', name: '디스트릭트 컵 우승팀 (25/26시즌)', sub: 'District Cup winners', meta: '31팀' },
         { note: '※ 3·4부 리그는 26/10/31까지의 순위 기준 · 북부 · 남부 · 중부 · 동부 지역별' }
       ]],
-      ['NRFA 리그 원 참가 팀', { teams: ['Chibavi Real Stars FC', 'Jenda United FC', 'Chizumulu United FC', 'Chilumba Barracks FC', 'Raiply FC', 'Mafu Stars FC'] }],
       ['대회 방식', [
         { tag: '예선', name: '32강 이전: 지역 플레이오프' },
         { tag: '본선', name: '32강부터 결승까지 토너먼트' },
@@ -6698,7 +6697,6 @@ const cupTournaments = [
         { tag: 'Extra', name: '2025/26 District Cup winners', meta: '31 teams' },
         { note: '* Tier 3 and 4 based on standings as of 31 Oct 2026 · by region: North, South, Central, East' }
       ]],
-      ['NRFA League One teams', { teams: ['Chibavi Real Stars FC', 'Jenda United FC', 'Chizumulu United FC', 'Chilumba Barracks FC', 'Raiply FC', 'Mafu Stars FC'] }],
       ['Format', [
         { tag: 'Qualifying', name: 'Before Round of 32: regional play-offs' },
         { tag: 'Knockout', name: 'Round of 32 to the final' },
@@ -6790,7 +6788,7 @@ const cupTournaments = [
       { en: 'Mzuzu City Hammers FC', ko: '음주주 시티 해머스 FC' },
       { en: 'Extreme FC', ko: '익스트림 FC' },
       { en: 'FOMO FC', ko: '포모 FC' },
-      { en: 'Embangweni United FC', ko: '엠방궤니 유나이티드 FC' },
+      { en: 'Embangweni United FC', ko: '엠방웨니 유나이티드 FC' },
       { en: 'Ntaja United FC', ko: '은타자 유나이티드 FC' },
       { en: 'Chilobwe United FC', ko: '칠롭웨 유나이티드 FC', logo: '칠롭웨.webp' },
       { en: 'Namitete Zitha FC', ko: '나미테테 지타 FC' },
@@ -6798,6 +6796,39 @@ const cupTournaments = [
       { en: 'Mighty Tigers FC', ko: '마이티 타이거스 FC' },
       { en: 'Bangwe All Stars FC', ko: '방궤 올 스타스 FC' },
       { en: 'Changalume Barracks FC', ko: '창갈루메 배럭스 FC' }
+    ],
+    // 지역 플레이오프(예선) 권역별 참가 팀 — 참가팀 탭에 표시됩니다. advance = 본선(32강) 진출 팀 수
+    regionalQualifiers: [
+      { id: 'north', nameKo: '북부 지역', nameEn: 'Northern Region', advance: 4, groups: [
+        { labelKo: '2부 · 내셔널 디비전 리그', labelEn: 'National Division League', teams: [
+          { en: 'Embangweni United FC', ko: '엠방웨니 유나이티드 FC' },
+          { en: 'Mzuzu City Hammers FC', ko: '음주주 시티 해머스 FC' },
+          { en: 'Songwe Border United FC', ko: '송궤 보더 유나이티드 FC' }
+        ] },
+        { labelKo: '3부 · 지역 1부 리그 (리그 원)', labelEn: 'Regional League One', teams: [
+          { en: 'Chibavi Real Stars FC', ko: '치바비 리얼 스타즈 FC' },
+          { en: 'Jenda United FC', ko: '젠다 유나이티드 FC' },
+          { en: 'Chizumulu United FC', ko: '치주물루 유나이티드 FC' },
+          { en: 'Chilumba Barracks FC', ko: '칠룸바 배럭스 FC' },
+          { en: 'Raiply FC', ko: '라이플리 FC' },
+          { en: 'Mafu Stars FC', ko: '마푸 스타즈 FC' }
+        ] },
+        { labelKo: '4부 · 지역 2부 리그 (리그 투)', labelEn: 'Regional League Two', teams: [
+          { en: 'Mzwawa FC', ko: '음즈와와 FC' },
+          { en: 'Bwabwa FC', ko: '브와브와 FC' },
+          { en: 'Chipelembe FC', ko: '치펠렘베 FC' },
+          { en: 'Chikaya FC', ko: '치카야 FC' }
+        ] },
+        { labelKo: '디스트릭트 컵 우승팀 (2025)', labelEn: 'District champions (2025)', teams: [
+          { en: 'Likoma Stars FC', ko: '리코마 스타스 FC', subKo: '리코마', subEn: 'Likoma' },
+          { en: 'Brazil Vuwa FC', ko: '브라질 부와 FC', subKo: '은카타 베이', subEn: 'Nkhata Bay' },
+          { en: 'Emazwini FC', ko: '에마즈위니 FC', subKo: '음주바', subEn: 'Mzimba' },
+          { en: 'Blue Spot FC', ko: '블루 스팟 FC', subKo: '음주주', subEn: 'Mzuzu' },
+          { en: 'Karonga United Reserve', ko: '카롱가 유나이티드 리저브', subKo: '카롱가', subEn: 'Karonga' },
+          { en: 'Chandamale FC', ko: '찬다말레 FC', subKo: '룸피', subEn: 'Rumphi' },
+          { en: 'Santos FC', ko: '산투스 FC', subKo: '치티파', subEn: 'Chitipa' }
+        ] }
+      ] }
     ],
     rounds: []
   },

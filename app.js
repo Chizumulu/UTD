@@ -702,7 +702,7 @@
     };
     const kvBlock = function (title, rows) {
       if (!Array.isArray(rows) || !rows.length) return '';
-      return '<section class="cup-info"><h3 class="cup-round-title">' + title + '</h3><dl class="cup-kv">' +
+      return '<section class="cup-info">' + (title ? '<h3 class="cup-round-title">' + title + '</h3>' : '') + '<dl class="cup-kv">' +
         rows.map(function (r) {
           let pre = '';
           if (!krwToggleDone && hasMwkMeta(r[1])) { krwToggleDone = true; pre = krwToggleHtml(); }
@@ -735,27 +735,53 @@
     const rowsTeams = allInfo.filter(function (r) { return !PRIZE_RE.test(String(r[0])) && TEAM_RE.test(String(r[0])); });
     const rowsAbout = allInfo.filter(function (r) { return rowsPrize.indexOf(r) < 0 && rowsTeams.indexOf(r) < 0; });
     // 1부 리그(32강 자동 진출) 팀 목록: 대진표 뼈대의 첫 라운드 entrants 를 그대로 보여줍니다.
-    const teamListSection = function (titleKo, titleEn, list) {
+    const teamListSection = function (titleKo, titleEn, list, tagKo, tagEn, badgeKo, badgeEn) {
       if (!Array.isArray(list) || !list.length) return '';
-      return '<section class="cup-info"><dl class="cup-kv"><div class="cup-kv-row"><dt>' +
-        (ko ? titleKo : titleEn) + ' (' + list.length + (ko ? '팀' : '') + ')</dt>' +
-        '<dd><div class="cup-team-chips">' + list.map(function (e) {
+      const title = ko ? titleKo : titleEn;
+      return '<section class="cup-info cup-rq"><div class="cup-rq-head"><div class="cup-rq-title">' + cupEsc(title) + '</div>' +
+        '<div class="cup-rq-stats"><span class="cup-rq-stat"><b>' + list.length + '</b>' + (ko ? '팀 참가' : ' teams') + '</span>' +
+        (badgeKo ? '<span class="cup-rq-stat is-hl">' + cupEsc(ko ? badgeKo : badgeEn) + '</span>' : '') + '</div></div>' +
+        '<div class="cup-rq-grid">' + list.map(function (e) {
           const t = leagueData.find(function (x) { return x.nameEn === e.en; });
           const lg = e.logo || (t && t.logoSrc);
-          return '<span class="cup-team-chip">' + (lg ? '<img src="' + cupEsc(lg) + '" alt="">' : '') + '<span>' + cupEsc(ko ? (e.ko || e.en) : e.en) + '</span></span>';
-        }).join('') + '</div></dd></div></dl></section>';
+          return '<div class="cup-rq-team">' + (lg ? '<img src="' + cupEsc(lg) + '" alt="">' : '<span class="cup-rq-ph" aria-hidden="true"></span>') +
+            '<span class="cup-rq-tname">' + cupEsc(ko ? (e.ko || e.en) : e.en) + '</span></div>';
+        }).join('') + '</div></section>';
     };
     // 1부: 대진표 뼈대 첫 라운드의 entrants / 2부: c.divisionTwo
     const firstRound = Array.isArray(c.bracket) && c.bracket[0];
-    const topFlightHtml = teamListSection('1부 리그 32강 자동 진출 팀', 'Top flight · Auto Round of 32', firstRound && firstRound.entrants) +
-      teamListSection('2부 리그 참가 팀', 'Second tier', (Array.isArray(c.divisionTwo) && c.divisionTwo.length) ? c.divisionTwo : (c.id === 'faCup2627' ? CUP_FA_DIV2_FALLBACK : null));
+    const topFlightHtml = teamListSection('1부 리그 · 슈퍼 리그 오브 말라위', 'Top flight · Super League of Malawi', firstRound && firstRound.entrants, '', '', '32강 자동 진출', 'Auto Round of 32') +
+      teamListSection('2부 리그 · 내셔널 디비전', 'Second tier · National Division', (Array.isArray(c.divisionTwo) && c.divisionTwo.length) ? c.divisionTwo : (c.id === 'faCup2627' ? CUP_FA_DIV2_FALLBACK : null));
+    // 지역 플레이오프(예선) 권역별 참가 팀: 토스 스타일 큰 카드 → 그룹(2부·3부·4부·지역) → 큰 팀 타일
+    const regionalHtml = (Array.isArray(c.regionalQualifiers) ? c.regionalQualifiers : []).map(function (rg) {
+      const total = (rg.groups || []).reduce(function (n, g) { return n + (g.teams || []).length; }, 0);
+      const head = '<div class="cup-rq-head"><div class="cup-rq-title">' + cupEsc(ko ? rg.nameKo + ' 예선' : rg.nameEn + ' qualifiers') + '</div>' +
+        '<div class="cup-rq-stats"><span class="cup-rq-stat"><b>' + total + '</b>' + (ko ? '팀 참가' : ' teams') + '</span>' +
+        (rg.advance ? '<span class="cup-rq-stat is-hl"><b>' + rg.advance + '</b>' + (ko ? '팀 32강 진출' : ' advance to R32') + '</span>' : '') + '</div></div>';
+      const body = (rg.groups || []).map(function (g) {
+        const lbl = String(ko ? g.labelKo : g.labelEn);
+        const m = lbl.match(/^(\d부)\s*·\s*(.+)$/);
+        const tag = m ? m[1] : (ko ? '지역' : 'District');
+        const name = m ? m[2] : lbl;
+        return '<div class="cup-rq-group"><div class="cup-rq-label"><span class="cup-rq-tag">' + cupEsc(tag) + '</span><span class="cup-rq-name">' + cupEsc(name) + '</span>' +
+          '<span class="cup-rq-count">' + (g.teams || []).length + (ko ? '팀' : '') + '</span></div>' +
+          '<div class="cup-rq-grid">' + (g.teams || []).map(function (e) {
+            const t = leagueData.find(function (x) { return x.nameEn === e.en; });
+            const lg = e.logo || (t && t.logoSrc);
+            const sub = ko ? e.subKo : e.subEn;
+            return '<div class="cup-rq-team">' + (lg ? '<img src="' + cupEsc(lg) + '" alt="">' : '<span class="cup-rq-ph" aria-hidden="true"></span>') +
+              '<span class="cup-rq-tname">' + cupEsc(ko ? (e.ko || e.en) : e.en) + (sub ? '<small>' + cupEsc(sub) + '</small>' : '') + '</span></div>';
+          }).join('') + '</div></div>';
+      }).join('');
+      return '<section class="cup-info cup-rq">' + head + body + '</section>';
+    }).join('');
     const bracketHtml = cupBracketHtml(c);
     const roundsList = (c.rounds || []).filter(function (r) { return r && r.matches && r.matches.length; });
     const panels = [
       { id: 'about', ko: '소개', en: 'About', html: heroHtml + kvBlock(ko ? '대회 안내' : 'About', rowsAbout) },
       { id: 'schedule', ko: '일정', en: 'Schedule', html: scheduleBlock(ko ? '일정' : 'Schedule', schedRows) },
-      { id: 'teams', ko: '참가팀', en: 'Teams', html: kvBlock(ko ? '참가 팀' : 'Teams', rowsTeams) + topFlightHtml },
-      { id: 'prize', ko: '상금', en: 'Prize', html: kvBlock(ko ? '상금' : 'Prize money', rowsPrize) },
+      { id: 'teams', ko: '참가팀', en: 'Teams', html: kvBlock('', rowsTeams) + topFlightHtml + regionalHtml },
+      { id: 'prize', ko: '상금', en: 'Prize', html: kvBlock('', rowsPrize) },
       { id: 'bracket', ko: '대진표', en: 'Bracket', html: '__BRACKET__' }
     ].filter(function (t) { return t.html; });
     if (!panels.some(function (t) { return t.id === cupTab; })) cupTab = panels.length ? panels[0].id : 'about';
@@ -764,7 +790,26 @@
         ' aria-selected="' + (t.id === cupTab ? 'true' : 'false') + '" onclick="setCupTab(\'' + t.id + '\')">' + (ko ? t.ko : t.en) + '</button>';
     }).join('') + '</div></div>';   // 탭 바만 화면에 고정(대회 설명 배너는 스크롤되어 사라짐)
 
-    let bracketPanel = bracketHtml;
+    // 북부 지역 예선 대진: 대진 확정 전이라 "N팀 → M팀 진출" 구조만 먼저 보여줍니다. (경기가 정해지면 rounds 에 추가)
+    const regionalBracketHtml = (Array.isArray(c.regionalQualifiers) ? c.regionalQualifiers : []).map(function (rg) {
+      const total = (rg.groups || []).reduce(function (n, g) { return n + (g.teams || []).length; }, 0);
+      const adv = rg.advance || 0;
+      const rn = ko ? rg.nameKo : rg.nameEn;
+      const pills = (rg.groups || []).map(function (g) {
+        const lbl = String(ko ? g.labelKo : g.labelEn), m = lbl.match(/^(\d부)\s*·\s*(.+)$/);
+        return '<div class="cup-rqb-pill"><span class="cup-rq-tag">' + cupEsc(m ? m[1] : (ko ? '지역' : 'District')) + '</span><span>' + cupEsc(m ? m[2].replace(/\s*\(.*\)$/, '') : lbl) + '</span><b>' + (g.teams || []).length + (ko ? '팀' : '') + '</b></div>';
+      }).join('');
+      let slots = '';
+      for (let i = 1; i <= adv; i++) slots += '<div class="cup-rqb-slot"><span>' + (ko ? '진출 ' + i : 'Slot ' + i) + '</span><b>' + (ko ? '미정' : 'TBD') + '</b></div>';
+      return '<section class="cup-info cup-rq cup-rqb"><div class="cup-rq-head"><div class="cup-rq-title">' + cupEsc(ko ? rn + ' 예선 대진' : rn + ' qualifier draw') + '</div>' +
+        '<div class="cup-rq-stats"><span class="cup-rq-stat"><b>' + total + '</b>' + (ko ? '팀 경쟁' : ' teams') + '</span>' +
+        '<span class="cup-rq-stat is-hl"><b>' + adv + '</b>' + (ko ? '팀 32강 진출' : ' to Round of 32') + '</span></div></div>' +
+        '<div class="cup-rqb-flow"><div class="cup-rqb-from"><div class="cup-rqb-cap">' + (ko ? '참가 ' + total + '팀' : total + ' teams') + '</div>' + pills + '</div>' +
+        '<div class="cup-rqb-arrow" aria-hidden="true">›</div>' +
+        '<div class="cup-rqb-to"><div class="cup-rqb-cap">' + (ko ? '32강 진출 ' + adv + '팀' : adv + ' advance') + '</div>' + slots + '</div></div>' +
+        '<p class="cup-br-note">' + (ko ? '지역 플레이오프 추첨(11/20) 후 대진이 확정돼요 · 경기는 11/28 – 12/27 · 대진이 나오면 이곳에 업데이트돼요.' : 'The bracket is set after the regional draw (20 Nov). Matches run 28 Nov – 27 Dec and will be updated here.') + '</p></section>';
+    }).join('');
+    let bracketPanel = regionalBracketHtml + (regionalBracketHtml && bracketHtml ? '<h3 class="cup-rqb-sec">' + (ko ? '본선 대진표 (32강~결승)' : 'Main bracket (Round of 32 – Final)') + '</h3>' : '') + bracketHtml;
 
     const rounds = roundsList;
     let rhtml = '';
@@ -6160,8 +6205,17 @@
   function formatLeagueLiveMinute(match) {
     if (match.status === 'full_time') return isKorean ? '종료' : 'FT';
     if (match.status === 'half_time') return isKorean ? '전반 종료' : 'HT';
-    if (typeof match.minute === 'number' && match.minute > 0 && match.minute < 200) return Math.floor(match.minute) + "'";
-    if (typeof match.minute === 'string' && match.minute) return match.minute;
+    if (typeof match.minute === 'number' && match.minute > 0 && match.minute < 200) {
+      return isKorean ? Math.floor(match.minute) + '분' : Math.floor(match.minute) + "'";
+    }
+    if (typeof match.minute === 'string' && match.minute) {
+      // "44th minute", "4'", "45+2'" 같은 원문에서 숫자(+추가시간)만 뽑아 한국어는 "44분"으로 표기.
+      if (isKorean) {
+        const mm = match.minute.match(/(\d+)\s*(?:\+\s*(\d+))?/);
+        if (mm) return `${mm[2] ? `${mm[1]}+${mm[2]}` : mm[1]}분`;
+      }
+      return match.minute;
+    }
     return isKorean ? '진행 중' : 'LIVE';
   }
 
