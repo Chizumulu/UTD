@@ -1,0 +1,56 @@
+name: Approved scorer proposal
+
+on:
+  repository_dispatch:
+    types: [scorer-proposal-approved]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-data-update-pr:
+    if: github.event.client_payload.proposal != null
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.SCORER_GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install source parser
+        run: npm install --no-save acorn@8
+      - name: Apply the approved scorer proposal
+        env:
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: |
+          mkdir -p work
+          node -e "const e=require(process.env.GITHUB_EVENT_PATH); require('node:fs').writeFileSync('work/scorer-proposal.json', JSON.stringify(e.client_payload.proposal));"
+          node automation/scorer-approval/apply-approved-proposal.mjs
+      - name: Publish the approved data change
+        env:
+          GH_TOKEN: ${{ secrets.SCORER_GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PROPOSAL_ID: ${{ github.event.client_payload.proposal.id }}
+          MATCH_LABEL: ${{ github.event.client_payload.proposal.home }} vs ${{ github.event.client_payload.proposal.away }}
+        run: |
+          if git diff --quiet -- data.js; then
+            echo "No data.js changes are needed."
+            exit 0
+          fi
+          BRANCH="automation/scorer-${PROPOSAL_ID:0:8}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add data.js
+          git commit -m "Update approved match scorers"
+          git push origin "$BRANCH"
+          if git push origin HEAD:main; then
+            echo "Approved scorer data was committed to main."
+          else
+            echo "Direct push to main was blocked; opening a PR without bypassing repository rules."
+            git push origin "HEAD:refs/heads/$BRANCH"
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Update scorers: $MATCH_LABEL" --body "This scorer update was approved in WhatsApp. A direct update to main was blocked by repository rules, so this PR is ready for the required review."
+          fi
