@@ -166,12 +166,11 @@ async function sendApprovalMessage(proposal, env) {
       !env.WHATSAPP_ADMIN_WA_ID || !env.WHATSAPP_TEMPLATE_NAME) {
     throw new Error("WhatsApp settings are incomplete");
   }
-  const summary = proposal.goals.map(g => {
-    const suffix = g.count > 1 ? " x" + g.count : "";
-    return (g.side === "home" ? "H" : "A") + " " + g.name + suffix;
-  }).join(", ");
+  const homeScorers = formatScorersForMessage(proposal.goals, "home");
+  const awayScorers = formatScorersForMessage(proposal.goals, "away");
+  // Keep this order aligned with the Meta template buttons: 승인, 보류, 거절.
   const buttons = await Promise.all(
-    ["approve", "reject", "hold"].map(async (action, index) => ({
+    ["approve", "hold", "reject"].map(async (action, index) => ({
       type: "button",
       sub_type: "quick_reply",
       index: String(index),
@@ -191,14 +190,15 @@ async function sendApprovalMessage(proposal, env) {
       type: "template",
       template: {
         name: env.WHATSAPP_TEMPLATE_NAME,
-        language: { code: env.WHATSAPP_TEMPLATE_LANGUAGE || "en" },
+        language: { code: env.WHATSAPP_TEMPLATE_LANGUAGE || "ko" },
         components: [
           {
             type: "body",
             parameters: [
               { type: "text", text: proposal.home + " " + proposal.homeScore + "–" + proposal.awayScore + " " + proposal.away },
-              { type: "text", text: summary.slice(0, 900) || "Scorer details" },
-              { type: "text", text: proposal.id.slice(0, 8) }
+              { type: "text", text: homeScorers.slice(0, 900) },
+              { type: "text", text: awayScorers.slice(0, 900) },
+              { type: "text", text: proposal.id }
             ]
           },
           ...buttons
@@ -207,6 +207,22 @@ async function sendApprovalMessage(proposal, env) {
     })
   });
   if (!response.ok) throw new Error("WhatsApp send failed: " + response.status + " " + (await response.text()).slice(0, 500));
+}
+
+function formatScorersForMessage(goals, side) {
+  const byPlayer = new Map();
+  for (const goal of goals.filter(item => item.side === side)) {
+    const name = String(goal.name || "").trim();
+    if (!name) continue;
+    const key = name.toLowerCase() + "|" + Boolean(goal.ownGoal);
+    const current = byPlayer.get(key) || { name, count: 0, ownGoal: Boolean(goal.ownGoal) };
+    current.count += Number(goal.count || 1);
+    byPlayer.set(key, current);
+  }
+  return Array.from(byPlayer.values(), player => {
+    const suffix = player.count > 1 ? " " + player.count + "골" : " 1골";
+    return player.name + suffix + (player.ownGoal ? " (자책골)" : "");
+  }).join("\\n") || "없음";
 }
 
 async function handleAction(payload, env) {
