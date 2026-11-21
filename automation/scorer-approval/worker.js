@@ -98,16 +98,37 @@ function makeProposal(item, match) {
   if (!home || !away || !Number.isInteger(homeScore) || !Number.isInteger(awayScore)) return null;
 
   const goals = [];
+  const reviewWarnings = [];
   for (const event of match.events || []) {
-    if (String(event.type || "").toLowerCase() !== "goal") continue;
-    const side = teamSide(event.team, home, away);
-    if (!side) return null;
+    const eventType = String(event.type || "").toLowerCase();
     const players = (event.players || []).filter(p => p && !/assist/i.test(String(p.role || "")));
-    if (!players.length) return null;
+    if (eventType === "penalty") {
+      const outcome = normalize(event.outcome || event.result || event.status || "");
+      const confirmedScorer = players.some(p => /scorer/i.test(String(p.role || "")));
+      if (!confirmedScorer && !/goal|scor|convert|successful/.test(outcome)) {
+        reviewWarnings.push("페널티 이벤트의 득점 여부 확인 필요");
+        continue;
+      }
+    } else if (eventType !== "goal") {
+      continue;
+    }
+
+    const side = teamSide(event.team, home, away);
+    if (!side) {
+      reviewWarnings.push("득점 이벤트의 팀을 확인할 수 없음");
+      continue;
+    }
+    if (!players.length) {
+      reviewWarnings.push("득점 이벤트에 득점자 정보가 없음");
+      continue;
+    }
     for (const player of players) {
       const name = String(player.name || "").trim();
-      const count = Number(player.count || 1);
-      if (!name || !Number.isInteger(count) || count < 1 || count > 10) return null;
+      const count = Number(player.count ?? 1);
+      if (!name || !Number.isInteger(count) || count < 1 || count > 10) {
+        reviewWarnings.push("득점자 이름 또는 득점 횟수가 올바르지 않음");
+        continue;
+      }
       goals.push({
         side,
         name,
@@ -120,8 +141,9 @@ function makeProposal(item, match) {
 
   const homeCount = goals.filter(g => g.side === "home").reduce((n, g) => n + g.count, 0);
   const awayCount = goals.filter(g => g.side === "away").reduce((n, g) => n + g.count, 0);
-  // Incomplete or conflicting event data must never become an approval proposal.
-  if (homeCount !== homeScore || awayCount !== awayScore) return null;
+  if (homeCount !== homeScore || awayCount !== awayScore) {
+    reviewWarnings.push("득점자 합계 " + homeCount + "-" + awayCount + "가 최종 점수 " + homeScore + "-" + awayScore + "와 다름");
+  }
 
   const sourceId = String(item.rawUpdateId || item.sourceMessageId || "");
   const dateSource = String(match.dateText || item.sourceTimestamp || "");
@@ -136,6 +158,8 @@ function makeProposal(item, match) {
     homeScore,
     awayScore,
     goals,
+    needsReview: reviewWarnings.length > 0,
+    reviewWarnings,
     sourceText: String(item.latestObservation?.text || "").slice(0, 1800)
   };
 }
@@ -195,7 +219,7 @@ async function sendApprovalMessage(proposal, env) {
           {
             type: "body",
             parameters: [
-              { type: "text", text: proposal.home + " " + proposal.homeScore + "–" + proposal.awayScore + " " + proposal.away },
+              { type: "text", text: (proposal.needsReview ? "⚠️ 확인 필요: " + proposal.reviewWarnings.join(" / ") + "\n" : "") + proposal.home + " " + proposal.homeScore + "–" + proposal.awayScore + " " + proposal.away },
               { type: "text", text: homeScorers.slice(0, 900) },
               { type: "text", text: awayScorers.slice(0, 900) },
               { type: "text", text: proposal.id }
