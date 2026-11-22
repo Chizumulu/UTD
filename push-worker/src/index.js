@@ -26,6 +26,16 @@ export default {
     try {
       const url = new URL(request.url);
 
+      if (request.method === "POST" && url.pathname === API_PATH + "test-sequence") {
+        if (!env.PUSH_TEST_TOKEN) return json({ error: "test_not_configured" }, 503, cors);
+        if (request.headers.get("Authorization") !== "Bearer " + env.PUSH_TEST_TOKEN) {
+          return json({ error: "unauthorized" }, 401, cors);
+        }
+        const result = await sendTestSequenceToLatestSubscription(env);
+        const status = result.ok ? 200 : (result.error === "no_subscription" ? 409 : 502);
+        return json(result, status, cors);
+      }
+
       if (request.method === "GET" && url.pathname === API_PATH + "config") {
         if (!env.VAPID_PUBLIC_KEY) return json({ error: "push_not_configured" }, 503, cors);
         return json({ publicKey: env.VAPID_PUBLIC_KEY }, 200, cors);
@@ -59,7 +69,7 @@ function corsHeaders(origin) {
   return new Headers({
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Max-Age": "86400",
     "Content-Type": "application/json; charset=utf-8",
     "Vary": "Origin"
@@ -428,17 +438,53 @@ function notificationPayload(match, type) {
   };
 }
 
-async function broadcast(env, notification, createdBefore = null) {
+async function sendTestSequenceToLatestSubscription(env) {
+  const latest = await env.DB.prepare(
+    "SELECT id FROM push_subscriptions ORDER BY created_at DESC LIMIT 1"
+  ).first();
+  if (!latest) return { ok: false, error: "no_subscription" };
+
+  const steps = [
+    { title: "테스트 경기 시작 · 0–0", body: "치주물루 유나이티드 vs 테스트 상대 · 킥오프" },
+    { title: "⚽ 테스트 득점 · 0–1", body: "치주물루 유나이티드 0–1 테스트 상대" },
+    { title: "⚽ 테스트 득점 · 0–2", body: "치주물루 유나이티드 0–2 테스트 상대" },
+    { title: "⚽ 테스트 득점 · 1–2", body: "치주물루 유나이티드 1–2 테스트 상대" },
+    { title: "테스트 경기 종료 · 1–2", body: "치주물루 유나이티드 1–2 테스트 상대 · 최종 스코어" }
+  ];
+  const sentAt = Date.now();
+
+  for (let index = 0; index < steps.length; index += 1) {
+    const notification = {
+      title: steps[index].title,
+      body: steps[index].body,
+      icon: "/UTD/apple-touch-icon.png",
+      tag: "utd-push-test-" + sentAt + "-" + index,
+      renotify: false,
+      data: { url: "https://chizumulu.github.io/UTD/" }
+    };
+    const delivery = await broadcast(env, notification, null, latest.id);
+    if (delivery.success !== 1 || delivery.transient > 0 || delivery.permanent > 0) {
+      return { ok: false, error: "delivery_failed", sentCount: index, failedStep: index + 1 };
+    }
+    if (index < steps.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+  }
+
+  return { ok: true, sentCount: steps.length, target: "latest_subscription" };
+}
+
+async function broadcast(env, notification, createdBefore = null, onlySubscriptionId = null) {
   const result = await env.DB.prepare(
     "SELECT id, endpoint, p256dh, auth, created_at FROM push_subscriptions"
   ).all();
   const allSubscriptions = result && Array.isArray(result.results) ? result.results : [];
-  const subscriptions = createdBefore === null
-    ? allSubscriptions
-    : allSubscriptions.filter(row => {
-      const createdAt = Date.parse(row.created_at);
-      return Number.isFinite(createdAt) && createdAt <= createdBefore;
-    });
+  const subscriptions = allSubscriptions.filter(row => {
+    if (onlySubscriptionId !== null && row.id !== onlySubscriptionId) return false;
+    if (createdBefore === null) return true;
+    const createdAt = Date.parse(row.created_at);
+    return Number.isFinite(createdAt) && createdAt <= createdBefore;
+  });
   const vapid = {
     subject: env.VAPID_SUBJECT,
     publicKey: env.VAPID_PUBLIC_KEY,
