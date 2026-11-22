@@ -1,50 +1,141 @@
+
 import fs from "node:fs";
 import { parse } from "acorn";
 
 const proposalPath = process.env.PROPOSAL_PATH || "work/scorer-proposal.json";
 const sourcePath = process.env.DATA_PATH || "data.js";
+
 const proposal = JSON.parse(fs.readFileSync(proposalPath, "utf8"));
 const source = fs.readFileSync(sourcePath, "utf8");
 
 validateProposal(proposal);
-const ast = parse(source, { ecmaVersion: "latest", sourceType: "script", allowHashBang: true });
+
+const ast = parse(source, {
+  ecmaVersion: "latest",
+  sourceType: "script",
+  allowHashBang: true
+});
+
 const declarations = findDeclarations(ast);
 const roundsData = literalValue(declarations.roundsData, source);
 const scheduledRounds = literalValue(declarations.scheduledRounds, source);
-const matchDetails = declarations.matchDetails ? literalValue(declarations.matchDetails, source) : {};
-const location = findFixture(proposal, roundsData || {}, scheduledRounds || {});
-if (!location) throw new Error("No unique scheduled/completed fixture matched the approved teams.");
+const matchDetails = declarations.matchDetails
+  ? literalValue(declarations.matchDetails, source)
+  : {};
 
-const goalsHome = formatScorers(proposal.goals.filter(g => g.side === "home"));
-const goalsAway = formatScorers(proposal.goals.filter(g => g.side === "away"));
+const location = findFixture(
+  proposal,
+  roundsData || {},
+  scheduledRounds || {}
+);
+
+if (!location) {
+  throw new Error(
+    "No unique scheduled/completed fixture matched the approved teams."
+  );
+}
+
+const goalsHome = formatScorers(
+  proposal.goals.filter(g => g.side === "home")
+);
+
+const goalsAway = formatScorers(
+  proposal.goals.filter(g => g.side === "away")
+);
+
 const edits = [];
 
-if (roundsData && Object.prototype.hasOwnProperty.call(roundsData, location.roundKey)) {
+if (location.kind === "completed") {
   const detailsDecl = declarations.matchDetails;
-  if (!detailsDecl || !matchDetails || !Array.isArray(matchDetails[location.roundKey])) {
-    throw new Error("The completed round has no matchDetails entry; refusing an unsafe data.js edit.");
+
+  if (
+    !detailsDecl ||
+    !matchDetails ||
+    !Array.isArray(matchDetails[location.roundKey])
+  ) {
+    throw new Error(
+      "The completed round has no matchDetails entry; refusing an unsafe data.js edit."
+    );
   }
-  const roundNode = objectProperty(declarations.matchDetails, location.roundKey);
-  const entries = roundNode && roundNode.value && roundNode.value.type === "ArrayExpression" ? roundNode.value.elements : [];
-  const target = entries[location.matchIndex];
-  const parsedTarget = target && literalValueNode(target, source);
-  if (!target || !parsedTarget || typeof parsedTarget.match !== "string") {
-    throw new Error("Could not safely locate the matching matchDetails record.");
+
+  // roundsData에서 해당 경기 객체를 가져옵니다.
+  // 여기의 순번은 roundsData 내부에서만 사용합니다.
+  const roundFixtures = (roundsData[location.roundKey] || [])
+    .filter(m => m && !m.byeKo && !m.byeEn);
+
+  const fixture = roundFixtures[location.matchIndex];
+
+  if (
+    !fixture ||
+    typeof fixture.homeKo !== "string" ||
+    typeof fixture.awayKo !== "string"
+  ) {
+    throw new Error(
+      "Could not safely identify the completed fixture's Korean team names."
+    );
   }
-  const resultText = parsedTarget.match;
-  const scoreRegex = /(\d+)\s*:\s*(\d+)/;
-  const scores = resultText.match(scoreRegex);
-  if (!scores || Number(scores[1]) !== proposal.homeScore || Number(scores[2]) !== proposal.awayScore) {
-    throw new Error("data.js score differs from the approved final score; manual reconciliation is required.");
+
+  // 중요:
+  // matchDetails는 연기된 경기를 제외할 수 있으므로
+  // roundsData의 배열 순번을 그대로 사용하지 않습니다.
+  // 홈팀·원정팀 이름과 스코어를 기준으로 상세 기록을 찾습니다.
+  const roundNode = objectProperty(
+    declarations.matchDetails,
+    location.roundKey
+  );
+
+  const entries =
+    roundNode &&
+    roundNode.value &&
+    roundNode.value.type === "ArrayExpression"
+      ? roundNode.value.elements
+      : [];
+
+  const target = findMatchDetailTarget(
+    entries,
+    source,
+    fixture,
+    proposal
+  );
+
+  if (!target) {
+    throw new Error(
+      "Could not uniquely match the fixture in matchDetails by teams and score. Manual reconciliation is required."
+    );
   }
+
+  const parsedTarget = literalValueNode(target, source);
+
+  if (!parsedTarget || typeof parsedTarget.match !== "string") {
+    throw new Error(
+      "Could not safely read the matching matchDetails record."
+    );
+  }
+
   edits.push(propertyEdit(source, target, "scorersHome", goalsHome));
   edits.push(propertyEdit(source, target, "scorersAway", goalsAway));
+
 } else {
   const roundsDecl = declarations.scheduledRounds;
   const roundNode = objectProperty(roundsDecl, location.roundKey);
-  const fixtures = roundNode && roundNode.value && roundNode.value.type === "ArrayExpression" ? roundNode.value.elements : [];
-  const target = fixtures.filter(m => m && !m.byeKo && !m.byeEn)[location.matchIndex];
-  if (!target) throw new Error("Could not locate the scheduled fixture in data.js.");
+
+  const fixtures =
+    roundNode &&
+    roundNode.value &&
+    roundNode.value.type === "ArrayExpression"
+      ? roundNode.value.elements
+      : [];
+
+  const target = fixtures.filter(
+    m => m && !m.byeKo && !m.byeEn
+  )[location.matchIndex];
+
+  if (!target) {
+    throw new Error(
+      "Could not locate the scheduled fixture in data.js."
+    );
+  }
+
   edits.push(propertyEdit(source, target, "homeScore", proposal.homeScore));
   edits.push(propertyEdit(source, target, "awayScore", proposal.awayScore));
   edits.push(propertyEdit(source, target, "scorersHome", goalsHome));
@@ -52,43 +143,123 @@ if (roundsData && Object.prototype.hasOwnProperty.call(roundsData, location.roun
 }
 
 let updated = source;
+
 for (const edit of edits.filter(Boolean).sort((a, b) => b.start - a.start)) {
-  updated = updated.slice(0, edit.start) + edit.text + updated.slice(edit.end);
+  updated =
+    updated.slice(0, edit.start) +
+    edit.text +
+    updated.slice(edit.end);
 }
+
 if (updated === source) {
-  console.log("Approved scorer data already matches data.js; no changes needed.");
+  console.log(
+    "Approved scorer data already matches data.js; no changes needed."
+  );
   process.exit(0);
 }
+
 fs.writeFileSync(sourcePath, updated, "utf8");
-console.log("Updated " + location.roundKey + " with " + goalsHome + " / " + goalsAway);
+
+console.log(
+  "Updated " +
+  location.roundKey +
+  " with " +
+  goalsHome +
+  " / " +
+  goalsAway
+);
+
+
+// ============================================================
+// Proposal validation
+// ============================================================
 
 function validateProposal(p) {
-  if (!p || !p.id || !p.home || !p.away || p.home === p.away) throw new Error("Invalid proposal metadata.");
-  if (!Number.isInteger(p.homeScore) || !Number.isInteger(p.awayScore) || !Array.isArray(p.goals)) {
+  if (
+    !p ||
+    !p.id ||
+    !p.home ||
+    !p.away ||
+    p.home === p.away
+  ) {
+    throw new Error("Invalid proposal metadata.");
+  }
+
+  if (
+    !Number.isInteger(p.homeScore) ||
+    !Number.isInteger(p.awayScore) ||
+    !Array.isArray(p.goals)
+  ) {
     throw new Error("Invalid proposal score or goal list.");
   }
-  const counts = { home: 0, away: 0 };
+
+  const counts = {
+    home: 0,
+    away: 0
+  };
+
   for (const goal of p.goals) {
-    if (!["home", "away"].includes(goal.side) || !String(goal.name || "").trim()) throw new Error("Invalid goal entry.");
+    if (
+      !["home", "away"].includes(goal.side) ||
+      !String(goal.name || "").trim()
+    ) {
+      throw new Error("Invalid goal entry.");
+    }
+
     const count = Number(goal.count || 1);
-    if (!Number.isInteger(count) || count < 1 || count > 10) throw new Error("Invalid goal count.");
+
+    if (
+      !Number.isInteger(count) ||
+      count < 1 ||
+      count > 10
+    ) {
+      throw new Error("Invalid goal count.");
+    }
+
     counts[goal.side] += count;
   }
-  if (counts.home !== p.homeScore || counts.away !== p.awayScore) throw new Error("Goal list does not reconcile to final score.");
+
+  if (
+    counts.home !== p.homeScore ||
+    counts.away !== p.awayScore
+  ) {
+    throw new Error(
+      "Goal list does not reconcile to final score."
+    );
+  }
 }
+
+
+// ============================================================
+// AST helpers
+// ============================================================
 
 function findDeclarations(program) {
   const found = {};
+
   for (const statement of program.body) {
     if (statement.type !== "VariableDeclaration") continue;
+
     for (const decl of statement.declarations) {
-      if (decl.id.type === "Identifier" &&
-          ["roundsData", "scheduledRounds", "matchDetails"].includes(decl.id.name)) {
+      if (
+        decl.id.type === "Identifier" &&
+        [
+          "roundsData",
+          "scheduledRounds",
+          "matchDetails"
+        ].includes(decl.id.name)
+      ) {
         found[decl.id.name] = decl.init;
       }
     }
   }
-  if (!found.roundsData || !found.scheduledRounds) throw new Error("Required round data declarations were not found.");
+
+  if (!found.roundsData || !found.scheduledRounds) {
+    throw new Error(
+      "Required round data declarations were not found."
+    );
+  }
+
   return found;
 }
 
@@ -98,83 +269,296 @@ function literalValue(node, text) {
 
 function literalValueNode(node, text) {
   if (!node) return undefined;
-  if (node.type === "Literal") return node.value;
-  if (node.type === "UnaryExpression" && node.operator === "-") return -literalValueNode(node.argument, text);
-  if (node.type === "ArrayExpression") return node.elements.map(el => literalValueNode(el, text));
+
+  if (node.type === "Literal") {
+    return node.value;
+  }
+
+  if (
+    node.type === "UnaryExpression" &&
+    node.operator === "-"
+  ) {
+    return -literalValueNode(node.argument, text);
+  }
+
+  if (node.type === "ArrayExpression") {
+    return node.elements.map(el =>
+      literalValueNode(el, text)
+    );
+  }
+
   if (node.type === "ObjectExpression") {
     const out = {};
+
     for (const prop of node.properties) {
-      if (prop.type !== "Property" || prop.computed || prop.kind !== "init") continue;
+      if (
+        prop.type !== "Property" ||
+        prop.computed ||
+        prop.kind !== "init"
+      ) {
+        continue;
+      }
+
       const key = prop.key.name ?? prop.key.value;
       out[key] = literalValueNode(prop.value, text);
     }
+
     return out;
   }
-  if (node.type === "TemplateLiteral" && node.expressions.length === 0) return node.quasis[0].value.cooked;
+
+  if (
+    node.type === "TemplateLiteral" &&
+    node.expressions.length === 0
+  ) {
+    return node.quasis[0].value.cooked;
+  }
+
   return undefined;
 }
 
 function objectProperty(objectNode, key) {
-  if (!objectNode || objectNode.type !== "ObjectExpression") return null;
-  return objectNode.properties.find(p => p.type === "Property" &&
-    (p.key.name ?? p.key.value) === key) || null;
+  if (!objectNode || objectNode.type !== "ObjectExpression") {
+    return null;
+  }
+
+  return objectNode.properties.find(
+    p =>
+      p.type === "Property" &&
+      (p.key.name ?? p.key.value) === key
+  ) || null;
 }
+
+
+// ============================================================
+// Fixture matching
+// ============================================================
 
 function findFixture(p, completed, scheduled) {
   const hits = [];
+
   for (const [roundKey, list] of Object.entries(completed)) {
     if (!Array.isArray(list)) continue;
-    const matchIndex = list.filter(m => m && !m.byeKo && !m.byeEn).findIndex(m =>
-      sameTeam(m.homeEn || m.homeKo, p.home) && sameTeam(m.awayEn || m.awayKo, p.away));
-    if (matchIndex >= 0) hits.push({ roundKey, matchIndex, kind: "completed" });
+
+    const matchIndex = list
+      .filter(m => m && !m.byeKo && !m.byeEn)
+      .findIndex(m =>
+        sameTeam(m.homeEn || m.homeKo, p.home) &&
+        sameTeam(m.awayEn || m.awayKo, p.away)
+      );
+
+    if (matchIndex >= 0) {
+      hits.push({
+        roundKey,
+        matchIndex,
+        kind: "completed"
+      });
+    }
   }
+
   for (const [roundKey, list] of Object.entries(scheduled)) {
     if (!Array.isArray(list)) continue;
-    const matchIndex = list.filter(m => m && !m.byeKo && !m.byeEn).findIndex(m =>
-      sameTeam(m.homeEn || m.homeKo, p.home) && sameTeam(m.awayEn || m.awayKo, p.away));
-    if (matchIndex >= 0) hits.push({ roundKey, matchIndex, kind: "scheduled" });
+
+    const matchIndex = list
+      .filter(m => m && !m.byeKo && !m.byeEn)
+      .findIndex(m =>
+        sameTeam(m.homeEn || m.homeKo, p.home) &&
+        sameTeam(m.awayEn || m.awayKo, p.away)
+      );
+
+    if (matchIndex >= 0) {
+      hits.push({
+        roundKey,
+        matchIndex,
+        kind: "scheduled"
+      });
+    }
   }
+
   if (hits.length !== 1) return null;
+
   return hits[0];
 }
 
 function sameTeam(left, right) {
-  const a = tokens(left), b = tokens(right);
+  const a = tokens(left);
+  const b = tokens(right);
+
   if (!a.length || !b.length) return false;
-  return a.every(t => b.includes(t)) || b.every(t => a.includes(t));
+
+  return (
+    a.every(t => b.includes(t)) ||
+    b.every(t => a.includes(t))
+  );
 }
 
 function tokens(value) {
-  return String(value || "").normalize("NFKD").toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/)
-    .filter(t => t && !["fc", "sc", "afc", "club", "football"].includes(t));
+  return String(value || "")
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(t =>
+      t &&
+      !["fc", "sc", "afc", "club", "football"].includes(t)
+    );
 }
+
+
+// ============================================================
+// matchDetails matching
+// ============================================================
+
+function findMatchDetailTarget(entries, source, fixture, proposal) {
+  const candidates = [];
+
+  for (const entry of entries) {
+    if (!entry) continue;
+
+    const detail = literalValueNode(entry, source);
+
+    if (!detail || typeof detail.match !== "string") {
+      continue;
+    }
+
+    const parsed = parseMatchLabel(detail.match);
+
+    if (!parsed) continue;
+
+    if (
+      !sameKoreanTeam(parsed.home, fixture.homeKo) ||
+      !sameKoreanTeam(parsed.away, fixture.awayKo)
+    ) {
+      continue;
+    }
+
+    if (
+      parsed.homeScore !== proposal.homeScore ||
+      parsed.awayScore !== proposal.awayScore
+    ) {
+      continue;
+    }
+
+    candidates.push(entry);
+  }
+
+  // 둘 이상 일치하면 임의로 수정하지 않습니다.
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
+function parseMatchLabel(value) {
+  const match = String(value).match(
+    /^\s*(.*?)\s+(\d+)\s*:\s*(.*?)\s+(\d+)\s*$/
+  );
+
+  if (!match) return null;
+
+  return {
+    home: match[1],
+    homeScore: Number(match[2]),
+    away: match[3],
+    awayScore: Number(match[4])
+  };
+}
+
+function sameKoreanTeam(shortName, fullName) {
+  const a = normalizeKoreanTeam(shortName);
+  const b = normalizeKoreanTeam(fullName);
+
+  if (!a || !b) return false;
+
+  return (
+    a === b ||
+    a.startsWith(b) ||
+    b.startsWith(a)
+  );
+}
+
+function normalizeKoreanTeam(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/\s+/g, "")
+    .replace(/FC|SC|AFC/gi, "")
+    .replace(/[^가-힣a-zA-Z0-9]/g, "")
+    .toLowerCase();
+}
+
+
+// ============================================================
+// Scorer formatting
+// ============================================================
 
 function formatScorers(goals) {
   const byPlayer = new Map();
+
   for (const g of goals) {
     const name = String(g.name).trim().toUpperCase();
     const ownGoal = Boolean(g.ownGoal);
     const key = name + "|" + ownGoal;
-    const item = byPlayer.get(key) || { name, count: 0, ownGoal };
+
+    const item = byPlayer.get(key) || {
+      name,
+      count: 0,
+      ownGoal
+    };
+
     item.count += Number(g.count || 1);
     byPlayer.set(key, item);
   }
+
   return Array.from(byPlayer.values(), info => {
     const notes = [];
-    if (info.count > 1) notes.push(info.count + "골");
-    if (info.ownGoal) notes.push("자책골");
-    return info.name + (notes.length ? " (" + notes.join(" ") + ")" : "");
+
+    if (info.count > 1) {
+      notes.push(info.count + "골");
+    }
+
+    if (info.ownGoal) {
+      notes.push("자책골");
+    }
+
+    return (
+      info.name +
+      (notes.length ? " (" + notes.join(" ") + ")" : "")
+    );
   }).join(", ") || "없음";
 }
+
+
+// ============================================================
+// Source editing
+// ============================================================
 
 function propertyEdit(text, object, key, value) {
   const existing = objectProperty(object, key);
   const encoded = JSON.stringify(value);
-  if (existing) return { start: existing.value.start, end: existing.value.end, text: encoded };
+
+  if (existing) {
+    return {
+      start: existing.value.start,
+      end: existing.value.end,
+      text: encoded
+    };
+  }
+
   const close = object.end - 1;
   const hasProperties = object.properties.length > 0;
   const before = text.slice(object.start, close).trimEnd();
-  const comma = hasProperties && !before.endsWith(",") ? "," : "";
-  return { start: close, end: close, text: comma + "\n      " + key + ": " + encoded + "\n    " };
+
+  const comma =
+    hasProperties && !before.endsWith(",")
+      ? ","
+      : "";
+
+  return {
+    start: close,
+    end: close,
+    text:
+      comma +
+      "\n      " +
+      key +
+      ": " +
+      encoded +
+      "\n    "
+  };
 }
