@@ -11,7 +11,7 @@ This is an opt-in bridge between the existing Chizumulu structured API and the U
 5. Approve dispatches a GitHub Actions event. The action checks the fixture and score in `data.js`, adds the home and away scorer summaries, then commits the approved change directly to `main`.
 6. The push triggers the repository's normal publish flow. If GitHub blocks a direct push because of branch rules, the action opens a PR instead; it never bypasses repository rules.
 
-If API events are incomplete, the team cannot be identified, a penalty outcome is ambiguous, or scorer totals disagree with the final score, the WhatsApp message includes a 확인 필요 warning. An explicit approval still controls whether it is sent to GitHub.
+If API events are incomplete, the team cannot be identified, a penalty outcome is ambiguous, or scorer totals disagree with the final score, the WhatsApp message includes a 확인 필요 warning. These proposals require two separate Approve clicks: the first sends a second confirmation message, and only Approve on that second message dispatches to GitHub. The confirmation button has its own signed payload; Hold and Reject remain available.
 
 ## 1. Create and deploy the Worker
 
@@ -94,7 +94,7 @@ Add the same fine-grained token as a repository Actions secret named `SCORER_GIT
 
 ## Decisions and retries
 
-- **Approve** commits the change to `main` immediately when repository rules allow it. If a direct push is blocked, the workflow opens a PR for the required GitHub review.
+- **Approve** commits a normal proposal after one approval. A proposal marked 확인 필요 requires approval on its original message and a second approval on the follow-up confirmation message. If a direct push is blocked, the workflow opens a PR for the required GitHub review.
 - **Reject** records the rejection.
 - **Hold** preserves the proposal for up to 14 days. Click Approve or Reject on that original WhatsApp message when ready.
 - A team pair/date is deduplicated for 14 days to avoid repeated alerts. For a corrected API post after a decision, remove the `match:<key>` and `proposal:<id>` keys from the Worker KV namespace after reviewing the change.
