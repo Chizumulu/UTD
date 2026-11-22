@@ -412,7 +412,12 @@ async function scanForCompletedMatches(env) {
         });
         for (const event of Array.isArray(match.events) ? match.events : []) {
           if (event && typeof event === "object") {
-            group.events.set(snapshotEventKey(event), event);
+            group.events.set(snapshotEventKey(event), {
+              ...event,
+              _snapshotHome: String(match.homeTeam || ""),
+              _snapshotAway: String(match.awayTeam || ""),
+              _sourceText: String(item.latestObservation?.text || "")
+            });
           }
         }
       }
@@ -571,7 +576,9 @@ function matchSnapshotKey(item, match, sequence) {
   if (!home || !away || !day) {
     return "snapshot:" + String(item.rawUpdateId || item.sourceMessageId || sequence);
   }
-  return home + "|" + away + "|" + day;
+  // API posts can reverse the displayed home/away order for the same fixture.
+  // Group by an unordered pair; makeProposal keeps the latest final snapshot's orientation.
+  return [home, away].sort().join("|") + "|" + day;
 }
 
 function normalizeTeamIdentity(value) {
@@ -629,44 +636,84 @@ function makeProposal(item, match) {
   if (hasConflict) {
     reviewWarnings.push("API가 경기 데이터 충돌 또는 검토 필요 상태로 표시함");
   }
+  const seenGoals = new Map();
   for (const event of match.events || []) {
     const eventType = String(event.type || "").toLowerCase();
-    const players = (event.players || []).filter(p => p && !/assist/i.test(String(p.role || "")));
-    if (eventType === "penalty") {
+    const players = Array.isArray(event.players) ? event.players.filter(Boolean) : [];
+    const explicitScorers = players.filter(player =>
+      /scorer|own[ _-]?goal/i.test(String(player.role || "")) ||
+      player.ownGoal === true || player.isOwnGoal === true
+    );
+    const isGoalEvent = /^(goal|penalt|own)/i.test(eventType) || explicitScorers.length > 0;
+    if (!isGoalEvent) continue;
+
+    if (eventType.startsWith("penalt")) {
       const outcome = normalize(event.outcome || event.result || event.status || "");
-      const confirmedScorer = players.some(p => /scorer/i.test(String(p.role || "")));
+      const confirmedScorer = explicitScorers.length > 0;
       if (!confirmedScorer && !/goal|scor|convert|successful/.test(outcome)) {
         reviewWarnings.push("페널티 이벤트의 득점 여부 확인 필요");
         continue;
       }
-    } else if (eventType !== "goal") {
+    }
+
+    // Match the live card: scorer roles win; otherwise a goal event contributes its first
+    // non-assist player. Do not count every participant in an event as a scorer.
+    let scorerPlayers = explicitScorers.length
+      ? explicitScorers
+      : players.filter(player => !/assist/i.test(String(player.role || ""))).slice(0, 1);
+    if (!scorerPlayers.length) {
+      reviewWarnings.push("득점 이벤트에 득점자 정보가 없음");
       continue;
     }
 
-    const side = teamSide(event.team, home, away);
+    let side = teamSide(event.team, home, away);
+    if (!side && (event._side === "home" || event._side === "away")) {
+      side = event._side;
+      const sourceHome = normalizeTeamIdentity(event._snapshotHome || "");
+      const sourceAway = normalizeTeamIdentity(event._snapshotAway || "");
+      if (sourceHome && sourceAway &&
+          sourceHome === normalizeTeamIdentity(away) &&
+          sourceAway === normalizeTeamIdentity(home)) {
+        side = side === "home" ? "away" : "home";
+      }
+    }
     if (!side) {
       reviewWarnings.push("득점 이벤트의 팀을 확인할 수 없음");
       continue;
     }
-    if (!players.length) {
-      reviewWarnings.push("득점 이벤트에 득점자 정보가 없음");
-      continue;
-    }
-    for (const player of players) {
-      const name = String(player.name || "").trim();
-      const count = Number(player.count ?? 1);
-      if (!name || !Number.isInteger(count) || count < 1 || count > 10) {
+
+    for (const player of scorerPlayers) {
+      const name = String(player.name || "").replace(/\s*[×xX]\s*\d+\s*$/, "").trim();
+      const inlineCount = String(player.name || "").match(/[×xX]\s*(\d+)\s*$/);
+      const count = Math.max(Number(player.count || 1), inlineCount ? Number(inlineCount[1]) : 1);
+      if (!name || !Number.isInteger(count) || count < 1 || count > 9) {
         reviewWarnings.push("득점자 이름 또는 득점 횟수가 올바르지 않음");
         continue;
       }
-      goals.push({
-        side,
-        name,
-        count,
-        minute: String(event.minuteText || event.minute || "").trim(),
-        ownGoal: Boolean(player.ownGoal || player.isOwnGoal || event.ownGoal)
-      });
+      const minute = String(event.minuteText || event.minute || "").trim();
+      const minuteMatch = minute.match(/(\d+)\s*(?:\+\s*(\d+))?/);
+      const minuteKey = minuteMatch
+        ? (minuteMatch[2] ? minuteMatch[1] + "+" + minuteMatch[2] : minuteMatch[1])
+        : minute;
+      const ownGoal = Boolean(player.ownGoal || player.isOwnGoal ||
+        /own[ _-]?goal/i.test(String(player.role || "")) || event.ownGoal);
+      const normalizedName = normalizeScorerName(name);
+      const duplicate = Array.from(seenGoals.values()).find(goal =>
+        goal.side === side && goal.minuteKey === minuteKey &&
+        similarScorerNames(normalizeScorerName(goal.name), normalizedName)
+      );
+      if (duplicate) {
+        duplicate.count = Math.max(duplicate.count, count);
+        duplicate.ownGoal = duplicate.ownGoal || ownGoal;
+      } else {
+        const goal = { side, name, count, minute, minuteKey, ownGoal };
+        seenGoals.set(seenGoals.size, goal);
+      }
     }
+  }
+  goals.push(...seenGoals.values());
+  for (const goal of goals) {
+    delete goal.minuteKey;
   }
 
   const homeCount = goals.filter(g => g.side === "home").reduce((n, g) => n + g.count, 0);
@@ -698,6 +745,34 @@ function makeProposal(item, match) {
     reviewWarnings,
     sourceText: String(item.latestObservation?.text || "").slice(0, 1800)
   };
+}
+
+function normalizeScorerName(value) {
+  return String(value || "").toLowerCase().replace(/[×x]\s*\d+\s*$/i, "")
+    .replace(/[^a-z]/g, "").replace(/h/g, "");
+}
+
+function scorerEditDistance(a, b) {
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let previous = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const old = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (a[i - 1] === b[j - 1] ? 0 : 1));
+      previous = old;
+    }
+  }
+  return row[b.length];
+}
+
+function similarScorerNames(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const min = Math.min(a.length, b.length), max = Math.max(a.length, b.length);
+  if (min < 5) return false;
+  const tolerance = max >= 14 ? 4 : max >= 10 ? 3 : max >= 7 ? 2 : 1;
+  return max - min <= tolerance && scorerEditDistance(a, b) <= tolerance;
 }
 
 function teamSide(value, home, away) {
