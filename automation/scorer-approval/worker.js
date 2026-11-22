@@ -667,13 +667,9 @@ function parseResultTextScorers(text, home, away, homeScore, awayScore) {
 
   const expectedTotal = homeScore + awayScore;
   const listedTotal = parsed.reduce((sum, scorer) => sum + scorer.count, 0);
-  if (listedTotal !== expectedTotal) {
-    // Follow the live ticker's narrow fallback for a result naming one scorer
-    // when the entire score belongs to one side.
-    if (parsed.length === 1 && awayScore === 0 && homeScore > 0) parsed[0].count = homeScore;
-    else if (parsed.length === 1 && homeScore === 0 && awayScore > 0) parsed[0].count = awayScore;
-    else return null;
-  }
+  // Do not infer a brace from the team score alone. If the source list is incomplete,
+  // use structured goal events instead; any remaining score mismatch stays reviewable.
+  if (listedTotal !== expectedTotal) return null;
 
   let homeRemaining = homeScore;
   const assigned = [];
