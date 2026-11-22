@@ -20,6 +20,12 @@ export default {
     if (url.pathname === "/admin/diagnostics") {
       return new Response("Method not allowed", { status: 405, headers: { allow: "POST" } });
     }
+    if (url.pathname === "/admin/resend" && request.method === "POST") {
+      return runAuthorizedResend(request, env);
+    }
+    if (url.pathname === "/admin/resend") {
+      return new Response("Method not allowed", { status: 405, headers: { allow: "POST" } });
+    }
     if (url.pathname === "/admin/scan" && request.method === "POST") {
       return runAuthorizedScan(request, env);
     }
@@ -357,6 +363,88 @@ async function runAuthorizedScan(request, env) {
     const summary = await scanForCompletedMatches(env);
     return Response.json({ ok: true, ...summary });
   } catch (error) {
+    return Response.json({ ok: false, error: error.message || String(error) }, { status: 502 });
+  }
+}
+
+async function runAuthorizedResend(request, env) {
+  const expectedToken = String(env.DIAGNOSTIC_TOKEN || "");
+  const authorization = request.headers.get("authorization") || "";
+  const suppliedToken = authorization.match(/^Bearer\\s+(.+)$/i)?.[1] || "";
+  if (!expectedToken || !constantTimeEqual(suppliedToken, expectedToken)) {
+    return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ ok: false, error: "Expected JSON with a matches array" }, { status: 400 });
+  }
+  if (!body || !Array.isArray(body.matches) || !body.matches.length || body.matches.length > 10) {
+    return Response.json({ ok: false, error: "matches must contain 1 to 10 home/away pairs" }, { status: 400 });
+  }
+
+  try {
+    const keys = [];
+    let cursor;
+    do {
+      const page = await env.APPROVALS.list({ prefix: "match:", limit: 1000, cursor });
+      keys.push(...(page.keys || []));
+      cursor = page.list_complete ? undefined : page.cursor;
+    } while (cursor);
+
+    const result = { ok: true, resentCount: 0, skippedCount: 0, results: [] };
+    for (const requested of body.matches) {
+      const home = normalizeTeamIdentity(requested?.home || "");
+      const away = normalizeTeamIdentity(requested?.away || "");
+      if (!home || !away) {
+        result.skippedCount += 1;
+        result.results.push({ home: requested?.home || "", away: requested?.away || "", status: "invalid_match" });
+        continue;
+      }
+      let proposal = null;
+      let proposalId = "";
+      for (const entry of keys) {
+        const id = await env.APPROVALS.get(entry.name);
+        if (!id) continue;
+        const raw = await env.APPROVALS.get("proposal:" + id);
+        if (!raw) continue;
+        const candidate = JSON.parse(raw);
+        if (normalizeTeamIdentity(candidate.home) === home &&
+            normalizeTeamIdentity(candidate.away) === away) {
+          proposal = candidate;
+          proposalId = id;
+          break;
+        }
+      }
+      const resultItem = { home: requested.home, away: requested.away };
+      if (!proposal) {
+        result.skippedCount += 1;
+        result.results.push({ ...resultItem, status: "not_found" });
+        continue;
+      }
+      const terminalStates = ["approved", "rejected", "dispatching", "superseded"];
+      if (terminalStates.includes(String(proposal.state || "").toLowerCase())) {
+        result.skippedCount += 1;
+        result.results.push({ ...resultItem, status: "already_" + proposal.state, proposalId });
+        continue;
+      }
+      try {
+        await sendApprovalMessage(proposal, env, {
+          confirmation: proposal.state === "awaiting_confirmation"
+        });
+        result.resentCount += 1;
+        result.results.push({ ...resultItem, status: "resent", proposalId });
+      } catch (error) {
+        result.skippedCount += 1;
+        result.results.push({ ...resultItem, status: "send_failed", proposalId, error: error.message || String(error) });
+      }
+    }
+    console.log(JSON.stringify({ event: "whatsapp_approval_manual_resend", ...result }));
+    return Response.json(result);
+  } catch (error) {
+    console.error(JSON.stringify({ event: "whatsapp_approval_manual_resend_failed", error: error.message || String(error) }));
     return Response.json({ ok: false, error: error.message || String(error) }, { status: 502 });
   }
 }
