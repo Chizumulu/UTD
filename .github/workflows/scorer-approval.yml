@@ -4,6 +4,10 @@ on:
   repository_dispatch:
     types: [scorer-proposal-approved]
 
+concurrency:
+  group: approved-scorer-proposals-main
+  queue: max
+
 permissions:
   contents: write
   pull-requests: write
@@ -50,7 +54,7 @@ jobs:
           if git push origin HEAD:main; then
             echo "Approved scorer data was committed to main."
           else
-            echo "Direct push to main was blocked; opening a PR without bypassing repository rules."
+            echo "Direct push to main failed; opening a PR for manual recovery."
             git push origin "HEAD:refs/heads/$BRANCH"
-            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Update scorers: $MATCH_LABEL" --body "This scorer update was approved in WhatsApp. A direct update to main was blocked by repository rules, so this PR is ready for the required review."
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Update scorers: $MATCH_LABEL" --body "This scorer update was approved in WhatsApp. The direct update to main failed, so this PR is available for recovery."
           fi
