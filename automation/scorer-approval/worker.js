@@ -555,8 +555,8 @@ function matchSnapshotKey(item, match, sequence) {
   const stableId = String(match.matchId || match.match_id || match.fixtureId || match.id || "").trim();
   if (stableId) return "id:" + normalize(stableId);
 
-  const home = String(match.homeTeam || "").trim();
-  const away = String(match.awayTeam || "").trim();
+  const home = normalizeTeamIdentity(match.homeTeam);
+  const away = normalizeTeamIdentity(match.awayTeam);
   const dateSource = String(match.dateText || item.sourceTimestamp || "").trim();
   const dayFirst = dateSource.match(/\b(\d{1,2})-(\d{1,2})-(\d{4})\b/);
   let day = "";
@@ -571,7 +571,16 @@ function matchSnapshotKey(item, match, sequence) {
   if (!home || !away || !day) {
     return "snapshot:" + String(item.rawUpdateId || item.sourceMessageId || sequence);
   }
-  return normalize(home) + "|" + normalize(away) + "|" + day;
+  return home + "|" + away + "|" + day;
+}
+
+function normalizeTeamIdentity(value) {
+  const team = normalize(value)
+    .replace(/\b(?:fc|sc|afc|club|football)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (team === "chibavi rs") return "chibavi real stars";
+  return team;
 }
 
 function snapshotEventKey(event) {
@@ -703,7 +712,7 @@ function teamSide(value, home, away) {
 }
 
 function teamTokens(value) {
-  return normalize(value).split(" ").filter(t => t && !["fc", "sc", "afc", "club", "football"].includes(t));
+  return normalizeTeamIdentity(value).split(" ").filter(Boolean);
 }
 
 function normalize(value) {
