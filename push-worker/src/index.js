@@ -212,7 +212,7 @@ async function pollMatchesAndNotify(env) {
     const notification = createNotification(previous, match);
     if (notification) {
       const delivery = await broadcast(env, notification);
-      if (delivery.success === 0 && delivery.transient > 0 && delivery.permanent === 0) {
+      if (delivery.success === 0 && delivery.transient > 0) {
         console.warn("All push deliveries failed temporarily; match state will be retried.", match.matchId);
         continue;
       }
@@ -246,27 +246,20 @@ function isFresh(match, now) {
   const lastSeen = Date.parse(match.lastSeenAt);
   if (!Number.isFinite(lastSeen)) return false;
   const age = Math.max(0, now - lastSeen);
-  const liveFreshness = Number(envNumber("LIVE_FRESHNESS_MINUTES", 45)) * 60 * 1000;
-  const finalFreshness = Number(envNumber("FINAL_FRESHNESS_HOURS", 24)) * 60 * 60 * 1000;
+  const liveFreshness = 45 * 60 * 1000;
+  const finalFreshness = 24 * 60 * 60 * 1000;
 
   if (match.status === "live" || match.status === "half_time") return age <= liveFreshness;
   if (match.status === "full_time") return age <= finalFreshness;
   return false;
 }
 
-function envNumber(_name, fallback) {
-  return fallback;
-}
 
 function createNotification(previous, match) {
-  const scoreChanged = previous
-    && previous.home_score !== match.homeScore
-    && previous.home_score !== null
-    && match.homeScore !== null
-    || previous
-    && previous.away_score !== match.awayScore
-    && previous.away_score !== null
-    && match.awayScore !== null;
+  const scoreChanged = !!previous && (
+    (previous.home_score !== null && match.homeScore !== null && previous.home_score !== match.homeScore)
+    || (previous.away_score !== null && match.awayScore !== null && previous.away_score !== match.awayScore)
+  );
 
   if (!previous) {
     if (match.status !== "live" && match.status !== "half_time") return null;
