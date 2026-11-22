@@ -22,6 +22,12 @@ const scheduledRounds = literalValue(declarations.scheduledRounds, source);
 const matchDetails = declarations.matchDetails
   ? literalValue(declarations.matchDetails, source)
   : {};
+const playerDirectory = declarations.playerDirectory
+  ? literalValue(declarations.playerDirectory, source)
+  : {};
+const nameAliases = declarations.nameAliases
+  ? literalValue(declarations.nameAliases, source)
+  : {};
 
 const location = findFixture(
   proposal,
@@ -36,14 +42,28 @@ if (!location) {
 }
 
 const goalsHome = formatScorers(
-  proposal.goals.filter(g => g.side === "home")
+  proposal.goals.filter(g => g.side === "home"),
+  nameAliases,
+  playerDirectory
 );
 
 const goalsAway = formatScorers(
-  proposal.goals.filter(g => g.side === "away")
+  proposal.goals.filter(g => g.side === "away"),
+  nameAliases,
+  playerDirectory
 );
 
 const edits = [];
+if (!declarations.playerDirectory || !playerDirectory || !declarations.nameAliases || !nameAliases) {
+  throw new Error("playerDirectory and nameAliases are required for Korean scorer names.");
+}
+edits.push(...playerDirectoryEdits(
+  source,
+  declarations.playerDirectory,
+  playerDirectory,
+  nameAliases,
+  proposal.goals
+));
 
 if (location.kind === "completed") {
   const detailsDecl = declarations.matchDetails;
@@ -246,7 +266,9 @@ function findDeclarations(program) {
         [
           "roundsData",
           "scheduledRounds",
-          "matchDetails"
+          "matchDetails",
+          "playerDirectory",
+          "nameAliases"
         ].includes(decl.id.name)
       ) {
         found[decl.id.name] = decl.init;
@@ -488,20 +510,59 @@ function normalizeKoreanTeam(value) {
 // Scorer formatting
 // ============================================================
 
-function formatScorers(goals) {
+function scorerIdentity(value) {
+  return String(value || "").normalize("NFKD").toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ").trim().replace(/\\s+/g, " ");
+}
+
+function resolveDirectoryPlayer(name, aliases, directory) {
+  let canonical = String(name || "").trim();
+  const seen = new Set();
+  for (let i = 0; i < 5; i++) {
+    const key = canonical.toUpperCase();
+    if (seen.has(key) || !aliases[key]) break;
+    seen.add(key);
+    canonical = String(aliases[key]).trim();
+  }
+  const target = scorerIdentity(canonical);
+  const found = Object.entries(directory || {}).find(([key, player]) =>
+    scorerIdentity(key) === target || scorerIdentity(player?.nameEn) === target
+  );
+  return found
+    ? { key: found[0], nameEn: found[1]?.nameEn || canonical, nameKo: found[1]?.nameKo || "" }
+    : { key: canonical.toUpperCase(), nameEn: canonical, nameKo: "" };
+}
+
+function playerDirectoryEdits(source, directoryNode, directory, aliases, goals) {
+  const updates = new Map();
+  for (const goal of goals) {
+    const player = resolveDirectoryPlayer(goal.name, aliases, directory);
+    if (player.nameKo) continue; // Keep the existing vetted Korean spelling.
+    const nameKo = String(goal.nameKo || "").trim();
+    if (!nameKo) continue; // No reliable Korean source was supplied; preserve the English scorer.
+    const key = player.key.toUpperCase();
+    if (!directory[key] && !updates.has(key)) {
+      updates.set(key, {
+        nameKo,
+        nameEn: String(goal.name || "").trim()
+      });
+    }
+  }
+  return Array.from(updates, ([key, value]) =>
+    propertyEdit(source, directoryNode, key, value)
+  );
+}
+
+function formatScorers(goals, aliases, directory) {
   const byPlayer = new Map();
 
   for (const g of goals) {
-    const name = String(g.name).trim().toUpperCase();
+    const resolved = resolveDirectoryPlayer(g.name, aliases, directory);
+    const name = String(resolved.nameEn || g.name).trim().toUpperCase();
     const ownGoal = Boolean(g.ownGoal);
-    const key = name + "|" + ownGoal;
+    const key = scorerIdentity(name) + "|" + ownGoal;
 
-    const item = byPlayer.get(key) || {
-      name,
-      count: 0,
-      ownGoal
-    };
-
+    const item = byPlayer.get(key) || { name, count: 0, ownGoal };
     item.count += Number(g.count || 1);
     byPlayer.set(key, item);
   }
@@ -509,18 +570,10 @@ function formatScorers(goals) {
   return Array.from(byPlayer.values(), info => {
     const notes = [];
 
-    if (info.count > 1) {
-      notes.push(info.count + "골");
-    }
+    if (info.count > 1) notes.push(info.count + "골");
+    if (info.ownGoal) notes.push("자책골");
 
-    if (info.ownGoal) {
-      notes.push("자책골");
-    }
-
-    return (
-      info.name +
-      (notes.length ? " (" + notes.join(" ") + ")" : "")
-    );
+    return info.name + (notes.length ? " (" + notes.join(" ") + ")" : "");
   }).join(", ") || "없음";
 }
 
