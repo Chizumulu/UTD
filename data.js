@@ -1745,7 +1745,15 @@ const scheduledRounds = {
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-22", kickoffTime: "15:00", postponed: true }, // 연기 (새 일정 미정) — 확정되면 해당 주차에 새 항목을 추가하고 이 항목에 movedToWeek를 달아주세요.
-    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
+    { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" ,
+      "scorersAway": "없음"
+    ,
+      "scorersHome": "CLEMENT KASEKA (2골)"
+    ,
+      "awayScore": 0
+    ,
+      "homeScore": 2
+    },
     { byeKo: "루비리 FC", byeEn: "Luviri FC" }
   ],
   // ── 정규 19주차 (엑셀 "Week 19") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
