@@ -512,7 +512,7 @@ function normalizeKoreanTeam(value) {
 
 function scorerIdentity(value) {
   return String(value || "").normalize("NFKD").toUpperCase()
-    .replace(/[^A-Z0-9]+/g, " ").trim().replace(/\\s+/g, " ");
+    .replace(/[^A-Z0-9]+/g, " ").trim().replace(/\s+/g, " ");
 }
 
 function resolveDirectoryPlayer(name, aliases, directory) {
