@@ -15828,7 +15828,7 @@ button.rmd-status-link {
 /* 메인(PC): 다음경기 카드 ↔ 승격 레이스 줄 ↔ 최근/예정 경기 카드 사이 간격을 위아래 똑같이(6px) 맞추고 줄 높이도 축소 */
 @media (min-width: 721px) {
   /* 다음경기 카드(position:relative)의 틸 그림자가 간격이 좁아진 이 줄 위로 번져 가리지 않게, 이 줄을 그 위 레이어로 올립니다 */
-  #rankView .promo-race-strip { position: relative; z-index: 1; margin-top: 6px; margin-bottom: 6px; padding-top: 4px; padding-bottom: 4px; min-height: 34px; }
+  #rankView .promo-race-strip ,#nmHero .promo-race-strip { position: relative; z-index: 1; margin-top: 6px; margin-bottom: 6px; padding-top: 4px; padding-bottom: 4px; min-height: 34px; }
   .next-match-strip.nms-merged { margin-bottom: 0; }
   #rankView .home-matches-row { margin-top: 0; }
 }
@@ -18225,8 +18225,8 @@ button.mc-h2h-row:active,
    - 되돌리고 싶으면 이 블록과 app.js의 '승격 레이스 뉴스 티커' 부분을 이전 버전으로 되돌리면 됩니다.
    ===================================================================== */
 @media (min-width: 721px) {
-  #rankView .promo-race-strip { position: relative; display: flex; flex-wrap: nowrap; align-items: center; gap: 0; overflow: hidden; padding: 0 12px 0 0; min-height: 40px; }
-  #rankView .promo-race-strip .prs-title { flex: none; padding: 0 18px; }
+  #rankView .promo-race-strip ,#nmHero .promo-race-strip { position: relative; display: flex; flex-wrap: nowrap; align-items: center; gap: 0; overflow: hidden; padding: 0 12px 0 0; min-height: 40px; }
+  #rankView .promo-race-strip .prs-title ,#nmHero .promo-race-strip .prs-title { flex: none; padding: 0 18px; }
   /* 상대 최근은 티커 슬라이드로 옮겼으므로 다음 경기 미리보기 줄에서는 숨깁니다 */
   .nmp-head .nmp-form { display: none; }
 }
@@ -18336,7 +18336,7 @@ button.mc-h2h-row:active,
 
 
 /* 승격 레이스 바가 숨김(hidden) 상태일 땐 위의 display:flex 규칙보다 우선해서 감춥니다 */
-#rankView .promo-race-strip[hidden] { display: none; }
+#rankView .promo-race-strip[hidden] ,#nmHero .promo-race-strip[hidden] { display: none; }
 
 /* =====================================================================
    승격 레이스 뉴스 티커 (모바일 ≤720px)
@@ -18344,10 +18344,10 @@ button.mc-h2h-row:active,
    - 긴 라벨·보조 정보·증감폭은 생략하고 핵심 숫자만 보여줍니다.
    ===================================================================== */
 @media (max-width: 720px) {
-  #rankView .promo-race-strip { display: flex; position: relative; flex-wrap: nowrap; align-items: center; gap: 0; overflow: hidden;
+  #rankView .promo-race-strip ,#nmHero .promo-race-strip { display: flex; position: relative; flex-wrap: nowrap; align-items: center; gap: 0; overflow: hidden;
     width: 100%; margin: 4px 0 4px; padding: 0 8px 0 0; min-height: 34px; }
-  #rankView .promo-race-strip .prs-title { flex: none; padding: 0 6px 0 10px; gap: 4px; }
-  #rankView .promo-race-strip .prs-title-txt { display: none; }
+  #rankView .promo-race-strip .prs-title ,#nmHero .promo-race-strip .prs-title { flex: none; padding: 0 6px 0 10px; gap: 4px; }
+  #rankView .promo-race-strip .prs-title-txt ,#nmHero .promo-race-strip .prs-title-txt { display: none; }
   .prs-ticker { height: 34px; touch-action: pan-y; }
   .prs-slide { padding: 0 6px; }
   .prs-slide-in { gap: 6px; }
@@ -18826,8 +18826,30 @@ tr.my-team td.team::after,
 /* =====================================================================
    PC 상단: 다음 경기 카드(좌) + 컵대회 요약 패널(우) — 8.5 : 1.5, 높이 동일, 1200px 이상에서만 2단
    ===================================================================== */
-.nm-hero { display: block; }
-.nmc { display: none; }
+/* 1199px 이하: 래퍼는 투명하게(기존 배치 그대로), 컵 패널은 슬림 한 줄 바로 — 승격 레이스(뉴스) 바 바로 위에 놓입니다. */
+.nm-hero, .nm-hero-main { display: contents; }
+.nmc:not([hidden]) {
+  display: flex; align-items: center; gap: 10px; box-sizing: border-box;
+  width: 100%; min-height: 34px; margin: 6px 0 0; padding: 3px 6px 3px 14px;
+  background: var(--color-surface); border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow); border: 1px solid rgba(var(--color-gold-rgb), 0.45);
+  text-align: left; cursor: pointer;
+}
+.nmc-head { flex: none; display: flex; align-items: center; }
+.nmc-logo { width: 22px; height: 22px; object-fit: contain; flex: none; }
+.nmc-logo-ph { display: grid; place-items: center; font-size: 18px; }
+.nmc-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
+.nmc-stage { margin: 0; font-size: var(--fs-sm); font-weight: 700; line-height: 1.2; color: var(--color-text-darkest); }
+.nmc-stage-sub, .nmc-next { display: none; }
+.nmc-state { flex: none; font-size: 11px; font-weight: 700; line-height: 1; padding: 3px 7px; border-radius: 999px; background: rgba(var(--color-gold-rgb), .22); color: var(--color-text-dark); }
+.nmc-state-live { background: var(--color-red); color: #fff; }
+.nmc-btn { flex: none; border: 0; cursor: pointer; padding: 3px 10px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600;
+  background: rgba(var(--color-tint-rgb), .08); color: var(--color-text-secondary); }
+body.season-archive .nmc { display: none !important; }
+/* 다음 경기 카드가 숨겨지는 화면(순위·일정 등)에서는 컵 바도 함께 숨김. 옮겨진 뉴스 바는 메인(#rankView)이 숨겨질 때 같이 숨김 */
+.nm-hero:has(#nextMatchStrip[style*="display: none"]) .nmc { display: none !important; }
+.container:has(#rankView[style*="display: none"]) .nm-hero #promoRaceStrip { display: none !important; }
+.nmc-tag { margin-left: 6px; font-size: var(--fs-sm); font-weight: 700; line-height: 1; color: var(--color-gold-strong); white-space: nowrap; }
 @media (min-width: 1200px) {
   .nm-hero {
     display: grid;
@@ -18848,8 +18870,10 @@ tr.my-team td.team::after,
     box-shadow: 0 10px 24px rgba(var(--color-gold-rgb), 0.28);
     border: 1px solid rgba(var(--color-gold-rgb), 0.45);
     text-align: center; align-items: center; justify-content: center;
+    width: auto; min-height: 0; border-radius: var(--radius-xl); cursor: default;
   }
   .nmc-head { display: flex; justify-content: center; }
+  .nmc-tag, .nmc-state { display: none; }
   .nmc-logo { width: 64px; height: 64px; object-fit: contain; flex: none; }
   .nmc-logo-ph { display: grid; place-items: center; font-size: 44px; }
   .nmc-name { font-size: 12.5px; line-height: 1.3; color: var(--color-text-dark); }

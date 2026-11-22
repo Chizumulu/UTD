@@ -4756,19 +4756,44 @@
     }
     el.hidden = false;
     el.setAttribute('role', 'group');
+    el.onclick = function (e) { if (window.matchMedia('(max-width: 1199px)').matches && !cupMode && !(e.target.closest && e.target.closest('.nmc-btn'))) toggleCupView(); }; // nmc-click: 모바일 슬림 바는 바 전체가 버튼
     el.innerHTML = `
-      <div class="nmc-head" title="${esc(ko ? cup.nameKo : cup.nameEn)}">${logoHtml}</div>
+      <div class="nmc-head" title="${esc(ko ? cup.nameKo : cup.nameEn)}">${logoHtml}<span class="nmc-tag">${ko ? '컵대회' : 'Cup'}</span></div>
       <div class="nmc-body">
-        <p class="nmc-stage">${esc(stageLine)}</p>${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
+        <p class="nmc-stage">${esc(stageLine)}</p><span class="nmc-state nmc-state-${esc(cup.status || 'upcoming')}">${esc(({ upcoming: ko ? '개막 전' : 'Upcoming', live: ko ? '진행 중' : 'Live', finished: ko ? '종료' : 'Finished' })[cup.status] || (ko ? '개막 전' : 'Upcoming'))}</span>${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
         <div class="nmc-next"><b>${esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
       </div>
       <button type="button" class="nmc-btn" onclick="toggleCupView()">${ko ? '자세히 보기' : 'Details'}</button>`;
+  }
+
+
+  // 1199px 이하: 컵 바 바로 아래(= 실시간 라이브 바·티커보다 위)로 승격 레이스(뉴스) 바를 옮기고, 넓은 화면에서는 원래 자리(#rankView 맨 위)로 되돌립니다.
+  const NMC_NARROW_MQ = window.matchMedia ? window.matchMedia('(max-width: 1199px)') : null;
+  function nmcPlacePromo() {
+    const promo = document.getElementById('promoRaceStrip');
+    const panel = document.getElementById('nmCupPanel');
+    const rank = document.getElementById('rankView');
+    if (!promo || !panel || !rank || !panel.parentNode) return;
+    const live = document.getElementById('nextMatchLiveBar');   // 문자중계 탭: 다음 경기 카드 바로 아래에 붙어 있어야 해서 카드 다음에 둠
+    const hero = document.getElementById('nmHero');
+    if (NMC_NARROW_MQ && NMC_NARROW_MQ.matches) {
+      if (live && live.nextElementSibling !== panel) panel.parentNode.insertBefore(live, panel);
+      if (promo.previousElementSibling !== panel) panel.parentNode.insertBefore(promo, panel.nextSibling);
+    } else {
+      if (promo.parentNode !== rank) rank.insertBefore(promo, rank.firstChild);
+      if (live && hero && hero.parentNode && live.previousElementSibling !== hero) hero.parentNode.insertBefore(live, hero.nextSibling);
+    }
+  }
+  if (NMC_NARROW_MQ) {
+    if (NMC_NARROW_MQ.addEventListener) NMC_NARROW_MQ.addEventListener('change', nmcPlacePromo);
+    else if (NMC_NARROW_MQ.addListener) NMC_NARROW_MQ.addListener(nmcPlacePromo);
   }
 
   function renderNextMatchStrip() {
     nmpDetachCard();
     try { renderNextMatchStripInner(); } finally { nmpPlaceCard(); }
     try { renderCupHeroPanel(); } catch (e) { console.warn('cup hero panel', e); }
+    try { nmcPlacePromo(); } catch (e) {}
     try { renderPromoRaceStrip(); } catch (e) {}   // 다음경기 카드 하단의 '결과별 우승 확률'은 이 함수가 채웁니다
   }
   function renderNextMatchPreviewCard() {
