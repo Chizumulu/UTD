@@ -18893,3 +18893,99 @@ body.season-archive .nmc { display: none !important; }
   .nmc-btn:focus-visible { outline: 2px solid var(--color-gold-strong); outline-offset: 2px; }
 }
 @media (min-width: 1200px) and (max-width: 1440px) { .nm-hero { margin-top: -8px; } }
+
+
+/* ===== PC: 치주물루 경기 실황 카드 (토스 스타일, 카드 높이는 기본 D-DAY 카드 그대로) ===== */
+.nmh-live-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; color: var(--color-text-muted); }
+.nmh-live-state { font-weight: 800; letter-spacing: .03em; color: var(--color-red-text); }
+.nmh-live-eyebrow.is-stale .nmh-live-state,
+.nmh-live-eyebrow.is-ended .nmh-live-state { color: var(--color-text-dark); }
+.nmh-live-week { color: var(--color-text-faint); font-weight: 500; }
+.nmh-live-week::before { content: '·'; margin-right: 7px; }
+.nmh-live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--color-red-text);
+  animation: nmhLiveBlink 1.2s ease-in-out infinite;
+}
+@keyframes nmhLiveBlink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .25; transform: scale(.7); } }
+
+/* 좌우 팀 열 폭을 같게 해서 스코어가 항상 정중앙에 오도록 (득점자가 늘어도 스코어는 위쪽에 고정) */
+.next-match-strip.nms-live .nmh-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 40px;
+}
+.next-match-strip.nms-live .nmh-team { justify-self: center; }
+
+/* 순위: 알약 배경 없이 글자만. 경기 전(회색) → 현재(굵게, 상승 초록 / 하락 빨강) */
+.next-match-strip.nms-live .nmh-team .nms-opp-rank {
+  background: none; border: 0; padding: 0;
+  font-size: var(--fs-sm); font-weight: 600; color: var(--color-text-faint);
+}
+.next-match-strip.nms-live .nmh-team .nms-opp-rank.nmh-rank-live {
+  display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums;
+}
+.next-match-strip.nms-live .nmh-team .nms-opp-rank span { font-size: inherit; font-weight: inherit; color: inherit; overflow: visible; }
+.next-match-strip.nms-live .nms-opp-rank .r-to { font-weight: 800; color: var(--color-text-dark); }
+.next-match-strip.nms-live .nms-opp-rank.is-up .r-to { color: var(--color-brand-text); }
+.next-match-strip.nms-live .nms-opp-rank.is-down .r-to { color: var(--color-red-text); }
+
+/* 득점자: 각 팀 순위 바로 아래에 줄 단위로 쌓입니다. 득점이 생기면 그만큼 카드 높이가 자연스럽게 늘어납니다. */
+.nmh-live-goals { display: flex; flex-direction: column; gap: 4px; align-items: center; margin-top: 6px; }
+.nmh-team .nmh-live-goals .nmh-live-goal {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: var(--fs-xs); font-weight: 500; color: var(--color-text-muted);
+  line-height: 1.35; white-space: normal; text-align: center; overflow: visible;
+}
+.nmh-live-goal svg { width: 13px; height: 13px; flex-shrink: 0; }
+.nmh-team .nmh-live-goals .nmh-live-goal b { font-weight: 800; color: var(--color-text-dark); }
+
+/* 가운데: 스코어 → 상태 알약 → 구장 → 출처 (기본 D-DAY 블록과 비슷한 높이로 컴팩트하게) */
+.next-match-strip.nms-live .nmh-center { min-width: 120px; padding-top: 4px; }
+.nmh-live-score {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  font-size: 40px; font-weight: 800; line-height: 1; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; color: var(--color-text-dark);
+}
+.nmh-live-sep { font-size: 24px; font-weight: 600; color: var(--color-text-faint); }
+.nmh-live-status { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+.nmh-live-pill {
+  font-size: var(--fs-xs); font-weight: 700; line-height: 1.3;
+  color: var(--color-red-text); background: rgba(var(--color-red-rgb), 0.1);
+  padding: 2px 10px; border-radius: 999px;
+}
+.nmh-live-pill.is-stale, .nmh-live-pill.is-ended { color: var(--color-text-muted); background: var(--color-bg-table-alt); }
+.next-match-strip.nms-live .nmh-center .nmh-venue { margin-top: 6px; color: var(--color-text-muted); }
+.nmh-live-src { margin-top: 2px; font-size: var(--fs-2xs); color: var(--color-text-faint); opacity: .8; }
+@media (prefers-reduced-motion: reduce) { .nmh-live-dot { animation: none; } }
+
+/* 'NRFA 페이스북 문자중계보기' 바 숨김 (요소는 사이드바 LIVE 배지용 킥오프 데이터 보관용으로 유지) */
+#nextMatchLiveBar { display: none !important; }
+
+/* ===== PC(≥1200px): 실황 중 컵대회 카드 자리에 경기 진행 소식(문자중계) 표시 ===== */
+@media (min-width: 1200px) {
+  .nmc.nmc-live-feed:not([hidden]) {
+    align-items: stretch; justify-content: flex-start; text-align: left;
+    gap: 10px; padding: 14px 14px 12px; cursor: default;
+  }
+  .nmc-feed-head { flex: none; display: flex; align-items: center; gap: 7px; font-size: var(--fs-sm); font-weight: 800; color: var(--color-text-dark); }
+  /* 목록은 절대 배치 + 내부 스크롤: 소식이 쌓여도 카드 높이는 왼쪽 실황 카드에 맞춰 그대로입니다. */
+  .nmc-feed { position: relative; flex: 1 1 0; min-height: 96px; width: 100%; }
+  .nmc-feed-list {
+    position: absolute; inset: 0; overflow-y: auto; padding-right: 4px;
+    display: flex; flex-direction: column; gap: 9px; scrollbar-width: thin;
+  }
+  .nmc-feed-row { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 8px; align-items: start; font-size: var(--fs-xs); line-height: 1.45; }
+  .nmc-feed-time { color: var(--color-text-faint); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .nmc-feed-text { color: var(--color-text-dark); font-weight: 500; word-break: keep-all; overflow-wrap: anywhere; }
+  .nmc-feed-icon { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
+  .nmc-feed-icon svg { width: 13px; height: 13px; }
+  .nmc-feed-empty { font-size: var(--fs-xs); color: var(--color-text-faint); line-height: 1.5; }
+}
+
+/* 실황 중에는 다음경기 카드 : 경기 진행 카드 = 7 : 3 (기본은 8.5 : 1.5) */
+@media (min-width: 1200px) {
+  .nm-hero { transition: grid-template-columns .25s ease; }
+  .nm-hero.nm-hero-live { grid-template-columns: minmax(0, 7fr) minmax(0, 3fr); }
+}

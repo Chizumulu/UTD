@@ -487,6 +487,33 @@ const matchLineups = {
     subsIn: [],
     subsUnused: [3, 8, 9, 11, 77, 80, 88]
   }
+  // ===== 정규 18주차(round19) @ 라이플리 FC (2026-11-22 원정) 선발 라인업 =====
+  // 라인업 이미지 기준입니다(이미지 제목은 "18라운드" = 연기경기주차를 뺀 정규 18주차, 데이터 키는 round19).
+  // 경기 전이라 result는 "예정"으로 두었습니다. 경기가 끝나면 "N : N 승/무/패"로 바꾸고,
+  // 득점·도움(goals/assists)과 교체 투입(subsIn)을 채워주세요.
+  // 대기 명단은 4, 8, 9, 15, 25, 80, 88번입니다.
+  // 이미지에 주장 완장 표시가 없어서, 평소 주장 만토 카망가(15)가 벤치인 점을 고려해 부주장 알란 음롱골라(3)에게 두었습니다. 다르면 고쳐주세요.
+  // 이미지에서 벤자민 니렌다(6)가 공격형 미드필더 중앙에 있어 CAM으로, 해리(11)/쿰부카니(49)를 좌/우 윙으로 두었습니다.
+  , round19: {
+    formation: "4-2-3-1",
+    opponentKo: "라이플리 FC",
+    result: "예정",
+    starters: [
+      { pos: "ST", number: 22, nameKo: "티모시 카타파" },
+      { pos: "LW", number: 11, nameKo: "해리 바튼" },
+      { pos: "CAM", number: 6, nameKo: "벤자민 니렌다" },
+      { pos: "RW", number: 49, nameKo: "쿰부카니 바냐" },
+      { pos: "LCM", number: 99, nameKo: "패트릭 지야" },
+      { pos: "RCM", number: 7, nameKo: "디킨스 니렌다" },
+      { pos: "LB", number: 5, nameKo: "라반 롱웨" },
+      { pos: "LCB", number: 13, nameKo: "조셉 반다" },
+      { pos: "RCB", number: 3, nameKo: "알란 음롱골라", captain: true },
+      { pos: "RB", number: 66, nameKo: "조던 칠와" },
+      { pos: "GK", number: 90, nameKo: "마야미코 치우시와" }
+    ],
+    subsIn: [],
+    subsUnused: [4, 8, 9, 15, 25, 80, 88]
+  }
 };
 
 const squadData = [

@@ -3000,10 +3000,19 @@
     return { primary: lg || cup, secondary: null };
   }
 
+  // PC 전용 실황 합치기: 위 카드가 지금 보여주는 "리그 다음 경기"의 홈/원정/킥오프 정보.
+  // 카드를 통째로 다시 그릴 때마다 갱신되고, 컵 경기이거나 경기가 없으면 null입니다.
+  let nmsStripLiveCtx = null;
+
   function renderNextMatchStripInner() {
     const el = document.getElementById('nextMatchStrip');
     if (!el) return;
     el.removeAttribute('aria-busy');
+    // 카드를 통째로 새로 그리면 실황 표시도 초기화됩니다(끝에서 applyNextMatchStripLive가 다시 입힘).
+    el.classList.remove('nms-live');
+    el.style.minHeight = '';
+    el._nmsLiveOrig = null;
+    nmsStripLiveCtx = null;
     const info = getMyRankedTeam();
     if (!info) { el.innerHTML = ''; return; }
     const t = info.team;
@@ -3104,6 +3113,12 @@
       ? Math.max(0, Math.round((kstMidnightUTCMillis(kickoffMs) - kstMidnightUTCMillis(Date.now())) / 86400000))
       : null;
     const ddayTxt = daysLeft === null ? '' : (daysLeft === 0 ? (isKorean ? 'D-DAY' : 'D-DAY') : `D-${daysLeft}`);
+    nmsStripLiveCtx = (!isCupNext && kickoffMs) ? {
+      homeEn: nmx.homeAway === 'H' ? t.nameEn : nmx.oppEn,
+      awayEn: nmx.homeAway === 'H' ? nmx.oppEn : t.nameEn,
+      kickoffMs: kickoffMs,
+      weekLbl: stripWeekLbl
+    } : null;
     // 경기가 있는 당일(또는 이미 시작됨)이면 카드 테두리에 은은하게 맥동하는
     // 그라데이션 빛을 둘러서 "오늘 경기 있음"을 한눈에 알아볼 수 있게 합니다.
     el.classList.toggle('nms-matchday', daysLeft === 0);
@@ -3178,6 +3193,218 @@
     }
     updateNextMatchLiveBar();
     hydrateWeatherWidgets();
+    try { applyNextMatchStripLive(); } catch (e) { /* 실황 합치기는 부가 기능: 실패해도 기본 카드는 유지 */ }
+  }
+
+  // ===== PC 전용: 치주물루 경기 실황을 위쪽 '다음경기' 카드에서 보여주기 =====
+  // api.chizumulu.net이 준 경기(진행 중 / 최근 소식 / 종료) 중, 지금 위 카드가 보여주는 리그 다음 경기와
+  // 같은 경기가 있으면 가운데 D-DAY 블록만 스코어로 바꿔치기합니다. API가 아무것도 안 주면 기존 카드 그대로입니다.
+  // 같은 경기가 아래 라이브 티커에 또 나오지 않도록 renderLeagueLiveTicker에서 이 경기는 뺍니다.
+  // 카드 전체를 다시 그리지 않고 가운데 블록(.nmh-center)·머리말·득점자만 갈아끼우므로
+  // 날씨 위젯이나 D-DAY 시계는 폴링 때마다 깜빡이거나 재시작되지 않습니다.
+  const NMS_LIVE_PC_MQ = window.matchMedia ? window.matchMedia('(min-width: 1200px)') : null; // 컵 패널이 우측 카드로 보이는 폭(경기 진행 소식을 거기서 보여줌)
+  function nmsLiveIsPc() { return !!(NMS_LIVE_PC_MQ && NMS_LIVE_PC_MQ.matches); }
+
+  function findNextMatchStripLiveMatch() {
+    const ctx = nmsStripLiveCtx;
+    if (!ctx || !nmsLiveIsPc()) return null;
+    const now = Date.now();
+    if (now < ctx.kickoffMs || now > ctx.kickoffMs + LEAGUE_LIVE_FORCE_CLOSE_MS) return null;
+    const list = Array.isArray(leagueLiveRenderedCache) ? leagueLiveRenderedCache : [];
+    return list.find(m => m
+      && resolveLeagueTeamNameEn(m.homeTeam) === ctx.homeEn
+      && resolveLeagueTeamNameEn(m.awayTeam) === ctx.awayEn) || null;
+  }
+
+  function nmsLiveGoalsHtml(sideGoals) {
+    const fmtMin = (txt) => {
+      if (!txt) return '';
+      const mm = String(txt).match(/(\d+)\s*(?:\+\s*(\d+))?/);
+      if (!mm) return String(txt);
+      const num = mm[2] ? `${mm[1]}+${mm[2]}` : mm[1];
+      return isKorean ? `${num}분` : `${num}'`;
+    };
+    const localize = (name) => {
+      const raw = String(name || '').trim();
+      if (!raw) return raw;
+      let key = raw.toUpperCase();
+      if (typeof nameAliases !== 'undefined' && nameAliases[key]) key = nameAliases[key];
+      const info = (typeof playerDirectory !== 'undefined') ? playerDirectory[key] : null;
+      return info ? (isKorean ? info.nameKo : info.nameEn) : raw;
+    };
+    const groups = new Map();
+    sideGoals.forEach((g, i) => {
+      const scorer = String(g.scorer || '').trim();
+      const key = scorer ? scorer.toLowerCase() : 'unknown-' + i;
+      if (!groups.has(key)) groups.set(key, { scorer: scorer, goals: [] });
+      groups.get(key).goals.push(g);
+    });
+    return Array.from(groups.values()).map(gr => {
+      const mins = gr.goals.map(g => fmtMin(g.minuteText)).filter(Boolean).join(', ');
+      const cnt = gr.goals.length;
+      return `<div class="nmh-live-goal">${svgIcon('ball')} ${escapeHtml(mins ? mins + ' ' : '')}${escapeHtml(localize(gr.scorer))}${cnt > 1 ? ` <b>×${cnt}</b>` : ''}</div>`;
+    }).join('');
+  }
+
+  // 실황 중 위 카드의 경기 진행 소식(문자중계)을 오른쪽 컵대회 카드 자리에서 보여줍니다.
+  // 라이브 창이 사라지면(= 위 카드가 평소 D-DAY 모드로 돌아가면) 컵대회 카드를 원래대로 복원합니다.
+  function nmsLiveFeedRows(m) {
+    const fmtMin = (txt) => {
+      if (!txt) return '';
+      const mm = String(txt).match(/(\d+)\s*(?:\+\s*(\d+))?/);
+      if (!mm) return String(txt);
+      const num = mm[2] ? `${mm[1]}+${mm[2]}` : mm[1];
+      return isKorean ? `${num}분` : `${num}'`;
+    };
+    const com = Array.isArray(m.commentary) ? m.commentary : [];
+    if (com.length) {
+      return com.slice().reverse().map(c => {
+        const meta = c.type ? leagueEventMeta({ type: c.type, note: '' }) : null;
+        const icon = (meta && meta.icon && meta.icon !== '•') ? meta.icon : svgIcon('chat');
+        return { t: formatLeagueCommentaryClock(c.ts), icon: icon, text: isKorean ? c.ko : c.en };
+      });
+    }
+    const evs = Array.isArray(m.events) ? m.events : [];
+    return evs.slice().reverse().map(ev => {
+      const meta = leagueEventMeta(ev);
+      const who = (ev.players || []).join(isKorean ? ' ↔ ' : ' / ');
+      return { t: fmtMin(ev.minuteText), icon: meta.icon, text: [isKorean ? meta.ko : meta.en, who].filter(Boolean).join(' ') };
+    });
+  }
+
+  function nmsSyncPanelLive() {
+    const panel = document.getElementById('nmCupPanel');
+    if (!panel) return;
+    const m = findNextMatchStripLiveMatch();
+    const rows = m ? nmsLiveFeedRows(m) : [];
+    // 진행 중이면 소식이 아직 없어도 자리를 잡아두고, 최근 소식/종료는 소식이 있을 때만 보여줍니다.
+    const takeOver = !!m && (rows.length > 0 || (!m.ended && !m.stale));
+    // 실황 중에는 좌우 비율을 7:3으로 넓혀서 소식이 읽기 편하게 합니다(끝나면 기본 8.5:1.5로 복귀).
+    const heroEl = panel.closest('.nm-hero');
+    if (heroEl) heroEl.classList.toggle('nm-hero-live', takeOver);
+    if (!takeOver) {
+      if (panel.classList.contains('nmc-live-feed')) {
+        panel.classList.remove('nmc-live-feed');
+        panel._nmsFeedHtml = null;
+        renderCupHeroPanel();
+      }
+      return;
+    }
+    const rowsHtml = rows.length
+      ? rows.map(r => `<div class="nmc-feed-row"><span class="nmc-feed-time">${escapeHtml(r.t || '')}</span><span class="nmc-feed-text"><span class="nmc-feed-icon">${r.icon}</span>${escapeHtml(r.text || '')}</span></div>`).join('')
+      : `<div class="nmc-feed-empty">${isKorean ? '경기 소식을 기다리는 중이에요' : 'Waiting for match updates'}</div>`;
+    const html = `<div class="nmc-feed-head">${(!m.ended && !m.stale) ? '<i class="nmh-live-dot" aria-hidden="true"></i>' : ''}<span>${isKorean ? '경기 진행' : 'Match Events'}</span></div><div class="nmc-feed"><div class="nmc-feed-list">${rowsHtml}</div></div>`;
+    if (panel.classList.contains('nmc-live-feed') && panel._nmsFeedHtml === html) return;
+    const oldList = panel.querySelector('.nmc-feed-list');
+    const keepScroll = oldList ? oldList.scrollTop : 0;
+    panel.hidden = false;
+    panel.classList.add('nmc-live-feed');
+    panel._nmsFeedHtml = html;
+    panel.innerHTML = html;
+    const newList = panel.querySelector('.nmc-feed-list');
+    if (newList && keepScroll) newList.scrollTop = keepScroll;
+  }
+
+  function applyNextMatchStripLive() {
+    try { nmsSyncPanelLive(); } catch (e) { console.warn('cup panel live feed', e); }
+    const el = document.getElementById('nextMatchStrip');
+    if (!el) return;
+    const ctx = nmsStripLiveCtx;
+    const m = findNextMatchStripLiveMatch();
+    const center = el.querySelector('.nmh-center');
+    const eyebrow = el.querySelector('.nmh-eyebrow');
+    const teams = el.querySelectorAll('.nmh-top > .nmh-team');
+    const clearLive = () => {
+      if (!el.classList.contains('nms-live')) return;
+      const orig = el._nmsLiveOrig;
+      if (orig && center) center.innerHTML = orig.centerHtml;
+      if (orig && eyebrow) eyebrow.innerHTML = orig.eyebrowHtml;
+      el.querySelectorAll('.nmh-live-goals').forEach(n => n.remove());
+      el.querySelectorAll('.nms-opp-rank[data-orig]').forEach(n => {
+        n.textContent = n.getAttribute('data-orig');
+        n.removeAttribute('data-orig');
+        n.classList.remove('nmh-rank-live');
+      });
+      el.classList.remove('nms-live');
+      el.style.minHeight = '';
+      el._nmsLiveOrig = null;
+      try { hydrateWeatherWidgets(); } catch (e) {}
+    };
+    if (!m || !ctx || !center || !eyebrow || teams.length < 2) { clearLive(); return; }
+
+    if (!el.classList.contains('nms-live')) {
+      el._nmsLiveOrig = { centerHtml: center.innerHTML, eyebrowHtml: eyebrow.innerHTML };
+      // 실황으로 바뀌어도 카드 높이는 기본(D-DAY) 카드 크기 그대로 유지합니다(보이는 상태일 때만 측정).
+      const baseH = el.offsetHeight;
+      if (baseH > 0) el.style.minHeight = baseH + 'px';
+    }
+    const venueEl = el.querySelector('.nmh-center .nmh-venue');
+    const venueHtml = venueEl ? venueEl.outerHTML
+      : ((el._nmsLiveOrig && /nmh-venue/.test(el._nmsLiveOrig.centerHtml))
+        ? (el._nmsLiveOrig.centerHtml.match(/<div class="nmh-venue">[\s\S]*?<\/div>/) || [''])[0] : '');
+
+    const hs = (m.score && m.score.home != null) ? m.score.home : '-';
+    const as = (m.score && m.score.away != null) ? m.score.away : '-';
+    const state = m.ended ? 'ended' : (m.stale ? 'stale' : 'live');
+    const stateLbl = state === 'ended' ? (isKorean ? '종료' : 'Full time')
+      : state === 'stale' ? (isKorean ? '최근 소식' : 'Recent update') : 'LIVE';
+    const pillHtml = state === 'ended'
+      ? `<span class="nmh-live-pill is-ended">${isKorean ? '종료' : 'FT'}</span>`
+      : (state === 'stale'
+        ? `<span class="nmh-live-pill is-stale">${isKorean ? '최근 소식' : 'Recent'}</span><span class="nmh-live-pill">${escapeHtml(formatLeagueLiveMinute(m))}</span>`
+        : `<span class="nmh-live-pill">${escapeHtml(formatLeagueLiveMinute(m))}</span>`);
+
+    el.classList.add('nms-live');
+    el.setAttribute('data-live-state', state);
+    eyebrow.innerHTML = `<span class="nmh-live-eyebrow is-${state}">${state === 'live' ? '<i class="nmh-live-dot" aria-hidden="true"></i>' : ''}<b class="nmh-live-state">${stateLbl}</b><span class="nmh-live-week">${escapeHtml(ctx.weekLbl)}</span></span>`;
+    center.innerHTML = `
+          <div class="nmh-live-score"><span class="nmh-live-num">${hs}</span><span class="nmh-live-sep">:</span><span class="nmh-live-num">${as}</span></div>
+          <div class="nmh-live-status">${pillHtml}</div>
+          ${venueHtml}
+          <div class="nmh-live-src">${isKorean ? 'NRFA 실황 기반 · 비공식 집계' : 'Based on NRFA live posts · unofficial'}</div>`;
+
+    // 득점자: 홈(왼쪽 팀) / 원정(오른쪽 팀) 아래에
+    const goals = Array.isArray(m.goals) ? m.goals : [];
+    [[teams[0], true], [teams[teams.length - 1], false]].forEach(([teamEl, isHome]) => {
+      let box = teamEl.querySelector('.nmh-live-goals');
+      const html = nmsLiveGoalsHtml(goals.filter(g => !!g.isHome === isHome));
+      if (!html) { if (box) box.remove(); return; }
+      if (!box) { box = document.createElement('div'); box.className = 'nmh-live-goals'; teamEl.appendChild(box); }
+      if (box.innerHTML !== html) box.innerHTML = html;
+    });
+
+    // 순위: 정적 "5위" → 현재 스코어 기준 "5위 → 4위"(티커와 같은 계산, 동시 경기 반영)
+    try {
+      const prevs = computeLiveRankPreviews((leagueLiveRenderedCache || []).map(x => ({
+        homeEn: resolveLeagueTeamNameEn(x.homeTeam),
+        awayEn: resolveLeagueTeamNameEn(x.awayTeam),
+        hs: (x.score && typeof x.score.home === 'number') ? x.score.home : null,
+        as: (x.score && typeof x.score.away === 'number') ? x.score.away : null
+      })));
+      const pv = prevs[ctx.homeEn + '|' + ctx.awayEn];
+      [[teams[0], pv && pv.home], [teams[teams.length - 1], pv && pv.away]].forEach(([teamEl, r]) => {
+        const rk = teamEl.querySelector('.nms-opp-rank');
+        if (!rk || !r || !r.before || !r.after) return;
+        if (!rk.hasAttribute('data-orig')) rk.setAttribute('data-orig', rk.textContent);
+        if (r.before === r.after) { rk.textContent = rk.getAttribute('data-orig'); rk.classList.remove('nmh-rank-live'); return; }
+        const fmt = (n) => isKorean ? `${n}위` : `#${n}`;
+        const up = r.after < r.before;
+        rk.innerHTML = `<span class="r-from">${fmt(r.before)}</span><span class="r-arrow">→</span><span class="r-to">${up ? '▲' : '▼'} ${fmt(r.after)}</span>`;
+        rk.classList.add('nmh-rank-live');
+        rk.classList.toggle('is-up', r.after < r.before);
+        rk.classList.toggle('is-down', r.after > r.before);
+      });
+    } catch (e) { /* 순위 미리보기는 부가 정보 */ }
+  }
+
+  // 화면 폭이 PC ↔ 모바일 경계를 넘나들면 카드와 티커를 모두 다시 맞춥니다.
+  if (NMS_LIVE_PC_MQ) {
+    const nmsLiveMqChange = () => {
+      try { applyNextMatchStripLive(); } catch (e) {}
+      try { renderLeagueLiveTicker(leagueLiveRenderedCache); } catch (e) {}
+    };
+    if (NMS_LIVE_PC_MQ.addEventListener) NMS_LIVE_PC_MQ.addEventListener('change', nmsLiveMqChange);
+    else if (NMS_LIVE_PC_MQ.addListener) NMS_LIVE_PC_MQ.addListener(nmsLiveMqChange);
   }
 
   // ===== 공유하기 (Web Share API + 클립보드 폴백) =====
@@ -4664,6 +4891,10 @@
   function renderCupHeroPanel() {
     const el = document.getElementById('nmCupPanel');
     if (!el) return;
+    el.classList.remove('nmc-live-feed');
+    el._nmsFeedHtml = null;
+    const heroForReset = el.closest('.nm-hero');
+    if (heroForReset) heroForReset.classList.remove('nm-hero-live');
     const cup = getCups()[0] || null;
     if (!cup) { el.hidden = true; el.innerHTML = ''; return; }
     const ko = isKorean;
@@ -4764,6 +4995,7 @@
         <div class="nmc-next"><b>${esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
       </div>
       <button type="button" class="nmc-btn" onclick="toggleCupView()">${ko ? '자세히 보기' : 'Details'}</button>`;
+    try { nmsSyncPanelLive(); } catch (e) { /* 실황 소식은 부가 기능 */ }
   }
 
 
@@ -4891,9 +5123,9 @@
       el.style.display = 'none';
       return;
     }
-    const now = Date.now();
-    const inWindow = now >= (kickoffMs - NEXT_MATCH_LIVE_BAR_LEAD_MS) && now <= (kickoffMs + NEXT_MATCH_LIVE_BAR_TAIL_MS);
-    el.style.display = inWindow ? '' : 'none';
+    // 'NRFA 페이스북 문자중계보기' 바는 더 이상 화면에 보여주지 않습니다.
+    // 요소 자체는 사이드바 LIVE 배지가 킥오프 시각(data-kickoff-utc)을 읽는 데 쓰이므로 DOM에는 남겨둡니다.
+    el.style.display = 'none';
   }
 
   // ===== 사이드바 라이브 배지 (킥오프 순간 ~ 종료 후 3시간까지, 화면을 어디로 옮겨도 보이도록) =====
@@ -6637,6 +6869,13 @@
     leagueLiveRenderedCache = matches;
     syncMiniTableWithLive();
 
+    // PC: 위 '다음경기' 카드가 이 경기를 실황으로 보여주므로 카드 쪽을 갱신하고, 티커에서는 뺍니다.
+    // 순위 미리보기 계산에는 동시 경기를 모두 반영하기 위해 빼기 전 전체 목록을 씁니다.
+    try { applyNextMatchStripLive(); } catch (e) { console.warn('next match strip live', e); }
+    const allLiveMatches = matches;
+    const stripLiveMatch = findNextMatchStripLiveMatch();
+    if (stripLiveMatch) matches = matches.filter(x => x !== stripLiveMatch);
+
     // 라이브 창은 메인(순위) 화면에서만 노출합니다. 다른 탭에 있을 땐 경기가
     // 진행 중이어도 숨겨두고, rank 화면으로 돌아왔을 때 다시 그립니다(아래 showView 참고).
     if (currentView !== 'rank') {
@@ -6651,7 +6890,7 @@
     }
 
     // 동시 진행 경기를 모두 반영한 순위 미리보기(한 번에 계산)
-    const lltRankPreviews = computeLiveRankPreviews(matches.map(m => ({
+    const lltRankPreviews = computeLiveRankPreviews(allLiveMatches.map(m => ({
       homeEn: resolveLeagueTeamNameEn(m.homeTeam),
       awayEn: resolveLeagueTeamNameEn(m.awayTeam),
       hs: (m.score && typeof m.score.home === 'number') ? m.score.home : null,
