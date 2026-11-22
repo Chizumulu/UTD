@@ -41,6 +41,7 @@
       ? "경기 시작 전 알림과 득점·경기 중 주요 상황, 경기 종료 및 최종 스코어를 알려드려요."
       : "Get pre-match reminders, goal and match updates, and the final score when the game ends.";
     dialog.querySelector('[data-action="enable"]').textContent = korean ? "알림 받기" : "Get alerts";
+    dialog.querySelector('[data-action="enable"]').className = "match-alert-confirm-repair";
     dialog.querySelector('[data-action="snooze"]').textContent = korean ? "7일간 닫기" : "Close for 7 days";
     dialog.querySelector('[data-action="never"]').textContent = korean ? "다시 보지 않기" : "Don't show again";
 
