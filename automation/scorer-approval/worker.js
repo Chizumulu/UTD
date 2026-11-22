@@ -550,11 +550,27 @@ async function scanForCompletedMatches(env) {
         })
         .map(snapshot => String(snapshot.item.latestObservation?.text || snapshot.item.korean?.text || ""))
         .filter(Boolean);
+      const terminalKoreanTexts = terminalSnapshots
+        .filter(snapshot =>
+          Number(snapshot.match.homeScore) === Number(candidate.match.homeScore) &&
+          Number(snapshot.match.awayScore) === Number(candidate.match.awayScore)
+        )
+        .sort((a, b) => {
+          const at = Number.isFinite(a.timestamp) ? a.timestamp : -Infinity;
+          const bt = Number.isFinite(b.timestamp) ? b.timestamp : -Infinity;
+          return bt - at || b.sequence - a.sequence;
+        })
+        .map(snapshot => String(snapshot.item.korean?.text || ""))
+        .filter(Boolean);
       const proposalItem = {
         ...candidate.item,
         latestObservation: {
           ...(candidate.item.latestObservation || {}),
           text: terminalTexts.join("\n\n")
+        },
+        korean: {
+          ...(candidate.item.korean || {}),
+          text: terminalKoreanTexts.join("\n\n")
         }
       };
       const proposal = makeProposal(proposalItem, mergedMatch);
@@ -804,6 +820,56 @@ function parseResultTextScorers(text, home, away, homeScore, awayScore) {
   return assignedHome === homeScore && assignedAway === awayScore ? assigned : null;
 }
 
+function parseKoreanResultScorers(text, matchIndex, homeScore, awayScore) {
+  if (!text) return null;
+  const clean = String(text)
+    .replace(/(\d)\uFE0F?\u20E3/g, "$1")
+    .replace(/\\?\*/g, "");
+  const lines = clean.split(/\r?\n/);
+  const scoreLine = /^\s*(.+?)\s+(\d+)\s*[-–:]\s*(\d+)\s+(.+?)\s*$/;
+  const rows = [];
+  for (let i = 0; i < lines.length; i++) {
+    const match = lines[i].trim().match(scoreLine);
+    if (!match || !/[가-힣]/.test(match[1] + match[4])) continue;
+    rows.push({ lineIndex: i, homeScore: Number(match[2]), awayScore: Number(match[3]) });
+  }
+  let row = Number.isInteger(matchIndex) ? rows[matchIndex] : null;
+  if (!row || row.homeScore !== homeScore || row.awayScore !== awayScore) {
+    const candidates = rows.filter(item =>
+      item.homeScore === homeScore && item.awayScore === awayScore
+    );
+    if (candidates.length !== 1) return null;
+    row = candidates[0];
+  }
+
+  const scorerLines = [];
+  for (let i = row.lineIndex + 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line || line.startsWith("#") || scoreLine.test(line)) break;
+    scorerLines.push(line.replace(/[()\[\]]/g, ""));
+  }
+  const parsed = [];
+  for (const raw of scorerLines.join(",").split(/[,;]+/)) {
+    let name = raw.trim().replace(/^[-\s]+|[-\s]+$/g, "");
+    if (!name) continue;
+    let count = 1;
+    const suffix = name.match(/\s*(?:[×xX]\s*(\d+)|\((\d+)\s*골?\))\s*$/i);
+    if (suffix) {
+      count = Number(suffix[1] || suffix[2]);
+      name = name.slice(0, suffix.index).trim();
+    } else if (/\b해트트릭\b/.test(name)) {
+      count = 3;
+      name = name.replace(/\b해트트릭\b/g, "").trim();
+    } else if (/\b두\s*골\b/.test(name)) {
+      count = 2;
+      name = name.replace(/\b두\s*골\b/g, "").trim();
+    }
+    if (!/[가-힣]/.test(name) || !Number.isInteger(count) || count < 1 || count > 9) continue;
+    parsed.push({ name, count });
+  }
+  return parsed.length ? parsed : null;
+}
+
 function makeProposal(item, match) {
   if (!match || !FINISHED_STATUS.test(String(match.status || "").trim())) return null;
   const home = String(match.homeTeam || "").trim();
@@ -915,6 +981,17 @@ function makeProposal(item, match) {
     }
   
   
+  }
+
+  const translatedNames = parseKoreanResultScorers(
+    item.korean?.text || "",
+    Number.isInteger(match.index) ? match.index : null,
+    homeScore,
+    awayScore
+  );
+  if (translatedNames && translatedNames.length === goals.length &&
+      translatedNames.every((translated, index) => translated.count === goals[index].count)) {
+    goals.forEach((goal, index) => { goal.nameKo = translatedNames[index].name; });
   }
 
   const homeCount = goals.filter(g => g.side === "home").reduce((n, g) => n + g.count, 0);
@@ -1065,13 +1142,22 @@ function formatScorersForMessage(goals, side) {
     const name = String(goal.name || "").trim();
     if (!name) continue;
     const key = name.toLowerCase() + "|" + Boolean(goal.ownGoal);
-    const current = byPlayer.get(key) || { name, count: 0, ownGoal: Boolean(goal.ownGoal) };
+    const current = byPlayer.get(key) || {
+      name,
+      nameKo: String(goal.nameKo || "").trim(),
+      count: 0,
+      ownGoal: Boolean(goal.ownGoal)
+    };
+    if (!current.nameKo && goal.nameKo) current.nameKo = String(goal.nameKo).trim();
     current.count += Number(goal.count || 1);
     byPlayer.set(key, current);
   }
   return Array.from(byPlayer.values(), player => {
     const suffix = player.count > 1 ? " " + player.count + "골" : " 1골";
-    return player.name + suffix + (player.ownGoal ? " (자책골)" : "");
+    const bilingualName = player.nameKo
+      ? player.name + " (" + player.nameKo + ")"
+      : player.name;
+    return bilingualName + suffix + (player.ownGoal ? " (자책골)" : "");
   }).join("\n") || "없음";
 }
 
