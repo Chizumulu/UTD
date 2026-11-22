@@ -830,7 +830,7 @@ function parseKoreanResultScorers(text, matchIndex, homeScore, awayScore) {
   const rows = [];
   for (let i = 0; i < lines.length; i++) {
     const match = lines[i].trim().match(scoreLine);
-    if (!match || !/[가-힣]/.test(match[1] + match[4])) continue;
+    if (!match || !/[가-힣]/.test(match[1]) || !/[가-힣]/.test(match[4])) continue;
     rows.push({ lineIndex: i, homeScore: Number(match[2]), awayScore: Number(match[3]) });
   }
   let row = Number.isInteger(matchIndex) ? rows[matchIndex] : null;
