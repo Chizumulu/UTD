@@ -68,7 +68,11 @@ npx wrangler deploy
 Call the endpoint with a bearer token. The first request checks the access token and phone number, then verifies the configured template name, language, four body variables, and quick reply order. It does not send a WhatsApp message:
 
 ```powershell
-$headers = @{ Authorization = "Bearer $env:DIAGNOSTIC_TOKEN" }
+$secureToken = Read-Host "Diagnostic token" -AsSecureString
+$pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
+try { $diagnosticToken = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) }
+finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
+$headers = @{ Authorization = "Bearer $diagnosticToken" }
 $body = '{"sendTest":false}'
 Invoke-RestMethod -Method Post -Uri 'https://<worker-host>/admin/diagnostics' -Headers $headers -ContentType 'application/json' -Body $body
 ```
