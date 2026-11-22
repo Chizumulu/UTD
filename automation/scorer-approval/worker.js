@@ -629,7 +629,7 @@ async function sendApprovalMessage(proposal, env, { confirmation = false } = {})
 
 function sanitizeTemplateText(value) {
   return String(value == null ? "" : value)
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
