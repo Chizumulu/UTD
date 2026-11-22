@@ -1,5 +1,6 @@
 const API_URL = "https://api.chizumulu.net/v1/structured?limit=40";
 const MAX_PROPOSAL_AGE_SECONDS = 60 * 60 * 24 * 14;
+const FINISHED_STATUS = /^(full[_\s-]?time|ft|finished|final|ended|completed|match[_\s-]?ended)$/i;
 
 export default {
   async fetch(request, env) {
@@ -371,16 +372,25 @@ async function scanForCompletedMatches(env) {
 }
 
 function makeProposal(item, match) {
-  if (!match || !["full_time", "finished", "ended"].includes(String(match.status || "").toLowerCase())) return null;
+  if (!match || !FINISHED_STATUS.test(String(match.status || "").trim())) return null;
   const home = String(match.homeTeam || "").trim();
   const away = String(match.awayTeam || "").trim();
   if (match.homeScore == null || match.awayScore == null) return null;
   const homeScore = Number(match.homeScore);
   const awayScore = Number(match.awayScore);
-  if (!home || !away || !Number.isInteger(homeScore) || !Number.isInteger(awayScore)) return null;
+  if (!home || !away || !Number.isInteger(homeScore) || !Number.isInteger(awayScore) || homeScore < 0 || awayScore < 0) return null;
 
   const goals = [];
   const reviewWarnings = [];
+  const quality = String(match.quality || match.dataQuality || "").trim().toLowerCase();
+  const hasConflict =
+    match.conflict === true ||
+    match.hasConflict === true ||
+    (Array.isArray(match.conflicts) && match.conflicts.length > 0) ||
+    ["conflict", "conflicted", "needs_review", "review"].includes(quality);
+  if (hasConflict) {
+    reviewWarnings.push("API가 경기 데이터 충돌 또는 검토 필요 상태로 표시함");
+  }
   for (const event of match.events || []) {
     const eventType = String(event.type || "").toLowerCase();
     const players = (event.players || []).filter(p => p && !/assist/i.test(String(p.role || "")));
@@ -428,10 +438,16 @@ function makeProposal(item, match) {
   }
 
   const sourceId = String(item.rawUpdateId || item.sourceMessageId || "");
+  const stableMatchId = String(match.matchId || match.match_id || match.fixtureId || match.id || "").trim();
   const dateSource = String(match.dateText || item.sourceTimestamp || "");
   const parsedDate = Date.parse(dateSource);
   const matchDay = Number.isFinite(parsedDate) ? new Date(parsedDate).toISOString().slice(0, 10) : dateSource.slice(0, 10);
-  const matchKey = normalize(home) + "|" + normalize(away) + "|" + matchDay;
+  if (!stableMatchId && !match.dateText) {
+    reviewWarnings.push("경기 고유 ID와 경기 날짜가 없어 경기 식별 확인 필요");
+  }
+  const matchKey = stableMatchId
+    ? "id:" + stableMatchId.toLowerCase()
+    : normalize(home) + "|" + normalize(away) + "|" + matchDay;
   return {
     sourceId,
     matchKey,
