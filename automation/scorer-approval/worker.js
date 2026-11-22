@@ -613,10 +613,10 @@ async function sendApprovalMessage(proposal, env, { confirmation = false } = {})
           {
             type: "body",
             parameters: [
-              { type: "text", text: confirmationText + reviewText + matchText },
-              { type: "text", text: homeScorers.slice(0, 900) },
-              { type: "text", text: awayScorers.slice(0, 900) },
-              { type: "text", text: proposal.id }
+              { type: "text", text: sanitizeTemplateText(confirmationText + reviewText + matchText) },
+              { type: "text", text: sanitizeTemplateText(homeScorers.slice(0, 900)) },
+              { type: "text", text: sanitizeTemplateText(awayScorers.slice(0, 900)) },
+              { type: "text", text: sanitizeTemplateText(proposal.id) }
             ]
           },
           ...buttons
@@ -625,6 +625,12 @@ async function sendApprovalMessage(proposal, env, { confirmation = false } = {})
     })
   });
   if (!response.ok) throw new Error("WhatsApp send failed: " + response.status + " " + (await response.text()).slice(0, 500));
+}
+
+function sanitizeTemplateText(value) {
+  return String(value == null ? "" : value)
+    .replace(/\\s+/g, " ")
+    .trim();
 }
 
 function formatScorersForMessage(goals, side) {
