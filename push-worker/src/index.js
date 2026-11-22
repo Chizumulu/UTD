@@ -215,9 +215,14 @@ async function pollMatchesAndNotify(env) {
       "SELECT * FROM match_states WHERE match_id = ?"
     ).bind(match.matchId).first();
 
+    const firstSeenFinal = !previous && match.status === "full_time";
     const notification = createNotification(previous, match);
     if (notification) {
-      const delivery = await broadcast(env, notification);
+      const createdBefore = firstSeenFinal ? Date.parse(match.lastSeenAt) : null;
+      const delivery = await broadcast(env, notification, createdBefore);
+      if (firstSeenFinal && delivery.targeted === 0) {
+        console.log("New final score was not sent because no subscription predated the API update.", match.matchId);
+      }
       if (delivery.transient > 0) {
         console.warn("At least one push delivery failed temporarily; this match update will be retried.", match.matchId);
         continue;
@@ -356,6 +361,7 @@ function createNotification(previous, match) {
   );
 
   if (!previous) {
+    if (match.status === "full_time") return notificationPayload(match, "full_time");
     if (match.status !== "live" && match.status !== "half_time") return null;
     return notificationPayload(match, "start");
   }
@@ -406,11 +412,17 @@ function notificationPayload(match, type) {
   };
 }
 
-async function broadcast(env, notification) {
+async function broadcast(env, notification, createdBefore = null) {
   const result = await env.DB.prepare(
-    "SELECT id, endpoint, p256dh, auth FROM push_subscriptions"
+    "SELECT id, endpoint, p256dh, auth, created_at FROM push_subscriptions"
   ).all();
-  const subscriptions = result && Array.isArray(result.results) ? result.results : [];
+  const allSubscriptions = result && Array.isArray(result.results) ? result.results : [];
+  const subscriptions = createdBefore === null
+    ? allSubscriptions
+    : allSubscriptions.filter(row => {
+      const createdAt = Date.parse(row.created_at);
+      return Number.isFinite(createdAt) && createdAt <= createdBefore;
+    });
   const vapid = {
     subject: env.VAPID_SUBJECT,
     publicKey: env.VAPID_PUBLIC_KEY,
@@ -448,7 +460,7 @@ async function broadcast(env, notification) {
     }
   }
 
-  return { success: success, transient: transient, permanent: permanent };
+  return { success: success, transient: transient, permanent: permanent, targeted: subscriptions.length };
 }
 
 async function saveMatchState(db, match) {

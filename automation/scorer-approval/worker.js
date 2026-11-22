@@ -20,6 +20,12 @@ export default {
     if (url.pathname === "/admin/diagnostics") {
       return new Response("Method not allowed", { status: 405, headers: { allow: "POST" } });
     }
+    if (url.pathname === "/admin/scan" && request.method === "POST") {
+      return runAuthorizedScan(request, env);
+    }
+    if (url.pathname === "/admin/scan") {
+      return new Response("Method not allowed", { status: 405, headers: { allow: "POST" } });
+    }
     return new Response("Not found", { status: 404 });
   },
 
@@ -339,35 +345,118 @@ async function receiveWebhook(request, env) {
   return new Response("EVENT_RECEIVED", { status: 200 });
 }
 
+async function runAuthorizedScan(request, env) {
+  const expectedToken = String(env.DIAGNOSTIC_TOKEN || "");
+  const authorization = request.headers.get("authorization") || "";
+  const suppliedToken = authorization.match(/^Bearer\s+(.+)$/i)?.[1] || "";
+  if (!expectedToken || !constantTimeEqual(suppliedToken, expectedToken)) {
+    return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const summary = await scanForCompletedMatches(env);
+    return Response.json({ ok: true, ...summary });
+  } catch (error) {
+    return Response.json({ ok: false, error: error.message || String(error) }, { status: 502 });
+  }
+}
+
 async function scanForCompletedMatches(env) {
-  const response = await fetch(API_URL, { headers: { accept: "application/json" } });
-  if (!response.ok) throw new Error("Structured API returned " + response.status);
-  const data = await response.json();
+  const summary = {
+    checkedAt: new Date().toISOString(),
+    itemCount: 0,
+    matchCount: 0,
+    terminalMatchCount: 0,
+    proposalCount: 0,
+    sentCount: 0,
+    duplicateCount: 0,
+    incompleteCount: 0,
+    nonStructuredItemCount: 0,
+    statusCounts: {},
+    terminalSamples: []
+  };
 
-  for (const item of data.items || []) {
-    const structured = item.structured;
-    if (!structured || !Array.isArray(structured.matches)) continue;
-    for (const match of structured.matches) {
-      const proposal = makeProposal(item, match);
-      if (!proposal) continue;
+  try {
+    const response = await fetch(API_URL, { headers: { accept: "application/json" } });
+    if (!response.ok) throw new Error("Structured API returned " + response.status);
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    summary.itemCount = items.length;
 
-      const key = "match:" + proposal.matchKey;
-      if (await env.APPROVALS.get(key)) continue;
-      const id = crypto.randomUUID();
-      proposal.id = id;
-      proposal.createdAt = new Date().toISOString();
-      await env.APPROVALS.put("proposal:" + id, JSON.stringify(proposal), {
-        expirationTtl: MAX_PROPOSAL_AGE_SECONDS
-      });
-      await env.APPROVALS.put(key, id, { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
-      try {
-        await sendApprovalMessage(proposal, env);
-      } catch (error) {
-        await env.APPROVALS.delete("proposal:" + id);
-        await env.APPROVALS.delete(key);
-        throw error;
+    for (const item of items) {
+      const structured = item.structured;
+      if (!structured || !Array.isArray(structured.matches)) {
+        summary.nonStructuredItemCount += 1;
+        continue;
+      }
+      for (const match of structured.matches) {
+        summary.matchCount += 1;
+        const status = String(match?.status || "(missing)").trim();
+        summary.statusCounts[status] = (summary.statusCounts[status] || 0) + 1;
+        if (summary.terminalSamples.length < 5 && FINISHED_STATUS.test(status)) {
+          summary.terminalSamples.push({
+            status,
+            homeTeam: String(match.homeTeam || ""),
+            awayTeam: String(match.awayTeam || ""),
+            homeScore: match.homeScore ?? null,
+            awayScore: match.awayScore ?? null
+          });
+        }
+        if (!FINISHED_STATUS.test(status)) continue;
+        summary.terminalMatchCount += 1;
+
+        const proposal = makeProposal(item, match);
+        if (!proposal) {
+          summary.incompleteCount += 1;
+          continue;
+        }
+        summary.proposalCount += 1;
+        const key = "match:" + proposal.matchKey;
+        if (await env.APPROVALS.get(key)) {
+          summary.duplicateCount += 1;
+          continue;
+        }
+
+        const id = crypto.randomUUID();
+        proposal.id = id;
+        proposal.createdAt = new Date().toISOString();
+        await env.APPROVALS.put("proposal:" + id, JSON.stringify(proposal), {
+          expirationTtl: MAX_PROPOSAL_AGE_SECONDS
+        });
+        await env.APPROVALS.put(key, id, { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
+        try {
+          await sendApprovalMessage(proposal, env);
+          summary.sentCount += 1;
+          console.log(JSON.stringify({
+            event: "whatsapp_approval_sent",
+            matchKey: proposal.matchKey,
+            score: proposal.homeScore + "-" + proposal.awayScore,
+            proposalId: id
+          }));
+        } catch (error) {
+          await env.APPROVALS.delete("proposal:" + id);
+          await env.APPROVALS.delete(key);
+          console.error(JSON.stringify({
+            event: "whatsapp_approval_send_failed",
+            matchKey: proposal.matchKey,
+            error: error.message || String(error)
+          }));
+          throw error;
+        }
       }
     }
+
+    console.log(JSON.stringify({ event: "scorer_scan_summary", ...summary }));
+    return summary;
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "scorer_scan_failed",
+      checkedAt: summary.checkedAt,
+      itemCount: summary.itemCount,
+      matchCount: summary.matchCount,
+      error: error.message || String(error)
+    }));
+    throw error;
   }
 }
 
