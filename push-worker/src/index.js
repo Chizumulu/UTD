@@ -212,8 +212,8 @@ async function pollMatchesAndNotify(env) {
     const notification = createNotification(previous, match);
     if (notification) {
       const delivery = await broadcast(env, notification);
-      if (delivery.success === 0 && delivery.transient > 0) {
-        console.warn("All push deliveries failed temporarily; match state will be retried.", match.matchId);
+      if (delivery.transient > 0) {
+        console.warn("At least one push delivery failed temporarily; this match update will be retried.", match.matchId);
         continue;
       }
     }
