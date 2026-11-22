@@ -10,11 +10,7 @@ const source = fs.readFileSync(sourcePath, "utf8");
 
 validateProposal(proposal);
 
-const ast = parse(source, {
-  ecmaVersion: "latest",
-  sourceType: "script",
-  allowHashBang: true
-});
+const ast = parseDataDeclarations(source);
 
 const declarations = findDeclarations(ast);
 const roundsData = literalValue(declarations.roundsData, source);
@@ -206,11 +202,7 @@ function archiveCompletedRounds(input) {
   const archivedRounds = [];
 
   while (true) {
-    const ast = parse(updated, {
-      ecmaVersion: "latest",
-      sourceType: "script",
-      allowHashBang: true
-    });
+    const ast = parseDataDeclarations(updated);
     const declarations = findDeclarations(ast);
     const completed = literalValue(declarations.roundsData, updated) || {};
     const scheduled = literalValue(declarations.scheduledRounds, updated) || {};
@@ -370,6 +362,21 @@ function validateProposal(p) {
 // ============================================================
 // AST helpers
 // ============================================================
+// Parse only the data declarations used by this updater. The site helpers below
+// the player directory are unrelated to result updates and may use syntax newer
+// than the Acorn version installed in the GitHub Actions runner.
+function parseDataDeclarations(text) {
+  const boundary = text.indexOf("\nfunction toTitleCase(");
+  if (boundary < 0) {
+    throw new Error("Could not locate the end of the data declarations in data.js.");
+  }
+  return parse(text.slice(0, boundary), {
+    ecmaVersion: "latest",
+    sourceType: "script",
+    allowHashBang: true
+  });
+}
+
 
 function findDeclarations(program) {
   const found = {};
