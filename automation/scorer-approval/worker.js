@@ -398,7 +398,7 @@ async function scanForCompletedMatches(env) {
         const status = String(match?.status || "(missing)").trim();
         summary.statusCounts[status] = (summary.statusCounts[status] || 0) + 1;
 
-        const groupKey = matchSnapshotKey(item, match);
+        const groupKey = matchSnapshotKey(item, match, sequence);
         let group = groups.get(groupKey);
         if (!group) {
           group = { snapshots: [], events: new Map() };
@@ -551,7 +551,7 @@ async function scanForCompletedMatches(env) {
   }
 }
 
-function matchSnapshotKey(item, match) {
+function matchSnapshotKey(item, match, sequence) {
   const stableId = String(match.matchId || match.match_id || match.fixtureId || match.id || "").trim();
   if (stableId) return "id:" + normalize(stableId);
 
@@ -569,7 +569,7 @@ function matchSnapshotKey(item, match) {
       : String(item.sourceTimestamp || "").slice(0, 10);
   }
   if (!home || !away || !day) {
-    return "snapshot:" + String(item.rawUpdateId || item.sourceMessageId || Math.random());
+    return "snapshot:" + String(item.rawUpdateId || item.sourceMessageId || sequence);
   }
   return normalize(home) + "|" + normalize(away) + "|" + day;
 }
@@ -588,7 +588,6 @@ function snapshotEventKey(event) {
     String(event.type || "").toLowerCase(),
     normalize(event.team || ""),
     String(event.minuteText || event.minute || ""),
-    String(event.index ?? ""),
     players
   ].join("|");
 }
