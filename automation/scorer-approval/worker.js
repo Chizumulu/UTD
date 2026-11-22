@@ -598,20 +598,27 @@ async function handleAction(payload, env) {
   proposal.state = "dispatching";
   await env.APPROVALS.put(key, JSON.stringify(proposal), { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
   const approvedProposal = { ...proposal, state: "approved", approvedAt: new Date().toISOString() };
-  const response = await fetch("https://api.github.com/repos/" + encodeURIComponent(owner) + "/" + encodeURIComponent(repository) + "/dispatches", {
-    method: "POST",
-    headers: {
-      authorization: "Bearer " + env.GITHUB_TOKEN,
-      accept: "application/vnd.github+json",
-      "content-type": "application/json",
-      "x-github-api-version": "2022-11-28",
-      "user-agent": "utd-scorer-approval"
-    },
-    body: JSON.stringify({
-      event_type: "scorer-proposal-approved",
-      client_payload: { proposal: approvedProposal }
-    })
-  });
+  let response;
+  try {
+    response = await fetch("https://api.github.com/repos/" + encodeURIComponent(owner) + "/" + encodeURIComponent(repository) + "/dispatches", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + env.GITHUB_TOKEN,
+        accept: "application/vnd.github+json",
+        "content-type": "application/json",
+        "x-github-api-version": "2022-11-28",
+        "user-agent": "utd-scorer-approval"
+      },
+      body: JSON.stringify({
+        event_type: "scorer-proposal-approved",
+        client_payload: { proposal: approvedProposal }
+      })
+    });
+  } catch (error) {
+    proposal.state = priorState;
+    await env.APPROVALS.put(key, JSON.stringify(proposal), { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
+    throw error;
+  }
   if (!response.ok) {
     proposal.state = priorState;
     await env.APPROVALS.put(key, JSON.stringify(proposal), { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
