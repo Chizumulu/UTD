@@ -1731,7 +1731,15 @@ const scheduledRounds = {
   // ── 정규 18주차 (엑셀 "Week 18") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round19: [
     { homeKo: "마푸 스타즈 FC", homeEn: "Mafu Stars FC", awayKo: "치하메 올스타즈 FC", awayEn: "Chihame All Stars FC", kickoffDate: "2026-11-21", kickoffTime: "15:00", homeScore: 2, awayScore: 1, scorersHome: "NORMAN NDLOVU (2골)", scorersAway: "ELIA MUNTHALI" },
-    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
+    { homeKo: "루베 마스터즈 FC", homeEn: "Lube Masters FC", awayKo: "친테체 유나이티드 FC", awayEn: "Chintheche United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" ,
+      "scorersAway": "TEMWA NDHLOVU"
+    ,
+      "scorersHome": "AMOS KAUNDA, SAMUEL NKHOMA"
+    ,
+      "awayScore": 1
+    ,
+      "homeScore": 2
+    },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-21", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "JOLLY KANYINJI", scorersAway: "없음" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-21", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "BENJAMIN MAPUNDA", scorersAway: "없음", movedFromWeek: 22, changed: true }, // 21주차(round22) 경기가 18주차로 변경됨. 오늘 경기만 마잘리로 그라운드(칠룸바 venueHistory 19주차 참고)
     { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
@@ -3409,7 +3417,11 @@ const playerDirectory = {
   // 2026-10-18 (15주차) 신규 득점자
   "BLESSINGS CHINYAMA": { nameKo: "블레싱스 친야마", nameEn: "Blessings Chinyama" },
   "BENJAMIN KALINGA": { nameKo: "벤자민 칼링가", nameEn: "Benjamin Kalinga" }
-};
+,
+      "SAMUEL NKHOMA": {"nameKo":"사무엘 은코마","nameEn":"Samuel Nkhoma"}
+    ,
+      "AMOS KAUNDA": {"nameKo":"아모스 카운다","nameEn":"Amos Kaunda"}
+    };
 
 function toTitleCase(upperName) {
   return upperName
