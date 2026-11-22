@@ -644,6 +644,11 @@ function parseResultTextScorers(text, home, away, homeScore, awayScore) {
   }
   if (names == null) return null;
 
+  // This API result omitted punctuation between two Raiply scorers:
+  // "Jasan Zimba Limbani Kamanga". Preserve the two known names rather than
+  // treating the full string as one scorer.
+  names = names.replace(/\b(Jasan\s+Zimba)\s+(Limbani\s+Kamanga)\b/i, "$1, $2");
+
   const parsed = [];
   for (const raw of names.split(/[,;]+/)) {
     let token = raw.trim().replace(/^[-\s]+|[-\s]+$/g, "");
