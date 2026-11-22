@@ -1742,7 +1742,15 @@ const scheduledRounds = {
     },
     { homeKo: "에크웬데니 FC", homeEn: "Ekwendeni FC", awayKo: "비전 S 아카데미", awayEn: "Vision S Academy", kickoffDate: "2026-11-21", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "JOLLY KANYINJI", scorersAway: "없음" },
     { homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-21", kickoffTime: "15:00", homeScore: 1, awayScore: 0, scorersHome: "BENJAMIN MAPUNDA", scorersAway: "없음", movedFromWeek: 22, changed: true }, // 21주차(round22) 경기가 18주차로 변경됨. 오늘 경기만 마잘리로 그라운드(칠룸바 venueHistory 19주차 참고)
-    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
+    { homeKo: "라이플리 FC", homeEn: "Raiply FC", awayKo: "치주물루 유나이티드 FC", awayEn: "Chizumulu United FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" ,
+      "scorersAway": "없음"
+    ,
+      "scorersHome": "JASAN ZIMBA, LIMBANI KAMANGA"
+    ,
+      "awayScore": 0
+    ,
+      "homeScore": 2
+    },
     { homeKo: "에우티니 베테랑스 FC", homeEn: "Euthini Veterans FC", awayKo: "치바비 리얼 스타즈 FC", awayEn: "Chibavi Real Stars FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" },
     { homeKo: "젠다 유나이티드 FC", homeEn: "Jenda United FC", awayKo: "칠룸바 배럭스 FC", awayEn: "Chilumba Barracks FC", kickoffDate: "2026-11-22", kickoffTime: "15:00", postponed: true }, // 연기 (새 일정 미정) — 확정되면 해당 주차에 새 항목을 추가하고 이 항목에 movedToWeek를 달아주세요.
     { homeKo: "치폴로폴로 보이즈 FC", homeEn: "Chipolopolo Boys FC", awayKo: "음벨와 워리어스 FC", awayEn: "M'mbelwa Warriors FC", kickoffDate: "2026-11-22", kickoffTime: "15:00" ,
