@@ -164,6 +164,13 @@ async function pollMatchesAndNotify(env) {
     throw new Error("VAPID secrets are not configured");
   }
 
+  const now = Date.now();
+  try {
+    await sendKickoffReminders(env, now);
+  } catch (error) {
+    console.error("Kickoff reminder check failed:", error);
+  }
+
   const apiBase = env.MATCH_API_BASE || "https://api.chizumulu.net";
   const url = new URL("/v1/matches", apiBase);
   url.searchParams.set("teamId", env.TEAM_ID || "chizumulu_united");
@@ -181,7 +188,6 @@ async function pollMatchesAndNotify(env) {
     throw new Error("Match API response has no matches array");
   }
 
-  const now = Date.now();
   const matches = payload.matches
     .filter(function (item) {
       return item && item.quality !== "conflict";
@@ -223,6 +229,94 @@ async function pollMatchesAndNotify(env) {
 
   const cutoff = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
   await env.DB.prepare("DELETE FROM match_states WHERE updated_at < ?").bind(cutoff).run();
+}
+
+const KICKOFF_REMINDER_WINDOW_MS = 5 * 60 * 1000;
+const KICKOFF_REMINDER_LEAD_MS = 60 * 60 * 1000;
+const SCHEDULED_ROUNDS_MARKER = "const scheduledRounds = {";
+
+async function sendKickoffReminders(env, now) {
+  const scheduleUrl = env.SCHEDULE_DATA_URL || "https://chizumulu.github.io/UTD/data.js";
+  const response = await fetch(scheduleUrl, {
+    headers: { "Accept": "text/javascript, text/plain;q=0.9, */*;q=0.8" },
+    cache: "no-store"
+  });
+  if (!response.ok) throw new Error("Schedule data returned HTTP " + response.status);
+
+  const fixtures = parseUpcomingChizumuluFixtures(await response.text());
+  for (const fixture of fixtures) {
+    const kickoffAt = parseKoreaKickoff(fixture.kickoffDate, fixture.kickoffTime);
+    if (!Number.isFinite(kickoffAt)) continue;
+
+    const notifyAt = kickoffAt - KICKOFF_REMINDER_LEAD_MS;
+    if (now < notifyAt || now > notifyAt + KICKOFF_REMINDER_WINDOW_MS) continue;
+
+    const fixtureId = await endpointId(fixture.homeEn + "|" + fixture.awayEn);
+    const settingKey = "kickoff_reminder:" + fixtureId;
+    const scheduledAt = new Date(kickoffAt).toISOString();
+    const previous = await env.DB.prepare(
+      "SELECT value FROM app_settings WHERE key = ?"
+    ).bind(settingKey).first();
+    if (previous && previous.value === scheduledAt) continue;
+
+    const notification = {
+      title: "경기 시작 1시간 전이에요",
+      body: fixture.homeKo + " vs " + fixture.awayKo + " · " + fixture.kickoffTime + " 킥오프",
+      icon: "/UTD/apple-touch-icon.png",
+      tag: "utd-kickoff-" + fixtureId,
+      renotify: false,
+      data: { url: "https://chizumulu.github.io/UTD/" }
+    };
+    const delivery = await broadcast(env, notification);
+    if (delivery.transient > 0) {
+      console.warn("Kickoff reminder delivery failed temporarily; it will be retried.", fixture.homeEn, fixture.awayEn);
+      continue;
+    }
+
+    await env.DB.prepare(
+      "INSERT INTO app_settings (key, value) VALUES (?, ?) " +
+      "ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+    ).bind(settingKey, scheduledAt).run();
+    console.log("Kickoff reminder sent.", fixture.homeEn, fixture.awayEn, scheduledAt);
+  }
+}
+
+function parseUpcomingChizumuluFixtures(source) {
+  const start = source.indexOf(SCHEDULED_ROUNDS_MARKER);
+  if (start < 0) throw new Error("scheduledRounds was not found in data.js");
+  const end = source.indexOf("\n};", start);
+  if (end < 0) throw new Error("scheduledRounds block is incomplete");
+  const block = source.slice(start, end);
+  const fixtures = [];
+  const objects = block.match(/\{[^{}\r\n]*\}/g) || [];
+
+  for (const item of objects) {
+    const homeEn = quotedProperty(item, "homeEn");
+    const awayEn = quotedProperty(item, "awayEn");
+    if (homeEn !== "Chizumulu United FC" && awayEn !== "Chizumulu United FC") continue;
+    if (/\b(?:postponed|cancelled)\s*:\s*true\b/.test(item)) continue;
+    if (/\bmovedToWeek\s*:/.test(item)) continue;
+    if (/\b(?:homeScore|awayScore)\s*:/.test(item)) continue;
+
+    const kickoffDate = quotedProperty(item, "kickoffDate");
+    const kickoffTime = quotedProperty(item, "kickoffTime");
+    const homeKo = quotedProperty(item, "homeKo");
+    const awayKo = quotedProperty(item, "awayKo");
+    if (!kickoffDate || !kickoffTime || !homeKo || !awayKo) continue;
+    fixtures.push({ homeEn, awayEn, homeKo, awayKo, kickoffDate, kickoffTime });
+  }
+  return fixtures;
+}
+
+function quotedProperty(source, name) {
+  const expression = new RegExp("(?:^|[,\\s])" + name + "\\s*:\\s*\"([^\"]*)\"");
+  const match = source.match(expression);
+  return match ? match[1] : "";
+}
+
+function parseKoreaKickoff(date, time) {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !/^(?:[01]\\d|2[0-3]):[0-5]\\d$/.test(time)) return NaN;
+  return Date.parse(date + "T" + time + ":00+09:00");
 }
 
 function normalizeMatch(item) {
