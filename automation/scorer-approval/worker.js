@@ -606,6 +606,10 @@ async function scanForCompletedMatches(env) {
               approvalDetailsSignature(existing) !== approvalDetailsSignature(proposal)) {
             const updated = {
               ...existing,
+              home: proposal.home,
+              away: proposal.away,
+              homeScore: proposal.homeScore,
+              awayScore: proposal.awayScore,
               goals: proposal.goals,
               needsReview: proposal.needsReview,
               reviewWarnings: proposal.reviewWarnings
@@ -736,6 +740,10 @@ function snapshotEventKey(event) {
 
 function approvalDetailsSignature(proposal) {
   return JSON.stringify({
+    home: proposal.home || "",
+    away: proposal.away || "",
+    homeScore: proposal.homeScore ?? null,
+    awayScore: proposal.awayScore ?? null,
     goals: proposal.goals || [],
     needsReview: Boolean(proposal.needsReview),
     reviewWarnings: proposal.reviewWarnings || []
