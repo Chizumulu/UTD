@@ -472,6 +472,8 @@ async function scanForCompletedMatches(env) {
     checkedAt: new Date().toISOString(),
     itemCount: 0,
     matchCount: 0,
+    targetCompetitionCode: String(env.COMPETITION_CODE || "nrfa_league_one").trim().toLowerCase(),
+    competitionSkippedCount: 0,
     recordedFixtureCount: 0,
     alreadyRecordedCount: 0,
     unverifiableDateCount: 0,
@@ -506,6 +508,13 @@ async function scanForCompletedMatches(env) {
       for (const match of structured.matches) {
         sequence += 1;
         summary.matchCount += 1;
+        const competitionCode = String(
+          match?.competitionCode || structured.competition?.code || ""
+        ).trim().toLowerCase();
+        if (competitionCode !== summary.targetCompetitionCode) {
+          summary.competitionSkippedCount += 1;
+          continue;
+        }
         const status = String(match?.status || "(missing)").trim();
         summary.statusCounts[status] = (summary.statusCounts[status] || 0) + 1;
 
