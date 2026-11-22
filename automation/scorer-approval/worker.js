@@ -40,7 +40,7 @@ async function runDiagnostics(request, env) {
     body = await request.json();
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("Expected a JSON object");
   } catch {
-    return Response.json({ ok: false, error: "Send a JSON body such as {\\"sendTest\\":false}" }, { status: 400 });
+    return Response.json({ ok: false, error: "Send a JSON object with sendTest set to true or false" }, { status: 400 });
   }
 
   const sendTest = body.sendTest === true;
@@ -56,7 +56,7 @@ async function runDiagnostics(request, env) {
     sendTestRequested: sendTest,
     checks: {
       configuration: {
-        ok: Boolean(base && phoneId && wabaId && templateName && language && token && recipient),
+        ok: Boolean(base && phoneId && wabaId && templateName && language && token),
         graphUrlConfigured: Boolean(base),
         accessTokenConfigured: Boolean(token),
         phoneNumberIdConfigured: Boolean(phoneId),
@@ -154,13 +154,13 @@ async function runDiagnostics(request, env) {
 
   if (sendTest) {
     const prerequisitesOk = result.checks.accessToken.ok &&
-      result.checks.phoneNumber.ok && result.checks.template.ok;
+      result.checks.phoneNumber.ok && result.checks.template.ok && Boolean(recipient);
     if (!prerequisitesOk) {
       result.checks.testMessage = {
         requested: true,
         ok: false,
         skipped: true,
-        reason: "Meta token, phone number, or approved template check failed"
+        reason: recipient ? "Meta token, phone number, or approved template check failed" : "WHATSAPP_ADMIN_WA_ID is not configured"
       };
     } else {
       const testResult = await sendDiagnosticMessage(base, phoneId, token, recipient, templateName, language);
