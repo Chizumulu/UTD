@@ -576,8 +576,8 @@ function matchSnapshotKey(item, match, sequence) {
 
 function normalizeTeamIdentity(value) {
   const team = normalize(value)
-    .replace(/\\b(?:fc|sc|afc|club|football)\\b/g, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\b(?:fc|sc|afc|club|football)\b/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
   if (team === "chibavi rs") return "chibavi real stars";
   return team;
