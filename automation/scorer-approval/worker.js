@@ -382,10 +382,11 @@ async function runAuthorizedResend(request, env) {
     return Response.json({ ok: false, error: "Expected JSON with a matches array" }, { status: 400 });
   }
   if (!body || !Array.isArray(body.matches) || !body.matches.length || body.matches.length > 10) {
-    return Response.json({ ok: false, error: "matches must contain 1 to 10 home/away pairs" }, { status: 400 });
+    return Response.json({ ok: false, error: "matches must contain 1 to 10 home/away/date entries" }, { status: 400 });
   }
 
   try {
+    const recordedFixtures = await loadRecordedFixtures();
     const keys = [];
     let cursor;
     do {
@@ -396,6 +397,12 @@ async function runAuthorizedResend(request, env) {
 
     const result = { ok: true, resentCount: 0, skippedCount: 0, results: [] };
     for (const requested of body.matches) {
+      const requestedDate = normalizeMatchDate(requested?.date || "");
+      if (!requestedDate) {
+        result.skippedCount += 1;
+        result.results.push({ home: requested?.home || "", away: requested?.away || "", status: "date_required" });
+        continue;
+      }
       const home = normalizeTeamIdentity(requested?.home || "");
       const away = normalizeTeamIdentity(requested?.away || "");
       if (!home || !away) {
@@ -418,10 +425,20 @@ async function runAuthorizedResend(request, env) {
           break;
         }
       }
-      const resultItem = { home: requested.home, away: requested.away };
+      const resultItem = { home: requested.home, away: requested.away, date: requestedDate };
       if (!proposal) {
         result.skippedCount += 1;
         result.results.push({ ...resultItem, status: "not_found" });
+        continue;
+      }
+      if (isRecordedFixture(recordedFixtures, requested.home, requested.away, requestedDate)) {
+        result.skippedCount += 1;
+        result.results.push({ ...resultItem, status: "already_in_data" });
+        continue;
+      }
+      if (normalizeMatchDate(proposal.matchDate || "") !== requestedDate) {
+        result.skippedCount += 1;
+        result.results.push({ ...resultItem, status: "proposal_date_mismatch_or_missing", proposalId });
         continue;
       }
       const terminalStates = ["approved", "rejected", "dispatching", "superseded"];
@@ -454,6 +471,9 @@ async function scanForCompletedMatches(env) {
     checkedAt: new Date().toISOString(),
     itemCount: 0,
     matchCount: 0,
+    recordedFixtureCount: 0,
+    alreadyRecordedCount: 0,
+    unverifiableDateCount: 0,
     terminalMatchCount: 0,
     proposalCount: 0,
     sentCount: 0,
@@ -469,6 +489,8 @@ async function scanForCompletedMatches(env) {
     const response = await fetch(API_URL, { headers: { accept: "application/json" } });
     if (!response.ok) throw new Error("Structured API returned " + response.status);
     const data = await response.json();
+    const recordedFixtures = await loadRecordedFixtures();
+    summary.recordedFixtureCount = recordedFixtures.length;
     const items = Array.isArray(data.items) ? data.items : [];
     summary.itemCount = items.length;
 
@@ -584,11 +606,20 @@ async function scanForCompletedMatches(env) {
           awayScore: mergedMatch.awayScore ?? null,
           eventCount: events.length,
           scorerSource: proposal?.scorerSource || null,
+          recordedInData: Boolean(proposal?.matchDate && isRecordedFixture(recordedFixtures, proposal.home, proposal.away, proposal.matchDate)),
           scorers: proposal ? proposal.goals.map(goal => goal.name) : []
         });
       }
       if (!proposal) {
         summary.incompleteCount += 1;
+        continue;
+      }
+      if (!proposal.matchDate) {
+        summary.unverifiableDateCount += 1;
+        continue;
+      }
+      if (isRecordedFixture(recordedFixtures, proposal.home, proposal.away, proposal.matchDate)) {
+        summary.alreadyRecordedCount += 1;
         continue;
       }
       summary.proposalCount += 1;
@@ -608,6 +639,7 @@ async function scanForCompletedMatches(env) {
               ...existing,
               home: proposal.home,
               away: proposal.away,
+              matchDate: proposal.matchDate,
               homeScore: proposal.homeScore,
               awayScore: proposal.awayScore,
               goals: proposal.goals,
@@ -742,6 +774,7 @@ function approvalDetailsSignature(proposal) {
   return JSON.stringify({
     home: proposal.home || "",
     away: proposal.away || "",
+    matchDate: proposal.matchDate || "",
     homeScore: proposal.homeScore ?? null,
     awayScore: proposal.awayScore ?? null,
     goals: proposal.goals || [],
@@ -878,6 +911,54 @@ function parseKoreanResultScorers(text, matchIndex, homeScore, awayScore) {
   return parsed.length ? parsed : null;
 }
 
+function normalizeMatchDate(value) {
+  const text = String(value || "").trim();
+  const dayFirst = text.match(/\b(\d{1,2})-(\d{1,2})-(\d{4})\b/);
+  if (dayFirst) {
+    return dayFirst[3] + "-" + dayFirst[2].padStart(2, "0") + "-" + dayFirst[1].padStart(2, "0");
+  }
+  const iso = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (iso) return iso[1] + "-" + iso[2] + "-" + iso[3];
+  const parsed = Date.parse(text);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString().slice(0, 10) : "";
+}
+
+async function loadRecordedFixtures() {
+  const response = await fetch("https://raw.githubusercontent.com/Chizumulu/UTD/main/data.js", {
+    headers: { accept: "text/plain" }
+  });
+  if (!response.ok) throw new Error("Could not load data.js (" + response.status + "); refusing to send approval messages");
+  const source = await response.text();
+  const start = source.indexOf("const roundsData = {");
+  const end = start >= 0 ? source.indexOf("\n};", start) : -1;
+  if (start < 0 || end < 0) throw new Error("Could not parse roundsData from data.js; refusing to send approval messages");
+  const region = source.slice(start, end);
+  const fixtures = [];
+  for (const objectMatch of region.matchAll(/\{[^{}]*\}/g)) {
+    const row = objectMatch[0];
+    const home = row.match(/\bhomeEn\s*:\s*"([^"]+)"/)?.[1] || "";
+    const away = row.match(/\bawayEn\s*:\s*"([^"]+)"/)?.[1] || "";
+    const date = row.match(/\bkickoffDate\s*:\s*"([^"]+)"/)?.[1] || "";
+    const homeScore = row.match(/\bhomeScore\s*:\s*(\d+)\b/);
+    const awayScore = row.match(/\bawayScore\s*:\s*(\d+)\b/);
+    if (home && away && date && homeScore && awayScore) {
+      fixtures.push({ home, away, date: normalizeMatchDate(date) });
+    }
+  }
+  if (!fixtures.length) throw new Error("No completed fixtures parsed from data.js; refusing to send approval messages");
+  return fixtures;
+}
+
+function isRecordedFixture(fixtures, home, away, date) {
+  const wantedDate = normalizeMatchDate(date);
+  const wantedTeams = [normalizeTeamIdentity(home), normalizeTeamIdentity(away)].sort().join("|");
+  if (!wantedDate || !wantedTeams.replace(/\|/g, "")) return false;
+  return fixtures.some(fixture =>
+    fixture.date === wantedDate &&
+    [normalizeTeamIdentity(fixture.home), normalizeTeamIdentity(fixture.away)].sort().join("|") === wantedTeams
+  );
+}
+
 function makeProposal(item, match) {
   if (!match || !FINISHED_STATUS.test(String(match.status || "").trim())) return null;
   const home = String(match.homeTeam || "").trim();
@@ -1008,6 +1089,7 @@ function makeProposal(item, match) {
     reviewWarnings.push("득점자 합계 " + homeCount + "-" + awayCount + "가 최종 점수 " + homeScore + "-" + awayScore + "와 다름");
   }
 
+  const matchDate = normalizeMatchDate(match.dateText || "");
   const sourceId = String(item.rawUpdateId || item.sourceMessageId || "");
   const stableMatchId = String(match.matchId || match.match_id || match.fixtureId || match.id || "").trim();
   const dateSource = String(match.dateText || item.sourceTimestamp || "");
@@ -1022,6 +1104,7 @@ function makeProposal(item, match) {
   return {
     sourceId,
     matchKey,
+    matchDate,
     home,
     away,
     homeScore,
