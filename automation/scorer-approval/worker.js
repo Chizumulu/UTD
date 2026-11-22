@@ -616,6 +616,83 @@ function approvalDetailsSignature(proposal) {
   });
 }
 
+function parseResultTextScorers(text, home, away, homeScore, awayScore) {
+  if (!text) return null;
+  const clean = String(text)
+    .replace(/(\d)\uFE0F?\u20E3/g, "$1")
+    .replace(/\\?\*/g, "");
+  const lines = clean.split(/\r?\n/);
+  const matchLine = /^\s*(.+?)\s+(\d+)\s*[-–:]\s*(\d+)\s+(.+?)\s*$/;
+  let names = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].replace(/\s+@.*$/, "").trim();
+    const match = line.match(matchLine);
+    if (!match) continue;
+    if (normalizeTeamIdentity(match[1]) !== normalizeTeamIdentity(home) ||
+        normalizeTeamIdentity(match[4]) !== normalizeTeamIdentity(away) ||
+        Number(match[2]) !== homeScore || Number(match[3]) !== awayScore) continue;
+
+    const following = [];
+    for (let j = i + 1; j < lines.length; j++) {
+      const next = lines[j].trim();
+      if (!next || next.startsWith("#") || matchLine.test(next)) break;
+      following.push(next.replace(/[()\[\]]/g, ""));
+    }
+    names = following.join(",");
+    break;
+  }
+  if (names == null) return null;
+
+  const parsed = [];
+  for (const raw of names.split(/[,;]+/)) {
+    let token = raw.trim().replace(/^[-\s]+|[-\s]+$/g, "");
+    if (!token) continue;
+    let count = 1;
+    const suffix = token.match(/\s*(?:[×xX]\s*(\d+)|\((\d+)\s*(?:goals?|골)?\))\s*$/i);
+    if (suffix) {
+      count = Number(suffix[1] || suffix[2]);
+      token = token.slice(0, suffix.index).trim();
+    } else if (/\bbrace\b/i.test(token)) {
+      count = 2;
+      token = token.replace(/\bbrace\b/ig, "").trim();
+    } else if (/\bhat[ -]?trick\b/i.test(token)) {
+      count = 3;
+      token = token.replace(/\bhat[ -]?trick\b/ig, "").trim();
+    }
+    if (!/[A-Za-z]{2}/.test(token) || !Number.isInteger(count) || count < 1 || count > 9) continue;
+    parsed.push({ name: token, count, ownGoal: false });
+  }
+  if (!parsed.length) return null;
+
+  const expectedTotal = homeScore + awayScore;
+  const listedTotal = parsed.reduce((sum, scorer) => sum + scorer.count, 0);
+  if (listedTotal !== expectedTotal) {
+    // Follow the live ticker's narrow fallback for a result naming one scorer
+    // when the entire score belongs to one side.
+    if (parsed.length === 1 && awayScore === 0 && homeScore > 0) parsed[0].count = homeScore;
+    else if (parsed.length === 1 && homeScore === 0 && awayScore > 0) parsed[0].count = awayScore;
+    else return null;
+  }
+
+  let homeRemaining = homeScore;
+  const assigned = [];
+  for (const scorer of parsed) {
+    if (homeRemaining > 0 && scorer.count <= homeRemaining) {
+      assigned.push({ side: "home", ...scorer });
+      homeRemaining -= scorer.count;
+    } else if (homeRemaining === 0) {
+      assigned.push({ side: "away", ...scorer });
+    } else {
+      // A multi-goal entry crossing the home/away score boundary needs roster data.
+      return null;
+    }
+  }
+  const assignedHome = assigned.filter(goal => goal.side === "home").reduce((sum, goal) => sum + goal.count, 0);
+  const assignedAway = assigned.filter(goal => goal.side === "away").reduce((sum, goal) => sum + goal.count, 0);
+  return assignedHome === homeScore && assignedAway === awayScore ? assigned : null;
+}
+
 function makeProposal(item, match) {
   if (!match || !FINISHED_STATUS.test(String(match.status || "").trim())) return null;
   const home = String(match.homeTeam || "").trim();
@@ -636,84 +713,97 @@ function makeProposal(item, match) {
   if (hasConflict) {
     reviewWarnings.push("API가 경기 데이터 충돌 또는 검토 필요 상태로 표시함");
   }
-  const seenGoals = new Map();
-  for (const event of match.events || []) {
-    const eventType = String(event.type || "").toLowerCase();
-    const players = Array.isArray(event.players) ? event.players.filter(Boolean) : [];
-    const explicitScorers = players.filter(player =>
-      /scorer|own[ _-]?goal/i.test(String(player.role || "")) ||
-      player.ownGoal === true || player.isOwnGoal === true
-    );
-    const isGoalEvent = /^(goal|penalt|own)/i.test(eventType) || explicitScorers.length > 0;
-    if (!isGoalEvent) continue;
-
-    if (eventType.startsWith("penalt")) {
-      const outcome = normalize(event.outcome || event.result || event.status || "");
-      const confirmedScorer = explicitScorers.length > 0;
-      if (!confirmedScorer && !/goal|scor|convert|successful/.test(outcome)) {
-        reviewWarnings.push("페널티 이벤트의 득점 여부 확인 필요");
-        continue;
-      }
-    }
-
-    // Match the live card: scorer roles win; otherwise a goal event contributes its first
-    // non-assist player. Do not count every participant in an event as a scorer.
-    let scorerPlayers = explicitScorers.length
-      ? explicitScorers
-      : players.filter(player => !/assist/i.test(String(player.role || ""))).slice(0, 1);
-    if (!scorerPlayers.length) {
-      reviewWarnings.push("득점 이벤트에 득점자 정보가 없음");
-      continue;
-    }
-
-    let side = teamSide(event.team, home, away);
-    if (!side && (event._side === "home" || event._side === "away")) {
-      side = event._side;
-      const sourceHome = normalizeTeamIdentity(event._snapshotHome || "");
-      const sourceAway = normalizeTeamIdentity(event._snapshotAway || "");
-      if (sourceHome && sourceAway &&
-          sourceHome === normalizeTeamIdentity(away) &&
-          sourceAway === normalizeTeamIdentity(home)) {
-        side = side === "home" ? "away" : "home";
-      }
-    }
-    if (!side) {
-      reviewWarnings.push("득점 이벤트의 팀을 확인할 수 없음");
-      continue;
-    }
-
-    for (const player of scorerPlayers) {
-      const name = String(player.name || "").replace(/\s*[×xX]\s*\d+\s*$/, "").trim();
-      const inlineCount = String(player.name || "").match(/[×xX]\s*(\d+)\s*$/);
-      const count = Math.max(Number(player.count || 1), inlineCount ? Number(inlineCount[1]) : 1);
-      if (!name || !Number.isInteger(count) || count < 1 || count > 9) {
-        reviewWarnings.push("득점자 이름 또는 득점 횟수가 올바르지 않음");
-        continue;
-      }
-      const minute = String(event.minuteText || event.minute || "").trim();
-      const minuteMatch = minute.match(/(\d+)\s*(?:\+\s*(\d+))?/);
-      const minuteKey = minuteMatch
-        ? (minuteMatch[2] ? minuteMatch[1] + "+" + minuteMatch[2] : minuteMatch[1])
-        : minute;
-      const ownGoal = Boolean(player.ownGoal || player.isOwnGoal ||
-        /own[ _-]?goal/i.test(String(player.role || "")) || event.ownGoal);
-      const normalizedName = normalizeScorerName(name);
-      const duplicate = Array.from(seenGoals.values()).find(goal =>
-        goal.side === side && goal.minuteKey === minuteKey &&
-        similarScorerNames(normalizeScorerName(goal.name), normalizedName)
+  const textGoals = parseResultTextScorers(
+    item.latestObservation?.text || item.korean?.text || "",
+    home,
+    away,
+    homeScore,
+    awayScore
+  );
+  if (textGoals) {
+    goals.push(...textGoals);
+  } else {
+    const seenGoals = new Map();
+    for (const event of match.events || []) {
+      const eventType = String(event.type || "").toLowerCase();
+      const players = Array.isArray(event.players) ? event.players.filter(Boolean) : [];
+      const explicitScorers = players.filter(player =>
+        /scorer|own[ _-]?goal/i.test(String(player.role || "")) ||
+        player.ownGoal === true || player.isOwnGoal === true
       );
-      if (duplicate) {
-        duplicate.count = Math.max(duplicate.count, count);
-        duplicate.ownGoal = duplicate.ownGoal || ownGoal;
-      } else {
-        const goal = { side, name, count, minute, minuteKey, ownGoal };
-        seenGoals.set(seenGoals.size, goal);
+      const isGoalEvent = /^(goal|penalt|own)/i.test(eventType) || explicitScorers.length > 0;
+      if (!isGoalEvent) continue;
+  
+      if (eventType.startsWith("penalt")) {
+        const outcome = normalize(event.outcome || event.result || event.status || "");
+        const confirmedScorer = explicitScorers.length > 0;
+        if (!confirmedScorer && !/goal|scor|convert|successful/.test(outcome)) {
+          reviewWarnings.push("페널티 이벤트의 득점 여부 확인 필요");
+          continue;
+        }
+      }
+  
+      // Match the live card: scorer roles win; otherwise a goal event contributes its first
+      // non-assist player. Do not count every participant in an event as a scorer.
+      let scorerPlayers = explicitScorers.length
+        ? explicitScorers
+        : players.filter(player => !/assist/i.test(String(player.role || ""))).slice(0, 1);
+      if (!scorerPlayers.length) {
+        reviewWarnings.push("득점 이벤트에 득점자 정보가 없음");
+        continue;
+      }
+  
+      let side = teamSide(event.team, home, away);
+      if (!side && (event._side === "home" || event._side === "away")) {
+        side = event._side;
+        const sourceHome = normalizeTeamIdentity(event._snapshotHome || "");
+        const sourceAway = normalizeTeamIdentity(event._snapshotAway || "");
+        if (sourceHome && sourceAway &&
+            sourceHome === normalizeTeamIdentity(away) &&
+            sourceAway === normalizeTeamIdentity(home)) {
+          side = side === "home" ? "away" : "home";
+        }
+      }
+      if (!side) {
+        reviewWarnings.push("득점 이벤트의 팀을 확인할 수 없음");
+        continue;
+      }
+  
+      for (const player of scorerPlayers) {
+        const name = String(player.name || "").replace(/\s*[×xX]\s*\d+\s*$/, "").trim();
+        const inlineCount = String(player.name || "").match(/[×xX]\s*(\d+)\s*$/);
+        const count = Math.max(Number(player.count || 1), inlineCount ? Number(inlineCount[1]) : 1);
+        if (!name || !Number.isInteger(count) || count < 1 || count > 9) {
+          reviewWarnings.push("득점자 이름 또는 득점 횟수가 올바르지 않음");
+          continue;
+        }
+        const minute = String(event.minuteText || event.minute || "").trim();
+        const minuteMatch = minute.match(/(\d+)\s*(?:\+\s*(\d+))?/);
+        const minuteKey = minuteMatch
+          ? (minuteMatch[2] ? minuteMatch[1] + "+" + minuteMatch[2] : minuteMatch[1])
+          : minute;
+        const ownGoal = Boolean(player.ownGoal || player.isOwnGoal ||
+          /own[ _-]?goal/i.test(String(player.role || "")) || event.ownGoal);
+        const normalizedName = normalizeScorerName(name);
+        const duplicate = Array.from(seenGoals.values()).find(goal =>
+          goal.side === side && goal.minuteKey === minuteKey &&
+          similarScorerNames(normalizeScorerName(goal.name), normalizedName)
+        );
+        if (duplicate) {
+          duplicate.count = Math.max(duplicate.count, count);
+          duplicate.ownGoal = duplicate.ownGoal || ownGoal;
+        } else {
+          const goal = { side, name, count, minute, minuteKey, ownGoal };
+          seenGoals.set(seenGoals.size, goal);
+        }
       }
     }
-  }
-  goals.push(...seenGoals.values());
-  for (const goal of goals) {
-    delete goal.minuteKey;
+    goals.push(...seenGoals.values());
+    for (const goal of goals) {
+      delete goal.minuteKey;
+    }
+  
+  
   }
 
   const homeCount = goals.filter(g => g.side === "home").reduce((n, g) => n + g.count, 0);
