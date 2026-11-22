@@ -26,13 +26,12 @@ jobs:
           node-version: 22
       - name: Install source parser
         run: npm install --no-save acorn@8
-      - name: Apply the approved scorer proposal
+      - name: Save approved proposal
         env:
           GITHUB_EVENT_PATH: ${{ github.event_path }}
         run: |
           mkdir -p work
           node -e "const e=require(process.env.GITHUB_EVENT_PATH); require('node:fs').writeFileSync('work/scorer-proposal.json', JSON.stringify(e.client_payload.proposal));"
-          node automation/scorer-approval/apply-approved-proposal.mjs
       - name: Publish the approved data change
         env:
           GH_TOKEN: ${{ secrets.SCORER_GITHUB_TOKEN }}
@@ -40,21 +39,44 @@ jobs:
           PROPOSAL_ID: ${{ github.event.client_payload.proposal.id }}
           MATCH_LABEL: ${{ github.event.client_payload.proposal.home }} vs ${{ github.event.client_payload.proposal.away }}
         run: |
-          if git diff --quiet -- data.js; then
-            echo "No data.js changes are needed."
-            exit 0
-          fi
-          BRANCH="automation/scorer-${PROPOSAL_ID:0:8}"
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$BRANCH"
+
+          attempt=1
+          while [ "$attempt" -le 3 ]; do
+            git fetch origin main
+            git checkout -B main origin/main
+            node automation/scorer-approval/apply-approved-proposal.mjs
+
+            if git diff --quiet -- data.js; then
+              echo "No data.js changes are needed."
+              exit 0
+            fi
+
+            git add data.js
+            git commit -m "Update approved match scorers"
+            if git push origin HEAD:main; then
+              echo "Approved scorer data was committed to main."
+              exit 0
+            fi
+
+            echo "main moved during the push; retrying from its latest version."
+            git reset --hard origin/main
+            attempt=$((attempt + 1))
+          done
+
+          echo "Direct push to main failed after three attempts; opening a recovery PR."
+          git fetch origin main
+          git checkout -B main origin/main
+          node automation/scorer-approval/apply-approved-proposal.mjs
+          if git diff --quiet -- data.js; then
+            echo "No data.js changes are needed after refreshing main."
+            exit 0
+          fi
           git add data.js
           git commit -m "Update approved match scorers"
-          git push origin "$BRANCH"
-          if git push origin HEAD:main; then
-            echo "Approved scorer data was committed to main."
-          else
-            echo "Direct push to main failed; opening a PR for manual recovery."
-            git push origin "HEAD:refs/heads/$BRANCH"
-            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Update scorers: $MATCH_LABEL" --body "This scorer update was approved in WhatsApp. The direct update to main failed, so this PR is available for recovery."
-          fi
+          branch="automation/scorer-${PROPOSAL_ID:0:8}-${GITHUB_RUN_ID}"
+          git switch -c "$branch"
+          git push origin "$branch"
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" --title "Update scorers: $MATCH_LABEL" --body "This scorer update was approved in WhatsApp. Direct push to main failed after retries, so this PR is available for recovery."
