@@ -3211,9 +3211,10 @@
     const now = Date.now();
     if (now < ctx.kickoffMs || now > ctx.kickoffMs + LEAGUE_LIVE_FORCE_CLOSE_MS) return null;
     const list = Array.isArray(leagueLiveRenderedCache) ? leagueLiveRenderedCache : [];
+    // API가 홈/원정을 data.js 일정과 반대로 줄 때도 같은 경기로 인정합니다(스코어·득점자 좌우는 apply에서 맞바꿈).
+    const pairKey = leagueTeamPairKey(ctx.homeEn, ctx.awayEn);
     return list.find(m => m
-      && resolveLeagueTeamNameEn(m.homeTeam) === ctx.homeEn
-      && resolveLeagueTeamNameEn(m.awayTeam) === ctx.awayEn) || null;
+      && leagueTeamPairKey(resolveLeagueTeamNameEn(m.homeTeam) || '', resolveLeagueTeamNameEn(m.awayTeam) || '') === pairKey) || null;
   }
 
   function nmsLiveGoalsHtml(sideGoals) {
@@ -3343,8 +3344,12 @@
       : ((el._nmsLiveOrig && /nmh-venue/.test(el._nmsLiveOrig.centerHtml))
         ? (el._nmsLiveOrig.centerHtml.match(/<div class="nmh-venue">[\s\S]*?<\/div>/) || [''])[0] : '');
 
-    const hs = (m.score && m.score.home != null) ? m.score.home : '-';
-    const as = (m.score && m.score.away != null) ? m.score.away : '-';
+    // 카드의 왼쪽은 항상 data.js 일정상의 홈팀입니다. API 홈/원정이 반대면 스코어와 득점자 좌우를 맞바꿉니다.
+    const swapped = resolveLeagueTeamNameEn(m.homeTeam) !== ctx.homeEn;
+    const apiHs = (m.score && m.score.home != null) ? m.score.home : '-';
+    const apiAs = (m.score && m.score.away != null) ? m.score.away : '-';
+    const hs = swapped ? apiAs : apiHs;
+    const as = swapped ? apiHs : apiAs;
     const state = m.ended ? 'ended' : (m.stale ? 'stale' : 'live');
     const stateLbl = state === 'ended' ? (isKorean ? '종료' : 'Full time')
       : state === 'stale' ? (isKorean ? '최근 소식' : 'Recent update') : 'LIVE';
@@ -3367,7 +3372,7 @@
     const goals = Array.isArray(m.goals) ? m.goals : [];
     [[teams[0], true], [teams[teams.length - 1], false]].forEach(([teamEl, isHome]) => {
       let box = teamEl.querySelector('.nmh-live-goals');
-      const html = nmsLiveGoalsHtml(goals.filter(g => !!g.isHome === isHome));
+      const html = nmsLiveGoalsHtml(goals.filter(g => (swapped ? !g.isHome : !!g.isHome) === isHome));
       if (!html) { if (box) box.remove(); return; }
       if (!box) { box = document.createElement('div'); box.className = 'nmh-live-goals'; teamEl.appendChild(box); }
       if (box.innerHTML !== html) box.innerHTML = html;
@@ -3381,8 +3386,9 @@
         hs: (x.score && typeof x.score.home === 'number') ? x.score.home : null,
         as: (x.score && typeof x.score.away === 'number') ? x.score.away : null
       })));
-      const pv = prevs[ctx.homeEn + '|' + ctx.awayEn];
-      [[teams[0], pv && pv.home], [teams[teams.length - 1], pv && pv.away]].forEach(([teamEl, r]) => {
+      const pv = prevs[resolveLeagueTeamNameEn(m.homeTeam) + '|' + resolveLeagueTeamNameEn(m.awayTeam)];
+      const pvLeft = pv && (swapped ? pv.away : pv.home), pvRight = pv && (swapped ? pv.home : pv.away);
+      [[teams[0], pvLeft], [teams[teams.length - 1], pvRight]].forEach(([teamEl, r]) => {
         const rk = teamEl.querySelector('.nms-opp-rank');
         if (!rk || !r || !r.before || !r.after) return;
         if (!rk.hasAttribute('data-orig')) rk.setAttribute('data-orig', rk.textContent);
@@ -6590,6 +6596,54 @@
     return windowState !== 'before' && windowState !== 'expired';
   }
 
+  // ===== 홈/원정 표기를 data.js 일정 기준으로 통일 =====
+  // api.chizumulu.net은 실황 게시물에 적힌 팀 순서대로 홈/원정을 줘서, 일정(data.js)과 반대일 때가 있습니다
+  // (예: 일정은 루베 홈 / 친테체 원정인데 API는 친테체 홈). 화면에는 항상 data.js 기준으로 보여주기 위해,
+  // 반대로 온 경기는 홈/원정 팀과 스코어, 득점자·이벤트의 홈/원정 쪽을 모두 맞바꿉니다.
+  // 일정에서 찾을 수 없는 경기는 API가 준 순서를 그대로 씁니다. 이미 일정 순서면 그대로 돌려줍니다.
+  function getLeagueScheduledOrientation(homeEn, awayEn, nowMs) {
+    const now = (typeof nowMs === 'number') ? nowMs : Date.now();
+    const pairKey = leagueTeamPairKey(homeEn, awayEn);
+    let best = null, bestMs = null;
+    for (const source of [
+      (typeof scheduledRounds !== 'undefined') ? scheduledRounds : null,
+      (typeof roundsData !== 'undefined') ? roundsData : null
+    ]) {
+      if (!source) continue;
+      for (const roundKey in source) {
+        const round = source[roundKey];
+        if (!Array.isArray(round)) continue;
+        for (const m of round) {
+          if (!m.homeEn || !m.awayEn || m.postponed) continue;
+          if (leagueTeamPairKey(m.homeEn, m.awayEn) !== pairKey) continue;
+          const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
+          if (!ms || ms > now) continue; // 지금까지 킥오프한 경기 중 가장 최근 것(= 오늘 경기)
+          if (bestMs === null || ms > bestMs) { best = m; bestMs = ms; }
+        }
+      }
+    }
+    return best ? { homeEn: best.homeEn, awayEn: best.awayEn } : null;
+  }
+
+  function normalizeLeagueMatchOrientation(m) {
+    if (!m) return m;
+    const h = resolveLeagueTeamNameEn(m.homeTeam);
+    const a = resolveLeagueTeamNameEn(m.awayTeam);
+    if (!h || !a) return m;
+    const o = getLeagueScheduledOrientation(h, a);
+    if (!o || o.homeEn === h) return m;
+    const out = Object.assign({}, m, { homeTeam: m.awayTeam, awayTeam: m.homeTeam });
+    if (m.score) out.score = Object.assign({}, m.score, { home: m.score.away, away: m.score.home });
+    const flipSide = (x) => x === 'home' ? 'away' : (x === 'away' ? 'home' : x);
+    if (Array.isArray(m.goals)) {
+      out.goals = m.goals.map(g => Object.assign({}, g, { isHome: !g.isHome, _side: flipSide(g._side) }));
+    }
+    if (Array.isArray(m.events)) {
+      out.events = m.events.map(ev => Object.assign({}, ev, { isHome: ev.isAway, isAway: ev.isHome, _side: flipSide(ev._side) }));
+    }
+    return out;
+  }
+
   // API 경기 객체({homeTeam, awayTeam, ...}) 하나가 지금 라이브 창에 보여도 되는지 판정합니다.
   function isLeagueMatchInLiveWindow(m) {
     const h = resolveLeagueTeamNameEn(m && m.homeTeam);
@@ -6774,6 +6828,10 @@
   function leagueFinalScoreInData(homeEn, awayEn) {
     const now = Date.now();
     let best = null, bestMs = null;
+    // API가 홈/원정을 data.js 일정과 반대로 주는 경우가 있어서(예: 일정은 루베 홈인데 API는 친테체 홈),
+    // 홈/원정 순서와 상관없이 같은 두 팀의 경기로 찾습니다. 순서까지 맞춰 찾으면 지난 1차전
+    // (순서가 같은 7월 경기, 이미 결과 있음)을 오늘 경기로 착각해 라이브 반영에서 빠지는 문제가 있었습니다.
+    const pairKey = leagueTeamPairKey(homeEn, awayEn);
     for (const source of [
       (typeof scheduledRounds !== 'undefined') ? scheduledRounds : null,
       (typeof roundsData !== 'undefined') ? roundsData : null
@@ -6783,7 +6841,7 @@
         const round = source[roundKey];
         if (!Array.isArray(round)) continue;
         for (const m of round) {
-          if (m.postponed || m.homeEn !== homeEn || m.awayEn !== awayEn) continue;
+          if (m.postponed || !m.homeEn || !m.awayEn || leagueTeamPairKey(m.homeEn, m.awayEn) !== pairKey) continue;
           const ms = kickoffUTCMillis(m.kickoffDate, m.kickoffTime);
           if (!ms || ms > now) continue;
           if (bestMs === null || ms > bestMs) { best = m; bestMs = ms; }
@@ -6863,7 +6921,7 @@
 
     // 캐시로 다시 그리는 경로(showView)에서도 킥오프 시각 창을 벗어난 경기는 보이지 않도록
     // 렌더링 직전에 한 번 더 걸러줍니다.
-    matches = (matches || []).filter(isLeagueMatchInLiveWindow);
+    matches = (matches || []).filter(isLeagueMatchInLiveWindow).map(normalizeLeagueMatchOrientation);
 
     // showView가 rank 화면 복귀 시 이 값 그대로 다시 그릴 수 있도록 최신 목록을 저장해둡니다.
     leagueLiveRenderedCache = matches;
