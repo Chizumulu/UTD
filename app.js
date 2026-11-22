@@ -4622,9 +4622,153 @@
     else if (NMP_MOBILE_MQ.addListener) NMP_MOBILE_MQ.addListener(nmpPlaceCard);
   }
 
+
+  // ===== PC 상단 우측: 컵대회 요약 패널 (#nmCupPanel) =====
+  // 로고 · 대회 단계(예선→본선 진행 바) · 다음 컵 경기(상대·날짜). 데이터는 cupTournaments(data.js)에서 읽습니다.
+  // 컵 경기가 아직 없으면(대진 발표 전) 일정표(scheduleKo/En)의 다음 일정을 대신 보여줍니다. PC(1101px↑)에서만 보입니다.
+  function nmcStageIdx(label) {
+    const s = String(label || '').toLowerCase();
+    if (/플레이오프|예선|play-?off|qualif/.test(s)) return 0;
+    if (/32/.test(s)) return 1;
+    if (/16/.test(s)) return 2;
+    if (/quarter|8강/.test(s)) return 3;
+    if (/semi|4강/.test(s)) return 4;
+    if (/final|결승/.test(s)) return 5;
+    return -1;
+  }
+  function nmcKst(ms) { return new Date(ms + KST_OFFSET_MS); }
+  function nmcDayNum(d) { return Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 86400000); }
+  function nmcDdayLabel(diff) { return diff === 0 ? 'D-DAY' : (diff > 0 ? 'D-' + diff : ''); }
+  function nmcMyRegion(cup) {
+    const regs = Array.isArray(cup.regionalQualifiers) ? cup.regionalQualifiers : [];
+    for (let i = 0; i < regs.length; i++) {
+      let n = 0, mine = false;
+      (regs[i].groups || []).forEach(function (g) {
+        (g.teams || []).forEach(function (t) { n++; if (isMyTeamName(t.en, t.ko)) mine = true; });
+      });
+      if (mine) return { nameKo: regs[i].nameKo, nameEn: regs[i].nameEn, advance: regs[i].advance, count: n };
+    }
+    return null;
+  }
+  function nmcMyMatches(cup) {
+    const out = [];
+    (cup.rounds || []).forEach(function (r) {
+      ((r && r.matches) || []).forEach(function (m) {
+        if (!m || !(isMyTeamName(m.home, m.homeKo) || isMyTeamName(m.away, m.awayKo))) return;
+        out.push({ m: m, r: r });
+      });
+    });
+    out.sort(function (x, y) { return String(x.m.date || '').localeCompare(String(y.m.date || '')); });
+    return out;
+  }
+  function renderCupHeroPanel() {
+    const el = document.getElementById('nmCupPanel');
+    if (!el) return;
+    const cup = getCups()[0] || null;
+    if (!cup) { el.hidden = true; el.innerHTML = ''; return; }
+    const ko = isKorean;
+    const esc = cupEsc;
+    const nowK = nmcKst(Date.now());
+    const todayNum = nmcDayNum(nowK);
+    const todayStr = nowK.toISOString().slice(0, 10);
+    const WD = ko ? ['일', '월', '화', '수', '목', '금', '토'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    // --- 단계 ---
+    const steps = ko ? ['예선', '32강', '16강', '8강', '4강', '결승'] : ['Qual.', 'R32', 'R16', 'QF', 'SF', 'Final'];
+    const fixtures = listMyCupFixtures();
+    const next = fixtures[0] || null;
+    const mine = nmcMyMatches(cup);
+    let stage = 0, eliminated = false, stageTitle = '', stageSub = '';
+    const region = nmcMyRegion(cup);
+    if (next) {
+      const si = nmcStageIdx(next.roundLabelKo + ' ' + next.roundLabelEn);
+      if (si >= 0) stage = si;
+      stageTitle = ko ? (next.roundLabelKo || steps[stage]) : (next.roundLabelEn || steps[stage]);
+    } else if (mine.length) {
+      const last = mine[mine.length - 1];
+      const si = nmcStageIdx((last.r.labelKo || '') + ' ' + (last.r.labelEn || ''));
+      if (si >= 0) stage = si;
+      const m = last.m;
+      if (m.homeScore != null && m.awayScore != null) {
+        const iAmHome = isMyTeamName(m.home, m.homeKo);
+        let myW = iAmHome ? m.homeScore > m.awayScore : m.awayScore > m.homeScore;
+        const draw = m.homeScore === m.awayScore;
+        if (draw && m.pso && /^\d+\s*:\s*\d+$/.test(m.pso)) { const p = m.pso.split(':').map(Number); myW = iAmHome ? p[0] > p[1] : p[1] > p[0]; }
+        else if (draw) myW = true;
+        if (!myW && stage >= 1) eliminated = true; // 예선은 조별 리그라 한 경기 패배로 탈락 처리하지 않음
+      }
+      stageTitle = ko ? (last.r.labelKo || steps[stage]) : (last.r.labelEn || steps[stage]);
+    }
+    if (!stageTitle) stageTitle = ko ? '예선 (지역 플레이오프)' : 'Qualifiers (regional play-offs)';
+    if (eliminated) stageSub = ko ? '탈락' : 'Eliminated';
+    else if (stage === 0 && region) {
+      stageSub = ko
+        ? `${region.nameKo.replace(/\s*지역$/, '')} ${region.count}팀`
+        : `${region.nameEn.replace(/\s*Region$/, '')} ${region.count} teams`;
+    } else if (stage >= 1) stageSub = ko ? '본선 토너먼트' : 'Knockout stage';
+
+    // --- 다음 경기 / 다음 일정 (토스 스타일: 회색 라벨 + 굵은 본문 + 회색 부가정보) ---
+    let nextLabel = '', nextMain = '', nextSub = '';
+    if (next) {
+      const ms = kickoffUTCMillis(next.kickoffDate, next.kickoffTime);
+      let when = '';
+      if (ms != null) {
+        const k = nmcKst(ms);
+        when = `${k.getUTCMonth() + 1}.${k.getUTCDate()}(${WD[k.getUTCDay()]}) ${String(k.getUTCHours()).padStart(2, '0')}:${String(k.getUTCMinutes()).padStart(2, '0')}`;
+      }
+      nextLabel = ko ? '다음 경기' : 'Next match';
+      nextMain = 'vs ' + (ko ? next.oppKo : next.oppEn);
+      nextSub = when;
+    } else {
+      const sched = (ko ? cup.scheduleKo : cup.scheduleEn) || [];
+      const item = sched.find(function (x) { return !(x[2] && x[2].end) || x[2].end >= todayStr; });
+      nextLabel = ko ? '다음 일정' : 'Next date';
+      nextMain = item ? item[1] : (ko ? '대진 발표 대기 중' : 'Awaiting fixtures');
+      nextSub = item ? item[0] : '';
+    }
+    const logo = cup.logoSrc2 || cup.logoSrc;
+    const logoHtml = logo
+      ? `<img class="nmc-logo" src="${esc(logo)}" alt="" onerror="this.outerHTML='<span class=&quot;nmc-logo nmc-logo-ph&quot;>🏆</span>'">`
+      : '<span class="nmc-logo nmc-logo-ph">🏆</span>';
+    let stageLine = eliminated ? (ko ? '탈락' : 'Eliminated') : [stageTitle.replace(/\s*\(.*\)/, ''), stageSub].filter(Boolean).join(' · ');
+    // 예선(조별 리그) 진행 중: "3위 | 2승 1무 0패". cup.standing = { rank, w, d, l } 을 직접 적으면 그 값을 쓰고,
+    // 없으면 rounds 의 예선 경기 결과로 승/무/패만 계산합니다(순위는 생략). 기록이 없으면 기존 문구("예선 · 북부 20팀").
+    let stageSubLine = '';
+    if (stage === 0 && !eliminated) {
+      let rec = cup.standing && typeof cup.standing === 'object' ? cup.standing : null;
+      if (!rec) {
+        let w = 0, d = 0, l = 0, played = 0;
+        mine.forEach(function (x) {
+          const m = x.m;
+          if (m.homeScore == null || m.awayScore == null) return;
+          if (nmcStageIdx((x.r.labelKo || '') + ' ' + (x.r.labelEn || '')) > 0) return;
+          const iAmHome = isMyTeamName(m.home, m.homeKo);
+          const my = iAmHome ? m.homeScore : m.awayScore, op = iAmHome ? m.awayScore : m.homeScore;
+          played++; if (my > op) w++; else if (my === op) d++; else l++;
+        });
+        if (played) rec = { w: w, d: d, l: l };
+      }
+      if (rec) {
+        const wdl = ko ? `${rec.w || 0}승 ${rec.d || 0}무 ${rec.l || 0}패` : `W${rec.w || 0} D${rec.d || 0} L${rec.l || 0}`;
+        stageLine = rec.rank ? (ko ? `${rec.rank}위 | ${wdl}` : `#${rec.rank} | ${wdl}`) : wdl;
+        stageSubLine = [stageTitle.replace(/\s*\(.*\)/, ''), stageSub].filter(Boolean).join(' · ');
+      }
+    }
+    el.hidden = false;
+    el.setAttribute('role', 'group');
+    el.innerHTML = `
+      <div class="nmc-head" title="${esc(ko ? cup.nameKo : cup.nameEn)}">${logoHtml}</div>
+      <div class="nmc-body">
+        <p class="nmc-stage">${esc(stageLine)}</p>${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
+        <div class="nmc-next"><b>${esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
+      </div>
+      <button type="button" class="nmc-btn" onclick="toggleCupView()">${ko ? '자세히 보기' : 'Details'}</button>`;
+  }
+
   function renderNextMatchStrip() {
     nmpDetachCard();
     try { renderNextMatchStripInner(); } finally { nmpPlaceCard(); }
+    try { renderCupHeroPanel(); } catch (e) { console.warn('cup hero panel', e); }
     try { renderPromoRaceStrip(); } catch (e) {}   // 다음경기 카드 하단의 '결과별 우승 확률'은 이 함수가 채웁니다
   }
   function renderNextMatchPreviewCard() {

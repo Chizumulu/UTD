@@ -6639,6 +6639,8 @@ const cupTournaments = [
     logoSrc2: './fa-cup-logo.png', // 컵 화면 상단 두 번째 로고(FAM 로고 오른쪽). 없으면 표시 안 함
     chipKo: '대통령배 FA컵', chipEn: 'Presidential FA Cup',
     status: 'upcoming',
+    // 상단 우측 컵 패널의 "3위 | 2승 1무 0패" 표시용(예선 조별 리그 진행 중에만). 경기 후 직접 수정하세요. 이 줄이 없으면 rounds 의 예선 결과로 승/무/패만 자동 계산합니다.
+    // standing: { rank: 3, w: 2, d: 1, l: 0 },
     descKo: '말라위 공화국 대통령과 말라위축구협회(FAM)가 주최하고 축구협회가 주관하는 컵대회예요. 32강 이전은 지역 플레이오프로 치르고, 32강부터 결승까지는 토너먼트로 진행돼요. 1부 16개 팀은 32강에 자동 진출해요. 초대 대회로, 모든 디비전 클럽에 전국 무대를 열어 주고 유망주 발굴과 풀뿌리 축구 발전을 도모해요.',
     descEn: 'A cup competition hosted by the President of the Republic of Malawi and the Football Association of Malawi (FAM), and organised by FAM. Regional play-offs are held before the Round of 32, and a knockout bracket runs from the Round of 32 to the final. The 16 top-flight teams advance automatically to the Round of 32. The inaugural edition aims to give clubs at every level a national stage while promoting talent identification and grassroots development.',
     // 값 형식: 문자열 | 문자열 배열(줄바꿈) | { tag, name, sub, meta, badge } 목록(등급·단계 표시) | { note } 작은 주석 | { teams: [영문팀명…] } 로고 칩
