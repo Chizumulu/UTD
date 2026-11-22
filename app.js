@@ -6695,6 +6695,10 @@
       const curRank = LEAGUE_MATCH_STATUS_RANK[m.status] || 0;
       if (curRank > prevRank) { bestByPair.set(pairKey, m); continue; }
       if (curRank === prevRank) {
+        // 축구 스코어는 줄어들지 않으므로 총 골 수가 더 많은 쪽이 더 최신입니다(분 정보가 없는 최신 항목이
+        // 분이 적힌 오래된 항목에 밀려 스코어가 되돌아가 보이는 문제 방지).
+        const goalsOf = x => (x && x.score ? (Number(x.score.home) || 0) + (Number(x.score.away) || 0) : 0);
+        if (goalsOf(m) !== goalsOf(prev)) { if (goalsOf(m) > goalsOf(prev)) bestByPair.set(pairKey, m); continue; }
         const prevMin = typeof prev.minute === 'number' ? prev.minute : -1;
         const curMin = typeof m.minute === 'number' ? m.minute : -1;
         if (curMin > prevMin) bestByPair.set(pairKey, m);
@@ -7832,6 +7836,15 @@
 
       const rosterSideOf = ev => leagueRosterSide(
         ev && ev.players && ev.players[0] && ev.players[0].name, homeNameEn, awayNameEn);
+      // 구조화 게시물의 _side('home'/'away')는 그 게시물이 적은 홈/원정 순서 기준입니다. 라이브 경기(m)와
+      // 순서가 반대면(예: 일정은 루베 홈인데 한쪽 소스는 친테체 홈) 득점자가 반대 팀으로 들어가고
+      // 스코어 상한(cap)도 엇갈려서 "1:0인데 0:0"처럼 보일 수 있어, m 기준으로 뒤집어 줍니다.
+      const entryFlipped = !!(entry && entry.homeNameEn && homeNameEn && entry.homeNameEn !== homeNameEn);
+      const flipSideTxt = x => x === 'home' ? 'away' : (x === 'away' ? 'home' : x);
+      const sideOfEv = ev => {
+        const own = ev && ev._side ? (entryFlipped ? flipSideTxt(ev._side) : ev._side) : null;
+        return own || rosterSideOf(ev);
+      };
 
       const goalsRaw = rawEvents
         .filter(isGoalEv)
@@ -7840,9 +7853,9 @@
           const base = {
             minuteText: ev.minuteText || '',
             scorer: (ev.players && ev.players[0] && ev.players[0].name) || '',
-            isHome: (ev._side || rosterSideOf(ev)) ? (ev._side || rosterSideOf(ev)) === 'home'
+            isHome: sideOfEv(ev) ? sideOfEv(ev) === 'home'
               : !!(scoringTeamNameEn && homeNameEn && scoringTeamNameEn === homeNameEn),
-            _side: ev._side || rosterSideOf(ev) || '',
+            _side: sideOfEv(ev) || '',
             _ts: ev._ts || 0,
             _first: ev._first || 0
           };
@@ -7860,8 +7873,10 @@
       // 최신 게시물이 알려주는 구조화 스코어(숫자일 때만). 득점자 이름 정정 등으로 같은 골이
       // 여러 번 누적돼도, 스코어를 이 값 이상으로 끌어올리지 않기 위한 상한입니다.
       const latestStructured = entry && entry.match;
-      const capHome = latestStructured && Number.isInteger(latestStructured.homeScore) ? latestStructured.homeScore : Infinity;
-      const capAway = latestStructured && Number.isInteger(latestStructured.awayScore) ? latestStructured.awayScore : Infinity;
+      const structHome = latestStructured && Number.isInteger(latestStructured.homeScore) ? latestStructured.homeScore : Infinity;
+      const structAway = latestStructured && Number.isInteger(latestStructured.awayScore) ? latestStructured.awayScore : Infinity;
+      const capHome = entryFlipped ? structAway : structHome;
+      const capAway = entryFlipped ? structHome : structAway;
 
       const goals = (function reconcileGoals(list) {
         const hasMin = g => /\d/.test(String(g.minuteText || ''));
