@@ -31,7 +31,7 @@
       '<div class="match-alert-confirm-actions">' +
         '<button type="button" data-action="enable"></button>' +
         '<button type="button" data-action="snooze"></button>' +
-        '<button type="button" class="match-alert-confirm-off" data-action="never"></button>' +
+        '<button type="button" data-action="never"></button>' +
       '</div>';
 
     dialog.querySelector("h2").textContent = korean
