@@ -315,7 +315,7 @@ function quotedProperty(source, name) {
 }
 
 function parseKoreaKickoff(date, time) {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !/^(?:[01]\\d|2[0-3]):[0-5]\\d$/.test(time)) return NaN;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) return NaN;
   return Date.parse(date + "T" + time + ":00+09:00");
 }
 
