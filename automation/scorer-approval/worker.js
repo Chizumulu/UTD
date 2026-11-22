@@ -930,23 +930,32 @@ async function loadRecordedFixtures() {
   });
   if (!response.ok) throw new Error("Could not load data.js (" + response.status + "); refusing to send approval messages");
   const source = await response.text();
-  const start = source.indexOf("const roundsData = {");
-  const end = start >= 0 ? source.indexOf("\n};", start) : -1;
-  if (start < 0 || end < 0) throw new Error("Could not parse roundsData from data.js; refusing to send approval messages");
-  const region = source.slice(start, end);
   const fixtures = [];
-  for (const objectMatch of region.matchAll(/\{[^{}]*\}/g)) {
-    const row = objectMatch[0];
-    const home = row.match(/\bhomeEn\s*:\s*"([^"]+)"/)?.[1] || "";
-    const away = row.match(/\bawayEn\s*:\s*"([^"]+)"/)?.[1] || "";
-    const date = row.match(/\bkickoffDate\s*:\s*"([^"]+)"/)?.[1] || "";
-    const homeScore = row.match(/\bhomeScore\s*:\s*(\d+)\b/);
-    const awayScore = row.match(/\bawayScore\s*:\s*(\d+)\b/);
-    if (home && away && date && homeScore && awayScore) {
-      fixtures.push({ home, away, date: normalizeMatchDate(date) });
+
+  // A result can already be entered while its round is still active. Check both
+  // completed rounds and scheduled rounds so those fixtures do not trigger
+  // duplicate approval messages before the whole round is archived.
+  for (const sectionName of ["roundsData", "scheduledRounds"]) {
+    const start = source.indexOf("const " + sectionName + " = {");
+    const end = start >= 0 ? source.indexOf("\n};", start) : -1;
+    if (start < 0 || end < 0) {
+      throw new Error("Could not parse " + sectionName + " from data.js; refusing to send approval messages");
+    }
+    const region = source.slice(start, end);
+    for (const objectMatch of region.matchAll(/\{[^{}]*\}/g)) {
+      const row = objectMatch[0];
+      const home = row.match(/\bhomeEn\s*:\s*"([^"]+)"/)?.[1] || "";
+      const away = row.match(/\bawayEn\s*:\s*"([^"]+)"/)?.[1] || "";
+      const date = row.match(/\bkickoffDate\s*:\s*"([^"]+)"/)?.[1] || "";
+      const homeScore = row.match(/\bhomeScore\s*:\s*(\d+)\b/);
+      const awayScore = row.match(/\bawayScore\s*:\s*(\d+)\b/);
+      if (home && away && date && homeScore && awayScore) {
+        fixtures.push({ home, away, date: normalizeMatchDate(date), section: sectionName });
+      }
     }
   }
-  if (!fixtures.length) throw new Error("No completed fixtures parsed from data.js; refusing to send approval messages");
+
+  if (!fixtures.length) throw new Error("No scored fixtures parsed from data.js; refusing to send approval messages");
   return fixtures;
 }
 
