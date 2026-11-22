@@ -419,7 +419,8 @@ async function runAuthorizedResend(request, env) {
         if (!raw) continue;
         const candidate = JSON.parse(raw);
         if (normalizeTeamIdentity(candidate.home) === home &&
-            normalizeTeamIdentity(candidate.away) === away) {
+            normalizeTeamIdentity(candidate.away) === away &&
+            normalizeMatchDate(candidate.matchDate || "") === requestedDate) {
           proposal = candidate;
           proposalId = id;
           break;
