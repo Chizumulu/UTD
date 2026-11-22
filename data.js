@@ -3275,6 +3275,7 @@ const nameAliases = {
   "RODRICK MLAUZI": "RODERICK MALUZI",
   "SIMONE PHIRI": "SEMEON PHIRI",
   "WAYTON NYIRENDA": "WYSON NYIRENDA",
+  "JASAN ZIMBA": "JASON ZIMBA", // API 철자 변형; 기존 선수 사전의 제이슨 짐바와 연결
 };
 
 // 우리 선수단(squadData)의 aliasesEn(영문 별칭)을 위 nameAliases 에 자동으로 합칩니다.
