@@ -5,7 +5,7 @@ This is an opt-in bridge between the existing Chizumulu structured API and the U
 ## Flow
 
 1. Every 10 minutes, the Cloudflare Worker checks `/v1/structured?limit=40`.
-2. It creates a proposal for completed matches. Incomplete or conflicting scorer data is marked for review and shown in the WhatsApp message.
+2. It creates a proposal for completed matches. Incomplete scorer data, explicit API conflict/review markers (`quality`, `dataQuality`, `conflict`, `hasConflict`, or a non-empty `conflicts` list), and API records without a match ID or date are marked for a second confirmation. The Worker accepts the same finished-status values as `scripts/sync-results.mjs`. It prefers a stable match ID for duplicate suppression.
 3. The Worker sends a WhatsApp template message with **Approve**, **Reject**, and **Hold** quick replies.
 4. Reject records the decision. Hold keeps the same proposal available so its buttons can be used later. Each proposal expires after 14 days.
 5. Approve dispatches a GitHub Actions event. The action checks the fixture and score in `data.js`, adds the home and away scorer summaries, then commits the approved change directly to `main`.
