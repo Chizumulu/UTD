@@ -5,13 +5,13 @@ This is an opt-in bridge between the existing Chizumulu structured API and the U
 ## Flow
 
 1. Every 10 minutes, the Cloudflare Worker checks `/v1/structured?limit=40`.
-2. It creates a proposal only for a completed match whose goal events identify both teams and whose scorer counts exactly match the final score.
+2. It creates a proposal for completed matches. Incomplete or conflicting scorer data is marked for review and shown in the WhatsApp message.
 3. The Worker sends a WhatsApp template message with **Approve**, **Reject**, and **Hold** quick replies.
 4. Reject records the decision. Hold keeps the same proposal available so its buttons can be used later. Each proposal expires after 14 days.
 5. Approve dispatches a GitHub Actions event. The action checks the fixture and score in `data.js`, adds the home and away scorer summaries, then commits the approved change directly to `main`.
 6. The push triggers the repository's normal publish flow. If GitHub blocks a direct push because of branch rules, the action opens a PR instead; it never bypasses repository rules.
 
-If a scorer is ambiguous, events are incomplete, teams cannot be matched uniquely, or the API goal count disagrees with the final score, no WhatsApp proposal is sent. The GitHub action also refuses ambiguous or mismatched fixtures.
+If API events are incomplete, the team cannot be identified, a penalty outcome is ambiguous, or scorer totals disagree with the final score, the WhatsApp message includes a 확인 필요 warning. These proposals require two separate Approve clicks: the first sends a second confirmation message, and only Approve on that second message dispatches to GitHub. The confirmation button has its own signed payload; Hold and Reject remain available.
 
 ## 1. Create and deploy the Worker
 
@@ -28,10 +28,12 @@ npx wrangler secret put META_VERIFY_TOKEN
 npx wrangler secret put META_APP_SECRET
 npx wrangler secret put WHATSAPP_ACCESS_TOKEN
 npx wrangler secret put WHATSAPP_PHONE_NUMBER_ID
+npx wrangler secret put WHATSAPP_BUSINESS_ACCOUNT_ID
 npx wrangler secret put WHATSAPP_ADMIN_WA_ID
 npx wrangler secret put WHATSAPP_TEMPLATE_NAME
 npx wrangler secret put WHATSAPP_TEMPLATE_LANGUAGE
 npx wrangler secret put WHATSAPP_GRAPH_URL
+npx wrangler secret put DIAGNOSTIC_TOKEN
 npx wrangler secret put APPROVAL_SIGNING_SECRET
 npx wrangler secret put GITHUB_REPOSITORY
 npx wrangler secret put GITHUB_TOKEN
@@ -46,10 +48,43 @@ The deployment URL will look like `https://utd-scorer-approval.<your-subdomain>.
 
 Create and get approval for a WhatsApp message template with:
 
-- Three body text variables: match and score, scorer summary, proposal ID.
-- Three quick reply buttons, in this order: **Approve**, **Reject**, **Hold**.
+- Four body text variables in this order: match and score, home scorers, away scorers, proposal ID.
+- Three quick reply buttons, in this order: **Approve**, **Hold**, **Reject**.
 
 Set the matching template name and language using the Worker secrets above. The Worker fills the quick reply payloads for each proposal. Meta requires approved templates for business initiated notifications. The recipient must be able to receive the business message.
+
+## WhatsApp diagnostics
+
+The protected diagnostic endpoint is separate from the scheduled match scan and never reads or changes `data.js`.
+
+Set `WHATSAPP_BUSINESS_ACCOUNT_ID` to the WABA ID shown in Meta and set a long random `DIAGNOSTIC_TOKEN` secret:
+
+```sh
+npx wrangler secret put WHATSAPP_BUSINESS_ACCOUNT_ID
+npx wrangler secret put DIAGNOSTIC_TOKEN
+npx wrangler deploy
+```
+
+Call the endpoint with a bearer token. The first request checks the access token and phone number, then verifies the configured template name, language, four body variables, and quick reply order. It does not send a WhatsApp message:
+
+```powershell
+$secureToken = Read-Host "Diagnostic token" -AsSecureString
+$pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
+try { $diagnosticToken = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) }
+finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
+$headers = @{ Authorization = "Bearer $diagnosticToken" }
+$body = '{"sendTest":false}'
+Invoke-RestMethod -Method Post -Uri 'https://<worker-host>/admin/diagnostics' -Headers $headers -ContentType 'application/json' -Body $body
+```
+
+To send an actual test template to the configured administrator number, explicitly set `sendTest` to `true`:
+
+```powershell
+$body = '{"sendTest":true}'
+Invoke-RestMethod -Method Post -Uri 'https://<worker-host>/admin/diagnostics' -Headers $headers -ContentType 'application/json' -Body $body
+```
+
+The test message contains diagnostic text and inert button payloads, so clicking its buttons cannot approve a scorer proposal. Check results include HTTP status and Meta error code/subcode. A sanitized summary is written to Worker logs and the KV key `diagnostic:last` for seven days. Never share the diagnostic token.
 
 ## 3. Enable the GitHub workflow
 
@@ -59,7 +94,7 @@ Add the same fine-grained token as a repository Actions secret named `SCORER_GIT
 
 ## Decisions and retries
 
-- **Approve** commits the change to `main` immediately when repository rules allow it. If a direct push is blocked, the workflow opens a PR for the required GitHub review.
+- **Approve** commits a normal proposal after one approval. A proposal marked 확인 필요 requires approval on its original message and a second approval on the follow-up confirmation message. If a direct push is blocked, the workflow opens a PR for the required GitHub review.
 - **Reject** records the rejection.
 - **Hold** preserves the proposal for up to 14 days. Click Approve or Reject on that original WhatsApp message when ready.
 - A team pair/date is deduplicated for 14 days to avoid repeated alerts. For a corrected API post after a decision, remove the `match:<key>` and `proposal:<id>` keys from the Worker KV namespace after reviewing the change.
