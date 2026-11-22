@@ -10523,7 +10523,7 @@
           homeScore: m.homeScore, awayScore: m.awayScore,
           movedFromWeek: m.movedFromWeek, changed: m.changed, forfeit: m.forfeit,
           kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
-          scorersHome: d.scorersHome, scorersAway: d.scorersAway
+          scorersHome: d.scorersHome || m.scorersHome, scorersAway: d.scorersAway || m.scorersAway
         };
       });
     }
