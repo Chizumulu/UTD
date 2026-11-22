@@ -466,7 +466,7 @@ async function scanForCompletedMatches(env) {
         ...candidate.item,
         latestObservation: {
           ...(candidate.item.latestObservation || {}),
-          text: terminalTexts.join("\\n\\n")
+          text: terminalTexts.join("\n\n")
         }
       };
       const proposal = makeProposal(proposalItem, mergedMatch);
