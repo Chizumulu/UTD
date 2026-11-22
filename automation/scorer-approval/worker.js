@@ -13,6 +13,12 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({ ok: true });
     }
+    if (url.pathname === "/admin/diagnostics" && request.method === "POST") {
+      return runDiagnostics(request, env);
+    }
+    if (url.pathname === "/admin/diagnostics") {
+      return new Response("Method not allowed", { status: 405, headers: { allow: "POST" } });
+    }
     return new Response("Not found", { status: 404 });
   },
 
@@ -20,6 +26,282 @@ export default {
     ctx.waitUntil(scanForCompletedMatches(env));
   }
 };
+
+async function runDiagnostics(request, env) {
+  const expectedToken = String(env.DIAGNOSTIC_TOKEN || "");
+  const authorization = request.headers.get("authorization") || "";
+  const suppliedToken = authorization.match(/^Bearer\s+(.+)$/i)?.[1] || "";
+  if (!expectedToken || !constantTimeEqual(suppliedToken, expectedToken)) {
+    return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body = {};
+  try {
+    body = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("Expected a JSON object");
+  } catch {
+    return Response.json({ ok: false, error: "Send a JSON body such as {\\"sendTest\\":false}" }, { status: 400 });
+  }
+
+  const sendTest = body.sendTest === true;
+  const base = String(env.WHATSAPP_GRAPH_URL || "").replace(/\/$/, "");
+  const phoneId = String(env.WHATSAPP_PHONE_NUMBER_ID || "");
+  const wabaId = String(env.WHATSAPP_BUSINESS_ACCOUNT_ID || "");
+  const templateName = String(env.WHATSAPP_TEMPLATE_NAME || "");
+  const language = String(env.WHATSAPP_TEMPLATE_LANGUAGE || "ko");
+  const token = String(env.WHATSAPP_ACCESS_TOKEN || "");
+  const recipient = String(env.WHATSAPP_ADMIN_WA_ID || "");
+  const result = {
+    checkedAt: new Date().toISOString(),
+    sendTestRequested: sendTest,
+    checks: {
+      configuration: {
+        ok: Boolean(base && phoneId && wabaId && templateName && language && token && recipient),
+        graphUrlConfigured: Boolean(base),
+        accessTokenConfigured: Boolean(token),
+        phoneNumberIdConfigured: Boolean(phoneId),
+        businessAccountIdConfigured: Boolean(wabaId),
+        templateNameConfigured: Boolean(templateName),
+        templateLanguageConfigured: Boolean(language),
+        testRecipientConfigured: Boolean(recipient)
+      },
+      accessToken: { ok: false, skipped: true },
+      phoneNumber: { ok: false, skipped: true },
+      template: { ok: false, skipped: true },
+      testMessage: { requested: sendTest, ok: null, skipped: !sendTest }
+    }
+  };
+
+  let graphUrl;
+  try {
+    graphUrl = new URL(base);
+    if (graphUrl.protocol !== "https:" || graphUrl.hostname !== "graph.facebook.com") {
+      throw new Error("WHATSAPP_GRAPH_URL must use https://graph.facebook.com/<version>");
+    }
+  } catch (error) {
+    result.checks.configuration.ok = false;
+    result.checks.configuration.error = error.message;
+  }
+
+  if (result.checks.configuration.ok && graphUrl) {
+    const phoneResult = await callMeta(
+      base + "/" + encodeURIComponent(phoneId) + "?fields=id,display_phone_number,verified_name",
+      token
+    );
+    result.checks.accessToken = metaCheck(phoneResult);
+    result.checks.phoneNumber = {
+      ...metaCheck(phoneResult),
+      idMatches: String(phoneResult.body?.id || "") === phoneId,
+      displayPhoneNumber: phoneResult.body?.display_phone_number || null,
+      verifiedName: phoneResult.body?.verified_name || null
+    };
+    result.checks.phoneNumber.ok = result.checks.phoneNumber.ok && result.checks.phoneNumber.idMatches;
+
+    const templateUrl = new URL(base + "/" + encodeURIComponent(wabaId) + "/message_templates");
+    templateUrl.searchParams.set("name", templateName);
+    templateUrl.searchParams.set("fields", "name,status,language,quality_score,components");
+    templateUrl.searchParams.set("limit", "100");
+    const templateResult = await callMeta(templateUrl.toString(), token);
+    const candidates = Array.isArray(templateResult.body?.data) ? templateResult.body.data : [];
+    const template = candidates.find(item =>
+      item && item.name === templateName && item.language === language
+    ) || null;
+    const templateStatus = String(template?.status || "").toUpperCase();
+    const templateComponents = Array.isArray(template?.components) ? template.components : [];
+    const templateBody = templateComponents.find(component =>
+      String(component.type || "").toUpperCase() === "BODY"
+    );
+    const bodyNumbers = Array.from(String(templateBody?.text || "").matchAll(/\{\{\s*(\d+)\s*\}\}/g), m => Number(m[1]));
+    const bodyVariablesOk = bodyNumbers.length === 4 &&
+      [1, 2, 3, 4].every(number => bodyNumbers.includes(number));
+    const buttonComponent = templateComponents.find(component =>
+      String(component.type || "").toUpperCase() === "BUTTONS"
+    );
+    const buttonTitles = (buttonComponent?.buttons || []).map(button => String(button.text || "").trim());
+    const normalizeButton = value => {
+      const text = value.toLowerCase();
+      if (text === "승인" || text === "approve") return "approve";
+      if (text === "보류" || text === "hold") return "hold";
+      if (text === "거절" || text === "reject") return "reject";
+      return text;
+    };
+    const expectedButtons = ["approve", "hold", "reject"];
+    const buttonOrderOk = buttonTitles.length === 3 &&
+      buttonTitles.map(normalizeButton).every((value, index) => value === expectedButtons[index]);
+    result.checks.template = {
+      ...metaCheck(templateResult),
+      found: Boolean(template),
+      name: template?.name || templateName,
+      language: template?.language || language,
+      status: template?.status || null,
+      qualityScore: template?.quality_score || null,
+      bodyVariableNumbers: bodyNumbers,
+      bodyVariablesOk,
+      buttonTitles,
+      buttonOrderOk,
+      ok: Boolean(templateResult.ok && template && ["APPROVED", "ACTIVE"].includes(templateStatus) &&
+        bodyVariablesOk && buttonOrderOk)
+    };
+    result.checks.template.error = templateResult.body?.error
+      ? metaError(templateResult.body.error)
+      : (!template ? { message: "Matching template name/language not found" } : null);
+  } else {
+    const skippedReason = result.checks.configuration.error || "Required Worker secrets are missing";
+    result.checks.accessToken = { ok: false, skipped: true, reason: skippedReason };
+    result.checks.phoneNumber = { ok: false, skipped: true, reason: skippedReason };
+    result.checks.template = { ok: false, skipped: true, reason: skippedReason };
+  }
+
+  if (sendTest) {
+    const prerequisitesOk = result.checks.accessToken.ok &&
+      result.checks.phoneNumber.ok && result.checks.template.ok;
+    if (!prerequisitesOk) {
+      result.checks.testMessage = {
+        requested: true,
+        ok: false,
+        skipped: true,
+        reason: "Meta token, phone number, or approved template check failed"
+      };
+    } else {
+      const testResult = await sendDiagnosticMessage(base, phoneId, token, recipient, templateName, language);
+      result.checks.testMessage = {
+        requested: true,
+        ...metaCheck(testResult),
+        response: testResult.body?.messages
+          ? { messageIds: testResult.body.messages.map(message => message.id).filter(Boolean) }
+          : null
+      };
+    }
+  }
+
+  const checkResults = [result.checks.accessToken, result.checks.phoneNumber, result.checks.template];
+  result.ok = checkResults.every(check => check.ok) &&
+    (!sendTest || result.checks.testMessage.ok === true);
+  const logEntry = {
+    event: "whatsapp_diagnostic",
+    checkedAt: result.checkedAt,
+    ok: result.ok,
+    sendTestRequested: sendTest,
+    checks: {
+      accessToken: logCheck(result.checks.accessToken),
+      phoneNumber: logCheck(result.checks.phoneNumber),
+      template: logCheck(result.checks.template),
+      testMessage: logCheck(result.checks.testMessage)
+    }
+  };
+  console.log(JSON.stringify(logEntry));
+  try {
+    await env.APPROVALS.put("diagnostic:last", JSON.stringify(logEntry), { expirationTtl: 60 * 60 * 24 * 7 });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "whatsapp_diagnostic_storage_error", message: error.message }));
+    result.logStorageError = error.message;
+  }
+  return Response.json(result, { status: result.ok ? 200 : 502 });
+}
+
+async function callMeta(url, token) {
+  let response;
+  let body = null;
+  try {
+    response = await fetch(url, {
+      headers: { authorization: "Bearer " + token, accept: "application/json" }
+    });
+    const raw = await response.text();
+    try { body = raw ? JSON.parse(raw) : {}; }
+    catch { body = { nonJsonResponse: raw.slice(0, 500) }; }
+    return { ok: response.ok, status: response.status, body };
+  } catch (error) {
+    return { ok: false, status: null, body: { transportError: error.message } };
+  }
+}
+
+function metaError(error) {
+  if (!error) return null;
+  return {
+    code: error.code ?? null,
+    subcode: error.error_subcode ?? null,
+    type: error.type || null,
+    message: String(error.message || "").slice(0, 500),
+    fbtraceId: error.fbtrace_id || null
+  };
+}
+
+function metaCheck(response) {
+  const error = response.body?.error || null;
+  return {
+    ok: Boolean(response.ok && !error),
+    httpStatus: response.status,
+    error: metaError(error),
+    transportError: response.body?.transportError || null
+  };
+}
+
+function logCheck(check) {
+  return {
+    ok: check?.ok ?? false,
+    skipped: check?.skipped ?? false,
+    httpStatus: check?.httpStatus ?? null,
+    error: check?.error || null,
+    idMatches: check?.idMatches ?? null,
+    found: check?.found ?? null,
+    status: check?.status ?? null,
+    bodyVariablesOk: check?.bodyVariablesOk ?? null,
+    buttonOrderOk: check?.buttonOrderOk ?? null,
+    requested: check?.requested ?? null
+  };
+}
+
+async function sendDiagnosticMessage(base, phoneId, token, recipient, templateName, language) {
+  const url = base + "/" + encodeURIComponent(phoneId) + "/messages";
+  return callMetaPost(url, token, {
+    messaging_product: "whatsapp",
+    to: recipient,
+    type: "template",
+    template: {
+      name: templateName,
+      language: { code: language },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: "진단 테스트 - 실제 경기 데이터와 무관" },
+            { type: "text", text: "테스트 홈팀 득점자" },
+            { type: "text", text: "테스트 원정팀 득점자" },
+            { type: "text", text: "DIAGNOSTIC-ONLY" }
+          ]
+        },
+        ...["0", "1", "2"].map(index => ({
+          type: "button",
+          sub_type: "quick_reply",
+          index,
+          parameters: [{ type: "payload", payload: "diagnostic_test" }]
+        }))
+      ]
+    }
+  });
+}
+
+async function callMetaPost(url, token, body) {
+  let response;
+  let parsed = null;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + token,
+        "content-type": "application/json",
+        accept: "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    const raw = await response.text();
+    try { parsed = raw ? JSON.parse(raw) : {}; }
+    catch { parsed = { nonJsonResponse: raw.slice(0, 500) }; }
+    return { ok: response.ok, status: response.status, body: parsed };
+  } catch (error) {
+    return { ok: false, status: null, body: { transportError: error.message } };
+  }
+}
 
 function verifyWebhook(url, env) {
   const mode = url.searchParams.get("hub.mode");
