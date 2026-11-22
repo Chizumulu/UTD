@@ -466,7 +466,7 @@ function normalize(value) {
     .replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
 }
 
-async function sendApprovalMessage(proposal, env) {
+async function sendApprovalMessage(proposal, env, { confirmation = false } = {}) {
   const base = env.WHATSAPP_GRAPH_URL;
   if (!base || !env.WHATSAPP_PHONE_NUMBER_ID || !env.WHATSAPP_ACCESS_TOKEN ||
       !env.WHATSAPP_ADMIN_WA_ID || !env.WHATSAPP_TEMPLATE_NAME) {
@@ -474,15 +474,22 @@ async function sendApprovalMessage(proposal, env) {
   }
   const homeScorers = formatScorersForMessage(proposal.goals, "home");
   const awayScorers = formatScorersForMessage(proposal.goals, "away");
-  // Keep this order aligned with the Meta template buttons: 승인, 보류, 거절.
+  const actions = confirmation ? ["confirm", "hold", "reject"] : ["approve", "hold", "reject"];
   const buttons = await Promise.all(
-    ["approve", "hold", "reject"].map(async (action, index) => ({
+    actions.map(async (action, index) => ({
       type: "button",
       sub_type: "quick_reply",
       index: String(index),
       parameters: [{ type: "payload", payload: await signedPayload(proposal.id, action, env) }]
     }))
   );
+  const matchText = proposal.home + " " + proposal.homeScore + "–" + proposal.awayScore + " " + proposal.away;
+  const reviewText = proposal.needsReview
+    ? "⚠️ 확인 필요: " + proposal.reviewWarnings.join(" / ") + "\n"
+    : "";
+  const confirmationText = confirmation
+    ? "⚠️ 2차 확인: 아래 승인 버튼을 다시 눌러야 GitHub 반영이 진행됩니다.\n"
+    : "";
   const response = await fetch(base.replace(/\/$/, "") + "/" +
     encodeURIComponent(env.WHATSAPP_PHONE_NUMBER_ID) + "/messages", {
     method: "POST",
@@ -501,7 +508,7 @@ async function sendApprovalMessage(proposal, env) {
           {
             type: "body",
             parameters: [
-              { type: "text", text: (proposal.needsReview ? "⚠️ 확인 필요: " + proposal.reviewWarnings.join(" / ") + "\n" : "") + proposal.home + " " + proposal.homeScore + "–" + proposal.awayScore + " " + proposal.away },
+              { type: "text", text: confirmationText + reviewText + matchText },
               { type: "text", text: homeScorers.slice(0, 900) },
               { type: "text", text: awayScorers.slice(0, 900) },
               { type: "text", text: proposal.id }
@@ -532,18 +539,18 @@ function formatScorersForMessage(goals, side) {
 }
 
 async function handleAction(payload, env) {
-  const match = String(payload).match(/^(approve|reject|hold):([0-9a-f-]{36}):([0-9a-f]{64})$/i);
+  const match = String(payload).match(/^(approve|confirm|reject|hold):([0-9a-f-]{36}):([0-9a-f]{64})$/i);
   if (!match) return;
   const [, action, id, signature] = match;
-  if (!constantTimeEqual(signature, await sign(id + ":" + action.toLowerCase(), env.APPROVAL_SIGNING_SECRET || ""))) return;
+  const selected = action.toLowerCase();
+  if (!constantTimeEqual(signature, await sign(id + ":" + selected, env.APPROVAL_SIGNING_SECRET || ""))) return;
 
   const key = "proposal:" + id;
   const raw = await env.APPROVALS.get(key);
   if (!raw) return;
   const proposal = JSON.parse(raw);
-  if (proposal.state && proposal.state !== "held") return;
+  if (["approved", "rejected", "dispatching"].includes(proposal.state)) return;
 
-  const selected = action.toLowerCase();
   if (selected === "hold") {
     proposal.state = "held";
     proposal.lastActionAt = new Date().toISOString();
@@ -557,8 +564,40 @@ async function handleAction(payload, env) {
     return;
   }
 
+  if (selected === "confirm") {
+    if (!proposal.needsReview || proposal.state !== "awaiting_confirmation") return;
+  } else if (selected === "approve") {
+    if (proposal.needsReview) {
+      if (proposal.state === "awaiting_confirmation") return;
+      if (proposal.state && proposal.state !== "held") return;
+
+      const priorState = proposal.state;
+      proposal.state = "awaiting_confirmation";
+      proposal.confirmationRequestedAt = new Date().toISOString();
+      await env.APPROVALS.put(key, JSON.stringify(proposal), { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
+      try {
+        await sendApprovalMessage(proposal, env, { confirmation: true });
+      } catch (error) {
+        if (priorState) proposal.state = priorState;
+        else delete proposal.state;
+        delete proposal.confirmationRequestedAt;
+        await env.APPROVALS.put(key, JSON.stringify(proposal), { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
+        throw error;
+      }
+      return;
+    }
+    if (proposal.state && proposal.state !== "held") return;
+  } else {
+    return;
+  }
+
   const [owner, repository] = String(env.GITHUB_REPOSITORY || "").split("/");
   if (!owner || !repository || !env.GITHUB_TOKEN) throw new Error("GitHub dispatch settings are incomplete");
+
+  const priorState = proposal.state;
+  proposal.state = "dispatching";
+  await env.APPROVALS.put(key, JSON.stringify(proposal), { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
+  const approvedProposal = { ...proposal, state: "approved", approvedAt: new Date().toISOString() };
   const response = await fetch("https://api.github.com/repos/" + encodeURIComponent(owner) + "/" + encodeURIComponent(repository) + "/dispatches", {
     method: "POST",
     headers: {
@@ -570,10 +609,14 @@ async function handleAction(payload, env) {
     },
     body: JSON.stringify({
       event_type: "scorer-proposal-approved",
-      client_payload: { proposal }
+      client_payload: { proposal: approvedProposal }
     })
   });
-  if (!response.ok) throw new Error("GitHub dispatch failed: " + response.status + " " + (await response.text()).slice(0, 500));
+  if (!response.ok) {
+    proposal.state = priorState;
+    await env.APPROVALS.put(key, JSON.stringify(proposal), { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
+    throw new Error("GitHub dispatch failed: " + response.status + " " + (await response.text()).slice(0, 500));
+  }
   proposal.state = "approved";
   proposal.lastActionAt = new Date().toISOString();
   await env.APPROVALS.put(key, JSON.stringify(proposal), { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
