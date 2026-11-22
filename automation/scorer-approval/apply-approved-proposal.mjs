@@ -171,6 +171,9 @@ for (const edit of edits.filter(Boolean).sort((a, b) => b.start - a.start)) {
     updated.slice(edit.end);
 }
 
+const archiveResult = archiveCompletedRounds(updated);
+updated = archiveResult.source;
+
 if (updated === source) {
   console.log(
     "Approved scorer data already matches data.js; no changes needed."
@@ -186,9 +189,123 @@ console.log(
   " with " +
   goalsHome +
   " / " +
-  goalsAway
+  goalsAway +
+  (archiveResult.archivedRounds.length
+    ? "; archived " + archiveResult.archivedRounds.join(", ")
+    : "")
 );
 
+
+
+// ============================================================
+// Completed-round archival
+// ============================================================
+
+function archiveCompletedRounds(input) {
+  let updated = input;
+  const archivedRounds = [];
+
+  while (true) {
+    const ast = parse(updated, {
+      ecmaVersion: "latest",
+      sourceType: "script",
+      allowHashBang: true
+    });
+    const declarations = findDeclarations(ast);
+    const completed = literalValue(declarations.roundsData, updated) || {};
+    const scheduled = literalValue(declarations.scheduledRounds, updated) || {};
+    const completedPositions = Object.keys(completed)
+      .map(key => Number(key.match(/^round(\d+)$/)?.[1]))
+      .filter(Number.isInteger);
+    const nextPosition = completedPositions.length
+      ? Math.max(...completedPositions) + 1
+      : 1;
+    const nextKey = "round" + nextPosition;
+    const fixtures = scheduled[nextKey];
+
+    // Only archive consecutive rounds. A later round can finish first because
+    // of postponed fixtures, but it must not advance the site's round counter
+    // past an earlier round that is still awaiting an approved result.
+    if (!Array.isArray(fixtures)) break;
+    const playedFixtures = fixtures.filter(match =>
+      match &&
+      !match.byeKo &&
+      !match.byeEn &&
+      match.postponed !== true &&
+      String(match.status || "").toLowerCase() !== "postponed"
+    );
+    if (
+      !playedFixtures.length ||
+      !playedFixtures.every(match =>
+        Number.isInteger(match.homeScore) &&
+        Number.isInteger(match.awayScore) &&
+        match.homeScore >= 0 &&
+        match.awayScore >= 0
+      )
+    ) {
+      break;
+    }
+
+    const scheduledProperty = objectProperty(
+      declarations.scheduledRounds,
+      nextKey
+    );
+    const roundsObject = declarations.roundsData;
+    if (!scheduledProperty || !roundsObject || roundsObject.type !== "ObjectExpression") {
+      throw new Error("Could not safely locate round data for automatic archival.");
+    }
+
+    const propertyText = updated.slice(
+      scheduledProperty.start,
+      scheduledProperty.end
+    );
+    const scheduledProperties = declarations.scheduledRounds.properties;
+    const propertyIndex = scheduledProperties.indexOf(scheduledProperty);
+    let removeStart = scheduledProperty.start;
+    let removeEnd = scheduledProperty.end;
+
+    if (propertyIndex < scheduledProperties.length - 1) {
+      const comma = updated.indexOf(",", scheduledProperty.end);
+      if (comma >= 0 && comma < scheduledProperties[propertyIndex + 1].start) {
+        removeEnd = comma + 1;
+      }
+    } else if (propertyIndex > 0) {
+      const comma = updated.indexOf(",", scheduledProperties[propertyIndex - 1].end);
+      if (comma >= 0 && comma < scheduledProperty.start) {
+        removeStart = comma;
+      }
+    }
+
+    const roundsClose = roundsObject.end - 1;
+    const lastRoundProperty = roundsObject.properties.at(-1);
+    const existingTail = lastRoundProperty
+      ? updated.slice(lastRoundProperty.end, roundsClose)
+      : "";
+    const needsSeparator = Boolean(lastRoundProperty && !/^\s*,/.test(existingTail));
+    const editsForArchive = [
+      {
+        start: roundsClose,
+        end: roundsClose,
+        text: (needsSeparator ? "," : "") + "\n  " + propertyText + ",\n"
+      },
+      {
+        start: removeStart,
+        end: removeEnd,
+        text: ""
+      }
+    ].sort((a, b) => b.start - a.start);
+
+    for (const edit of editsForArchive) {
+      updated =
+        updated.slice(0, edit.start) +
+        edit.text +
+        updated.slice(edit.end);
+    }
+    archivedRounds.push(nextKey);
+  }
+
+  return { source: updated, archivedRounds };
+}
 
 // ============================================================
 // Proposal validation
