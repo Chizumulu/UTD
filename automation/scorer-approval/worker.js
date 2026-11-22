@@ -448,7 +448,28 @@ async function scanForCompletedMatches(env) {
       });
       const mergedMatch = { ...candidate.match, events };
       const status = String(mergedMatch.status || "(missing)").trim();
-      const proposal = makeProposal(candidate.item, mergedMatch);
+      // The latest full-time snapshot may not be the post that contains the scorer list.
+      // Search the terminal snapshots newest-first, while keeping the chosen match orientation/score.
+      const terminalTexts = terminalSnapshots
+        .filter(snapshot =>
+          Number(snapshot.match.homeScore) === Number(candidate.match.homeScore) &&
+          Number(snapshot.match.awayScore) === Number(candidate.match.awayScore)
+        )
+        .sort((a, b) => {
+          const at = Number.isFinite(a.timestamp) ? a.timestamp : -Infinity;
+          const bt = Number.isFinite(b.timestamp) ? b.timestamp : -Infinity;
+          return bt - at || b.sequence - a.sequence;
+        })
+        .map(snapshot => String(snapshot.item.latestObservation?.text || snapshot.item.korean?.text || ""))
+        .filter(Boolean);
+      const proposalItem = {
+        ...candidate.item,
+        latestObservation: {
+          ...(candidate.item.latestObservation || {}),
+          text: terminalTexts.join("\n\n")
+        }
+      };
+      const proposal = makeProposal(proposalItem, mergedMatch);
 
       if (summary.terminalSamples.length < 5) {
         summary.terminalSamples.push({
@@ -458,6 +479,7 @@ async function scanForCompletedMatches(env) {
           homeScore: mergedMatch.homeScore ?? null,
           awayScore: mergedMatch.awayScore ?? null,
           eventCount: events.length,
+          scorerSource: proposal?.scorerSource || null,
           scorers: proposal ? proposal.goals.map(goal => goal.name) : []
         });
       }
@@ -832,6 +854,7 @@ function makeProposal(item, match) {
     homeScore,
     awayScore,
     goals,
+    scorerSource: textGoals ? "result_text" : "structured_events",
     needsReview: reviewWarnings.length > 0,
     reviewWarnings,
     sourceText: String(item.latestObservation?.text || "").slice(0, 1800)
