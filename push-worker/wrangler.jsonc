@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "utd-match-push",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-22",
+  "vars": {
+    "SITE_ORIGIN": "https://chizumulu.github.io",
+    "MATCH_API_BASE": "https://api.chizumulu.net",
+    "TEAM_ID": "chizumulu_united",
+    "COMPETITION_CODE": "nrfa_league_one",
+    "LIVE_FRESHNESS_MINUTES": "45",
+    "FINAL_FRESHNESS_HOURS": "24"
+  },
+  "triggers": {
+    "crons": ["*/2 * * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "utd-match-push",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ]
+}
