@@ -6,6 +6,7 @@
   "vars": {
     "SITE_ORIGIN": "https://chizumulu.github.io",
     "MATCH_API_BASE": "https://api.chizumulu.net",
+    "SCHEDULE_DATA_URL": "https://chizumulu.github.io/UTD/data.js",
     "TEAM_ID": "chizumulu_united",
     "COMPETITION_CODE": "nrfa_league_one",
     "LIVE_FRESHNESS_MINUTES": "45",
