@@ -202,11 +202,27 @@ async function pollMatchesAndNotify(env) {
   ).bind("baseline_complete").first();
 
   if (!baseline) {
-    for (const match of matches) await saveMatchState(env.DB, match);
+    for (const match of matches) {
+      // On the first poll, send only fresh final scores to devices that were
+      // already subscribed when the API recorded the final update. This keeps
+      // the historical baseline quiet for later subscribers.
+      if (match.status === "full_time") {
+        const notification = createNotification(null, match);
+        const delivery = await broadcast(env, notification, Date.parse(match.lastSeenAt));
+        if (delivery.targeted === 0) {
+          console.log("Initial final score was not sent because no subscription predated the API update.", match.matchId);
+        }
+        if (delivery.transient > 0) {
+          console.warn("Initial final score delivery failed temporarily; it will be retried.", match.matchId);
+          continue;
+        }
+      }
+      await saveMatchState(env.DB, match);
+    }
     await env.DB.prepare(
       "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
     ).bind("baseline_complete", "1").run();
-    console.log("Initial match state stored; no historical notifications sent.");
+    console.log("Initial match state stored; eligible fresh final scores were notified.");
     return;
   }
 
