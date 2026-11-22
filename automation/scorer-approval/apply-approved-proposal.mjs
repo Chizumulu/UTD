@@ -733,7 +733,7 @@ function propertyEdit(text, object, key, value) {
     text:
       comma +
       "\n      " +
-      key +
+      JSON.stringify(key) +
       ": " +
       encoded +
       "\n    "
