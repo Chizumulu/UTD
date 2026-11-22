@@ -348,7 +348,7 @@ async function receiveWebhook(request, env) {
 async function runAuthorizedScan(request, env) {
   const expectedToken = String(env.DIAGNOSTIC_TOKEN || "");
   const authorization = request.headers.get("authorization") || "";
-  const suppliedToken = authorization.match(/^Bearer\\s+(.+)$/i)?.[1] || "";
+  const suppliedToken = authorization.match(/^Bearer\s+(.+)$/i)?.[1] || "";
   if (!expectedToken || !constantTimeEqual(suppliedToken, expectedToken)) {
     return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
