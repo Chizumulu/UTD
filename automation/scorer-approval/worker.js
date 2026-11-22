@@ -369,6 +369,7 @@ async function scanForCompletedMatches(env) {
     terminalMatchCount: 0,
     proposalCount: 0,
     sentCount: 0,
+    updatedCount: 0,
     duplicateCount: 0,
     incompleteCount: 0,
     nonStructuredItemCount: 0,
@@ -383,6 +384,8 @@ async function scanForCompletedMatches(env) {
     const items = Array.isArray(data.items) ? data.items : [];
     summary.itemCount = items.length;
 
+    const groups = new Map();
+    let sequence = 0;
     for (const item of items) {
       const structured = item.structured;
       if (!structured || !Array.isArray(structured.matches)) {
@@ -390,59 +393,147 @@ async function scanForCompletedMatches(env) {
         continue;
       }
       for (const match of structured.matches) {
+        sequence += 1;
         summary.matchCount += 1;
         const status = String(match?.status || "(missing)").trim();
         summary.statusCounts[status] = (summary.statusCounts[status] || 0) + 1;
-        if (summary.terminalSamples.length < 5 && FINISHED_STATUS.test(status)) {
-          summary.terminalSamples.push({
-            status,
-            homeTeam: String(match.homeTeam || ""),
-            awayTeam: String(match.awayTeam || ""),
-            homeScore: match.homeScore ?? null,
-            awayScore: match.awayScore ?? null
-          });
-        }
-        if (!FINISHED_STATUS.test(status)) continue;
-        summary.terminalMatchCount += 1;
 
-        const proposal = makeProposal(item, match);
-        if (!proposal) {
-          summary.incompleteCount += 1;
-          continue;
+        const groupKey = matchSnapshotKey(item, match);
+        let group = groups.get(groupKey);
+        if (!group) {
+          group = { snapshots: [], events: new Map() };
+          groups.set(groupKey, group);
         }
-        summary.proposalCount += 1;
-        const key = "match:" + proposal.matchKey;
-        if (await env.APPROVALS.get(key)) {
-          summary.duplicateCount += 1;
-          continue;
-        }
-
-        const id = crypto.randomUUID();
-        proposal.id = id;
-        proposal.createdAt = new Date().toISOString();
-        await env.APPROVALS.put("proposal:" + id, JSON.stringify(proposal), {
-          expirationTtl: MAX_PROPOSAL_AGE_SECONDS
+        group.snapshots.push({
+          item,
+          match,
+          timestamp: Date.parse(item.sourceTimestamp || ""),
+          sequence
         });
-        await env.APPROVALS.put(key, id, { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
-        try {
-          await sendApprovalMessage(proposal, env);
-          summary.sentCount += 1;
-          console.log(JSON.stringify({
-            event: "whatsapp_approval_sent",
-            matchKey: proposal.matchKey,
-            score: proposal.homeScore + "-" + proposal.awayScore,
-            proposalId: id
-          }));
-        } catch (error) {
-          await env.APPROVALS.delete("proposal:" + id);
-          await env.APPROVALS.delete(key);
-          console.error(JSON.stringify({
-            event: "whatsapp_approval_send_failed",
-            matchKey: proposal.matchKey,
-            error: error.message || String(error)
-          }));
-          throw error;
+        for (const event of Array.isArray(match.events) ? match.events : []) {
+          if (event && typeof event === "object") {
+            group.events.set(snapshotEventKey(event), event);
+          }
         }
+      }
+    }
+
+    for (const group of groups.values()) {
+      const terminalSnapshots = group.snapshots.filter(snapshot =>
+        FINISHED_STATUS.test(String(snapshot.match.status || "").trim())
+      );
+      if (!terminalSnapshots.length) continue;
+      summary.terminalMatchCount += 1;
+
+      const candidate = terminalSnapshots.reduce((latest, snapshot) => {
+        if (!latest) return snapshot;
+        const currentTime = Number.isFinite(snapshot.timestamp) ? snapshot.timestamp : -Infinity;
+        const latestTime = Number.isFinite(latest.timestamp) ? latest.timestamp : -Infinity;
+        return currentTime > latestTime ||
+          (currentTime === latestTime && snapshot.sequence > latest.sequence)
+          ? snapshot
+          : latest;
+      }, null);
+
+      const events = Array.from(group.events.values()).sort((a, b) => {
+        const minuteA = Number.parseInt(a.minuteText || a.minute || "", 10);
+        const minuteB = Number.parseInt(b.minuteText || b.minute || "", 10);
+        return (Number.isFinite(minuteA) ? minuteA : Number.MAX_SAFE_INTEGER) -
+          (Number.isFinite(minuteB) ? minuteB : Number.MAX_SAFE_INTEGER);
+      });
+      const mergedMatch = { ...candidate.match, events };
+      const status = String(mergedMatch.status || "(missing)").trim();
+      const proposal = makeProposal(candidate.item, mergedMatch);
+
+      if (summary.terminalSamples.length < 5) {
+        summary.terminalSamples.push({
+          status,
+          homeTeam: String(mergedMatch.homeTeam || ""),
+          awayTeam: String(mergedMatch.awayTeam || ""),
+          homeScore: mergedMatch.homeScore ?? null,
+          awayScore: mergedMatch.awayScore ?? null,
+          eventCount: events.length,
+          scorers: proposal ? proposal.goals.map(goal => goal.name) : []
+        });
+      }
+      if (!proposal) {
+        summary.incompleteCount += 1;
+        continue;
+      }
+      summary.proposalCount += 1;
+      const key = "match:" + proposal.matchKey;
+      const existingId = await env.APPROVALS.get(key);
+      if (existingId) {
+        summary.duplicateCount += 1;
+        const proposalKey = "proposal:" + existingId;
+        const existingRaw = await env.APPROVALS.get(proposalKey);
+        if (existingRaw) {
+          const existing = JSON.parse(existingRaw);
+          const terminalStates = ["approved", "rejected", "dispatching"];
+          const recent = Date.parse(existing.createdAt || "") >= Date.now() - 48 * 60 * 60 * 1000;
+          if (!terminalStates.includes(existing.state) && recent &&
+              approvalDetailsSignature(existing) !== approvalDetailsSignature(proposal)) {
+            const updated = {
+              ...existing,
+              goals: proposal.goals,
+              needsReview: proposal.needsReview,
+              reviewWarnings: proposal.reviewWarnings
+            };
+            if (updated.state === "awaiting_confirmation" && !updated.needsReview) {
+              delete updated.state;
+            }
+            await env.APPROVALS.put(proposalKey, JSON.stringify(updated), {
+              expirationTtl: MAX_PROPOSAL_AGE_SECONDS
+            });
+            try {
+              await sendApprovalMessage(updated, env, {
+                confirmation: updated.state === "awaiting_confirmation"
+              });
+              summary.updatedCount += 1;
+              console.log(JSON.stringify({
+                event: "whatsapp_approval_details_updated",
+                matchKey: proposal.matchKey,
+                scorerCount: updated.goals.length,
+                needsReview: updated.needsReview,
+                proposalId: existingId
+              }));
+            } catch (error) {
+              await env.APPROVALS.put(proposalKey, existingRaw, {
+                expirationTtl: MAX_PROPOSAL_AGE_SECONDS
+              });
+              throw error;
+            }
+          }
+        }
+        continue;
+      }
+
+      const id = crypto.randomUUID();
+      proposal.id = id;
+      proposal.createdAt = new Date().toISOString();
+      await env.APPROVALS.put("proposal:" + id, JSON.stringify(proposal), {
+        expirationTtl: MAX_PROPOSAL_AGE_SECONDS
+      });
+      await env.APPROVALS.put(key, id, { expirationTtl: MAX_PROPOSAL_AGE_SECONDS });
+      try {
+        await sendApprovalMessage(proposal, env);
+        summary.sentCount += 1;
+        console.log(JSON.stringify({
+          event: "whatsapp_approval_sent",
+          matchKey: proposal.matchKey,
+          score: proposal.homeScore + "-" + proposal.awayScore,
+          scorerCount: proposal.goals.length,
+          proposalId: id
+        }));
+      } catch (error) {
+        await env.APPROVALS.delete("proposal:" + id);
+        await env.APPROVALS.delete(key);
+        console.error(JSON.stringify({
+          event: "whatsapp_approval_send_failed",
+          matchKey: proposal.matchKey,
+          error: error.message || String(error)
+        }));
+        throw error;
       }
     }
 
@@ -458,6 +549,56 @@ async function scanForCompletedMatches(env) {
     }));
     throw error;
   }
+}
+
+function matchSnapshotKey(item, match) {
+  const stableId = String(match.matchId || match.match_id || match.fixtureId || match.id || "").trim();
+  if (stableId) return "id:" + normalize(stableId);
+
+  const home = String(match.homeTeam || "").trim();
+  const away = String(match.awayTeam || "").trim();
+  const dateSource = String(match.dateText || item.sourceTimestamp || "").trim();
+  const dayFirst = dateSource.match(/\b(\d{1,2})-(\d{1,2})-(\d{4})\b/);
+  let day = "";
+  if (dayFirst) {
+    day = dayFirst[3] + "-" + dayFirst[2].padStart(2, "0") + "-" + dayFirst[1].padStart(2, "0");
+  } else {
+    const parsed = Date.parse(dateSource);
+    day = Number.isFinite(parsed)
+      ? new Date(parsed).toISOString().slice(0, 10)
+      : String(item.sourceTimestamp || "").slice(0, 10);
+  }
+  if (!home || !away || !day) {
+    return "snapshot:" + String(item.rawUpdateId || item.sourceMessageId || Math.random());
+  }
+  return normalize(home) + "|" + normalize(away) + "|" + day;
+}
+
+function snapshotEventKey(event) {
+  const players = (Array.isArray(event.players) ? event.players : [])
+    .map(player => [
+      normalize(player?.name || ""),
+      normalize(player?.role || ""),
+      String(player?.count ?? ""),
+      Boolean(player?.ownGoal || player?.isOwnGoal)
+    ].join(":"))
+    .sort()
+    .join(",");
+  return [
+    String(event.type || "").toLowerCase(),
+    normalize(event.team || ""),
+    String(event.minuteText || event.minute || ""),
+    String(event.index ?? ""),
+    players
+  ].join("|");
+}
+
+function approvalDetailsSignature(proposal) {
+  return JSON.stringify({
+    goals: proposal.goals || [],
+    needsReview: Boolean(proposal.needsReview),
+    reviewWarnings: proposal.reviewWarnings || []
+  });
 }
 
 function makeProposal(item, match) {
