@@ -22,8 +22,8 @@
 <script>
   window.ASSET_VERSIONS = {
     style: '002',
-    data: '003',
-    app: '004',
+    data: '004',
+    app: '005',
     report: '001',
     archive: '200',
     predictWorker: '220',
@@ -1169,7 +1169,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="lbl" data-en="AI Prediction Accuracy" data-ko="AI 예측 성적표">AI 예측 성적표</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'aiTrackInfo')">ⓘ</span>
       <div class="info-tooltip" id="aiTrackInfo" onclick="event.stopPropagation()">
-        <span class="lbl" data-en="For every match already played, we recompute what the Poisson model would have predicted using only the data available before that match, then compare it with the actual score. Opening-week matches (no prior data for either side) are shown but excluded from the accuracy stats." data-ko="이미 끝난 모든 경기에 대해, 그 경기가 열리기 전까지의 데이터만 가지고 포아송 모델이 뭐라고 예측했을지 재계산한 뒤 실제 스코어와 비교해요. 두 팀 다 이전 경기 기록이 없는 개막 라운드는 표에는 나오지만 적중률 통계에서는 제외해요.">이미 끝난 모든 경기에 대해, 그 경기가 열리기 전까지의 데이터만 가지고 포아송 모델이 뭐라고 예측했을지 재계산한 뒤 실제 스코어와 비교해요. 두 팀 다 이전 경기 기록이 없는 개막 라운드는 표에는 나오지만 적중률 통계에서는 제외해요.</span>
+        <span class="lbl" data-en="This backtest replays the model selection and forecast for each match using results from earlier dates. The summary counts games both teams had played before. Forfeits are excluded from model training and evaluation." data-ko="경기일보다 앞선 결과로 모델을 선택하고 예측을 다시 계산한 성적입니다. 두 팀 모두 이전 경기 기록이 있는 경기를 집계하며, 몰수 경기는 전력 계산과 예측 평가에서 제외합니다.">경기일보다 앞선 결과로 모델을 선택하고 예측을 다시 계산한 성적입니다. 두 팀 모두 이전 경기 기록이 있는 경기를 집계하며, 몰수 경기는 전력 계산과 예측 평가에서 제외합니다.</span>
       </div>
     </div>
     <details class="ai-track-details" id="aiTrackDetails" ontoggle="if(this.open){window.dispatchEvent(new Event('resize'));}">
@@ -1178,7 +1178,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="lbl ai-track-details-close" data-en="Hide details" data-ko="접기">접기</span>
         <svg class="ai-track-details-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </summary>
-    <p class="ai-track-note lbl" data-en="Recalculated automatically every time a new round's results are added. No manual logging needed." data-ko="새 라운드 결과가 추가될 때마다 자동으로 다시 계산돼요. 따로 기록할 필요 없어요.">새 라운드 결과가 추가될 때마다 자동으로 다시 계산돼요. 따로 기록할 필요 없어요.</p>
+    <p class="ai-track-note lbl" data-en="Results for the model selected before each match" data-ko="경기 전에 선택된 모델의 재검증 성적">경기 전에 선택된 모델의 재검증 성적</p>
     <div class="ai-track-summary" id="aiTrackSummary"></div>
     <div class="ai-track-surprise" id="aiTrackSurprise"></div>
 
@@ -1205,7 +1205,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="lbl" data-en="Auto-Correction" data-ko="자동 보정">자동 보정</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'aiTrackCorrectionInfo')">ⓘ</span>
       <div class="info-tooltip" id="aiTrackCorrectionInfo" onclick="event.stopPropagation()">
-        <span class="lbl" data-en="Compares expected goals vs actual goals across completed matches and nudges future predictions (this section, the Monte Carlo simulation, and next-match cards) accordingly. Turns on automatically once enough matches build up, and the adjustment is capped to avoid overreacting to a small sample." data-ko="완료된 경기들의 예상 득점과 실제 득점을 비교해서, 앞으로의 예측(이 섹션, 몬테카를로 시뮬레이션, 다음 경기 카드)에 그 차이만큼 자동으로 반영해요. 표본이 충분히 쌓이면 자동으로 켜지고, 적은 표본에 과하게 휘둘리지 않도록 보정 폭에는 상한이 있어요.">완료된 경기들의 예상 득점과 실제 득점을 비교해서, 앞으로의 예측(이 섹션, 몬테카를로 시뮬레이션, 다음 경기 카드)에 그 차이만큼 자동으로 반영해요. 표본이 충분히 쌓이면 자동으로 켜지고, 적은 표본에 과하게 휘둘리지 않도록 보정 폭에는 상한이 있어요.</span>
+        <span class="lbl" data-en="Compares the baseline and correction options on earlier forecasts. A correction must improve the Brier score without increasing log loss over the baseline." data-ko="앞선 경기의 예측 성적으로 기본 모델과 보정 후보를 비교합니다. 기본 모델보다 브라이어 점수가 낮고 로그 손실이 커지지 않는 보정만 채택합니다.">앞선 경기의 예측 성적으로 기본 모델과 보정 후보를 비교합니다. 기본 모델보다 브라이어 점수가 낮고 로그 손실이 커지지 않는 보정만 채택합니다.</span>
       </div>
     </div>
     <div class="ai-track-summary" id="aiTrackCorrectionSummary"></div>
@@ -1230,7 +1230,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="lbl" data-en="Dixon-Coles Low-Score Fix (ρ)" data-ko="저득점 보정 (Dixon-Coles ρ)">저득점 보정 (Dixon-Coles ρ)</span>
       <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'aiTrackDCInfo')">ⓘ</span>
       <div class="info-tooltip" id="aiTrackDCInfo" onclick="event.stopPropagation()">
-        <span class="lbl" data-en="Independent Poisson models tend to misjudge low scorelines (0-0, 1-0, 0-1, 1-1). Instead of using a textbook default, ρ is estimated from this league's own results via maximum likelihood, recalculated walk-forward before each round. Turns on automatically once enough matches build up." data-ko="독립 포아송 모델은 0-0, 1-0, 0-1, 1-1 같은 저득점 스코어를 실제보다 잘못 예측하는 경향이 있어요. 텍스트북 고정값 대신 이 리그의 실제 결과로 최대우도추정(MLE)을 돌려 ρ를 구하고, 매 라운드 직전까지의 데이터로 다시 계산(walk-forward)해요. 표본이 충분히 쌓이면 자동으로 켜져요.">독립 포아송 모델은 0-0, 1-0, 0-1, 1-1 같은 저득점 스코어를 실제보다 잘못 예측하는 경향이 있어요. 텍스트북 고정값 대신 이 리그의 실제 결과로 최대우도추정(MLE)을 돌려 ρ를 구하고, 매 라운드 직전까지의 데이터로 다시 계산(walk-forward)해요. 표본이 충분히 쌓이면 자동으로 켜져요.</span>
+        <span class="lbl" data-en="Estimates a low-score correction from earlier league results and compares it with the other forecast options on the same matches." data-ko="앞선 경기 결과로 0-0, 1-0, 0-1, 1-1의 저득점 보정을 추정하고, 같은 경기에서 다른 예측 후보와 성적을 비교합니다.">앞선 경기 결과로 0-0, 1-0, 0-1, 1-1의 저득점 보정을 추정하고, 같은 경기에서 다른 예측 후보와 성적을 비교합니다.</span>
       </div>
     </div>
     <div class="ai-track-summary" id="aiTrackDCSummary"></div>

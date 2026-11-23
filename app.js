@@ -1069,7 +1069,6 @@
       runMonteCarloSimulationAsync(4000).then(result => {
         predictionCache = result;
         drawPredictionTable();
-        renderTitleProbabilityHistoryChart(); // 마지막 주차 점을 정식 결과로 맞추기 위해 다시 그림
         refreshBtn.disabled = false;
       }).catch(err => {
         console.error('몬테카를로 시뮬레이션 실행 중 오류:', err);
@@ -2326,18 +2325,22 @@
         <span class="ai-track-chip-val">${s.avgBrierScore.toFixed(3)}</span>
         <span class="ai-track-chip-lbl lbl" data-en="Brier score (0=perfect, 2=worst)" data-ko="브라이어 점수(0=완벽, 2=최악)">${isKorean ? '브라이어 점수(0=완벽, 2=최악)' : 'Brier score (0=perfect, 2=worst)'}</span>
       </div>
+      <div class="ai-track-chip">
+        <span class="ai-track-chip-val">${s.avgLogLoss.toFixed(3)}</span>
+        <span class="ai-track-chip-lbl lbl" data-en="Log loss (lower is better)" data-ko="로그 손실(낮을수록 좋음)">${isKorean ? '로그 손실(낮을수록 좋음)' : 'Log loss (lower is better)'}</span>
+      </div>
       <div class="ai-track-chip ai-track-chip-n">
         <span class="ai-track-chip-val">${s.n}</span>
         <span class="ai-track-chip-lbl lbl" data-en="Matches scored" data-ko="집계 경기 수">${isKorean ? '집계 경기 수' : 'Matches scored'}</span>
       </div>
     `;
 
-    renderAiAutoCorrection(track, s);
+    renderAiAutoCorrection(track, track.summaryRaw);
     renderAiDCCorrection(track);
     renderAiSurprise();
 
     const wdlLabel = { H: isKorean ? '홈승' : 'Home', D: isKorean ? '무승부' : 'Draw', A: isKorean ? '원정승' : 'Away' };
-    const rowsSorted = track.rows.slice().sort((a, b) => b.weekNum - a.weekNum);
+    const rowsSorted = track.rows.slice().reverse();
 
     bodyEl.innerHTML = rowsSorted.map(r => {
       const homeName = isKorean ? r.homeKo : r.homeEn;
@@ -2456,10 +2459,7 @@
     const compEl = document.getElementById('aiTrackCorrectedSummary');
     if (!corrEl || !compEl) return;
 
-    // correctionModeUsed: 'ratio'(곱셈 보정) | 'additive'(절편/방향성 보정).
-    // 어느 쪽을 실제로 쓸지는 data.js의 computeAiPredictionTrackRecord가
-    // walk-forward 백테스트 성적을 비교해서 자동으로 정합니다.
-    const mode = track.correctionModeUsed || 'ratio';
+    const mode = track.correctionModeUsed;
     const isAdditive = mode === 'additive';
     const c = isAdditive ? track.currentAdditiveCorrection : track.currentCorrection;
     const sc = isAdditive ? track.summaryAdditive : track.summaryCorrected;
@@ -2488,8 +2488,8 @@
     if (!c || !c.active) {
       const minSamples = (typeof AUTO_CORRECTION_MIN_SAMPLES === 'number') ? AUTO_CORRECTION_MIN_SAMPLES : 8;
       const soFar = c ? c.n : 0;
-      const msgKo = `자동 보정은 최소 ${minSamples}경기가 쌓이면 켜져요. 지금까지 ${soFar}경기 집계됨 — 조금만 더 기다려주세요.`;
-      const msgEn = `Auto-correction turns on once at least ${minSamples} matches build up (${soFar} so far).`;
+      const msgKo = `보정 후보는 평가 경기 ${minSamples}건부터 비교합니다. 현재 ${soFar}경기가 쌓였습니다.`;
+      const msgEn = `Correction options are compared after ${minSamples} scored matches. There are ${soFar} so far.`;
       corrEl.innerHTML = `<div class="ai-track-empty lbl" data-en="${msgEn}" data-ko="${msgKo}">${isKorean ? msgKo : msgEn}</div>`;
       compEl.innerHTML = '';
       const wrapEl = document.getElementById('aiTrackTeamCorrectionWrap');
@@ -2497,7 +2497,11 @@
       return;
     }
 
-    corrEl.innerHTML = `
+    const selectedKo = mode === 'off' ? '보정 없는 기본 모델' : (isAdditive ? '득점 덧셈 보정' : '득점 배율 보정');
+    const selectedEn = mode === 'off' ? 'Unadjusted baseline' : (isAdditive ? 'Additive goal correction' : 'Goal ratio correction');
+    const modelLabel = `<div class="ai-track-note lbl" data-ko="현재 모델 · ${selectedKo}" data-en="Current model · ${selectedEn}">${isKorean ? '현재 모델 · ' + selectedKo : 'Current model · ' + selectedEn}</div>`;
+    corrEl.innerHTML = mode === 'off' ? modelLabel : `
+      ${modelLabel}
       <div class="ai-track-chip ai-track-chip-correction">
         <span class="ai-track-chip-val">${isAdditive ? fmtOffset(c.homeOffset) : fmtFactor(c.homeFactor)}</span>
         <span class="ai-track-chip-lbl lbl" data-en="Home goal correction" data-ko="홈 득점 보정">${isKorean ? '홈 득점 보정' : 'Home goal correction'}</span>
@@ -2512,7 +2516,12 @@
       </div>
     `;
 
-    renderAiTeamCorrections(track);
+    if (mode === 'off') {
+      const wrapEl = document.getElementById('aiTrackTeamCorrectionWrap');
+      if (wrapEl) wrapEl.style.display = 'none';
+    } else {
+      renderAiTeamCorrections(track);
+    }
 
     if (!sc || !rawSummary) {
       compEl.innerHTML = '';
@@ -2539,6 +2548,11 @@
         <span class="ai-track-chip-val">${sc.avgBrierScore.toFixed(3)}</span>
         ${deltaHtml(sc.avgBrierScore, rawSummary.avgBrierScore, false, true)}
         <span class="ai-track-chip-lbl lbl" data-en="Brier score w/ correction" data-ko="보정 적용 시 브라이어 점수">${isKorean ? '보정 적용 시 브라이어 점수' : 'Brier score w/ correction'}</span>
+      </div>
+      <div class="ai-track-chip ai-track-chip-corrected">
+        <span class="ai-track-chip-val">${sc.avgLogLoss.toFixed(3)}</span>
+        ${deltaHtml(sc.avgLogLoss, rawSummary.avgLogLoss, false, true)}
+        <span class="ai-track-chip-lbl lbl" data-en="Log loss w/ correction" data-ko="보정 적용 시 로그 손실">${isKorean ? '보정 적용 시 로그 손실' : 'Log loss w/ correction'}</span>
       </div>
     `;
   }
@@ -2632,10 +2646,10 @@
         msgKo = `ρ 추정은 최소 ${minSamples}경기가 쌓이면 켜져요. 지금까지 ${soFar}경기 집계됨 — 조금만 더 기다려주세요.`;
         msgEn = `ρ estimation turns on once at least ${minSamples} matches build up (${soFar} so far).`;
       } else {
-        // 표본은 충분하지만, 백테스트상 도움이 안 돼서 일부러 꺼둔 경우
+        // 추정할 표본은 충분하지만 현재 모델이 저득점 보정을 쓰지 않는 경우
         const wouldBeRho = (typeof track.estimatedDCRho === 'number') ? track.estimatedDCRho.toFixed(3) : '0';
-        msgKo = `표본은 충분하지만(${soFar}경기, 추정 시 ρ=${wouldBeRho}), 백테스트 결과 ρ 보정이 오히려 적중률을 낮춰서 지금은 적용하지 않고 있어요. 아래에서 "적용했다면" 성적을 비교해볼 수 있어요.`;
-        msgEn = `${soFar} matches is enough (would-be ρ=${wouldBeRho}), but the backtest shows ρ would lower accuracy, so it's intentionally left off for now. See the comparison below for what applying it would have looked like.`;
+        msgKo = `현재 선택한 모델은 저득점 보정을 사용하지 않습니다. ${soFar}경기에서 추정한 ρ는 ${wouldBeRho}입니다.`;
+        msgEn = `The selected model leaves low-score correction off. The estimate from ${soFar} matches is ρ=${wouldBeRho}.`;
       }
       rhoEl.innerHTML = `<div class="ai-track-empty lbl" data-en="${msgEn}" data-ko="${msgKo}">${isKorean ? msgKo : msgEn}</div>`;
       // 표본이 충분하면(dcSampleOk) "적용했다면" 백테스트 비교는 그래도 보여줍니다.
@@ -3962,7 +3976,7 @@
         if (basePct === null) { prsState.failedSig = sig; return; }
 
         // 지난주 대비: 화면에 보이는 현재 값(정식 몬테카를로) − 직전 라운드 값(추이 차트의 간이 모델).
-        // 우승확률 추이 차트도 마지막 점을 정식 값으로 덮어쓰므로, 차트의 마지막 선 방향과 항상 일치합니다.
+        // 우승 확률 추이의 마지막 점과 현재 표는 같은 시뮬레이션 설정을 사용합니다.
         // (간이 모델 마지막 두 점끼리 빼면 정식 값과 모델이 달라 부호까지 어긋날 수 있었습니다.)
         // ※ 다만 정식 값과 간이 모델 값은 스케일이 크게 달라서(예: 정식 5% vs 간이 20%) 그대로 빼면
         //   "▼35%p" 같은 엉뚱한 값이 나옵니다. 그래서 간이 모델 안에서의 변화율(직전 라운드 → 최근 라운드)만
@@ -17134,7 +17148,7 @@
     svg.innerHTML = '';
     if (legendEl) legendEl.innerHTML = '';
 
-    let history = titleProbHistoryCache;
+    const history = titleProbHistoryCache;
     if (history === null) {
       const loading = svgEl('text', { x: 410, y: 205, 'text-anchor': 'middle', class: 'rank-hist-axis-label' });
       loading.textContent = isKorean ? '계산 중...' : 'Calculating...';
@@ -17143,18 +17157,6 @@
       return;
     }
     if (!history.length) return;
-
-    // 가장 최근 주차(마지막 점)는 예측 탭의 정식 몬테카를로 결과와 같은 값으로 맞춥니다.
-    // 추이용 간이 시뮬레이션(600회, 단순 모델)과 정식 시뮬레이션(4000회, 보정 모델)은
-    // 값이 달라서, 그대로 두면 표의 우승 확률과 그래프 끝점이 어긋나 보이기 때문입니다.
-    if (predictionCache && Array.isArray(predictionCache.results) && predictionCache.results.length) {
-      const officialPct = {};
-      predictionCache.results.forEach(r => { officialPct[r.nameEn] = r.championPct; });
-      const lastEntry = history[history.length - 1];
-      history = history.slice(0, -1).concat([Object.assign({}, lastEntry, {
-        championPct: Object.assign({}, lastEntry.championPct, officialPct)
-      })]);
-    }
 
     const teamByEn = {};
     leagueData.forEach(t => { teamByEn[t.nameEn] = t; });
