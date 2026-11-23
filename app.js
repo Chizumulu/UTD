@@ -6647,8 +6647,10 @@
   let leagueLiveRefreshFailed = false;
   const PENDING_LEAGUE_RESULTS_KEY = 'utd-pending-league-results';
   const LEAGUE_RESULT_REPORT_WINDOW_MS = 24 * 60 * 60 * 1000;
+  const LEAGUE_RESULT_POLL_MS = 10 * 60 * 1000;
   let pendingLeagueResults = new Map();
   let storedPendingLeagueResults = null;
+  let unresolvedLeagueResultKickoffs = [];
 
   function validLeagueResultScore(home, away) {
     return Number.isInteger(home) && home >= 0 && Number.isInteger(away) && away >= 0;
@@ -6730,6 +6732,9 @@
     }
     pendingLeagueResults = next;
     storedPendingLeagueResults = stored;
+    unresolvedLeagueResultKickoffs = [...openByKey.values()]
+      .filter(fixture => !next.has(fixture.key))
+      .map(fixture => fixture.kickoffAt);
     return changed;
   }
 
@@ -7797,7 +7802,17 @@
   }
 
   async function fetchLeagueStructuredRecentMatches() {
-    const res = await fetch(CHIZUMULU_API_BASE + '/v1/structured?limit=' + CHIZUMULU_STRUCTURED_LIMIT);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      return await readLeagueStructuredRecentMatches(controller.signal);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function readLeagueStructuredRecentMatches(signal) {
+    const res = await fetch(CHIZUMULU_API_BASE + '/v1/structured?limit=' + CHIZUMULU_STRUCTURED_LIMIT, { signal });
     if (!res.ok) {
       const err = new Error('Chizumulu API /v1/structured 요청 실패: ' + res.status);
       err.status = res.status;
@@ -8447,8 +8462,13 @@
     return { inWindow, nextStartMs };
   }
 
-  // 다음 폴링을 예약합니다. 창 안이면 기존처럼 지터를 섞은 주기로, 창 밖이면 다음 창 시작 시점(최대 1시간 뒤)에
-  // 다시 확인합니다. 앞으로 남은 창이 하나도 없으면 타이머를 걸지 않습니다.
+  function hasUnresolvedLateLeagueResult(now) {
+    return unresolvedLeagueResultKickoffs.some(kickoffAt =>
+      now > kickoffAt + LEAGUE_LIVE_WINDOW_AFTER_MS &&
+      now < kickoffAt + LEAGUE_RESULT_REPORT_WINDOW_MS);
+  }
+
+  // 라이브 창이 닫힌 뒤에는 미확인 종료 결과와 다음 라이브 창 중 더 이른 시점에 다시 확인합니다.
   function scheduleNextLeagueLivePoll() {
     const now = Date.now();
     const st = getLeaguePollWindowState(now);
@@ -8457,28 +8477,43 @@
       // 패턴 기반 차단을 유발하기 쉬우므로, 매번 ±15% 정도 무작위 오차(지터)를 더합니다.
       const jitter = leagueLivePollDelay * (0.85 + Math.random() * 0.3);
       leagueLivePollTimer = setTimeout(refreshLeagueLiveTicker, jitter);
-    } else if (st.nextStartMs !== null) {
-      // 모든 방문자가 킥오프 5분 전 정각에 한꺼번에 몰리지 않도록 0~30초 무작위로 퍼뜨립니다.
-      const wait = Math.min(st.nextStartMs - now, LEAGUE_LIVE_SLEEP_MAX_MS) + Math.random() * 30000;
-      leagueLivePollTimer = setTimeout(refreshLeagueLiveTicker, wait);
     } else {
-      leagueLivePollTimer = null;
+      // 킥오프는 최대 1시간 간격으로 확인하고, 요청 시점이 몰리지 않도록 지터를 넣습니다.
+      const nextWindowWait = st.nextStartMs === null ? Infinity :
+        Math.min(st.nextStartMs - now, LEAGUE_LIVE_SLEEP_MAX_MS) + Math.random() * 30000;
+      const resultWait = hasUnresolvedLateLeagueResult(now) ?
+        LEAGUE_RESULT_POLL_MS * (0.85 + Math.random() * 0.3) : Infinity;
+      const wait = Math.min(nextWindowWait, resultWait);
+      leagueLivePollTimer = Number.isFinite(wait) ? setTimeout(refreshLeagueLiveTicker, wait) : null;
     }
+  }
+
+  function updateLeagueResultViews(matches, observations) {
+    const pendingChanged = syncPendingLeagueResults(observations);
+    renderLeagueLiveTicker(matches);
+    if (pendingChanged && currentView === 'rounds') renderRoundsView();
+    renderLinkedFixtureSummary();
   }
 
   // force: 페이지를 연 직후 첫 호출처럼 창과 상관없이 한 번은 불러서 현재 상태를 그려야 할 때 true.
   async function refreshLeagueLiveTicker(force) {
-    if (force !== true && !getLeaguePollWindowState(Date.now()).inWindow) {
-      scheduleNextLeagueLivePoll();
-      renderLeagueLiveTicker(leagueLiveRenderedCache);
-      renderLinkedFixtureSummary();
-      return;
-    }
+    const now = Date.now();
     // 안쪽에서 무슨 일이 나든(특히 renderLeagueLiveTicker처럼 이전엔 보호되지 않았던 부분)
     // 폴링 루프 자체는 절대 멈추면 안 되므로, 다음 예약(setTimeout)을 finally에 둬서
     // 예외가 나도 항상 실행되게 합니다. 그렇지 않으면 한 번의 예외로 setTimeout 체인이
     // 끊겨서, 사용자가 직접 새로고침하기 전까지 라이브 창이 다시는 갱신되지 않습니다.
     try {
+      if (force !== true && !getLeaguePollWindowState(now).inWindow) {
+        let resultObservations = [];
+        if (hasUnresolvedLateLeagueResult(now)) {
+          try {
+            ({resultObservations} = await fetchLeagueStructuredRecentMatches());
+          } catch (e) { /* 기존 결과를 유지하고 다음 조회 때 다시 시도합니다. */ }
+        }
+        updateLeagueResultViews(leagueLiveRenderedCache, resultObservations);
+        return;
+      }
+
       let liveObservations = [];
       try {
         const live = await fetchLeagueLiveMatches();
@@ -8515,16 +8550,10 @@
         combinedMatches = attachLeagueGoalEvents([...leagueLiveMatchesCache, ...staleMatches], structuredEntries);
       } catch (e) { /* 무시 */ }
 
-      try {
-        const pendingChanged = syncPendingLeagueResults(resultObservations.concat(
-          liveObservations, combinedMatches.map(pendingLeagueObservation).filter(Boolean)));
-        renderLeagueLiveTicker(combinedMatches);
-        if (pendingChanged && currentView === 'rounds') renderRoundsView();
-        renderLinkedFixtureSummary();
-      } catch (e) {
-        // 렌더링 중 예상 못한 오류(예: 손상된 데이터)가 나도 여기서 삼켜서 폴링을 계속 이어갑니다.
-        console.error('renderLeagueLiveTicker 실패:', e);
-      }
+      updateLeagueResultViews(combinedMatches, resultObservations.concat(
+        liveObservations, combinedMatches.map(pendingLeagueObservation).filter(Boolean)));
+    } catch (e) {
+      console.error('renderLeagueLiveTicker 실패:', e);
     } finally {
       scheduleNextLeagueLivePoll();
     }
