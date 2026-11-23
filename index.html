@@ -23,7 +23,7 @@
   window.ASSET_VERSIONS = {
     style: '002',
     data: '004',
-    app: '005',
+    app: '006',
     report: '001',
     archive: '200',
     predictWorker: '220',
@@ -393,6 +393,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <span class="llt-title lbl" data-en="Live Now · NRFA League One" data-ko="지금 진행 중 · NRFA 리그 원">지금 진행 중 · NRFA 리그 원</span>
   </div>
   <div class="llt-scroller" id="leagueLiveTickerScroller"></div>
+  <p class="nmh-live-src" id="leagueLiveRefreshStatus" hidden></p>
 </div>
 <div id="archiveView" aria-live="polite">
   <div class="archive-hero" id="archiveHero">
@@ -1483,6 +1484,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="modal-content match-detail-modal-content">
     <div class="modal-header">
       <h2 id="matchDetailTitle"></h2>
+      <button type="button" class="rmd-act-btn lbl" id="matchDetailShareBtn" onclick="shareOpenFixture()" data-en="Share" data-ko="공유" style="display:none">공유</button>
       <button class="close-btn" onclick="closeMatchDetail()">&times;</button>
     </div>
     <div class="modal-body match-detail-modal-body" id="matchDetailBody"></div>

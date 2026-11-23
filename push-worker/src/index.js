@@ -305,7 +305,9 @@ async function sendKickoffReminders(env, now) {
   });
   if (!response.ok) throw new Error("Schedule data returned HTTP " + response.status);
 
-  const fixtures = parseUpcomingChizumuluFixtures(await response.text());
+  const source = await response.text();
+  const season = source.match(/\bconst SEASON_START\s*=\s*['"](\d{4})-/)?.[1];
+  const fixtures = parseUpcomingChizumuluFixtures(source);
   for (const fixture of fixtures) {
     const kickoffAt = parseCatKickoff(fixture.kickoffDate, fixture.kickoffTime);
     if (!Number.isFinite(kickoffAt)) continue;
@@ -327,7 +329,9 @@ async function sendKickoffReminders(env, now) {
       icon: "/UTD/apple-touch-icon.png",
       tag: "utd-kickoff-" + fixtureId,
       renotify: false,
-      data: { url: "https://chizumulu.github.io/UTD/" }
+      data: { url: matchNotificationUrl(
+        season, fixture.homeEn, fixture.awayEn, fixture.kickoffDate
+      ) }
     };
     const delivery = await broadcast(env, notification, { deliveryId: settingKey + ":" + scheduledAt });
     if (delivery.transient > 0) {
@@ -439,6 +443,14 @@ function matchDeliveryId(previous, match) {
   return JSON.stringify(["match", match.matchId, from, match.status, match.homeScore, match.awayScore]);
 }
 
+function matchNotificationUrl(season, home, away, date) {
+  const root = "https://chizumulu.github.io/UTD/";
+  if (!home || !away || !date) return root;
+  const slug = value => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const parts = season ? [season, slug(home), slug(away)] : ["live", home, away, date];
+  return root + "#/match/" + parts.map(encodeURIComponent).join("/");
+}
+
 function notificationPayload(match, type) {
   const score = (match.homeScore === null ? "–" : match.homeScore)
     + "–"
@@ -471,7 +483,7 @@ function notificationPayload(match, type) {
     icon: "/UTD/apple-touch-icon.png",
     tag: "utd-match-" + match.matchId,
     renotify: true,
-    data: { url: "https://chizumulu.github.io/UTD/" }
+    data: { url: matchNotificationUrl(null, match.homeTeam, match.awayTeam, match.lastSeenAt.slice(0, 10)) }
   };
 }
 

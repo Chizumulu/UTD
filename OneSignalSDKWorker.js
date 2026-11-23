@@ -20,20 +20,41 @@ self.addEventListener("push", function (event) {
       badge: "/UTD/favicon-32x32.png",
       tag: typeof payload.tag === "string" ? payload.tag : "utd-match-update",
       renotify: payload.renotify === true,
-      data: { url: "https://chizumulu.github.io/UTD/" }
+      data: { url: matchNotificationTarget(payload.data && payload.data.url) }
     };
     await self.registration.showNotification(title, options);
   })());
 });
 
+function matchNotificationTarget(value) {
+  var root = "https://chizumulu.github.io/UTD/";
+  if (typeof value === "string") {
+    try {
+      var target = new URL(value);
+      if (target.href === root || (target.origin === "https://chizumulu.github.io" &&
+          target.pathname === "/UTD/" && target.hash.startsWith("#/match/"))) return target.href;
+    } catch (_error) {}
+  }
+  return root;
+}
+
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
   event.waitUntil((async function () {
-    var target = "https://chizumulu.github.io/UTD/";
+    var data = event.notification.data;
+    var root = "https://chizumulu.github.io/UTD/";
+    var target = matchNotificationTarget(data && data.url);
     var windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     for (var i = 0; i < windows.length; i += 1) {
       var client = windows[i];
-      if (client.url.indexOf("https://chizumulu.github.io/UTD/") === 0 && "focus" in client) return client.focus();
+      if (!client.url.startsWith(root)) continue;
+      if (client.url === target || target === root) return client.focus();
+      if (typeof client.navigate === "function") {
+        try {
+          var navigated = await client.navigate(target);
+          if (navigated) return navigated.focus();
+        } catch (_error) {}
+      }
     }
     if (self.clients.openWindow) return self.clients.openWindow(target);
   })());
