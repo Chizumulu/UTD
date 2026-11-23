@@ -132,7 +132,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 <!-- Self-hosted Web Push: 경기 상태 알림 -->
 <script src="./push-config.js?v=2"></script>
-<script src="./push-client.js?v=4" defer></script>
+<script src="./push-client.js?v=5" defer></script>
 <script src="./match-alert-onboarding.js?v=2" defer></script>
 <style>
   .match-alert-confirm {
@@ -174,9 +174,11 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <dialog class="match-alert-confirm" id="disableMatchAlertsDialog" aria-labelledby="disableMatchAlertsTitle" aria-describedby="disableMatchAlertsDescription">
   <h2 class="lbl" id="disableMatchAlertsTitle" data-ko="경기 알림 설정" data-en="Match alert settings">경기 알림 설정</h2>
   <p class="lbl" id="disableMatchAlertsDescription" data-ko="이 기기에서 받을 알림을 고르거나 알림 연결을 복구할 수 있어요." data-en="Choose which alerts this device receives or repair its push connection.">이 기기에서 받을 알림을 고르거나 알림 연결을 복구할 수 있어요.</p>
+  <p id="matchAlertDeviceTestStatus" role="status"></p>
   <div class="match-alert-confirm-actions" style="flex-wrap:wrap;">
     <button type="button" class="lbl" data-ko="취소" data-en="Cancel" onclick="closeDisableMatchAlertsDialog()" autofocus>취소</button>
     <button type="button" class="lbl" data-ko="알림 종류" data-en="Alert types" onclick="openMatchAlertPreferences()">알림 종류</button>
+    <button type="button" id="matchAlertDeviceTestBtn" class="lbl" data-ko="테스트 알림 보내기" data-en="Send test alert" onclick="sendTestMatchAlert()">테스트 알림 보내기</button>
     <button type="button" class="match-alert-confirm-repair lbl" data-ko="연결 복구" data-en="Refresh connection" onclick="repairMatchAlerts()">연결 복구</button>
     <button type="button" class="match-alert-confirm-off lbl" data-ko="알림 끄기" data-en="Turn off alerts" onclick="confirmDisableMatchAlerts()">알림 끄기</button>
   </div>

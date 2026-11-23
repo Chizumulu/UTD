@@ -11,6 +11,7 @@
   var activeNotificationTypes = null;
   var preferencesRequest = 0;
   var preferenceSubscription = null;
+  var deviceTestInFlight = false;
 
   function isKoreanUi() {
     if (typeof isKorean === "boolean") return isKorean;
@@ -214,6 +215,7 @@
       var registered = await hasRegisteredMatchAlerts();
       var dialog = document.getElementById(registered ? "disableMatchAlertsDialog" : "enableMatchAlertsDialog");
       if (dialog && typeof dialog.showModal === "function") {
+        if (registered && !deviceTestInFlight) setDeviceTestStatus("", "");
         dialog.showModal();
       } else if (window.confirm(registered ? "경기 알림을 끄시겠어요?" : "득점과 경기 상태 알림을 받으시겠어요?")) {
         if (registered) await confirmDisableMatchAlerts();
@@ -232,6 +234,46 @@
   function closeDisableMatchAlertsDialog() {
     var dialog = document.getElementById("disableMatchAlertsDialog");
     if (dialog && dialog.open) dialog.close();
+  }
+
+  function setDeviceTestStatus(ko, en) {
+    setLabel(document.getElementById("matchAlertDeviceTestStatus"), ko, en);
+  }
+
+  async function sendTestMatchAlert() {
+    var dialog = document.getElementById("disableMatchAlertsDialog");
+    if (!dialog.open || deviceTestInFlight) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") {
+      setDeviceTestStatus("먼저 브라우저 설정에서 이 사이트의 알림을 허용해 주세요.",
+        "Allow notifications for this site in your browser settings first.");
+      return;
+    }
+    var button = document.getElementById("matchAlertDeviceTestBtn");
+    deviceTestInFlight = true;
+    button.disabled = true;
+    setDeviceTestStatus("이 기기로 테스트 알림을 보내는 중…", "Sending a test alert to this device…");
+    try {
+      var config = await getConfig();
+      var subscription = await getMatchingSubscription(config);
+      if (!subscription) throw new Error("subscription_not_registered");
+      var response = await sendSubscription("subscriptions/test", subscription);
+      if (!response || response.accepted !== true) throw new Error("device_test_delivery_failed");
+      setDeviceTestStatus("푸시 서비스가 발송 요청을 받았어요. 이 기기에 알림이 뜨는지 확인해 주세요.",
+        "The push service accepted the test. Check whether an alert appears on this device.");
+    } catch (error) {
+      if (error.message === "subscription_not_registered" || error.message === "subscription_expired") {
+        setDeviceTestStatus("이 기기의 알림 연결을 확인할 수 없어요. 연결 복구 후 다시 시도해 주세요.",
+          "This device's alert registration could not be verified. Repair the connection and try again.");
+      } else if (error.message === "device_test_rate_limited") {
+        setDeviceTestStatus("테스트 알림은 30초에 한 번 보낼 수 있어요.", "You can send one test alert every 30 seconds.");
+      } else {
+        setDeviceTestStatus("테스트 알림을 보내지 못했어요. 잠시 후 다시 시도해 주세요.",
+          "Could not send the test alert. Please try again shortly.");
+      }
+    } finally {
+      deviceTestInFlight = false;
+      button.disabled = false;
+    }
   }
 
   function setPreferencesFormBusy(dialog, busy, messageKo, messageEn) {
@@ -390,6 +432,7 @@
   window.repairMatchAlerts = repairMatchAlerts;
   window.closeEnableMatchAlertsDialog = closeEnableMatchAlertsDialog;
   window.closeDisableMatchAlertsDialog = closeDisableMatchAlertsDialog;
+  window.sendTestMatchAlert = sendTestMatchAlert;
   window.openMatchAlertPreferences = openMatchAlertPreferences;
   window.saveMatchAlertPreferences = saveMatchAlertPreferences;
   window.matchAlertNotice = notice;
