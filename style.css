@@ -14140,6 +14140,8 @@ body {
   background: var(--color-surface); color: var(--color-text-toggle); font: inherit;
 }
 .round-search p { margin: 0; font-size: var(--fs-sm); }
+.round-status-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.round-status-filters button { min-height: 40px; }
 #roundSearchMore { align-self: center; }
 .round-mode-actions .round-share-btn { margin: 0; }
 @media (max-width: 720px) {
