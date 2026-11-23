@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '003',
+    style: '004',
     data: '004',
-    app: '009',
+    app: '010',
     report: '002',
     archive: '200',
     predictWorker: '220',
@@ -871,6 +871,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <input id="roundSearchInput" type="search" maxlength="100" autocomplete="off" aria-controls="roundMatchList"
         oninput="updateRoundSearch(event)" oncompositionend="updateRoundSearch(event)">
       <button type="button" id="roundSearchClear" class="round-mode-chip lbl" data-ko="지우기" data-en="Clear" onclick="clearRoundSearch(true)" hidden>지우기</button>
+    </div>
+    <div class="round-status-filters" id="roundStatusFilters" role="group" aria-label="시즌 경기 상태" data-aria-ko="시즌 경기 상태" data-aria-en="Season fixture status" aria-controls="roundMatchList">
+      <button type="button" class="round-mode-chip lbl active" data-status="all" data-ko="전체" data-en="All" aria-pressed="true" onclick="setRoundStatusFilter(this.dataset.status)">전체</button>
+      <button type="button" class="round-mode-chip lbl" data-status="upcoming" data-ko="예정" data-en="Upcoming" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">예정</button>
+      <button type="button" class="round-mode-chip lbl" data-status="result" data-ko="결과" data-en="Results" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">결과</button>
+      <button type="button" class="round-mode-chip lbl" data-status="postponed" data-ko="연기" data-en="Postponed" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">연기</button>
+      <button type="button" class="round-mode-chip lbl" data-status="pending" data-ko="결과 대기" data-en="Awaiting result" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">결과 대기</button>
     </div>
     <p id="roundSearchStatus" role="status" tabindex="-1"></p>
   </form>

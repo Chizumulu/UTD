@@ -11000,6 +11000,7 @@
       currentRoundKey = key;
     }
     roundViewMode = 'week'; // 특정 주차로 이동하므로 주차별 보기로 전환
+    roundStatusFilter = 'all';
     clearRoundSearch(false);
     showView('rounds'); // 반기는 showView → renderRoundsView에서 currentRoundKey 기준으로 다시 정해집니다.
     const listEl = document.getElementById('roundMatchList');
@@ -11015,6 +11016,7 @@
   let roundMonthMineOnly = false;   // 치주물루 경기만 보기
   let roundMonthKeysCache = [];     // 현재 월 탭 목록(스와이프용)
   const ROUND_SEARCH_PAGE_SIZE = 40;
+  let roundStatusFilter = 'all';
   let roundSearchLimit = ROUND_SEARCH_PAGE_SIZE;
   let roundSearchTimer;
   try {
@@ -11025,6 +11027,7 @@
 
   function setRoundViewMode(mode) {
     roundViewMode = mode === 'month' ? 'month' : 'week';
+    roundStatusFilter = 'all';
     clearRoundSearch(false);
     try { localStorage.setItem('roundViewMode', roundViewMode); } catch (e) {}
     renderRoundsView();
@@ -11131,6 +11134,23 @@
     return document.getElementById('roundSearchInput').value.trim().split(/\s+/).map(normalizeRoundSearch).filter(Boolean);
   }
 
+  function setRoundStatusFilter(status) {
+    roundStatusFilter = status;
+    clearTimeout(roundSearchTimer);
+    roundSearchLimit = ROUND_SEARCH_PAGE_SIZE;
+    renderRoundsView();
+  }
+
+  function seasonFixtureStatus(match, now) {
+    if (!match.postponed && Number.isInteger(match.homeScore) && Number.isInteger(match.awayScore)) return 'result';
+    if (match.pendingResult) return 'pending';
+    if (match.postponed) return 'postponed';
+    const kickoffAt = kickoffUTCMillis(match.kickoffDate, match.kickoffTime || '23:59');
+    const grace = match.kickoffTime ? LEAGUE_LIVE_WINDOW_AFTER_MS : 60 * 1000;
+    const past = kickoffAt && now >= kickoffAt + grace;
+    return past ? 'pending' : 'upcoming';
+  }
+
   function updateRoundSearch(event, immediately = false) {
     if (event?.isComposing) return;
     clearTimeout(roundSearchTimer);
@@ -11153,15 +11173,18 @@
   }
 
   function renderRoundSearchResults(listEl, status, terms) {
+    const now = Date.now();
     const matches = collectSeasonScheduleMatches().filter(match => {
+      if (!terms.length) return true;
       const names = [match.homeEn, match.homeKo, match.awayEn, match.awayKo].map(normalizeRoundSearch);
       return terms.every(term => names.some(name => name.includes(term)));
-    }).map(match => ({
-      ...match, isScheduled: !Number.isInteger(match.homeScore) || !Number.isInteger(match.awayScore)
-    }));
-    const today = kstDateKey(Date.now());
+    }).flatMap(match => {
+      const fixtureStatus = seasonFixtureStatus(match, now);
+      if (roundStatusFilter !== 'all' && roundStatusFilter !== fixtureStatus) return [];
+      return [{ ...match, fixtureStatus, isScheduled: fixtureStatus !== 'result' }];
+    });
     const sectionOf = match => !match.kickoffDate || match.postponed ? 2
-      : match.isScheduled && match.kickoffDate >= today ? 0 : 1;
+      : match.fixtureStatus === 'upcoming' ? 0 : 1;
     matches.sort((a, b) => {
       const section = sectionOf(a);
       return section - sectionOf(b) ||
@@ -11250,7 +11273,7 @@
       const kst = kstOf(m);
       // 예정 경기(다른 주차로 옮겨간 자리표시자 제외)에는 "프리뷰" 펼침 패널을 붙입니다.
       // 계산이 가벼운 편은 아니라서 내용은 처음 펼칠 때 만들고(matchPreviewHtml), 목록을 그릴 때는 버튼만 둡니다.
-      const pvEligible = !played && !m.movedToWeek
+      const pvEligible = !played && !m.movedToWeek && !m.postponed && m.fixtureStatus !== 'pending'
         && leagueData.some(t => t.nameEn === m.homeEn) && leagueData.some(t => t.nameEn === m.awayEn);
 
       // 득점자 한 줄 (각 팀 이름 아래)
@@ -11308,6 +11331,8 @@
           <span class="rmd-num rmd-num-away${awayWin ? ' is-win' : (homeWin ? ' is-lose' : '')}">${m.awayScore}</span>`;
       } else if (m.movedToWeek) {
         mid = `<button type="button" class="rmd-status rmd-status-link lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`;
+      } else if (m.fixtureStatus === 'pending') {
+        mid = `<span class="rmd-status lbl" data-en="Awaiting result" data-ko="결과 대기">${isKorean ? '결과 대기' : 'Awaiting result'}</span>`;
       } else if (m.postponed) {
         mid = `<span class="rmd-status is-postponed lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`;
       } else {
@@ -11716,8 +11741,13 @@
     const input = document.getElementById('roundSearchInput');
     input.placeholder = isKorean ? '팀 이름 · 예: 라이플리, Raiply' : 'Team name · e.g. Raiply';
     const terms = roundSearchTerms();
-    const searching = terms.length > 0;
+    const searching = terms.length > 0 || roundStatusFilter !== 'all';
     document.getElementById('roundSearchClear').hidden = !input.value;
+    document.querySelectorAll('#roundStatusFilters button').forEach(button => {
+      const selected = button.dataset.status === roundStatusFilter;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
     const halfBarEl = document.getElementById('roundHalfBar');
     if (halfBarEl) halfBarEl.style.display = monthMode || searching ? 'none' : '';
 
@@ -22683,7 +22713,7 @@
       return null;
     }
     function stepRound(delta) {
-      if (roundSearchTerms().length) return;
+      if (roundStatusFilter !== 'all' || roundSearchTerms().length) return;
       if (roundViewMode === 'month') {
         const mk = roundMonthKeysCache, mi = mk.indexOf(roundMonthKey), nx = mk[mi + delta];
         if (mi < 0 || !nx) return;
