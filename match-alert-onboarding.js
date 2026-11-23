@@ -3,7 +3,6 @@
 
   var SNOOZE_KEY = "utd-match-alerts-prompt-snoozed-until";
   var NEVER_KEY = "utd-match-alerts-prompt-never";
-  var SERVICE_WORKER_SCOPE = "/UTD/";
 
   function isStandalonePwa() {
     return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
@@ -76,11 +75,8 @@
     if (snoozedUntil > Date.now()) return false;
     if (snoozedUntil) localStorage.removeItem(SNOOZE_KEY);
 
-    var registration = await navigator.serviceWorker.getRegistration(SERVICE_WORKER_SCOPE);
-    var subscription = registration && registration.pushManager
-      ? await registration.pushManager.getSubscription()
-      : null;
-    return !subscription;
+    return typeof window.hasRegisteredMatchAlerts === "function" &&
+      !(await window.hasRegisteredMatchAlerts());
   }
 
   document.addEventListener("DOMContentLoaded", function () {

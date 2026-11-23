@@ -21,11 +21,15 @@ Use a Cloudflare account with Workers and D1 enabled.
 
 The Worker accepts browser requests only from `https://chizumulu.github.io`. Keep the VAPID private key in Cloudflare Worker secrets; never put it in the PWA or GitHub repository.
 
+For an existing deployment upgrading to delivery receipts, apply the updated schema to the existing D1 database with `npm run db:apply`, then deploy the Worker before publishing the updated site. The site uses the Worker's subscription status endpoint to confirm that the current browser subscription is registered.
+
 ## Polling and notifications
 
 The Cron Trigger runs every two minutes. Change the expression in `wrangler.jsonc` to adjust the frequency. The Worker checks up to 100 recent matches for `teamId=chizumulu_united` and `competitionCode=nrfa_league_one`, ignores stale live rows older than 45 minutes, and skips notifications for the first poll so existing results do not generate a burst of alerts. It also reads `scheduledRounds` from the public site `data.js` and sends a one-hour kickoff reminder for unplayed Chizumulu fixtures with a date and time. The schedule strings use Malawi local time (Central Africa Time, UTC+02:00), as used by the site and its calendar downloads. Some fixture times in `data.js` are explicitly marked as provisional 15:00 defaults, so reminders use those values until the schedule is corrected.
 
 Push subscriptions are stored in D1. Expired subscriptions that return HTTP 404 or 410 are removed automatically. The notification card is tagged by match so later score updates replace the prior card where the platform supports it.
+
+The Worker records successful deliveries per notification and subscription in D1. Overlapping polls share the delivery state, and retries skip subscriptions whose delivery is already recorded. Delivery records expire after two days.
 
 The source API is independent of NRFA and may be delayed, corrected, or unavailable. The Worker retries on its next scheduled run; it cannot make a new API update arrive earlier.
 
