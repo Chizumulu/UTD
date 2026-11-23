@@ -3445,12 +3445,12 @@
     const apiAs = (m.score && m.score.away != null) ? m.score.away : '-';
     const hs = swapped ? apiAs : apiHs;
     const as = swapped ? apiHs : apiAs;
-    const state = m.ended ? 'ended' : (m.stale ? 'stale' : 'live');
+    const state = m.ended || m.status === 'full_time' ? 'ended' : (m.stale ? 'stale' : 'live');
     const stateLbl = state === 'ended' ? (isKorean ? '종료' : 'Full time')
       : leagueLiveRefreshFailed ? (isKorean ? '마지막 확인' : 'Last known')
       : state === 'stale' ? (isKorean ? '최근 소식' : 'Recent update') : 'LIVE';
     const pillHtml = state === 'ended'
-      ? `<span class="nmh-live-pill is-ended">${isKorean ? '종료' : 'FT'}</span>`
+      ? `<span class="nmh-live-pill is-ended">${isKorean ? '종료' : 'FT'}${m.pendingTableResult ? ' · ' + pendingLeagueResultText() : ''}</span>`
       : (state === 'stale'
         ? `<span class="nmh-live-pill is-stale">${isKorean ? '최근 소식' : 'Recent'}</span><span class="nmh-live-pill">${escapeHtml(formatLeagueLiveMinute(m))}</span>`
         : `<span class="nmh-live-pill">${escapeHtml(formatLeagueLiveMinute(m))}</span>`);
@@ -6645,6 +6645,133 @@
   let leagueLivePollDelay = LEAGUE_LIVE_POLL_MS;
   let leagueLiveLastCheckedAt = 0;
   let leagueLiveRefreshFailed = false;
+  const PENDING_LEAGUE_RESULTS_KEY = 'utd-pending-league-results';
+  const LEAGUE_RESULT_REPORT_WINDOW_MS = 24 * 60 * 60 * 1000;
+  let pendingLeagueResults = new Map();
+  let storedPendingLeagueResults = null;
+
+  function validLeagueResultScore(home, away) {
+    return Number.isInteger(home) && home >= 0 && Number.isInteger(away) && away >= 0;
+  }
+
+  function leagueResultFixtureKey(match, kickoffAt = kickoffUTCMillis(match.kickoffDate, match.kickoffTime)) {
+    return leagueFixturePath(match.homeEn, match.awayEn) + '@' + kickoffAt;
+  }
+
+  function pendingLeagueResultText() {
+    return isKorean ? '순위표 반영 대기' : 'Awaiting table update';
+  }
+
+  function recordedLeagueResultText() {
+    return isKorean ? '반영 완료' : 'Recorded';
+  }
+
+  function pendingLeagueResultForFixture(match) {
+    if (match.postponed || match.movedToWeek || validLeagueResultScore(match.homeScore, match.awayScore)) return null;
+    return pendingLeagueResults.get(leagueResultFixtureKey(match))?.score || null;
+  }
+
+  function syncPendingLeagueResults(observations) {
+    const fixturesByPair = new Map();
+    const openByKey = new Map();
+    allRoundKeysIncludingScheduled().forEach(roundKey => {
+      buildRoundMatches(roundKey).forEach(match => {
+        if (!match.homeEn || !match.awayEn || match.postponed || match.movedToWeek) return;
+        const kickoffAt = kickoffUTCMillis(match.kickoffDate, match.kickoffTime);
+        if (!kickoffAt) return;
+        const item = {match, kickoffAt, key: leagueResultFixtureKey(match, kickoffAt)};
+        const pair = leagueTeamPairKey(match.homeEn, match.awayEn);
+        if (!fixturesByPair.has(pair)) fixturesByPair.set(pair, []);
+        fixturesByPair.get(pair).push(item);
+        if (!validLeagueResultScore(match.homeScore, match.awayScore)) openByKey.set(item.key, item);
+      });
+    });
+
+    if (storedPendingLeagueResults === null) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(PENDING_LEAGUE_RESULTS_KEY));
+        storedPendingLeagueResults = Array.isArray(cached) ? cached : [];
+      } catch (error) {
+        storedPendingLeagueResults = [];
+      }
+    }
+    const next = new Map();
+    const now = Date.now();
+    const validTimestamp = (fixture, observedAt) => Number.isFinite(observedAt) && observedAt <= now &&
+      observedAt >= fixture.kickoffAt + LEAGUE_MIN_FULL_TIME_MS &&
+      observedAt <= fixture.kickoffAt + LEAGUE_RESULT_REPORT_WINDOW_MS;
+    for (const record of storedPendingLeagueResults) {
+      const fixture = openByKey.get(record?.key);
+      if (fixture && validTimestamp(fixture, record.observedAt) && validLeagueResultScore(record.home, record.away)) {
+        next.set(fixture.key, { ...fixture, score: record });
+      }
+    }
+    for (const observation of observations) {
+      const { homeNameEn, awayNameEn, ts, home, away } = observation;
+      if (!homeNameEn || !awayNameEn || !validLeagueResultScore(home, away)) continue;
+      const fixtures = fixturesByPair.get(leagueTeamPairKey(homeNameEn, awayNameEn)) || [];
+      // Include recorded matches in this lookup so an old observation cannot migrate to a rematch.
+      const fixture = fixtures.reduce((latest, item) =>
+        item.kickoffAt <= ts && (!latest || item.kickoffAt > latest.kickoffAt) ? item : latest, null);
+      if (!fixture || !openByKey.has(fixture.key) || !validTimestamp(fixture, ts)) continue;
+      if (next.get(fixture.key)?.score.observedAt > ts) continue;
+      const reversed = fixture.match.homeEn !== homeNameEn;
+      next.set(fixture.key, { ...fixture, score: {
+        key: fixture.key, observedAt: ts, home: reversed ? away : home, away: reversed ? home : away
+      } });
+    }
+
+    const signature = results => JSON.stringify([...results.values()]
+      .map(({key, score}) => [key, score.home, score.away]).sort((a, b) => a[0].localeCompare(b[0])));
+    const changed = signature(pendingLeagueResults) !== signature(next);
+    const stored = [...next.values()].map(item => item.score);
+    if (JSON.stringify(stored) !== JSON.stringify(storedPendingLeagueResults)) {
+      try { localStorage.setItem(PENDING_LEAGUE_RESULTS_KEY, JSON.stringify(stored)); } catch (error) {}
+    }
+    pendingLeagueResults = next;
+    storedPendingLeagueResults = stored;
+    return changed;
+  }
+
+  function pendingLeagueObservation(match) {
+    if (!match.ended && match.status !== 'full_time') return null;
+    return {
+      homeNameEn: resolveLeagueTeamNameEn(match.homeTeam),
+      awayNameEn: resolveLeagueTeamNameEn(match.awayTeam),
+      ts: Date.parse(match.completedAt || match.lastSeenAt || ''),
+      home: match.score?.home,
+      away: match.score?.away
+    };
+  }
+
+  function pendingLeagueResultForLive(match) {
+    const home = resolveLeagueTeamNameEn(match.homeTeam);
+    const away = resolveLeagueTeamNameEn(match.awayTeam);
+    const now = Date.now();
+    return [...pendingLeagueResults.values()].find(item =>
+      item.match.homeEn === home && item.match.awayEn === away &&
+      now >= item.kickoffAt && now <= item.kickoffAt + LEAGUE_LIVE_FORCE_CLOSE_MS);
+  }
+
+  function renderPendingLeagueResults(shownKeys) {
+    const section = document.getElementById('pendingLeagueResults');
+    const list = document.getElementById('pendingLeagueResultList');
+    const pending = currentView === 'rank' ? [...pendingLeagueResults.values()]
+      .filter(item => !shownKeys.has(item.key)).sort((a, b) => b.kickoffAt - a.kickoffAt) : [];
+    section.hidden = !pending.length;
+    const html = pending.map(({ match, score }) => {
+      const home = escapeHtml(isKorean ? match.homeKo : match.homeEn);
+      const away = escapeHtml(isKorean ? match.awayKo : match.awayEn);
+      return `<a class="pending-league-result" href="#/${leagueFixturePath(match.homeEn, match.awayEn)}">
+        <span>${home} <b>${score.home} : ${score.away}</b> ${away}</span>
+        <small>${isKorean ? '경기 종료' : 'Full time'} · ${pendingLeagueResultText()}</small>
+      </a>`;
+    }).join('');
+    if (list._lastHtml !== html) {
+      list.innerHTML = html;
+      list._lastHtml = html;
+    }
+  }
 
   function leagueLiveRefreshText() {
     const options = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: isKorean ? 'Asia/Seoul' : 'Africa/Blantyre' };
@@ -6939,7 +7066,10 @@
       // "라이브"로 주더라도 화면에서는 제외합니다(킥오프 시각부터 창을 활성화).
       return isLeagueLiveWindowOpen(getLeagueLiveWindowState(h, a, now));
     });
-    return dedupeLeagueMatchesByPair(filtered);
+    return {
+      matches: dedupeLeagueMatchesByPair(filtered),
+      observations: matches.map(pendingLeagueObservation).filter(Boolean)
+    };
   }
 
   // /v1/matches/{matchId}는 팀 이름으로 추정하는 게 아니라, 그 경기 하나(matchId)의
@@ -7140,6 +7270,15 @@
     // 캐시로 다시 그리는 경로(showView)에서도 킥오프 시각 창을 벗어난 경기는 보이지 않도록
     // 렌더링 직전에 한 번 더 걸러줍니다.
     matches = (matches || []).filter(isLeagueMatchInLiveWindow).map(normalizeLeagueMatchOrientation);
+    const shownPending = new Set();
+    matches = matches.map(match => {
+      const pending = pendingLeagueResultForLive(match);
+      if (!pending) return match;
+      shownPending.add(pending.key);
+      const {home, away} = pending.score;
+      return { ...match, score: {home, away}, pendingTableResult: true, status: 'full_time', ended: true, stale: false };
+    });
+    renderPendingLeagueResults(shownPending);
 
     // showView가 rank 화면 복귀 시 이 값 그대로 다시 그릴 수 있도록 최신 목록을 저장해둡니다.
     leagueLiveRenderedCache = matches;
@@ -7204,7 +7343,7 @@
       const topBadgeHtml = (leagueLiveRefreshFailed && !m.ended)
         ? `<span class="llt-stale-badge">${isKorean ? '마지막 확인' : 'Last known'}</span>`
         : m.ended
-        ? `<span class="llt-ended-badge">${isKorean ? '종료' : 'FT'}</span>`
+        ? `<span class="llt-ended-badge">${isKorean ? '종료' : 'FT'}${m.pendingTableResult ? ' · ' + pendingLeagueResultText() : ''}</span>`
         : (m.stale
           ? `<span class="llt-stale-badge">${isKorean ? '최근 소식' : 'Recent'}</span><span class="llt-minute">${escapeHtml(formatLeagueLiveMinute(m))}</span>`
           : `<span class="llt-minute">${escapeHtml(formatLeagueLiveMinute(m))}</span>`);
@@ -7673,6 +7812,7 @@
     // 언급하지 않음), 최신 게시물 하나만 보면 이전에 보도됐던 골이 통째로 사라지는
     // 문제가 있었습니다 — 그래서 events는 최신 게시물 것으로 덮어쓰지 않고 누적합니다.
     const latestByPair = new Map(); // pairKey -> { ts, homeNameEn, awayNameEn, match }
+    const resultObservations = [];
     const goalsByPair = new Map();  // pairKey -> Map(dedupeKey -> goal event)
     // 실황 게시물(live_update) 본문을 시간순으로 모은 "경기 진행" 피드. 경고/교체 같은
     // 구조화 이벤트가 없는 문장형 중계(점유율, 코너킥, 위기 상황 등)까지 담기 위함입니다.
@@ -7692,6 +7832,9 @@
         const homeNameEn = resolveLeagueTeamNameEn({ name: m.homeTeam });
         const awayNameEn = resolveLeagueTeamNameEn({ name: m.awayTeam });
         if (!homeNameEn || !awayNameEn) continue; // 우리 리그 15개 팀끼리의 경기만 대상으로 합니다.
+        if (m.status === 'full_time') {
+          resultObservations.push({ ts, homeNameEn, awayNameEn, home: m.homeScore, away: m.awayScore });
+        }
         const pairKey = leagueTeamPairKey(homeNameEn, awayNameEn);
 
         const prev = latestByPair.get(pairKey);
@@ -7775,7 +7918,7 @@
       }
     }
 
-    return Array.from(latestByPair.values()).map(entry => {
+    const entries = Array.from(latestByPair.values()).map(entry => {
       const pairKey = leagueTeamPairKey(entry.homeNameEn, entry.awayNameEn);
       const goalMap = goalsByPair.get(pairKey);
       let mergedEvents = normalizeLeagueGoalEvents(goalMap ? Array.from(goalMap.values()) : []);
@@ -7893,6 +8036,7 @@
       const commentary = feedMap ? Array.from(feedMap.values()).sort((a, b) => a.ts - b.ts) : [];
       return Object.assign({}, entry, { match: mergedMatch, commentary });
     });
+    return { entries, resultObservations };
   }
 
   // "마지막으로 확인된 라이브 상태" 캐시: /v1/live에 매 주기마다 떠 있던 경기를 팀
@@ -7937,6 +8081,7 @@
       // 수 있으므로, 킥오프 시각을 모르면 끝없이 떠 있게 될 수 있어 아예 심지 않습니다.
       // (진행 중인 경기는 기존과 같이 킥오프를 몰라도 심습니다.)
       if (isFullTime && windowState === 'unknown') continue;
+      if (isFullTime && (!Number.isFinite(entry.ts) || now - entry.ts > LEAGUE_LIVE_FORCE_CLOSE_MS)) continue;
       // 킥오프 후 90분 전의 full_time은 지난 맞대결 게시물일 가능성이 높아 심지 않습니다.
       if (isFullTime && isLeagueFullTimeTooEarly(entry.homeNameEn, entry.awayNameEn, now)) continue;
 
@@ -8007,7 +8152,8 @@
         isFullTime = detail.status === 'full_time';
       } else if (!isFullTime) {
         const structuredEntry = structuredByPairKey.get(pairKey);
-        isFullTime = !!(structuredEntry && structuredEntry.match.status === 'full_time');
+        isFullTime = !!(structuredEntry && structuredEntry.match.status === 'full_time' &&
+          Date.now() - structuredEntry.ts <= LEAGUE_LIVE_FORCE_CLOSE_MS);
       }
 
       // 킥오프 후 90분 전에는 종료를 인정하지 않고 진행 중(최근 소식)으로 유지합니다.
@@ -8024,6 +8170,7 @@
       const shownMatch = detail
         ? Object.assign({}, cached.match, { score: detail.score, minute: detail.minute, status: detail.status })
         : Object.assign({}, cached.match, isFullTime ? { status: 'full_time' } : null);
+      if (isFullTime && detail) shownMatch.completedAt = detail.completedAt || detail.lastSeenAt;
       if (isFullTime) cached.match = shownMatch;
       staleMatches.push(Object.assign({}, shownMatch, { stale: !isFullTime, ended: isFullTime }));
     }
@@ -8323,6 +8470,8 @@
   async function refreshLeagueLiveTicker(force) {
     if (force !== true && !getLeaguePollWindowState(Date.now()).inWindow) {
       scheduleNextLeagueLivePoll();
+      renderLeagueLiveTicker(leagueLiveRenderedCache);
+      renderLinkedFixtureSummary();
       return;
     }
     // 안쪽에서 무슨 일이 나든(특히 renderLeagueLiveTicker처럼 이전엔 보호되지 않았던 부분)
@@ -8330,8 +8479,11 @@
     // 예외가 나도 항상 실행되게 합니다. 그렇지 않으면 한 번의 예외로 setTimeout 체인이
     // 끊겨서, 사용자가 직접 새로고침하기 전까지 라이브 창이 다시는 갱신되지 않습니다.
     try {
+      let liveObservations = [];
       try {
-        leagueLiveMatchesCache = await fetchLeagueLiveMatches();
+        const live = await fetchLeagueLiveMatches();
+        leagueLiveMatchesCache = live.matches;
+        liveObservations = live.observations;
         leagueLiveLastCheckedAt = Date.now();
         leagueLiveRefreshFailed = false;
         leagueLivePollDelay = LEAGUE_LIVE_POLL_MS; // 성공하면 원래 주기로 되돌립니다.
@@ -8352,8 +8504,9 @@
       // structuredEntries 조회와 stale 판정(주로 matchId 기반)을 서로 다른 try로 분리해서,
       // /v1/structured가 잠깐 실패해도 matchId 기반 FULL TIME 확인은 영향받지 않게 합니다.
       let structuredEntries = [];
+      let resultObservations = [];
       try {
-        structuredEntries = await fetchLeagueStructuredRecentMatches();
+        ({ entries: structuredEntries, resultObservations } = await fetchLeagueStructuredRecentMatches());
       } catch (e) { /* 무시: structuredEntries는 빈 배열로 유지 */ }
 
       let combinedMatches = leagueLiveMatchesCache;
@@ -8363,7 +8516,10 @@
       } catch (e) { /* 무시 */ }
 
       try {
+        const pendingChanged = syncPendingLeagueResults(resultObservations.concat(
+          liveObservations, combinedMatches.map(pendingLeagueObservation).filter(Boolean)));
         renderLeagueLiveTicker(combinedMatches);
+        if (pendingChanged && currentView === 'rounds') renderRoundsView();
         renderLinkedFixtureSummary();
       } catch (e) {
         // 렌더링 중 예상 못한 오류(예: 손상된 데이터)가 나도 여기서 삼켜서 폴링을 계속 이어갑니다.
@@ -8377,6 +8533,12 @@
   function startLeagueLiveTicker() {
     if (leagueLivePollTimer) clearTimeout(leagueLivePollTimer);
     leagueLivePollDelay = LEAGUE_LIVE_POLL_MS;
+    const pendingChanged = syncPendingLeagueResults([]);
+    if (pendingChanged) {
+      renderLeagueLiveTicker(leagueLiveRenderedCache);
+      if (currentView === 'rounds') renderRoundsView();
+      renderLinkedFixtureSummary();
+    }
     refreshLeagueLiveTicker(true); // 첫 호출은 창 밖이어도 한 번 불러서 현재 상태(종료 카드 등)를 그립니다.
   }
 
@@ -10752,7 +10914,7 @@
         // (그렇지 않으면 이후 경기들의 득점자가 한 칸씩 밀려서 엉뚱하게 매칭됩니다.)
         if (m.postponed || typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') {
           return {
-            isBye: false, isScheduled: !!m.postponed,
+            isBye: false, isScheduled: true,
             homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
             homeScore: m.homeScore, awayScore: m.awayScore,
             postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek, changed: m.changed,
@@ -11143,7 +11305,7 @@
 
   function seasonFixtureStatus(match, now) {
     if (!match.postponed && Number.isInteger(match.homeScore) && Number.isInteger(match.awayScore)) return 'result';
-    if (match.pendingResult) return 'pending';
+    if (match.pendingResult || pendingLeagueResultForFixture(match)) return 'pending';
     if (match.postponed) return 'postponed';
     const kickoffAt = kickoffUTCMillis(match.kickoffDate, match.kickoffTime || '23:59');
     const grace = match.kickoffTime ? LEAGUE_LIVE_WINDOW_AFTER_MS : 60 * 1000;
@@ -11259,6 +11421,7 @@
       // 구단정보 > 경기결과(teamOpts)에서 우리 팀 목록이면 모든 행이 우리 경기라 강조 표시는 생략합니다.
       const mine = (teamOpts && teamOpts.teamEn && isMyTeamName(teamOpts.teamEn, teamOpts.teamKo)) ? false : mineMatch;
       const played = !m.isScheduled;
+      const pendingScore = played ? null : pendingLeagueResultForFixture(m);
       const homeWin = played && m.homeScore > m.awayScore;
       const awayWin = played && m.awayScore > m.homeScore;
       const wn = roundKeyPos(m.__rk);
@@ -11273,7 +11436,7 @@
       const kst = kstOf(m);
       // 예정 경기(다른 주차로 옮겨간 자리표시자 제외)에는 "프리뷰" 펼침 패널을 붙입니다.
       // 계산이 가벼운 편은 아니라서 내용은 처음 펼칠 때 만들고(matchPreviewHtml), 목록을 그릴 때는 버튼만 둡니다.
-      const pvEligible = !played && !m.movedToWeek && !m.postponed && m.fixtureStatus !== 'pending'
+      const pvEligible = !played && !pendingScore && !m.movedToWeek && !m.postponed && m.fixtureStatus !== 'pending'
         && leagueData.some(t => t.nameEn === m.homeEn) && leagueData.some(t => t.nameEn === m.awayEn);
 
       // 득점자 한 줄 (각 팀 이름 아래)
@@ -11328,7 +11491,14 @@
         mid = `
           <span class="rmd-num rmd-num-home${homeWin ? ' is-win' : (awayWin ? ' is-lose' : '')}">${m.homeScore}</span>
           <span class="rmd-status lbl" data-en="FT" data-ko="종료">${isKorean ? '종료' : 'FT'}</span>
-          <span class="rmd-num rmd-num-away${awayWin ? ' is-win' : (homeWin ? ' is-lose' : '')}">${m.awayScore}</span>`;
+          <span class="rmd-num rmd-num-away${awayWin ? ' is-win' : (homeWin ? ' is-lose' : '')}">${m.awayScore}</span>
+          <small class="rmd-result-note">${recordedLeagueResultText()}</small>`;
+      } else if (pendingScore) {
+        mid = `
+          <span class="rmd-num rmd-num-home">${pendingScore.home}</span>
+          <span class="rmd-status lbl" data-en="FT" data-ko="종료">${isKorean ? '종료' : 'FT'}</span>
+          <span class="rmd-num rmd-num-away">${pendingScore.away}</span>
+          <small class="rmd-result-note">${pendingLeagueResultText()}</small>`;
       } else if (m.movedToWeek) {
         mid = `<button type="button" class="rmd-status rmd-status-link lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`;
       } else if (m.fixtureStatus === 'pending') {
@@ -11360,7 +11530,7 @@
           </div>
           ${homeLogo ? `<img class="rmd-logo" src="${homeLogo}" alt="${m.homeEn}">` : ''}
         </div>
-        <div class="rmd-mid${played ? '' : ' is-single'}">${mid}</div>
+        <div class="rmd-mid${played || pendingScore ? '' : ' is-single'}">${mid}</div>
         <div class="rmd-team rmd-away${awayWin ? ' is-winner' : ''}"${teamLinkAttrs(m.awayEn)}>
           ${awayLogo ? `<img class="rmd-logo" src="${awayLogo}" alt="${m.awayEn}">` : ''}
           <div class="rmd-team-text">
@@ -19573,6 +19743,7 @@
     currentMatchDetailAway = typeof lineup.isAway === 'boolean' ? lineup.isAway : fixtureAway;
     const bodyEl = document.getElementById('matchDetailBody');
     bodyEl.innerHTML = `
+      ${validLeagueResultScore(fixture?.homeScore, fixture?.awayScore) ? `<p class="mcenter-note">${recordedLeagueResultText()}</p>` : ''}
       <div class="lineup-formation-tag">${lineup.formation}</div>
       ${buildMatchAssistSummary(lineup)}
       ${renderMatchCenterSection(roundKey, lineup, opponentName, result)}
@@ -19832,14 +20003,16 @@
     const away = isKorean ? match.awayKo : match.awayEn;
     document.getElementById('matchDetailTitle').textContent = home + ' vs ' + away;
     const played = Number.isInteger(match.homeScore) && Number.isInteger(match.awayScore);
+    const pending = played ? null : pendingLeagueResultForFixture(match);
     const kickoffAt = kickoffUTCMillis(match.kickoffDate, match.kickoffTime);
     const inLiveWindow = kickoffAt && Date.now() >= kickoffAt && Date.now() < kickoffAt + LEAGUE_LIVE_WINDOW_AFTER_MS;
-    const live = played || !inLiveWindow ? null : leagueLiveRenderedCache.find(item =>
+    const live = played || pending || !inLiveWindow ? null : leagueLiveRenderedCache.find(item =>
       resolveLeagueTeamNameEn(item.homeTeam) === match.homeEn &&
       resolveLeagueTeamNameEn(item.awayTeam) === match.awayEn && isLeagueMatchInLiveWindow(item));
-    const score = played ? match : live?.score;
+    const score = played ? { home: match.homeScore, away: match.awayScore } : pending || live?.score;
     const status = match.forfeit ? (isKorean ? '몰수 경기' : 'Forfeit')
       : played ? (isKorean ? '경기 종료' : 'Full time')
+      : pending ? (isKorean ? '경기 종료' : 'Full time')
       : live ? (leagueLiveRefreshFailed && !live.ended ? (isKorean ? '마지막 확인' : 'Last known') : formatLeagueLiveMinute(live))
       : match.postponed ? (isKorean ? '경기 연기' : 'Postponed')
       : match.pendingResult || (kickoffAt && kickoffAt < Date.now())
@@ -19848,7 +20021,8 @@
     const venue = getTeamVenue(match.homeEn, roundKeyPos(match.roundKey));
     const kickoff = formatKickoff(match, true);
     const parts = [
-      '<p>' + escapeHtml(status) + (score ? ' · ' + (played ? score.homeScore : score.home ?? '–') + ' : ' + (played ? score.awayScore : score.away ?? '–') : '') + '</p>',
+      '<p>' + (score ? (score.home ?? '–') + ' : ' + (score.away ?? '–') + ' · ' : '') + escapeHtml(status) +
+        (played ? ' · ' + recordedLeagueResultText() : pending ? ' · ' + pendingLeagueResultText() : '') + '</p>',
       kickoff ? '<p>' + kickoff + '</p>' : '',
       venue ? '<p>' + escapeHtml(isKorean ? venue.nameKo : venue.nameEn) + '</p>' : '',
       live ? '<p>' + escapeHtml(leagueLiveRefreshText()) + '</p>' : ''
