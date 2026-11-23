@@ -6376,7 +6376,7 @@
     return 'idx-avg';
   }
 
-  function buildRecordCardHtml(t, rank, total) {
+  function buildRecordCardHtml(t, rank, total, compact) {
     const gpg = t.played > 0 ? (t.goalsFor / t.played).toFixed(1) : '0.0';
     const gapg = t.played > 0 ? (t.goalsAgainst / t.played).toFixed(1) : '0.0';
     const gdClass = t.gd > 0 ? 'gd-pos' : (t.gd < 0 ? 'gd-neg' : 'gd-zero');
@@ -6400,31 +6400,40 @@
     const hasIndex = attackIndex !== null || defenseIndex !== null || defensePerfect;
 
     const rows = [
-      { ko: '승점', en: 'PTS', value: `<span class="pts">${t.pts}</span>` },
-      { ko: '경기', en: 'PLAYED', value: t.played },
-      { ko: '승-무-패', en: 'W-D-L', value: `${t.won}-${t.drawn}-${t.lost}` },
-      { ko: '홈 성적', en: 'HOME RECORD', value: homeAwayValue(home) },
-      { ko: '원정 성적', en: 'AWAY RECORD', value: homeAwayValue(away) },
-      { ko: '득점', en: 'GOALS FOR', value: t.goalsFor },
-      { ko: '실점', en: 'GOALS AGAINST', value: t.goalsAgainst },
-      { ko: '득실차', en: 'GOAL DIFF', value: `<span class="${gdClass}">${t.gd}</span>` },
-      { ko: '경기당 득점', en: 'GOALS / GAME', value: gpg },
-      { ko: '경기당 실점', en: 'CONCEDED / GAME', value: gapg },
-      { ko: '공격 지수', en: 'ATTACK INDEX', value: attackValue },
-      { ko: '수비 지수', en: 'DEFENSE INDEX', value: defenseValue },
-      { ko: '무실점 경기', en: 'CLEAN SHEETS', value: t.cleanSheets },
-      { ko: '무득점 경기', en: 'FAILED TO SCORE', value: t.failedToScore }
+      { k: 'pts', ko: '승점', en: 'PTS', value: `<span class="pts">${t.pts}</span>` },
+      { k: 'played', ko: '경기', en: 'PLAYED', value: t.played },
+      { k: 'wdl', ko: '승-무-패', en: 'W-D-L', value: `${t.won}-${t.drawn}-${t.lost}` },
+      { k: 'home', ko: '홈 성적', en: 'HOME RECORD', value: homeAwayValue(home) },
+      { k: 'away', ko: '원정 성적', en: 'AWAY RECORD', value: homeAwayValue(away) },
+      { k: 'gf', ko: '득점', en: 'GOALS FOR', value: t.goalsFor },
+      { k: 'ga', ko: '실점', en: 'GOALS AGAINST', value: t.goalsAgainst },
+      { k: 'gd', ko: '득실차', en: 'GOAL DIFF', value: `<span class="${gdClass}">${t.gd}</span>` },
+      { k: 'gpg', ko: '경기당 득점', en: 'GOALS / GAME', value: gpg },
+      { k: 'gapg', ko: '경기당 실점', en: 'CONCEDED / GAME', value: gapg },
+      { k: 'atk', ko: '공격 지수', en: 'ATTACK INDEX', value: attackValue },
+      { k: 'def', ko: '수비 지수', en: 'DEFENSE INDEX', value: defenseValue },
+      { k: 'cs', ko: '무실점 경기', en: 'CLEAN SHEETS', value: t.cleanSheets },
+      { k: 'fts', ko: '무득점 경기', en: 'FAILED TO SCORE', value: t.failedToScore }
     ];
 
+    // 다른 구단 화면(compact): 핵심 3개(큰 칸) → 득점·실점·득실차(3칸) → 나머지는 짝지어 2열.
+    // 치주물루 화면은 compact가 없어 기존 순서/모양 그대로입니다.
+    const recordOrder = ['pts', 'played', 'wdl', 'gf', 'ga', 'gd', 'home', 'away', 'gpg', 'gapg', 'atk', 'def', 'cs', 'fts'];
+    const recordTier = { pts: 'a', played: 'a', wdl: 'a', gf: 'b', ga: 'b', gd: 'b' };
+    const recordRowsOrdered = compact
+      ? recordOrder.map(k => rows.find(r => r.k === k))
+      : rows;
+    recordRowsOrdered.forEach(r => { if (!recordTier[r.k]) recordTier[r.k] = 'c'; });
+
     return `
-      <div class="ti-record-card">
+      <div class="ti-record-card${compact ? ' ti-record-card-compact' : ''}">
         <div class="ti-record-rank">
           <span class="ti-record-rank-num">${rank}</span>
           <span class="ti-record-rank-label lbl" data-en="of ${total} teams" data-ko="위 (총 ${total}팀)">${isKorean ? `위 (총 ${total}팀)` : `of ${total} teams`}</span>
         </div>
         <div class="ti-record-grid">
-          ${rows.map(r => `
-            <div class="ti-record-item">
+          ${recordRowsOrdered.map(r => `
+            <div class="ti-record-item"${compact ? ` data-tier="${recordTier[r.k]}"` : ''}>
               <span class="ti-record-item-label lbl" data-en="${r.en}" data-ko="${r.ko}">${isKorean ? r.ko : r.en}</span>
               <span class="ti-record-item-value">${r.value}</span>
             </div>
@@ -6531,7 +6540,7 @@
     return `
       <div class="ti-section">
         <div class="ti-section-title lbl" data-en="${titleEn}" data-ko="${titleKo}">${isKorean ? titleKo : titleEn}</div>
-        <div class="ti-record-card">
+        <div class="ti-record-card ti-record-card-prev">
           <div class="ti-record-rank">
             <span class="ti-record-rank-num">${p.rank}</span>
             <span class="ti-record-rank-label lbl" data-en="Final Rank" data-ko="최종 순위">${isKorean ? '최종 순위' : 'Final Rank'}</span>
@@ -18780,7 +18789,7 @@
     }
 
     // 치주물루(우리 팀)와 동일한 형태로 보여줍니다: 기록 카드 → 폼 가이드 + 홈 vs 원정 카드 → 득점 순위 → 다음 경기.
-    const recordCardHtml = buildRecordCardHtml(t, rank, total);
+    const recordCardHtml = buildRecordCardHtml(t, rank, total, true);
     const magicNumberHtml = buildTeamMagicNumberHtml(t, getRankedTeams('all'));
     const pointsTrendHtml = `
       <details class="team-points-trend-details ti-section team-points-trend-section">

@@ -19441,3 +19441,218 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
   .round-adv > .round-search-filters { flex-wrap: wrap; }
 }
 .round-adv > .round-search-field { margin-top: 8px; flex: none; width: 100%; }
+
+
+/* =====================================================================
+   토스 스타일 정리 — 다른 구단 상세 화면 (#otherTeamFullBody) 전용
+   - 이 블록은 파일 맨 아래에 붙는 "덮어쓰기"입니다. 기존 규칙은 건드리지 않았고,
+     #otherTeamFullBody 안에서만 적용되므로 치주물루(우리 팀) 화면에는 영향이 없어요.
+   - 문제가 생기면 이 블록 전체만 지우면 원래대로 돌아갑니다.
+   - 원칙: 카드 1종류(흰 배경·큰 모서리·옅은 그림자 1개) / 제목은 카드 밖 굵게 /
+     간격은 12·16·24 단계만 / 강조색은 파란색 하나, 나머지는 회색
+   ===================================================================== */
+#otherTeamFullBody {
+  --tt-radius: 20px;
+  --tt-shadow: 0 2px 12px rgba(var(--color-navy-rgb), 0.07);
+  --tt-gap-section: 24px;
+  --tt-gap-card: 12px;
+}
+:root[data-theme="dark"] #otherTeamFullBody {
+  --tt-shadow: 0 2px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* 섹션 간격 + 카드 밖 제목 */
+#otherTeamFullBody .ti-section {
+  margin-bottom: var(--tt-gap-section);
+}
+#otherTeamFullBody .ti-section-title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-text-darkest);
+  margin-bottom: var(--tt-gap-card);
+  padding-left: 4px;
+}
+
+/* 카드 한 종류로 통일 */
+#otherTeamFullBody .ti-card,
+#otherTeamFullBody .ti-record-card,
+#otherTeamFullBody .ti-prev-delta {
+  background: var(--color-surface);
+  border: 0;
+  border-radius: var(--tt-radius);
+  box-shadow: var(--tt-shadow);
+  padding: 20px;
+}
+#otherTeamFullBody .ti-record-card { margin-bottom: 0; }
+#otherTeamFullBody .ti-prev-delta { margin-top: var(--tt-gap-card); }
+#otherTeamFullBody .ti-overview-grid { gap: var(--tt-gap-card); margin-bottom: 0; }
+
+/* 카드 안 소제목: 작은 회색 라벨 */
+#otherTeamFullBody .ti-card-title,
+#otherTeamFullBody .ti-prev-delta-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 14px;
+}
+
+/* 기록 카드: 순위 블록 + 값 목록 */
+#otherTeamFullBody .ti-record-rank {
+  border-radius: 16px;
+}
+#otherTeamFullBody .ti-record-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+#otherTeamFullBody .ti-record-item-label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+#otherTeamFullBody .ti-record-item-value {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-text-darkest);
+  font-variant-numeric: tabular-nums;
+}
+#otherTeamFullBody .ti-record-index-note {
+  border-top: 0;
+  padding-top: 0;
+}
+
+/* 작년 대비 변화: 2열 격자, 큰 숫자 + 작은 라벨 */
+#otherTeamFullBody .ti-prev-delta-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 12px;
+}
+#otherTeamFullBody .ti-prev-delta-label {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+#otherTeamFullBody .ti-prev-delta-vals {
+  font-size: var(--fs-md);
+  color: var(--color-text-darkest);
+}
+
+/* 폼 가이드: 연속 기록·미니 통계 숫자는 파란색 하나로 */
+#otherTeamFullBody .ti-streak-item {
+  border-radius: 16px;
+  padding: 14px 8px;
+}
+#otherTeamFullBody .ti-streak-value,
+#otherTeamFullBody .ti-mini-num {
+  color: var(--color-brand-text);
+  font-size: var(--fs-xl);
+  font-variant-numeric: tabular-nums;
+}
+#otherTeamFullBody .ti-mini-stats {
+  padding-top: 16px;
+}
+
+/* 모바일: 순위 블록을 위로 올리고(세로로 길게 늘어나던 것 해소) 값 목록은 한 줄씩 */
+@media (max-width: 600px) {
+  #otherTeamFullBody .ti-record-card {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 16px 20px;
+  }
+  #otherTeamFullBody .ti-record-rank {
+    flex-direction: row;
+    justify-content: center;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    padding: 14px 16px;
+  }
+  #otherTeamFullBody .ti-record-rank-label { margin-top: 0; }
+  #otherTeamFullBody .ti-record-grid { gap: 0; }
+  #otherTeamFullBody .ti-record-item:last-child { border-bottom: 0; }
+}
+
+/* ---- 기록 카드 묶음 배치 (다른 구단 화면, app.js buildRecordCardHtml의 compact) ----
+   핵심 3개(승점·경기·승-무-패)는 큰 칸 3개, 득점·실점·득실차는 작은 칸 3개,
+   나머지(홈/원정, 경기당 득실, 공격/수비 지수, 무실점/무득점)는 2개씩 짝지어 한 줄에 둡니다. */
+#otherTeamFullBody .ti-record-card-compact .ti-record-grid {
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0;
+  min-width: 0;
+}
+#otherTeamFullBody .ti-record-card-compact .ti-record-item {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 14px 12px 14px 0;
+  border-bottom: 0;
+  grid-column: span 3;
+}
+#otherTeamFullBody .ti-record-card-compact .ti-record-item:nth-child(n+4) {
+  border-top: 1px solid var(--color-border-light);
+}
+#otherTeamFullBody .ti-record-card-compact .ti-record-item[data-tier="a"],
+#otherTeamFullBody .ti-record-card-compact .ti-record-item[data-tier="b"] {
+  grid-column: span 2;
+  align-items: center;
+  text-align: center;
+  padding: 14px 4px;
+}
+#otherTeamFullBody .ti-record-card-compact .ti-record-item[data-tier="a"] .ti-record-item-value {
+  font-size: var(--fs-2xl);
+}
+#otherTeamFullBody .ti-record-card-compact .ti-record-item[data-tier="b"] .ti-record-item-value {
+  font-size: var(--fs-xl);
+}
+#otherTeamFullBody .ti-record-card-compact .ti-record-item[data-tier="c"] .ti-record-item-value {
+  font-size: var(--fs-lg);
+}
+#otherTeamFullBody .ti-record-card-compact .ti-record-item-label {
+  font-size: var(--fs-xs);
+}
+
+/* ---- 직전 시즌 최종 순위 카드 (다른 구단 화면) ----
+   경기·득실차·승점을 한 줄 3칸으로 묶고, 버튼은 무거운 틸 그라데이션 대신
+   옅은 파란 배경의 보조 버튼으로 바꿉니다. */
+#otherTeamFullBody .ti-record-card-prev .ti-record-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  min-width: 0;
+}
+#otherTeamFullBody .ti-record-card-prev .ti-record-item {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 14px 4px;
+  border-bottom: 0;
+  text-align: center;
+}
+#otherTeamFullBody .ti-record-card-prev .ti-record-item-label {
+  font-size: var(--fs-xs);
+}
+#otherTeamFullBody .ti-record-card-prev .ti-record-item-value {
+  font-size: var(--fs-2xl);
+}
+#otherTeamFullBody .ti-record-card-prev .ti-prevseason-cell {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+}
+#otherTeamFullBody .ti-prevseason-btn {
+  min-height: 48px;
+  border-radius: 14px;
+  background: rgba(var(--color-tint-rgb), 0.1);
+  color: var(--color-brand-text);
+  box-shadow: none;
+  filter: none;
+}
+#otherTeamFullBody .ti-prevseason-btn:active {
+  background: rgba(var(--color-tint-rgb), 0.18);
+}
+@media (hover: hover) {
+  #otherTeamFullBody .ti-prevseason-btn:hover {
+    background: rgba(var(--color-tint-rgb), 0.16);
+    box-shadow: none;
+    filter: none;
+  }
+}
