@@ -5,6 +5,7 @@ const CALENDAR_PATH = "/calendar/chizumulu.ics";
 const API_LIMIT = 100;
 const MAX_REQUEST_BYTES = 16 * 1024;
 const PUSH_TIMEOUT_MS = 15 * 1000;
+const DEVICE_TEST_INTERVAL_MS = 30 * 1000;
 const DELIVERY_LEASE_MS = 60 * 1000;
 const DELIVERY_RETENTION_MS = 2 * 24 * 60 * 60 * 1000;
 const NOTIFICATION_TYPES = ["schedule", "reminder", "live", "result"];
@@ -57,6 +58,10 @@ export default {
 
       if (url.pathname === API_PATH + "subscriptions/preferences" && request.method === "POST") {
         return await subscriptionPreferences(request, env, cors);
+      }
+
+      if (url.pathname === API_PATH + "subscriptions/test" && request.method === "POST") {
+        return await sendDeviceTestAlert(request, env, cors);
       }
 
       if (url.pathname === API_PATH + "subscriptions" && request.method === "DELETE") {
@@ -152,6 +157,10 @@ function notificationPreferenceKey(id) {
   return "push_notification_types:" + id;
 }
 
+function deviceTestKey(id) {
+  return "push_device_test_at:" + id;
+}
+
 function parseNotificationTypes(types) {
   if (!Array.isArray(types) || types.length > NOTIFICATION_TYPES.length ||
       new Set(types).size !== types.length || types.some(type => !NOTIFICATION_TYPES.includes(type))) return null;
@@ -238,14 +247,55 @@ async function subscriptionPreferences(request, env, cors) {
   return json({ notificationTypes: types }, 200, cors);
 }
 
+async function sendDeviceTestAlert(request, env, cors) {
+  const { endpoint, keys, error } = await readSubscription(request);
+  if (error) return json({ error }, 400, cors);
+  if (!env.VAPID_SUBJECT || !env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) {
+    return json({ error: "push_not_configured" }, 503, cors);
+  }
+
+  const id = await endpointId(endpoint);
+  const registered = await env.DB.prepare(
+    "SELECT 1 FROM push_subscriptions WHERE id = ? AND p256dh = ? AND auth = ?"
+  ).bind(id, keys.p256dh, keys.auth).first();
+  if (!registered) return json({ error: "subscription_not_registered" }, 404, cors);
+
+  const now = Date.now();
+  const claim = await env.DB.prepare(
+    "INSERT INTO app_settings (key, value) " +
+    "SELECT ?, ? FROM push_subscriptions WHERE id = ? AND p256dh = ? AND auth = ? " +
+    "ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE CAST(app_settings.value AS INTEGER) <= ?"
+  ).bind(deviceTestKey(id), String(now), id, keys.p256dh, keys.auth, now - DEVICE_TEST_INTERVAL_MS).run();
+  if (claim.meta.changes !== 1) {
+    const headers = new Headers(cors);
+    headers.set("Retry-After", String(DEVICE_TEST_INTERVAL_MS / 1000));
+    return json({ error: "device_test_rate_limited" }, 429, headers);
+  }
+
+  const notification = {
+    title: "치주물루 경기 알림 테스트",
+    body: "지금 사용 중인 기기로 보낸 연결 확인 알림이에요.",
+    icon: "/UTD/apple-touch-icon.png",
+    tag: "utd-device-test-" + now,
+    data: { url: "https://chizumulu.github.io/UTD/" }
+  };
+  const delivery = await broadcast(env, notification, {
+    onlySubscriptionId: id, onlySubscriptionKeys: keys, ttl: 60
+  });
+  if (delivery.permanent > 0) return json({ error: "subscription_expired" }, 410, cors);
+  if (delivery.targeted === 0) return json({ error: "subscription_not_registered" }, 404, cors);
+  if (delivery.success !== 1) return json({ error: "device_test_delivery_failed" }, 502, cors);
+  return json({ accepted: true }, 200, cors);
+}
+
 async function removeSubscription(db, id, keys) {
   const remove = keys
     ? db.prepare("DELETE FROM push_subscriptions WHERE id = ? AND p256dh = ? AND auth = ?").bind(id, keys.p256dh, keys.auth)
     : db.prepare("DELETE FROM push_subscriptions WHERE id = ?").bind(id);
   await db.batch([
     remove,
-    db.prepare("DELETE FROM app_settings WHERE key = ? AND NOT EXISTS (SELECT 1 FROM push_subscriptions WHERE id = ?)")
-      .bind(notificationPreferenceKey(id), id)
+    db.prepare("DELETE FROM app_settings WHERE key IN (?, ?) AND NOT EXISTS (SELECT 1 FROM push_subscriptions WHERE id = ?)")
+      .bind(notificationPreferenceKey(id), deviceTestKey(id), id)
   ]);
 }
 
@@ -854,18 +904,28 @@ async function claimDelivery(db, deliveryId, subscriptionId) {
 }
 
 async function broadcast(env, notification, {
-  deliveryId = null, createdBefore = null, onlySubscriptionId = null
+  deliveryId = null, createdBefore = null, onlySubscriptionId = null, onlySubscriptionKeys = null, ttl = 900
 } = {}) {
   const { category, ...payload } = notification;
+  const filters = [];
+  const bindings = [deliveryId];
+  if (onlySubscriptionId !== null) {
+    filters.push("s.id = ?");
+    bindings.push(onlySubscriptionId);
+  }
+  if (onlySubscriptionKeys) {
+    filters.push("s.p256dh = ?", "s.auth = ?");
+    bindings.push(onlySubscriptionKeys.p256dh, onlySubscriptionKeys.auth);
+  }
   const result = await env.DB.prepare(
     "SELECT s.id, s.endpoint, s.p256dh, s.auth, s.created_at, d.delivered_at, p.value AS notification_types " +
     "FROM push_subscriptions AS s LEFT JOIN push_deliveries AS d " +
     "ON d.subscription_id = s.id AND d.delivery_id = ? " +
-    "LEFT JOIN app_settings AS p ON p.key = 'push_notification_types:' || s.id"
-  ).bind(deliveryId).all();
+    "LEFT JOIN app_settings AS p ON p.key = 'push_notification_types:' || s.id" +
+    (filters.length ? " WHERE " + filters.join(" AND ") : "")
+  ).bind(...bindings).all();
   const allSubscriptions = result && Array.isArray(result.results) ? result.results : [];
   const subscriptions = allSubscriptions.filter(row => {
-    if (onlySubscriptionId !== null && row.id !== onlySubscriptionId) return false;
     if (category && !storedNotificationTypes(row.notification_types).includes(category)) return false;
     if (createdBefore === null) return true;
     const createdAt = Date.parse(row.created_at);
@@ -895,7 +955,7 @@ async function broadcast(env, notification, {
         keys: { p256dh: row.p256dh, auth: row.auth }
       };
       const init = await buildPushPayload(
-        { data: JSON.stringify(payload), options: { ttl: 900, urgency: "high" } },
+        { data: JSON.stringify(payload), options: { ttl, urgency: "high" } },
         subscription,
         vapid
       );
