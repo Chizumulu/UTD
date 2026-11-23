@@ -132,7 +132,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 <!-- Self-hosted Web Push: 경기 상태 알림 -->
 <script src="./push-config.js?v=2"></script>
-<script src="./push-client.js?v=3" defer></script>
+<script src="./push-client.js?v=4" defer></script>
 <script src="./match-alert-onboarding.js?v=2" defer></script>
 <style>
   .match-alert-confirm {
@@ -172,13 +172,33 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   </div>
 </dialog>
 <dialog class="match-alert-confirm" id="disableMatchAlertsDialog" aria-labelledby="disableMatchAlertsTitle" aria-describedby="disableMatchAlertsDescription">
-  <h2 class="lbl" id="disableMatchAlertsTitle" data-ko="경기 알림을 끄시겠어요?" data-en="Turn off match alerts?">경기 알림을 끄시겠어요?</h2>
-  <p class="lbl" id="disableMatchAlertsDescription" data-ko="알림이 오지 않으면 연결 복구를 눌러 이 기기의 푸시 등록을 새로 고칠 수 있어요. 끄면 경기 알림을 받지 않아요." data-en="If alerts are not arriving, refresh this device's push registration. Turning alerts off will stop match notifications.">알림이 오지 않으면 연결 복구를 눌러 이 기기의 푸시 등록을 새로 고칠 수 있어요. 끄면 경기 알림을 받지 않아요.</p>
-  <div class="match-alert-confirm-actions">
+  <h2 class="lbl" id="disableMatchAlertsTitle" data-ko="경기 알림 설정" data-en="Match alert settings">경기 알림 설정</h2>
+  <p class="lbl" id="disableMatchAlertsDescription" data-ko="이 기기에서 받을 알림을 고르거나 알림 연결을 복구할 수 있어요." data-en="Choose which alerts this device receives or repair its push connection.">이 기기에서 받을 알림을 고르거나 알림 연결을 복구할 수 있어요.</p>
+  <div class="match-alert-confirm-actions" style="flex-wrap:wrap;">
     <button type="button" class="lbl" data-ko="취소" data-en="Cancel" onclick="closeDisableMatchAlertsDialog()" autofocus>취소</button>
+    <button type="button" class="lbl" data-ko="알림 종류" data-en="Alert types" onclick="openMatchAlertPreferences()">알림 종류</button>
     <button type="button" class="match-alert-confirm-repair lbl" data-ko="연결 복구" data-en="Refresh connection" onclick="repairMatchAlerts()">연결 복구</button>
     <button type="button" class="match-alert-confirm-off lbl" data-ko="알림 끄기" data-en="Turn off alerts" onclick="confirmDisableMatchAlerts()">알림 끄기</button>
   </div>
+</dialog>
+
+<dialog class="match-alert-confirm" id="matchAlertPreferencesDialog" aria-labelledby="matchAlertPreferencesTitle" aria-describedby="matchAlertPreferencesDescription">
+  <h2 class="lbl" id="matchAlertPreferencesTitle" data-ko="경기 알림 종류" data-en="Match alert types">경기 알림 종류</h2>
+  <p class="lbl" id="matchAlertPreferencesDescription" data-ko="이 기기에서 받을 알림을 선택하세요." data-en="Choose which alerts to receive on this device.">이 기기에서 받을 알림을 선택하세요.</p>
+  <form onsubmit="event.preventDefault(); saveMatchAlertPreferences()">
+    <fieldset disabled aria-labelledby="matchAlertPreferencesDescription" style="border:0;margin:0;padding:0;">
+      <p><label><input type="checkbox" name="notificationType" value="schedule"> <span class="lbl" data-ko="일정 변경" data-en="Schedule changes">일정 변경</span></label></p>
+      <p><label><input type="checkbox" name="notificationType" value="reminder"> <span class="lbl" data-ko="킥오프 1시간 전" data-en="One hour before kickoff">킥오프 1시간 전</span></label></p>
+      <p><label><input type="checkbox" name="notificationType" value="live"> <span class="lbl" data-ko="경기 시작·득점 등 경기 중 소식" data-en="Kickoff, goals and live updates">경기 시작·득점 등 경기 중 소식</span></label></p>
+      <p><label><input type="checkbox" name="notificationType" value="result"> <span class="lbl" data-ko="경기 종료 및 최종 스코어" data-en="Full time and final score">경기 종료 및 최종 스코어</span></label></p>
+    </fieldset>
+    <p id="matchAlertPreferencesMessage" role="status"></p>
+    <div class="match-alert-confirm-actions" style="flex-wrap:wrap;">
+      <button type="button" class="lbl" onclick="this.closest('dialog').close()" data-ko="닫기" data-en="Close">닫기</button>
+      <button type="button" id="matchAlertPreferencesRetry" class="lbl" onclick="openMatchAlertPreferences()" data-ko="다시 불러오기" data-en="Reload" hidden>다시 불러오기</button>
+      <button type="submit" id="matchAlertPreferencesSave" class="match-alert-confirm-repair lbl" data-ko="저장" data-en="Save" disabled>저장</button>
+    </div>
+  </form>
 </dialog>
 
 <dialog class="match-alert-confirm" id="calendarSubscriptionDialog" aria-labelledby="calendarSubscriptionTitle" aria-describedby="calendarSubscriptionDescription">

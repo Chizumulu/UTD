@@ -7,6 +7,7 @@ const MAX_REQUEST_BYTES = 16 * 1024;
 const PUSH_TIMEOUT_MS = 15 * 1000;
 const DELIVERY_LEASE_MS = 60 * 1000;
 const DELIVERY_RETENTION_MS = 2 * 24 * 60 * 60 * 1000;
+const NOTIFICATION_TYPES = ["schedule", "reminder", "live", "result"];
 const ALLOWED_PUSH_HOSTS = [
   "fcm.googleapis.com",
   "android.googleapis.com",
@@ -52,6 +53,10 @@ export default {
 
       if (url.pathname === API_PATH + "subscriptions/status" && request.method === "POST") {
         return await subscriptionStatus(request, env, cors);
+      }
+
+      if (url.pathname === API_PATH + "subscriptions/preferences" && request.method === "POST") {
+        return await subscriptionPreferences(request, env, cors);
       }
 
       if (url.pathname === API_PATH + "subscriptions" && request.method === "DELETE") {
@@ -140,12 +145,33 @@ async function readSubscription(request) {
   if (!keys || !validPushKey(keys.p256dh, 60, 160) || !validPushKey(keys.auth, 16, 80)) {
     return { error: "invalid_push_keys" };
   }
-  return { endpoint, keys };
+  return { endpoint, keys, notificationTypes: value.notificationTypes };
+}
+
+function notificationPreferenceKey(id) {
+  return "push_notification_types:" + id;
+}
+
+function parseNotificationTypes(types) {
+  if (!Array.isArray(types) || types.length > NOTIFICATION_TYPES.length ||
+      new Set(types).size !== types.length || types.some(type => !NOTIFICATION_TYPES.includes(type))) return null;
+  return NOTIFICATION_TYPES.filter(type => types.includes(type));
+}
+
+function storedNotificationTypes(value) {
+  if (typeof value !== "string") return NOTIFICATION_TYPES;
+  try {
+    return parseNotificationTypes(JSON.parse(value)) || NOTIFICATION_TYPES;
+  } catch (_error) {
+    return NOTIFICATION_TYPES;
+  }
 }
 
 async function subscribe(request, env, cors) {
-  const { endpoint, keys, error } = await readSubscription(request);
+  const { endpoint, keys, notificationTypes, error } = await readSubscription(request);
   if (error) return json({ error }, 400, cors);
+  const types = notificationTypes === undefined ? null : parseNotificationTypes(notificationTypes);
+  if (notificationTypes !== undefined && types === null) return json({ error: "invalid_notification_types" }, 400, cors);
 
   const current = await env.DB.prepare("SELECT COUNT(*) AS count FROM push_subscriptions").first();
   const id = await endpointId(endpoint);
@@ -155,12 +181,21 @@ async function subscribe(request, env, cors) {
   }
 
   const now = new Date().toISOString();
-  await env.DB.prepare(
+  const insert = env.DB.prepare(
     "INSERT INTO push_subscriptions (id, endpoint, p256dh, auth, created_at, updated_at) " +
     "VALUES (?, ?, ?, ?, ?, ?) " +
     "ON CONFLICT(id) DO UPDATE SET endpoint = excluded.endpoint, p256dh = excluded.p256dh, " +
     "auth = excluded.auth, updated_at = excluded.updated_at"
-  ).bind(id, endpoint, keys.p256dh, keys.auth, now, now).run();
+  ).bind(id, endpoint, keys.p256dh, keys.auth, now, now);
+  if (types === null) {
+    await insert.run();
+  } else {
+    await env.DB.batch([
+      insert,
+      env.DB.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING")
+        .bind(notificationPreferenceKey(id), JSON.stringify(types))
+    ]);
+  }
 
   return json({ ok: true }, 201, cors);
 }
@@ -171,9 +206,47 @@ async function subscriptionStatus(request, env, cors) {
 
   const id = await endpointId(endpoint);
   const subscription = await env.DB.prepare(
-    "SELECT 1 FROM push_subscriptions WHERE id = ? AND p256dh = ? AND auth = ?"
-  ).bind(id, keys.p256dh, keys.auth).first();
-  return json({ registered: !!subscription }, 200, cors);
+    "SELECT p.value FROM push_subscriptions AS s " +
+    "LEFT JOIN app_settings AS p ON p.key = ? WHERE s.id = ? AND s.p256dh = ? AND s.auth = ?"
+  ).bind(notificationPreferenceKey(id), id, keys.p256dh, keys.auth).first();
+  const status = { registered: !!subscription };
+  if (typeof subscription?.value === "string") status.notificationTypes = storedNotificationTypes(subscription.value);
+  return json(status, 200, cors);
+}
+
+async function subscriptionPreferences(request, env, cors) {
+  const { endpoint, keys, notificationTypes, error } = await readSubscription(request);
+  if (error) return json({ error }, 400, cors);
+  const id = await endpointId(endpoint);
+  const key = notificationPreferenceKey(id);
+  if (notificationTypes === undefined) {
+    const subscription = await env.DB.prepare(
+      "SELECT p.value FROM push_subscriptions AS s " +
+      "LEFT JOIN app_settings AS p ON p.key = ? WHERE s.id = ? AND s.p256dh = ? AND s.auth = ?"
+    ).bind(key, id, keys.p256dh, keys.auth).first();
+    if (!subscription) return json({ error: "subscription_not_registered" }, 404, cors);
+    return json({ notificationTypes: storedNotificationTypes(subscription.value) }, 200, cors);
+  }
+  const types = parseNotificationTypes(notificationTypes);
+  if (types === null) return json({ error: "invalid_notification_types" }, 400, cors);
+  const result = await env.DB.prepare(
+    "INSERT INTO app_settings (key, value) " +
+    "SELECT ?, ? FROM push_subscriptions WHERE id = ? AND p256dh = ? AND auth = ? " +
+    "ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+  ).bind(key, JSON.stringify(types), id, keys.p256dh, keys.auth).run();
+  if (result.meta.changes !== 1) return json({ error: "subscription_not_registered" }, 404, cors);
+  return json({ notificationTypes: types }, 200, cors);
+}
+
+async function removeSubscription(db, id, keys) {
+  const remove = keys
+    ? db.prepare("DELETE FROM push_subscriptions WHERE id = ? AND p256dh = ? AND auth = ?").bind(id, keys.p256dh, keys.auth)
+    : db.prepare("DELETE FROM push_subscriptions WHERE id = ?").bind(id);
+  await db.batch([
+    remove,
+    db.prepare("DELETE FROM app_settings WHERE key = ? AND NOT EXISTS (SELECT 1 FROM push_subscriptions WHERE id = ?)")
+      .bind(notificationPreferenceKey(id), id)
+  ]);
 }
 
 async function unsubscribe(request, env, cors) {
@@ -184,7 +257,7 @@ async function unsubscribe(request, env, cors) {
   }
 
   const id = await endpointId(endpoint);
-  await env.DB.prepare("DELETE FROM push_subscriptions WHERE id = ?").bind(id).run();
+  await removeSubscription(env.DB, id);
   return json({ ok: true }, 200, cors);
 }
 
@@ -455,6 +528,7 @@ async function sendKickoffReminders(env, season, fixtures, now) {
     if (previous && previous.value === scheduledAt) continue;
 
     const notification = {
+      category: "reminder",
       title: "경기 시작 1시간 전이에요",
       body: fixture.homeKo + " vs " + fixture.awayKo + " · " + fixture.kickoffTime + " CAT 킥오프",
       icon: "/UTD/apple-touch-icon.png",
@@ -610,6 +684,7 @@ function scheduleChangeNotification(season, fixture, state) {
     : type === "rescheduled" ? "새 킥오프 " + kickoff(state.kickoffAt) + " KST"
     : kickoff(previousKickoffAt) + " → " + kickoff(state.kickoffAt) + " KST";
   return {
+    category: "schedule",
     title: titles[type],
     body: fixture.homeKo + " vs " + fixture.awayKo + " · " + timing,
     icon: "/UTD/apple-touch-icon.png",
@@ -720,6 +795,7 @@ function notificationPayload(match, type) {
   }
 
   return {
+    category: type === "full_time" ? "result" : "live",
     title: title,
     body: body,
     icon: "/UTD/apple-touch-icon.png",
@@ -780,14 +856,17 @@ async function claimDelivery(db, deliveryId, subscriptionId) {
 async function broadcast(env, notification, {
   deliveryId = null, createdBefore = null, onlySubscriptionId = null
 } = {}) {
+  const { category, ...payload } = notification;
   const result = await env.DB.prepare(
-    "SELECT s.id, s.endpoint, s.p256dh, s.auth, s.created_at, d.delivered_at " +
+    "SELECT s.id, s.endpoint, s.p256dh, s.auth, s.created_at, d.delivered_at, p.value AS notification_types " +
     "FROM push_subscriptions AS s LEFT JOIN push_deliveries AS d " +
-    "ON d.subscription_id = s.id AND d.delivery_id = ?"
+    "ON d.subscription_id = s.id AND d.delivery_id = ? " +
+    "LEFT JOIN app_settings AS p ON p.key = 'push_notification_types:' || s.id"
   ).bind(deliveryId).all();
   const allSubscriptions = result && Array.isArray(result.results) ? result.results : [];
   const subscriptions = allSubscriptions.filter(row => {
     if (onlySubscriptionId !== null && row.id !== onlySubscriptionId) return false;
+    if (category && !storedNotificationTypes(row.notification_types).includes(category)) return false;
     if (createdBefore === null) return true;
     const createdAt = Date.parse(row.created_at);
     return Number.isFinite(createdAt) && createdAt <= createdBefore;
@@ -816,13 +895,13 @@ async function broadcast(env, notification, {
         keys: { p256dh: row.p256dh, auth: row.auth }
       };
       const init = await buildPushPayload(
-        { data: JSON.stringify(notification), options: { ttl: 900, urgency: "high" } },
+        { data: JSON.stringify(payload), options: { ttl: 900, urgency: "high" } },
         subscription,
         vapid
       );
       const response = await fetch(row.endpoint, { ...init, signal: AbortSignal.timeout(PUSH_TIMEOUT_MS) });
       if (response.status === 404 || response.status === 410) {
-        await env.DB.prepare("DELETE FROM push_subscriptions WHERE id = ?").bind(row.id).run();
+        await removeSubscription(env.DB, row.id, row);
         permanent += 1;
       } else if (response.ok) {
         if (deliveryId !== null) {

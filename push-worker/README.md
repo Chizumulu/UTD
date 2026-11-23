@@ -29,6 +29,8 @@ The Cron Trigger runs every two minutes. Change the expression in `wrangler.json
 
 Push subscriptions are stored in D1. Expired subscriptions that return HTTP 404 or 410 are removed automatically. The notification card is tagged by match so later score updates replace the prior card where the platform supports it.
 
+Each device can choose schedule changes, one-hour reminders, live updates, and final scores. Existing registrations without saved preferences receive every type. An empty selection pauses all match alerts while keeping the registration. The preferences endpoint verifies the device's existing subscription keys and saves its choices in `app_settings`.
+
 The Worker also reads `scheduledRounds` and `roundsData` to detect changes to Chizumulu league fixtures. The first observation of each fixture establishes a baseline silently. A subsequent kickoff date or time change, an explicit postponement, or a new kickoff for a postponed match sends a notification with Korean Standard Time and a link to that match. Completed matches and moved-from placeholders do not trigger change notifications. This uses the published `data.js` schedule, so edits become eligible after the site publishes them.
 
 Schedule snapshots and pending changes use the existing `app_settings` table. Temporary delivery failures are retried for up to 24 hours, or until the new kickoff if it comes sooner. Delivery receipts prevent sending the same change again to subscriptions that already received it.
