@@ -11228,71 +11228,37 @@
     try { localStorage.setItem('roundMonthMineOnly', roundMonthMineOnly ? '1' : '0'); } catch (e) {}
     renderRoundsView();
   }
-  // 상단 컨트롤을 한 줄로 정리: [주차별|월별] [전반기|후반기] ........ [내 경기만] [공유하기] [연기된 경기보기]
-  // 반기 선택줄과 공유/연기 버튼은 index.html에서 따로 떨어져 있어서, 처음 한 번만 이 줄 안으로 옮겨 담습니다.
-  function ensureRoundModeToggle() {
-    const host = document.getElementById('roundsView');
-    if (!host) return;
-    let bar = document.getElementById('roundModeBar');
-    if (!bar) {
-      bar = document.createElement('div');
-      bar.id = 'roundModeBar';
-      bar.className = 'round-mode-bar';
-      host.insertBefore(bar, host.firstChild);
-
-      const seg = document.createElement('div');
-      seg.id = 'roundModeSeg';
-      seg.className = 'round-mode-seg';
-      seg.setAttribute('role', 'tablist');
-      bar.appendChild(seg);
-
-      const half = document.getElementById('roundHalfBar');
-      if (half) bar.appendChild(half);
-
-      const actions = document.createElement('div');
-      actions.id = 'roundModeActions';
-      actions.className = 'round-mode-actions';
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.id = 'roundMineChip';
-      chip.className = 'round-mode-chip';
-      chip.setAttribute('onclick', 'toggleRoundMonthMine()');
-      chip.innerHTML = `<span class="lbl" data-en="My team only" data-ko="내 경기만">${isKorean ? '내 경기만' : 'My team only'}</span>`;
-      actions.appendChild(chip);
-      const calendar = document.createElement('button');
-      calendar.type = 'button';
-      calendar.className = 'round-mode-chip lbl';
-      calendar.id = 'roundCalendarButton';
-      calendar.dataset.ko = '캘린더';
-      calendar.dataset.en = 'Calendar';
-      calendar.textContent = isKorean ? calendar.dataset.ko : calendar.dataset.en;
-      calendar.setAttribute('aria-haspopup', 'dialog');
-      calendar.onclick = openLeagueCalendarSubscription;
-      actions.appendChild(calendar);
-      const share = document.getElementById('roundShareBtn');
-      const postponed = host.querySelector('.postponed-btn');
-      // '치주물루에 유리한 예측 보기' 토글 버튼: 공유하기 왼쪽
-      const favor = document.createElement('button');
-      favor.type = 'button';
-      favor.id = 'roundFavorBtn';
-      favor.className = 'round-mode-chip round-favor-btn';
-      favor.setAttribute('onclick', 'toggleRoundFavor()');
-      favor.setAttribute('aria-controls', 'roundFavorPanel');
-      actions.appendChild(favor);
-      if (share) actions.appendChild(share);
-      if (postponed) actions.appendChild(postponed);
-      bar.appendChild(actions);
+  const roundTools = document.getElementById('roundTools');
+  const roundToolsSummary = roundTools.querySelector('summary');
+  roundTools.addEventListener('click', event => {
+    if (event.target.closest('.round-tools-actions button')) {
+      roundTools.open = false;
+      roundToolsSummary.focus({ preventScroll: true });
     }
-    const segBtn = (mode, ko, en) => `<button type="button" role="tab" aria-selected="${roundViewMode === mode}" class="round-mode-btn${roundViewMode === mode ? ' active' : ''}" onclick="setRoundViewMode('${mode}')"><span class="lbl" data-en="${en}" data-ko="${ko}">${isKorean ? ko : en}</span></button>`;
-    document.getElementById('roundModeSeg').innerHTML = segBtn('week', '주차별', 'By Week') + segBtn('month', '월별', 'By Month');
+  }, true);
+  roundTools.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !roundTools.open) return;
+    event.preventDefault();
+    event.stopPropagation();
+    roundTools.open = false;
+    roundToolsSummary.focus();
+  });
+  document.addEventListener('click', event => {
+    if (roundTools.open && !roundTools.contains(event.target)) roundTools.open = false;
+  });
+
+  function syncRoundModeControls() {
+    document.querySelectorAll('#roundModeSeg [data-mode]').forEach(button => {
+      const selected = button.dataset.mode === roundViewMode;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-selected', String(selected));
+    });
     rfvSyncButton();
-    const chipEl = document.getElementById('roundMineChip');
-    if (chipEl) {
-      chipEl.style.display = '';
-      chipEl.classList.toggle('active', roundMonthMineOnly);
-      chipEl.setAttribute('aria-pressed', String(roundMonthMineOnly));
-    }
+    const mine = document.getElementById('roundMineChip');
+    mine.classList.toggle('active', roundMonthMineOnly);
+    mine.setAttribute('aria-pressed', String(roundMonthMineOnly));
   }
+
 
   function collectSeasonScheduleMatches() {
     return allRoundKeysIncludingScheduled().flatMap(rk => buildRoundMatches(rk)
@@ -11935,10 +11901,10 @@
       currentRoundKey = pickRoundKeyForHalf(currentRoundHalf, halfKeys);
     }
     renderRoundHalfBar(roundKeys);
-    ensureRoundModeToggle();
+    syncRoundModeControls();
     const monthMode = roundViewMode === 'month';
     const input = document.getElementById('roundSearchInput');
-    input.placeholder = isKorean ? '팀 이름 · 예: 라이플리, Raiply' : 'Team name · e.g. Raiply';
+    input.placeholder = isKorean ? '팀 이름 검색' : 'Team name · e.g. Raiply';
     const terms = roundSearchTerms();
     const searching = terms.length > 0 || roundStatusFilter !== 'all';
     document.getElementById('roundSearchClear').hidden = !input.value;

@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '005',
+    style: '006',
     data: '005',
-    app: '012',
+    app: '013',
     report: '002',
     archive: '200',
     predictWorker: '220',
@@ -889,34 +889,48 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </div>
 <div id="roundsView" style="display:none;">
-  <!-- 전반기/후반기(로빈 라운드) 선택. app.js의 renderRoundHalfBar()가 채웁니다. -->
-  <div class="round-half-bar" id="roundHalfBar" role="tablist"></div>
-  <form class="round-search" role="search" aria-labelledby="roundSearchLabel" onsubmit="event.preventDefault(); updateRoundSearch(null, true)">
-    <label id="roundSearchLabel" for="roundSearchInput" class="lbl" data-ko="시즌 경기 검색" data-en="Search season fixtures">시즌 경기 검색</label>
-    <div class="round-search-field">
-      <input id="roundSearchInput" type="search" maxlength="100" autocomplete="off" aria-controls="roundMatchList"
-        oninput="updateRoundSearch(event)" oncompositionend="updateRoundSearch(event)">
-      <button type="button" id="roundSearchClear" class="round-mode-chip lbl" data-ko="지우기" data-en="Clear" onclick="clearRoundSearch(true)" hidden>지우기</button>
+  <div class="round-controls">
+    <div class="round-mode-bar">
+      <div class="round-mode-seg" id="roundModeSeg" role="tablist" aria-label="일정 보기" data-aria-ko="일정 보기" data-aria-en="Schedule view">
+        <button type="button" role="tab" aria-selected="true" class="round-mode-btn active lbl" data-mode="week" data-ko="주차별" data-en="By week" onclick="setRoundViewMode('week')">주차별</button>
+        <button type="button" role="tab" aria-selected="false" class="round-mode-btn lbl" data-mode="month" data-ko="월별" data-en="By month" onclick="setRoundViewMode('month')">월별</button>
+      </div>
+      <div class="round-half-bar" id="roundHalfBar" role="tablist" aria-label="시즌 구간" data-aria-ko="시즌 구간" data-aria-en="Season half"></div>
+      <details class="round-tools" id="roundTools">
+        <summary><span class="lbl" data-ko="일정 도구" data-en="Tools">일정 도구</span></summary>
+        <div class="round-tools-actions">
+          <button type="button" class="lbl" id="roundCalendarButton" data-ko="캘린더" data-en="Calendar" aria-haspopup="dialog" onclick="openLeagueCalendarSubscription()">캘린더</button>
+          <button type="button" id="roundFavorBtn" aria-controls="roundFavorPanel" onclick="toggleRoundFavor()"></button>
+          <button type="button" class="lbl" id="roundShareBtn" data-en="Share round results" data-ko="라운드 결과 공유" onclick="shareRoundResults()">라운드 결과 공유</button>
+          <button type="button" class="lbl" data-en="View postponed matches" data-ko="연기된 경기 보기" aria-haspopup="dialog" onclick="openPostponedMatchesModal()">연기된 경기 보기</button>
+        </div>
+      </details>
     </div>
-    <div class="round-status-filters" id="roundStatusFilters" role="group" aria-label="시즌 경기 상태" data-aria-ko="시즌 경기 상태" data-aria-en="Season fixture status" aria-controls="roundMatchList">
-      <button type="button" class="round-mode-chip lbl active" data-status="all" data-ko="전체" data-en="All" aria-pressed="true" onclick="setRoundStatusFilter(this.dataset.status)">전체</button>
-      <button type="button" class="round-mode-chip lbl" data-status="upcoming" data-ko="예정" data-en="Upcoming" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">예정</button>
-      <button type="button" class="round-mode-chip lbl" data-status="result" data-ko="결과" data-en="Results" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">결과</button>
-      <button type="button" class="round-mode-chip lbl" data-status="postponed" data-ko="연기" data-en="Postponed" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">연기</button>
-      <button type="button" class="round-mode-chip lbl" data-status="pending" data-ko="결과 대기" data-en="Awaiting result" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">결과 대기</button>
-    </div>
-    <p id="roundSearchStatus" role="status" tabindex="-1"></p>
-  </form>
+    <form class="round-search" role="search" aria-labelledby="roundSearchLabel" onsubmit="event.preventDefault(); updateRoundSearch(null, true)">
+      <label id="roundSearchLabel" for="roundSearchInput" class="lbl sr-only" data-ko="시즌 경기 검색" data-en="Search season fixtures">시즌 경기 검색</label>
+      <div class="round-search-row">
+        <div class="round-search-field">
+          <svg class="round-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
+          <input id="roundSearchInput" type="search" maxlength="100" autocomplete="off" aria-controls="roundMatchList"
+            oninput="updateRoundSearch(event)" oncompositionend="updateRoundSearch(event)">
+          <button type="button" id="roundSearchClear" class="round-mode-chip lbl" data-ko="지우기" data-en="Clear" onclick="clearRoundSearch(true)" hidden>지우기</button>
+        </div>
+        <div class="round-search-filters">
+          <div class="round-status-filters" id="roundStatusFilters" role="group" aria-label="시즌 경기 상태" data-aria-ko="시즌 경기 상태" data-aria-en="Season fixture status" aria-controls="roundMatchList">
+            <button type="button" class="round-mode-chip lbl active" data-status="all" data-ko="전체" data-en="All" aria-pressed="true" onclick="setRoundStatusFilter(this.dataset.status)">전체</button>
+            <button type="button" class="round-mode-chip lbl" data-status="upcoming" data-ko="예정" data-en="Upcoming" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">예정</button>
+            <button type="button" class="round-mode-chip lbl" data-status="result" data-ko="결과" data-en="Results" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">결과</button>
+            <button type="button" class="round-mode-chip lbl" data-status="postponed" data-ko="연기" data-en="Postponed" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">연기</button>
+            <button type="button" class="round-mode-chip lbl" data-status="pending" data-ko="결과 대기" data-en="Awaiting result" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">결과 대기</button>
+          </div>
+          <button type="button" class="round-mode-chip round-mine-chip lbl" id="roundMineChip" data-en="My team only" data-ko="내 경기만" aria-pressed="false" onclick="toggleRoundMonthMine()">내 경기만</button>
+        </div>
+      </div>
+      <p id="roundSearchStatus" role="status" tabindex="-1"></p>
+    </form>
+  </div>
   <div class="round-toolbar">
     <div class="round-tab-bar" id="roundTabBar"></div>
-    <button class="share-btn round-share-btn lbl" id="roundShareBtn" data-en="Share" data-ko="공유하기" onclick="shareRoundResults()" aria-label="Share round results" title="이번 라운드 결과 공유" data-title-ko="이번 라운드 결과 공유" data-title-en="Share round results">
-      <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>
-      <span class="lbl" data-en="Share" data-ko="공유">공유</span>
-    </button>
-    <button class="share-btn round-share-btn postponed-btn lbl" data-en="Postponed Matches" data-ko="연기된 경기보기" onclick="openPostponedMatchesModal()" aria-label="View postponed matches" title="연기된 경기 보기" data-title-ko="연기된 경기 보기" data-title-en="View postponed matches">
-      <svg class="share-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="4.5" width="17" height="16" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.2H20.5" stroke="currentColor" stroke-width="1.8"/><path d="M7.3 2.6V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.7 2.6V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.2 16.2L11.6 12.8M11.6 12.8L15 16.2M11.6 12.8V16.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="lbl" data-en="Postponed" data-ko="연기된 경기보기">연기된 경기보기</span>
-    </button>
   </div>
   <div class="round-match-list" id="roundMatchList"></div>
 </div>
