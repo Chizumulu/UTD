@@ -1512,23 +1512,6 @@
     flex-wrap: wrap;
     margin-bottom: 14px;
   }
-  .round-share-btn {
-    margin-left: 0;
-    background: var(--color-surface);
-    box-shadow: 0 4px 12px rgba(var(--color-navy-rgb),0.10);
-    border-radius: var(--radius-sm);
-    padding: 8px 14px;
-    margin-top: 0;
-  }
-  .postponed-btn {
-    color: var(--color-red-text);
-  }
-  @media (hover: hover) {
-    .postponed-btn:hover {
-      background: rgba(var(--color-navy-rgb),0.06);
-      color: var(--color-red-text);
-    }
-  }
   .postponed-modal-content {
     max-width: 460px;
   }
@@ -13299,14 +13282,6 @@ body.season-archive #viewToggleWrap > :not(.archive-nav-btn) { display: none !im
   }
 }
 
-/* 모바일: 리그 일정의 주차 변경 버튼 줄(.round-toolbar) 위에 구분선 추가 */
-@media (max-width: 720px) {
-  #roundsView .round-toolbar {
-    border-top: 1px solid var(--color-border-light);
-    padding-top: 10px;
-  }
-}
-
 /* 모바일: 상단 헤더(로고/제목/주차)와 시즌 선택 버튼 사이에 구분선 추가
    (하단 컨트롤 줄 위 구분선과 같은 색·두께) */
 @media (max-width: 880px) {
@@ -14118,60 +14093,194 @@ body {
 /* ===== 리그 일정: 주차별 / 월별 보기 토글 ===== */
 .round-match-card.rmc-mine-mark { box-shadow: inset 3px 0 0 rgba(var(--color-teal-rgb), 0.7); }
 
-/* ===== 리그 일정: 상단 컨트롤 한 줄 정리 (주차별/월별 · 반기 · 액션 버튼) ===== */
-.round-mode-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 12px; }
-.round-mode-seg { order: 1; display: inline-flex; gap: 4px; padding: 4px; background: var(--color-surface); border-radius: var(--radius-md); box-shadow: 0 6px 18px rgba(var(--color-navy-rgb), 0.12); }
-.round-mode-btn { border: 0; background: transparent; font-family: inherit; font-size: var(--fs-sm); font-weight: 700; color: var(--color-text-toggle); padding: 8px 16px; min-height: 36px; border-radius: var(--radius-xs); cursor: pointer; transition: all 0.2s; }
-@media (hover: hover) {
-  .round-mode-btn:hover { background: var(--color-bg-btn-hover); color: var(--color-brand-text);
-  }
+/* 리그 일정 상단 */
+.round-controls {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-chip);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
-.round-mode-btn.active { background: var(--color-selected-bg); color: var(--color-selected-fg); box-shadow: var(--color-selected-shadow); }
-.round-mode-bar .round-half-bar { order: 2; margin-bottom: 0; }
-.round-mode-actions { order: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-left: auto; }
-.round-mode-chip { border: 0; background: var(--color-surface); font-family: inherit; font-size: var(--fs-sm); font-weight: 600; color: var(--color-text-toggle); padding: 8px 14px; min-height: 36px; border-radius: var(--radius-sm); box-shadow: 0 4px 12px rgba(var(--color-navy-rgb), 0.10); cursor: pointer; transition: all 0.2s; }
-.round-mode-chip.active { background: var(--color-selected-bg); color: var(--color-selected-fg); }
-.round-search { display: grid; gap: 6px; margin-bottom: 12px; }
-.round-search label { font-weight: 600; font-size: var(--fs-sm); }
-.round-search-field { display: flex; gap: 8px; align-items: stretch; }
-.round-search input {
-  min-width: 0; flex: 1; padding: 8px 12px; min-height: 44px;
-  border: 1px solid currentColor; border-radius: var(--radius-sm);
-  background: var(--color-surface); color: var(--color-text-toggle); font: inherit;
+.round-mode-bar { display: flex; align-items: center; gap: 8px; }
+.round-mode-seg,
+.round-mode-bar .round-half-bar {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  width: auto;
+  padding: 3px;
+  margin: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-btn-hover);
+  box-shadow: none;
 }
-.round-search p { margin: 0; font-size: var(--fs-sm); }
-.round-status-filters { display: flex; flex-wrap: wrap; gap: 6px; }
-.round-status-filters button { min-height: 40px; }
-#roundSearchMore { align-self: center; }
-.round-mode-actions .round-share-btn { margin: 0; }
-@media (max-width: 720px) {
-  .round-mode-actions { order: 2; }
-  .round-mode-bar .round-half-bar { order: 3; flex: 1 1 100%; width: 100%; }
+.round-mode-btn,
+.round-mode-bar .round-half-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 13px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-text-toggle);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+.round-mode-bar .round-half-btn { min-width: 98px; }
+.round-mode-btn.active,
+.round-mode-bar .round-half-btn.active {
+  background: var(--color-selected-bg);
+  color: var(--color-selected-fg);
+  box-shadow: none;
 }
 
-/* 상단 컨트롤 3묶음(주차별/월별 · 전반기/후반기 · 액션 버튼)의 높이·너비를 통일 */
-.round-mode-bar { --round-ctl-h: 52px; --round-ctl-btn-w: 140px; align-items: stretch; }
-.round-mode-seg,
-.round-mode-bar .round-half-bar { height: var(--round-ctl-h); box-sizing: border-box; align-items: stretch; }
-.round-mode-btn { display: flex; align-items: center; justify-content: center; min-height: 0; min-width: 76px; padding: 0 16px; font-size: var(--fs-sm); }
-.round-mode-bar .round-half-btn { justify-content: center; min-width: 112px; padding: 0 16px; }
-.round-mode-actions { align-items: stretch; }
-.round-mode-actions > .round-mode-chip,
-.round-mode-actions > .share-btn {
-  display: inline-flex; align-items: center; justify-content: center; text-align: center;
-  box-sizing: border-box; height: var(--round-ctl-h); min-height: 0;
-  flex: 0 0 var(--round-ctl-btn-w); width: var(--round-ctl-btn-w);
-  margin: 0; padding: 0 12px;
-  border-radius: var(--radius-md);
-  font-size: var(--fs-sm); font-weight: 600; line-height: 1.3;
-  white-space: normal; word-break: keep-all;
+.round-tools { position: relative; margin-left: auto; flex: none; }
+.round-tools summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-chip);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-toggle);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
 }
-@media (max-width: 720px) {
-  .round-mode-actions { width: 100%; margin-left: 0; flex-wrap: nowrap; }
-  .round-mode-actions > .round-mode-chip,
-  .round-mode-actions > .share-btn { flex: 1 1 0; width: auto; min-width: 0; padding: 0 6px; font-size: var(--fs-sm); }
-  .round-mode-btn { flex: 1; }
-  .round-mode-seg { flex: 1 1 auto; }
+.round-tools summary::-webkit-details-marker { display: none; }
+.round-tools summary::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+.round-tools[open] summary { background: var(--color-bg-btn-hover); }
+.round-tools[open] summary::after { transform: translateY(3px) rotate(225deg); }
+.round-tools-actions {
+  position: absolute;
+  z-index: 15;
+  right: 0;
+  top: calc(100% + 6px);
+  display: grid;
+  gap: 2px;
+  width: 224px;
+  padding: 5px;
+  border: 1px solid var(--color-border-chip);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: 0 8px 22px rgba(var(--color-navy-rgb), .14);
+}
+.round-tools-actions button {
+  min-height: 40px;
+  padding: 8px 10px;
+  text-align: start;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-text-toggle);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.round-tools-actions button.active { color: var(--color-brand-text); background: var(--color-bg-btn-hover); }
+
+.round-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-chip);
+}
+.round-search-field { position: relative; display: flex; align-items: stretch; flex: 1 1 205px; min-width: 0; }
+.round-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 17px;
+  height: 17px;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+.round-search input {
+  min-width: 0;
+  flex: 1;
+  padding: 8px 10px 8px 36px;
+  min-height: 42px;
+  border: 1px solid var(--color-border-chip);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-btn-hover);
+  color: var(--color-text-toggle);
+  font: inherit;
+}
+.round-search input::placeholder { color: var(--color-text-muted); opacity: 1; }
+.round-search input::-webkit-search-cancel-button { appearance: none; }
+#roundSearchClear { margin-left: 4px; }
+#roundSearchStatus { margin: 8px 0 0; color: var(--color-text-muted); font-size: var(--fs-sm); }
+#roundSearchStatus:empty { margin: 0; }
+.round-search-filters,
+.round-status-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.round-search-filters { gap: 4px 8px; }
+.round-mode-chip {
+  min-height: 38px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-text-toggle);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.round-mine-chip { border-color: var(--color-border-chip); }
+.round-mode-chip.active { border-color: transparent; background: var(--color-selected-bg); color: var(--color-selected-fg); }
+#roundSearchMore { align-self: center; border-color: var(--color-border-chip); background: var(--color-surface); }
+#roundsView .round-toolbar:has(.round-tab-bar[style*="display: none"]) { display: none; }
+@media (hover: hover) {
+  .round-controls :is(.round-mode-btn, .round-half-btn, .round-mode-chip):not(.active):hover,
+  .round-tools :is(summary, button):hover { background: var(--color-bg-btn-hover); }
+  .round-mode-seg .round-mode-btn:not(.active):hover { color: var(--color-brand-text); }
+}
+@media (max-width: 640px) {
+  .round-controls { gap: 9px; padding: 10px; }
+  .round-mode-bar { flex-wrap: wrap; }
+  .round-mode-bar .round-half-bar { order: 1; flex: 1 0 100%; }
+  .round-mode-bar .round-half-btn { flex: 1; min-width: 0; padding-inline: 6px; }
+  .round-mode-btn, .round-mode-bar .round-half-btn { min-height: 40px; }
+  .round-search-row { padding-top: 9px; }
+  .round-search-field { flex-basis: 100%; }
+  .round-search input { min-height: 44px; font-size: 16px; }
+  .round-mode-chip { min-height: 44px; padding-inline: 8px; }
+  .round-tools-actions button { min-height: 44px; }
+}
+@media (max-width: 360px) {
+  .round-status-filters {
+    display: grid;
+    flex: 1 1 100%;
+    grid-template-columns: .7fr 1.15fr .9fr 1.2fr 1.1fr;
+    gap: 2px;
+  }
+  .round-status-filters .round-mode-chip {
+    min-width: 0;
+    padding-inline: 3px;
+    font-size: var(--fs-xs);
+    white-space: normal;
+  }
 }
 /* 주차/월 탭: 스크롤바 대신 기존 가장자리 페이드로만 스크롤을 암시 (아래 겹쳐 보이던 막대 제거) */
 #roundsView .round-tab-bar { scrollbar-width: none; min-width: 0; max-width: 100%; }
