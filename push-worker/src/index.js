@@ -202,9 +202,9 @@ async function pollMatchesAndNotify(env) {
   }
 
   try {
-    await sendKickoffReminders(env, now);
+    await checkScheduleNotifications(env, now);
   } catch (error) {
-    console.error("Kickoff reminder check failed:", error);
+    console.error("Schedule notification check failed:", error);
   }
 
   const apiBase = env.MATCH_API_BASE || "https://api.chizumulu.net";
@@ -295,9 +295,9 @@ async function pollMatchesAndNotify(env) {
 
 const KICKOFF_REMINDER_WINDOW_MS = 5 * 60 * 1000;
 const KICKOFF_REMINDER_LEAD_MS = 60 * 60 * 1000;
-const SCHEDULED_ROUNDS_MARKER = "const scheduledRounds = {";
+const SCHEDULE_CHANGE_RETRY_MS = 24 * 60 * 60 * 1000;
 
-async function sendKickoffReminders(env, now) {
+async function checkScheduleNotifications(env, now) {
   const scheduleUrl = env.SCHEDULE_DATA_URL || "https://chizumulu.github.io/UTD/data.js";
   const response = await fetch(scheduleUrl, {
     headers: { "Accept": "text/javascript, text/plain;q=0.9, */*;q=0.8" },
@@ -305,17 +305,45 @@ async function sendKickoffReminders(env, now) {
   });
   if (!response.ok) throw new Error("Schedule data returned HTTP " + response.status);
 
-  const source = await response.text();
+  const sourceModifiedAt = Date.parse(response.headers.get("Last-Modified") || "") || null;
+  const source = (await response.text()).replace(/\r\n/g, "\n");
   const season = source.match(/\bconst SEASON_START\s*=\s*['"](\d{4})-/)?.[1];
-  const fixtures = parseUpcomingChizumuluFixtures(source);
+  const scheduled = readScheduleBlock(source, "scheduledRounds");
+  if (scheduled === null) throw new Error("scheduledRounds block is missing or incomplete");
+  const upcoming = readChizumuluFixtures(scheduled);
+
+  if (season) {
+    try {
+      const results = readScheduleBlock(source, "roundsData");
+      if (results === null) throw new Error("roundsData block is missing or incomplete");
+      const fixtures = mergeScheduleFixtures(upcoming, readChizumuluFixtures(results));
+      await sendScheduleChanges(env, season, fixtures, now, sourceModifiedAt);
+    } catch (error) {
+      console.error("Schedule change check failed:", error);
+    }
+  }
+
+  await sendKickoffReminders(env, season, upcoming, now);
+}
+
+async function sendKickoffReminders(env, season, fixtures, now) {
   for (const fixture of fixtures) {
-    const kickoffAt = parseCatKickoff(fixture.kickoffDate, fixture.kickoffTime);
-    if (!Number.isFinite(kickoffAt)) continue;
+    if (fixture.status !== "scheduled") continue;
+    const { kickoffAt } = fixture;
 
     const notifyAt = kickoffAt - KICKOFF_REMINDER_LEAD_MS;
     if (now < notifyAt || now > notifyAt + KICKOFF_REMINDER_WINDOW_MS) continue;
 
-    const fixtureId = await endpointId(fixture.homeEn + "|" + fixture.awayEn);
+    const pair = fixture.homeEn + "|" + fixture.awayEn;
+    if (season) {
+      const saved = await env.DB.prepare("SELECT value FROM app_settings WHERE key = ?")
+        .bind(scheduleFixtureStateKey(season, pair)).first();
+      if (saved) {
+        const latest = JSON.parse(saved.value);
+        if (latest.status !== "scheduled" || latest.kickoffAt !== kickoffAt) continue;
+      }
+    }
+    const fixtureId = await endpointId(pair);
     const settingKey = "kickoff_reminder:" + fixtureId;
     const scheduledAt = new Date(kickoffAt).toISOString();
     const previous = await env.DB.prepare(
@@ -347,37 +375,145 @@ async function sendKickoffReminders(env, now) {
   }
 }
 
-function parseUpcomingChizumuluFixtures(source) {
-  const start = source.indexOf(SCHEDULED_ROUNDS_MARKER);
-  if (start < 0) throw new Error("scheduledRounds was not found in data.js");
-  const end = source.indexOf("\n};", start);
-  if (end < 0) throw new Error("scheduledRounds block is incomplete");
-  const block = source.slice(start, end);
-  const fixtures = [];
-  const objects = block.match(/\{[^{}\r\n]*\}/g) || [];
+function readScheduleBlock(source, name) {
+  const start = new RegExp("^const " + name + "\\s*=\\s*\\{", "m").exec(source);
+  if (!start) return null;
+  const end = source.indexOf("\n};", start.index + start[0].length);
+  if (end < 0) return null;
+  const block = source.slice(start.index + start[0].length, end);
+  return /^const\s/m.test(block) ? null : block;
+}
 
-  for (const item of objects) {
+function readChizumuluFixtures(block) {
+  const fixtures = [];
+  // One object per fixture, including results whose properties span multiple lines.
+  // Start at an indented object so examples inside line comments are ignored.
+  for (const [item] of block.matchAll(/^[ \t]*\{[^{}]*\}(?=[ \t]*,?[ \t]*(?:\/\/[^\n]*)?$)/gm)) {
     const homeEn = quotedProperty(item, "homeEn");
     const awayEn = quotedProperty(item, "awayEn");
     if (homeEn !== "Chizumulu United FC" && awayEn !== "Chizumulu United FC") continue;
-    if (/\b(?:postponed|cancelled)\s*:\s*true\b/.test(item)) continue;
-    if (/\bmovedToWeek\s*:/.test(item)) continue;
-    if (/\b(?:homeScore|awayScore)\s*:/.test(item)) continue;
+    if (/^\d+$/.test(fixtureProperty(item, "movedToWeek") || "")) continue;
 
     const kickoffDate = quotedProperty(item, "kickoffDate");
     const kickoffTime = quotedProperty(item, "kickoffTime");
     const homeKo = quotedProperty(item, "homeKo");
     const awayKo = quotedProperty(item, "awayKo");
-    if (!kickoffDate || !kickoffTime || !homeKo || !awayKo) continue;
-    fixtures.push({ homeEn, awayEn, homeKo, awayKo, kickoffDate, kickoffTime });
+    if (!homeKo || !awayKo) continue;
+
+    const kickoff = parseCatKickoff(kickoffDate, kickoffTime);
+    const kickoffAt = Number.isFinite(kickoff) ? kickoff : null;
+    const completed = ["homeScore", "awayScore"].every(key => /^\d+$/.test(fixtureProperty(item, key) || ""));
+    const status = completed ? "completed"
+      : fixtureProperty(item, "cancelled") === "true" ? "cancelled"
+      : fixtureProperty(item, "postponed") === "true" ? "postponed"
+      : kickoffAt === null || fixtureProperty(item, "pendingResult") === "true" ? "undated"
+      : "scheduled";
+    fixtures.push({ homeEn, awayEn, homeKo, awayKo, kickoffDate, kickoffTime, kickoffAt, status });
   }
   return fixtures;
 }
 
 function quotedProperty(source, name) {
-  const expression = new RegExp("(?:^|[,\\s])" + name + "\\s*:\\s*\"([^\"]*)\"");
-  const match = source.match(expression);
-  return match ? match[1] : "";
+  const value = fixtureProperty(source, name);
+  return value?.startsWith('"') ? JSON.parse(value) : "";
+}
+
+function fixtureProperty(source, name) {
+  const expression = new RegExp('(?:^|[{,\\s])(?:"' + name + '"|' + name + ')\\s*:\\s*("(?:[^"\\\\]|\\\\.)*"|true\\b|false\\b|\\d+(?=\\s*[,}]))');
+  return source.match(expression)?.[1];
+}
+
+function mergeScheduleFixtures(upcoming, results) {
+  const priority = { undated: 0, postponed: 1, cancelled: 2, scheduled: 3, completed: 4 };
+  const fixtures = new Map();
+  for (const fixture of [...upcoming, ...results]) {
+    const id = fixture.homeEn + "|" + fixture.awayEn;
+    const existing = fixtures.get(id);
+    if (!existing || priority[fixture.status] > priority[existing.status]) fixtures.set(id, fixture);
+  }
+  return fixtures;
+}
+
+function scheduleChangeType(previous, fixture, now) {
+  if (fixture.status === "postponed" && previous.status === "scheduled" &&
+      previous.kickoffAt + SCHEDULE_CHANGE_RETRY_MS > now) return "postponed";
+  if (fixture.status !== "scheduled" || fixture.kickoffAt <= now) return null;
+  if (previous.status === "postponed") return "rescheduled";
+  if (previous.status === "scheduled" && previous.kickoffAt !== fixture.kickoffAt) return "changed";
+  return null;
+}
+
+async function sendScheduleChanges(env, season, fixtures, now, sourceModifiedAt) {
+  for (const [id, fixture] of fixtures) {
+    const key = scheduleFixtureStateKey(season, id);
+    const saved = await env.DB.prepare("SELECT value FROM app_settings WHERE key = ?").bind(key).first();
+    const previous = saved ? JSON.parse(saved.value) : null;
+    if (previous && (previous.status === "completed" || now < previous.observedAt)) continue;
+    if (sourceModifiedAt && previous?.sourceModifiedAt > sourceModifiedAt) continue;
+    // Preserve a known time if the source is temporarily incomplete.
+    if (previous && fixture.status === "undated") continue;
+
+    let state = previous;
+    let storedValue = saved?.value;
+    if (!previous || previous.status !== fixture.status ||
+        (fixture.status === "scheduled" && previous.kickoffAt !== fixture.kickoffAt)) {
+      const type = previous ? scheduleChangeType(previous, fixture, now) : null;
+      state = {
+        status: fixture.status, kickoffAt: fixture.kickoffAt, observedAt: now,
+        sourceModifiedAt: sourceModifiedAt || previous?.sourceModifiedAt || null,
+        revision: (previous?.revision || 0) + 1,
+        pending: type ? { type, previousKickoffAt: previous.kickoffAt } : null
+      };
+      const nextValue = JSON.stringify(state);
+      const changed = previous
+        ? await compareScheduleState(env.DB, key, storedValue, nextValue)
+        : await env.DB.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING")
+          .bind(key, nextValue).run();
+      if (changed.meta.changes !== 1) continue;
+      storedValue = nextValue;
+    }
+    if (!state.pending) continue;
+
+    const tooLate = now - state.observedAt >= SCHEDULE_CHANGE_RETRY_MS ||
+      (state.status === "scheduled" && state.kickoffAt <= now);
+    if (!tooLate) {
+      const delivery = await broadcast(env, scheduleChangeNotification(season, fixture, state), {
+        deliveryId: key + ":" + state.revision, createdBefore: state.observedAt
+      });
+      if (delivery.transient > 0) continue;
+    }
+    await compareScheduleState(env.DB, key, storedValue, JSON.stringify({ ...state, pending: null }));
+  }
+}
+
+function scheduleFixtureStateKey(season, id) {
+  return "schedule_change:" + season + ":" + id;
+}
+
+function compareScheduleState(db, key, before, after) {
+  return db.prepare("UPDATE app_settings SET value = ? WHERE key = ? AND value = ?")
+    .bind(after, key, before).run();
+}
+
+function scheduleChangeNotification(season, fixture, state) {
+  const { type, previousKickoffAt } = state.pending;
+  const kickoff = ms => new Date(ms + 9 * 60 * 60 * 1000).toISOString().slice(0, 16).replace("T", " ");
+  const titles = {
+    postponed: "경기가 연기됐어요",
+    rescheduled: "연기 경기 새 일정이 나왔어요",
+    changed: "경기 킥오프 일정이 바뀌었어요"
+  };
+  const timing = type === "postponed" ? "기존 " + kickoff(previousKickoffAt) + " KST · 새 일정 미정"
+    : type === "rescheduled" ? "새 킥오프 " + kickoff(state.kickoffAt) + " KST"
+    : kickoff(previousKickoffAt) + " → " + kickoff(state.kickoffAt) + " KST";
+  return {
+    title: titles[type],
+    body: fixture.homeKo + " vs " + fixture.awayKo + " · " + timing,
+    icon: "/UTD/apple-touch-icon.png",
+    tag: "utd-schedule-" + season + "-" + fixture.homeEn + "-" + fixture.awayEn,
+    renotify: true,
+    data: { url: matchNotificationUrl(season, fixture.homeEn, fixture.awayEn) }
+  };
 }
 
 function parseCatKickoff(date, time) {
@@ -445,7 +581,7 @@ function matchDeliveryId(previous, match) {
 
 function matchNotificationUrl(season, home, away, date) {
   const root = "https://chizumulu.github.io/UTD/";
-  if (!home || !away || !date) return root;
+  if (!home || !away || (!season && !date)) return root;
   const slug = value => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   const parts = season ? [season, slug(home), slug(away)] : ["live", home, away, date];
   return root + "#/match/" + parts.map(encodeURIComponent).join("/");
