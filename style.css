@@ -14131,6 +14131,16 @@ body {
 .round-mode-actions { order: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 .round-mode-chip { border: 0; background: var(--color-surface); font-family: inherit; font-size: var(--fs-sm); font-weight: 600; color: var(--color-text-toggle); padding: 8px 14px; min-height: 36px; border-radius: var(--radius-sm); box-shadow: 0 4px 12px rgba(var(--color-navy-rgb), 0.10); cursor: pointer; transition: all 0.2s; }
 .round-mode-chip.active { background: var(--color-selected-bg); color: var(--color-selected-fg); }
+.round-search { display: grid; gap: 6px; margin-bottom: 12px; }
+.round-search label { font-weight: 600; font-size: var(--fs-sm); }
+.round-search-field { display: flex; gap: 8px; align-items: stretch; }
+.round-search input {
+  min-width: 0; flex: 1; padding: 8px 12px; min-height: 44px;
+  border: 1px solid currentColor; border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-text-toggle); font: inherit;
+}
+.round-search p { margin: 0; font-size: var(--fs-sm); }
+#roundSearchMore { align-self: center; }
 .round-mode-actions .round-share-btn { margin: 0; }
 @media (max-width: 720px) {
   .round-mode-actions { order: 2; }
