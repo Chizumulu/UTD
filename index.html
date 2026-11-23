@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '002',
+    style: '003',
     data: '004',
-    app: '008',
+    app: '009',
     report: '002',
     archive: '200',
     predictWorker: '220',
@@ -865,6 +865,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="roundsView" style="display:none;">
   <!-- 전반기/후반기(로빈 라운드) 선택. app.js의 renderRoundHalfBar()가 채웁니다. -->
   <div class="round-half-bar" id="roundHalfBar" role="tablist"></div>
+  <form class="round-search" role="search" aria-labelledby="roundSearchLabel" onsubmit="event.preventDefault(); updateRoundSearch(null, true)">
+    <label id="roundSearchLabel" for="roundSearchInput" class="lbl" data-ko="시즌 경기 검색" data-en="Search season fixtures">시즌 경기 검색</label>
+    <div class="round-search-field">
+      <input id="roundSearchInput" type="search" maxlength="100" autocomplete="off" aria-controls="roundMatchList"
+        oninput="updateRoundSearch(event)" oncompositionend="updateRoundSearch(event)">
+      <button type="button" id="roundSearchClear" class="round-mode-chip lbl" data-ko="지우기" data-en="Clear" onclick="clearRoundSearch(true)" hidden>지우기</button>
+    </div>
+    <p id="roundSearchStatus" role="status" tabindex="-1"></p>
+  </form>
   <div class="round-toolbar">
     <div class="round-tab-bar" id="roundTabBar"></div>
     <button class="share-btn round-share-btn lbl" id="roundShareBtn" data-en="Share" data-ko="공유하기" onclick="shareRoundResults()" aria-label="Share round results" title="이번 라운드 결과 공유" data-title-ko="이번 라운드 결과 공유" data-title-en="Share round results">

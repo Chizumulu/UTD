@@ -11000,6 +11000,7 @@
       currentRoundKey = key;
     }
     roundViewMode = 'week'; // 특정 주차로 이동하므로 주차별 보기로 전환
+    clearRoundSearch(false);
     showView('rounds'); // 반기는 showView → renderRoundsView에서 currentRoundKey 기준으로 다시 정해집니다.
     const listEl = document.getElementById('roundMatchList');
     if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -11013,6 +11014,9 @@
   let roundMonthKey = null;         // 'YYYY-MM' | 'tbd'
   let roundMonthMineOnly = false;   // 치주물루 경기만 보기
   let roundMonthKeysCache = [];     // 현재 월 탭 목록(스와이프용)
+  const ROUND_SEARCH_PAGE_SIZE = 40;
+  let roundSearchLimit = ROUND_SEARCH_PAGE_SIZE;
+  let roundSearchTimer;
   try {
     if (localStorage.getItem('roundViewMode') === 'month') roundViewMode = 'month';
     roundMonthMineOnly = localStorage.getItem('roundMonthMineOnly') === '1';
@@ -11021,6 +11025,7 @@
 
   function setRoundViewMode(mode) {
     roundViewMode = mode === 'month' ? 'month' : 'week';
+    clearRoundSearch(false);
     try { localStorage.setItem('roundViewMode', roundViewMode); } catch (e) {}
     renderRoundsView();
   }
@@ -11095,25 +11100,122 @@
     }
   }
 
+  function collectSeasonScheduleMatches() {
+    return allRoundKeysIncludingScheduled().flatMap(rk => buildRoundMatches(rk)
+      .filter(m => !m.isBye && !m.movedToWeek && (!roundMonthMineOnly ||
+        isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo)))
+      .map(m => ({ ...m, __rk: rk })));
+  }
+
   function collectRoundMonthData() {
     const months = new Map();   // 'YYYY-MM' -> Map('YYYY-MM-DD' -> match[])
     const before = [];          // 날짜는 없지만 이미 치러진 경기 → 첫 달 "이전" 탭
     const tbd = [];             // 날짜가 없고 아직 안 치른(연기 등) 경기
-    allRoundKeysIncludingScheduled().forEach(rk => {
-      buildRoundMatches(rk).forEach(m => {
-        if (m.isBye || m.movedToWeek) return;
-        if (roundMonthMineOnly && !(isMyTeamName(m.homeEn, m.homeKo) || isMyTeamName(m.awayEn, m.awayKo))) return;
-        m.__rk = rk;
-        if (!m.kickoffDate) { (m.isScheduled ? tbd : before).push(m); return; }
-        const mk = m.kickoffDate.slice(0, 7);
-        if (!months.has(mk)) months.set(mk, new Map());
-        const days = months.get(mk);
-        if (!days.has(m.kickoffDate)) days.set(m.kickoffDate, []);
-        days.get(m.kickoffDate).push(m);
-      });
+    collectSeasonScheduleMatches().forEach(m => {
+      if (!m.kickoffDate) { (m.isScheduled ? tbd : before).push(m); return; }
+      const mk = m.kickoffDate.slice(0, 7);
+      if (!months.has(mk)) months.set(mk, new Map());
+      const days = months.get(mk);
+      if (!days.has(m.kickoffDate)) days.set(m.kickoffDate, []);
+      days.get(m.kickoffDate).push(m);
     });
     months.forEach(days => days.forEach(list => list.sort((a, b) => String(a.kickoffTime || '').localeCompare(String(b.kickoffTime || '')))));
     return { months, before, tbd };
+  }
+
+  function normalizeRoundSearch(value) {
+    return String(value || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  }
+
+  function roundSearchTerms() {
+    return document.getElementById('roundSearchInput').value.trim().split(/\s+/).map(normalizeRoundSearch).filter(Boolean);
+  }
+
+  function updateRoundSearch(event, immediately = false) {
+    if (event?.isComposing) return;
+    clearTimeout(roundSearchTimer);
+    roundSearchLimit = ROUND_SEARCH_PAGE_SIZE;
+    if (immediately || !roundSearchTerms().length) renderRoundsView();
+    else roundSearchTimer = setTimeout(() => {
+      if (currentView === 'rounds') renderRoundsView();
+    }, 120);
+  }
+
+  function clearRoundSearch(restoreFocus) {
+    const input = document.getElementById('roundSearchInput');
+    input.value = '';
+    clearTimeout(roundSearchTimer);
+    roundSearchLimit = ROUND_SEARCH_PAGE_SIZE;
+    if (restoreFocus) {
+      renderRoundsView();
+      input.focus();
+    }
+  }
+
+  function renderRoundSearchResults(listEl, status, terms) {
+    const matches = collectSeasonScheduleMatches().filter(match => {
+      const names = [match.homeEn, match.homeKo, match.awayEn, match.awayKo].map(normalizeRoundSearch);
+      return terms.every(term => names.some(name => name.includes(term)));
+    }).map(match => ({
+      ...match, isScheduled: !Number.isInteger(match.homeScore) || !Number.isInteger(match.awayScore)
+    }));
+    const today = kstDateKey(Date.now());
+    const sectionOf = match => !match.kickoffDate || match.postponed ? 2
+      : match.isScheduled && match.kickoffDate >= today ? 0 : 1;
+    matches.sort((a, b) => {
+      const section = sectionOf(a);
+      return section - sectionOf(b) ||
+        (section === 0 ? 1 : -1) * String(a.kickoffDate || '').localeCompare(String(b.kickoffDate || '')) ||
+        String(a.kickoffTime || '').localeCompare(String(b.kickoffTime || '')) ||
+        roundKeyPos(a.__rk) - roundKeyPos(b.__rk);
+    });
+
+    status.textContent = matches.length ? (isKorean ? `시즌 전체 · ${matches.length}경기` : `Season results · ${matches.length} matches`)
+      : (isKorean ? '일치하는 경기가 없어요.' : 'No matching fixtures.');
+    listEl.replaceChildren();
+    const groups = new Map();
+    matches.slice(0, roundSearchLimit).forEach(match => {
+      const key = sectionOf(match) + ':' + (match.kickoffDate || match.__rk);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(match);
+    });
+    const { addDayCard } = makeRoundRowTools(listEl);
+    for (const list of groups.values()) {
+      const { kickoffDate } = list[0];
+      const weeks = [...new Set(list.map(match => roundKeyPos(match.__rk)))];
+      const weekKo = weeks.map(w => wkKo(w)).join(' · ');
+      const weekEn = weeks.map(w => wkEn(w, 'Week', ' ')).join(' · ');
+      if (!kickoffDate) {
+        const pending = list.some(match => match.isScheduled);
+        addDayCard(pending ? '날짜 미정' : '날짜 기록 없음', pending ? 'Date TBD' : 'Date unavailable',
+          list, false, weekKo, weekEn);
+      } else {
+        const [year, month, day] = kickoffDate.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        addDayCard(`${month}월 ${day}일 (${WEEKDAY_KO[date.getDay()]})`,
+          date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          list, list.some(match => !!todayBadgeHtml(match)), weekKo, weekEn);
+      }
+    }
+    if (matches.length > roundSearchLimit) {
+      const more = document.createElement('button');
+      more.id = 'roundSearchMore';
+      more.type = 'button';
+      more.className = 'round-mode-chip';
+      const remaining = matches.length - roundSearchLimit;
+      more.textContent = isKorean ? `경기 더 보기 (${remaining})` : `Show more matches (${remaining})`;
+      more.onclick = () => {
+        const firstAdded = roundSearchLimit;
+        roundSearchLimit += ROUND_SEARCH_PAGE_SIZE;
+        renderRoundsView();
+        const target = listEl.querySelectorAll('.rmd-row')[firstAdded] || status;
+        target.tabIndex = -1;
+        target.focus();
+      };
+      listEl.appendChild(more);
+    }
+    attachImageFallback();
+    hydrateWeatherWidgets();
   }
 
   // 월별/주차별 보기가 함께 쓰는 "날짜 카드 + 경기 행(row)" 생성 도구.
@@ -11611,12 +11713,26 @@
     renderRoundHalfBar(roundKeys);
     ensureRoundModeToggle();
     const monthMode = roundViewMode === 'month';
+    const input = document.getElementById('roundSearchInput');
+    input.placeholder = isKorean ? '팀 이름 · 예: 라이플리, Raiply' : 'Team name · e.g. Raiply';
+    const terms = roundSearchTerms();
+    const searching = terms.length > 0;
+    document.getElementById('roundSearchClear').hidden = !input.value;
     const halfBarEl = document.getElementById('roundHalfBar');
-    if (halfBarEl) halfBarEl.style.display = monthMode ? 'none' : '';
+    if (halfBarEl) halfBarEl.style.display = monthMode || searching ? 'none' : '';
 
     const shareBtn = document.getElementById('roundShareBtn');
     const listElForEmpty = document.getElementById('roundMatchList');
     if (listElForEmpty) listElForEmpty.classList.add('rmd-list'); // 주차별/월별 모두 같은 날짜 카드 디자인 사용
+    const searchStatus = document.getElementById('roundSearchStatus');
+    if (searching) {
+      tabBar.style.display = 'none';
+      if (shareBtn) shareBtn.style.display = 'none';
+      rfvSetVisible(false);
+      renderRoundSearchResults(listElForEmpty, searchStatus, terms);
+      return;
+    }
+    searchStatus.textContent = '';
 
     // 아직 일정이 하나도 안 나온 반기(예: 후반기 발표 전)는 안내 문구만 보여줍니다.
     if (!monthMode && !halfKeys.length) {
@@ -22567,6 +22683,7 @@
       return null;
     }
     function stepRound(delta) {
+      if (roundSearchTerms().length) return;
       if (roundViewMode === 'month') {
         const mk = roundMonthKeysCache, mi = mk.indexOf(roundMonthKey), nx = mk[mi + delta];
         if (mi < 0 || !nx) return;
