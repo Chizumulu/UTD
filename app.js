@@ -561,6 +561,7 @@
   function showCupView() {
     setArchiveMode(false);
     currentView = 'cup';
+    document.body.setAttribute('data-view', 'cup');
     ['rankView', 'leagueRankView', 'squadView', 'roundsView', 'statsView', 'scorersView', 'predictView',
      'venuesView', 'teamCompareView', 'reportView', 'nextMatchStrip', 'nextMatchPreviewCard'].forEach(function (id) {
       const el = document.getElementById(id);
@@ -918,6 +919,7 @@
     // 어디서 불러도 같게 동작하도록 여기 한 곳에서 처리합니다(같은 화면을 다시 그릴 때는 스크롤을 유지).
     const prevView = currentView;
     currentView = view;
+    document.body.setAttribute('data-view', view); // 후원 플로팅 버튼 등 화면별 CSS/JS 에서 사용
     if (view !== prevView) { try { window.scrollTo(0, 0); } catch (e) {} }
     prepareArchiveForView(view); // 작년 기록을 쓰는 화면이면 archive-2526.js를 이때 불러옵니다
     const rankView = document.getElementById('rankView');
@@ -9339,7 +9341,25 @@
     if (!activeBtn) { indicator.classList.remove('is-ready'); return; }
     indicator.style.transform = `translateX(${activeBtn.offsetLeft - 4}px)`;
     indicator.style.width = activeBtn.offsetWidth + 'px';
+    // 버튼이 두 줄로 나뉘는 레이아웃(득점 순위 모바일)에서도 필이 활성 버튼 높이에만 맞도록
+    indicator.style.top = activeBtn.offsetTop + 'px';
+    indicator.style.bottom = 'auto';
+    indicator.style.height = activeBtn.offsetHeight + 'px';
     indicator.classList.add('is-ready');
+    // 버튼 폭이 나중에 바뀌어도(예: "PK 제외" 토글이 숨겨지거나 폰트가 늦게 로드될 때) 필이 따라가도록
+    // 각 버튼의 크기 변화를 지켜봅니다. 필은 버튼 크기에 영향을 주지 않아 무한 루프는 생기지 않습니다.
+    if (!wrapEl._segRO && typeof ResizeObserver !== 'undefined') {
+      wrapEl._segRO = new ResizeObserver(() => {
+        const b = wrapEl.querySelector('.active');
+        if (!b || !b.offsetWidth) return;
+        indicator.style.transform = `translateX(${b.offsetLeft - 4}px)`;
+        indicator.style.width = b.offsetWidth + 'px';
+        indicator.style.top = b.offsetTop + 'px';
+        indicator.style.height = b.offsetHeight + 'px';
+      });
+      wrapEl._segRO.observe(wrapEl);
+      Array.from(wrapEl.children).forEach(c => { if (c !== indicator) wrapEl._segRO.observe(c); });
+    }
   }
   window.addEventListener('resize', () => {
     document.querySelectorAll('.rank-filter-wrap').forEach(updateSegIndicator);
@@ -12303,6 +12323,8 @@
     document.querySelectorAll('.scorers-mode-btn').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
     });
+    // "PK 제외" 토글이 숨겨지거나 나타나면 버튼 폭이 바뀌므로, 필 위치는 그 뒤에 측정해야 합니다.
+    syncScorersNoPkBtn();
     updateSegIndicator(document.querySelector('#scorersView .rank-filter-wrap'));
     const table = document.getElementById('scorersTable');
     if (table) {
@@ -23196,4 +23218,86 @@
     var t = e.target && e.target.closest ? e.target.closest(TAB_SEL) : null;
     if (t && !isSelected(t)) window.hapticTap();
   }, true);
+})();
+
+
+// ===== 후원(커피) 플로팅 버튼 =====
+// 우하단에 둥둥 떠 있는 커피 버튼(#coffeeFabWrap). 마크업은 index.html, 스타일은 style.css 의 같은 이름 블록에 있습니다.
+// - ✕ 를 누르면 3일간 숨깁니다(nrfa-coffee-fab-dismiss-until). 설치 배너의 '닫기' 패턴과 같습니다.
+// - 사이트에 들어오면 SHOW_DELAY_MS(현재 0 = 즉시) 뒤에 부드럽게 나타납니다.
+// - 클릭/닫기는 GA 이벤트(coffee_fab_click / coffee_fab_dismiss)로 보냅니다.
+// - 문구(aria-label, 호버 라벨)는 data-ko/en · data-aria-ko/en 이라 언어 전환을 따라갑니다.
+(function () {
+  var wrap = document.getElementById('coffeeFabWrap');
+  var link = document.getElementById('coffeeFab');
+  var closeBtn = document.getElementById('coffeeFabClose');
+  if (!wrap || !link || !closeBtn) return;
+
+  var KEY = 'nrfa-coffee-fab-dismiss-until';
+  var DISMISS_DAYS = 3;
+  var SHOW_DELAY_MS = 0;
+
+  function isDismissed() {
+    try {
+      var until = localStorage.getItem(KEY);
+      return !!(until && Date.now() < Number(until));
+    } catch (e) { return false; }
+  }
+  function track(name) {
+    try {
+      if (typeof gtag === 'function') gtag('event', name, { placement: 'floating_fab', link_url: link.href });
+    } catch (e) {}
+  }
+
+  if (isDismissed()) return;
+
+  setTimeout(function () {
+    wrap.hidden = false;
+    // hidden 해제 직후 한 프레임 뒤에 .show 를 붙여야 페이드인 전환이 먹습니다.
+    requestAnimationFrame(function () { requestAnimationFrame(function () { wrap.classList.add('show'); }); });
+  }, SHOW_DELAY_MS);
+
+  // 1) 스크롤하는 동안 숨기고, 멈춘 뒤 IDLE_MS 지나면 다시 나타납니다.
+  var IDLE_MS = 900;
+  var idleTimer = null;
+  window.addEventListener('scroll', function () {
+    wrap.classList.add('is-scrolling');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { wrap.classList.remove('is-scrolling'); }, IDLE_MS);
+  }, { passive: true });
+
+  // 2) 아래 화면(body[data-view] 값)에서는 버튼을 아예 숨깁니다. (사이드바/더보기 시트 후원 링크는 그대로 있습니다)
+  //    화면 이름: rank, leagueRank, rounds, stats, predict, scorers, teamCompare, squad, venues, report, cup
+  var HIDE_VIEWS = ['rounds'];
+  function syncViewHidden() {
+    var v = document.body.getAttribute('data-view') || '';
+    wrap.classList.toggle('is-view-hidden', HIDE_VIEWS.indexOf(v) !== -1);
+  }
+  syncViewHidden();
+  new MutationObserver(syncViewHidden).observe(document.body, { attributes: true, attributeFilter: ['data-view'] });
+
+  link.addEventListener('click', function () { track('coffee_fab_click'); });
+  // PC에서는 라벨("커피 한 잔 후원하기")이 항상 보이므로, 라벨을 눌러도 버튼을 누른 것과 똑같이 동작하게 합니다.
+  var label = wrap.querySelector('.coffee-fab-label');
+  if (label) label.addEventListener('click', function () { link.click(); });
+
+  closeBtn.addEventListener('click', function () {
+    try { localStorage.setItem(KEY, String(Date.now() + DISMISS_DAYS * 24 * 60 * 60 * 1000)); } catch (e) {}
+    track('coffee_fab_dismiss');
+    wrap.classList.remove('show');
+    setTimeout(function () { wrap.hidden = true; }, 350);
+  });
+})();
+
+
+// ===== 후원 링크(사이드바 하단 / 더보기 시트) 클릭 → GA 이벤트 =====
+// 플로팅 버튼과 같은 coffee_fab_click 이벤트를 쓰되 placement 로 구분합니다(floating_fab / sidebar / more-sheet).
+(function () {
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('[data-coffee-link]') : null;
+    if (!a) return;
+    try {
+      if (typeof gtag === 'function') gtag('event', 'coffee_fab_click', { placement: a.getAttribute('data-coffee-link'), link_url: a.href });
+    } catch (err) {}
+  });
 })();
