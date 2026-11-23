@@ -19079,24 +19079,21 @@
     return `${scorePart} ${suffixMap[lastChar]}`;
   }
 
-  // 경기 상세에서 우리 팀이 원정인지 판별합니다. 해당 라운드(roundsData/scheduledRounds)에서
-  // 우리 팀 + 라인업의 상대(opponentKo)가 맞붙는 경기를 찾아 우리가 어웨이 쪽이면 true.
-  // 못 찾으면 홈(false)으로 봅니다. 라인업에 isAway: true 를 직접 적어도 됩니다.
-  function isOurMatchAway(roundKey, lineup) {
-    if (lineup && typeof lineup.isAway === 'boolean') return lineup.isAway;
-    const opp = lineup && lineup.opponentKo;
+  // 경기 상세의 상대 팀과 일치하는 대진을 찾습니다. 진행 중인 라운드에도 최종 스코어가 먼저 반영될 수 있습니다.
+  function findOurLineupMatch(roundKey, lineup) {
+    const opp = lineup.opponentKo;
     const pools = [
       (typeof roundsData !== 'undefined' && roundsData[roundKey]) || [],
       (typeof scheduledRounds !== 'undefined' && scheduledRounds[roundKey]) || []
     ];
     for (const list of pools) {
       for (const m of list) {
-        if (!m || m.byeKo || m.byeEn) continue;
-        if (m.homeKo === REPORT_TEAM_KO && (!opp || m.awayKo === opp)) return false;
-        if (m.awayKo === REPORT_TEAM_KO && (!opp || m.homeKo === opp)) return true;
+        if (!m || m.byeKo || m.byeEn || m.postponed || m.movedToWeek) continue;
+        if (m.homeKo === REPORT_TEAM_KO && (!opp || m.awayKo === opp)) return m;
+        if (m.awayKo === REPORT_TEAM_KO && (!opp || m.homeKo === opp)) return m;
       }
     }
-    return false;
+    return null;
   }
 
   function openMatchDetail(roundKey, weekNum) {
@@ -19108,7 +19105,16 @@
     const weekLabel = isKo ? `${wkKo(weekNum)}` : `${wkEn(weekNum, 'Week', ' ')}`;
     const opponentTeam = leagueData.find(t => t.nameKo === lineup.opponentKo);
     const opponentName = opponentTeam ? (isKo ? opponentTeam.nameKo : opponentTeam.nameEn) : lineup.opponentKo;
-    const resultText = translateResultSuffix(lineup.result);
+    const fixture = findOurLineupMatch(roundKey, lineup);
+    const fixtureAway = fixture?.awayKo === REPORT_TEAM_KO;
+    let result = lineup.result;
+    if (Number.isInteger(fixture?.homeScore) && Number.isInteger(fixture.awayScore)) {
+      const ownGoals = fixtureAway ? fixture.awayScore : fixture.homeScore;
+      const oppGoals = fixtureAway ? fixture.homeScore : fixture.awayScore;
+      const outcome = ownGoals === oppGoals ? '무' : (ownGoals > oppGoals ? '승' : '패');
+      result = `${ownGoals} : ${oppGoals} ${outcome}`;
+    }
+    const resultText = translateResultSuffix(result);
     document.getElementById('matchDetailTitle').textContent =
       `${weekLabel} vs ${opponentName} (${resultText})`;
 
@@ -19117,12 +19123,12 @@
       : { list: lineup.recentHistory || [], summary: lineup.historySummary || '' };
 
     currentMatchDetailLineup = lineup;
-    currentMatchDetailAway = isOurMatchAway(roundKey, lineup);
+    currentMatchDetailAway = typeof lineup.isAway === 'boolean' ? lineup.isAway : fixtureAway;
     const bodyEl = document.getElementById('matchDetailBody');
     bodyEl.innerHTML = `
       <div class="lineup-formation-tag">${lineup.formation}</div>
       ${buildMatchAssistSummary(lineup)}
-      ${renderMatchCenterSection(roundKey, lineup, opponentName)}
+      ${renderMatchCenterSection(roundKey, lineup, opponentName, result)}
       <div class="match-detail-layout">
         <div class="match-detail-left">
           ${renderLineupLeft(lineup)}
@@ -19139,7 +19145,7 @@
   }
 
   // ===== 경기 상세: 매치센터 섹션 (이벤트 타임라인 · 전/후반 결과 · MVP) =====
-  // 데이터는 matchLineups[roundKey]의 goals/assists/subsIn(inMin/outMin)과 teamAwards.motm 만 씁니다.
+  // 스코어 외에는 matchLineups[roundKey]의 goals/assists/subsIn(inMin/outMin)과 teamAwards.motm을 씁니다.
   //  - 골 시간이 "-"(미상)인 골은 "시간 미상"으로 따로 모읍니다. 결과 스코어(result)가 라인업 득점 합보다
   //    크면(자책골 등) 그 차이도 "득점자 미기록"으로 취급합니다.
   //  - 상대 득점은 시간·득점자 데이터가 없으므로, 실점이 0인 경기만 전·후반 스코어를 확정하고
@@ -19167,7 +19173,7 @@
     return `<span class="mcenter-name lineup-squad-link" data-player-number="${p.statKey || p.number}">${name}</span>`;
   }
 
-  function renderMatchCenterSection(roundKey, lineup, opponentName) {
+  function renderMatchCenterSection(roundKey, lineup, opponentName, result) {
     const isKo = isKorean;
     const starters = lineup.starters || [];
     const subsIn = lineup.subsIn || [];
@@ -19189,7 +19195,7 @@
     const unknown = goals.filter(g => !g.min);
 
     // --- 스코어 ---
-    const rm = String(lineup.result || '').match(/(\d+)\s*:\s*(\d+)/);
+    const rm = String(result || '').match(/(\d+)\s*:\s*(\d+)/);
     const oursTotal = rm ? parseInt(rm[1], 10) : null;
     const oppTotal = rm ? parseInt(rm[2], 10) : null;
     const unrecorded = oursTotal === null ? 0 : Math.max(0, oursTotal - goals.length);
