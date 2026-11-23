@@ -5,6 +5,7 @@
   var SERVICE_WORKER_URL = "/UTD/OneSignalSDKWorker.js";
   var SERVICE_WORKER_SCOPE = "/UTD/";
   var cachedConfig = null;
+  var buttonStatusRequest = 0;
 
   function isKoreanUi() {
     return typeof window.isKorean === "undefined" ? true : !!window.isKorean;
@@ -90,13 +91,41 @@
     return registration;
   }
 
-  async function getMatchingSubscription(config, registerIfMissing) {
-    var registration = await getRegistration(registerIfMissing);
+  async function getMatchingSubscription(config) {
+    var registration = await getRegistration(false);
     if (!registration || !registration.pushManager) return null;
     var subscription = await registration.pushManager.getSubscription();
     if (!subscription) return null;
     if (!subscriptionUsesKey(subscription, config.publicKey)) return null;
     return subscription;
+  }
+
+  function sendSubscription(path, subscription) {
+    return api("/api/push/" + path, {
+      method: "POST",
+      body: JSON.stringify({ subscription: subscription.toJSON() })
+    });
+  }
+
+  async function hasRegisteredMatchAlerts() {
+    if (Notification.permission === "denied") return false;
+    var config = await getConfig();
+    var subscription = await getMatchingSubscription(config);
+    if (!subscription) return false;
+    var status = await sendSubscription("subscriptions/status", subscription);
+    if (!status || typeof status.registered !== "boolean") {
+      throw new Error("Push server did not return the subscription status.");
+    }
+    return status.registered;
+  }
+
+  async function registerSubscription(subscription) {
+    var result = await sendSubscription("subscriptions", subscription);
+    if (!result || result.ok !== true) {
+      throw new Error("Push server did not confirm registration.");
+    }
+    buttonStatusRequest += 1;
+    renderButton(true, null);
   }
 
   function renderButton(on, error) {
@@ -127,13 +156,16 @@
   }
 
   async function refreshButton() {
-    if (!API_BASE) return;
+    if (!API_BASE || !("Notification" in window) ||
+        !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    var request = ++buttonStatusRequest;
     try {
-      var config = await getConfig();
-      var subscription = await getMatchingSubscription(config, false);
-      renderButton(!!subscription, null);
+      var registered = await hasRegisteredMatchAlerts();
+      if (request === buttonStatusRequest) renderButton(registered, null);
     } catch (error) {
-      renderButton(false, error && error.message ? error.message : String(error));
+      if (request === buttonStatusRequest) {
+        renderButton(false, error && error.message ? error.message : String(error));
+      }
     }
   }
 
@@ -143,13 +175,12 @@
       return;
     }
     try {
-      var config = await getConfig();
-      var subscription = await getMatchingSubscription(config, false);
-      var dialog = document.getElementById(subscription ? "disableMatchAlertsDialog" : "enableMatchAlertsDialog");
+      var registered = await hasRegisteredMatchAlerts();
+      var dialog = document.getElementById(registered ? "disableMatchAlertsDialog" : "enableMatchAlertsDialog");
       if (dialog && typeof dialog.showModal === "function") {
         dialog.showModal();
-      } else if (window.confirm(subscription ? "경기 알림을 끄시겠어요?" : "득점과 경기 상태 알림을 받으시겠어요?")) {
-        if (subscription) await confirmDisableMatchAlerts();
+      } else if (window.confirm(registered ? "경기 알림을 끄시겠어요?" : "득점과 경기 상태 알림을 받으시겠어요?")) {
+        if (registered) await confirmDisableMatchAlerts();
         else await enableMatchAlerts();
       }
     } catch (error) {
@@ -196,11 +227,7 @@
         });
       }
 
-      await api("/api/push/subscriptions", {
-        method: "POST",
-        body: JSON.stringify({ subscription: subscription.toJSON() })
-      });
-      await refreshButton();
+      await registerSubscription(subscription);
       toast("이 기기에서 경기 알림을 받습니다.", "Match alerts are enabled on this device.");
     } catch (error) {
       console.error("Web Push subscription failed:", error);
@@ -213,7 +240,7 @@
     closeDisableMatchAlertsDialog();
     try {
       var config = await getConfig();
-      var subscription = await getMatchingSubscription(config, false);
+      var subscription = await getMatchingSubscription(config);
       if (subscription) {
         try {
           await api("/api/push/subscriptions", {
@@ -246,11 +273,7 @@
         await enableMatchAlerts();
         return;
       }
-      await api("/api/push/subscriptions", {
-        method: "POST",
-        body: JSON.stringify({ subscription: subscription.toJSON() })
-      });
-      await refreshButton();
+      await registerSubscription(subscription);
       toast("이 기기의 알림 연결을 새로 고쳤어요.", "This device's push registration was refreshed.");
     } catch (error) {
       await refreshButton();
@@ -259,6 +282,7 @@
   }
 
   window.toggleMatchAlerts = toggleMatchAlerts;
+  window.hasRegisteredMatchAlerts = hasRegisteredMatchAlerts;
   window.enableMatchAlerts = enableMatchAlerts;
   window.confirmDisableMatchAlerts = confirmDisableMatchAlerts;
   window.repairMatchAlerts = repairMatchAlerts;

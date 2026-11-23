@@ -3,6 +3,9 @@ import { buildPushPayload } from "@block65/webcrypto-web-push";
 const API_PATH = "/api/push/";
 const API_LIMIT = 100;
 const MAX_REQUEST_BYTES = 16 * 1024;
+const PUSH_TIMEOUT_MS = 15 * 1000;
+const DELIVERY_LEASE_MS = 60 * 1000;
+const DELIVERY_RETENTION_MS = 2 * 24 * 60 * 60 * 1000;
 const ALLOWED_PUSH_HOSTS = [
   "fcm.googleapis.com",
   "android.googleapis.com",
@@ -43,6 +46,10 @@ export default {
 
       if (url.pathname === API_PATH + "subscriptions" && request.method === "POST") {
         return await subscribe(request, env, cors);
+      }
+
+      if (url.pathname === API_PATH + "subscriptions/status" && request.method === "POST") {
+        return await subscriptionStatus(request, env, cors);
       }
 
       if (url.pathname === API_PATH + "subscriptions" && request.method === "DELETE") {
@@ -119,18 +126,24 @@ function bytesToBase64Url(bytes) {
   return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-async function subscribe(request, env, cors) {
+async function readSubscription(request) {
   const value = await readJson(request);
   const subscription = value && value.subscription;
   const endpoint = subscription && subscription.endpoint;
   const keys = subscription && subscription.keys;
 
   if (typeof endpoint !== "string" || endpoint.length > 2048 || !isAllowedPushEndpoint(endpoint)) {
-    return json({ error: "invalid_push_endpoint" }, 400, cors);
+    return { error: "invalid_push_endpoint" };
   }
   if (!keys || !validPushKey(keys.p256dh, 60, 160) || !validPushKey(keys.auth, 16, 80)) {
-    return json({ error: "invalid_push_keys" }, 400, cors);
+    return { error: "invalid_push_keys" };
   }
+  return { endpoint, keys };
+}
+
+async function subscribe(request, env, cors) {
+  const { endpoint, keys, error } = await readSubscription(request);
+  if (error) return json({ error }, 400, cors);
 
   const current = await env.DB.prepare("SELECT COUNT(*) AS count FROM push_subscriptions").first();
   const id = await endpointId(endpoint);
@@ -150,6 +163,17 @@ async function subscribe(request, env, cors) {
   return json({ ok: true }, 201, cors);
 }
 
+async function subscriptionStatus(request, env, cors) {
+  const { endpoint, keys, error } = await readSubscription(request);
+  if (error) return json({ error }, 400, cors);
+
+  const id = await endpointId(endpoint);
+  const subscription = await env.DB.prepare(
+    "SELECT 1 FROM push_subscriptions WHERE id = ? AND p256dh = ? AND auth = ?"
+  ).bind(id, keys.p256dh, keys.auth).first();
+  return json({ registered: !!subscription }, 200, cors);
+}
+
 async function unsubscribe(request, env, cors) {
   const value = await readJson(request);
   const endpoint = value && value.endpoint;
@@ -165,6 +189,9 @@ async function unsubscribe(request, env, cors) {
 async function pollMatchesAndNotify(env) {
   if (!env.DB) throw new Error("D1 binding DB is missing");
 
+  const now = Date.now();
+  await env.DB.prepare("DELETE FROM push_deliveries WHERE expires_at <= ?").bind(now).run();
+
   const subscriptions = await env.DB.prepare(
     "SELECT COUNT(*) AS count FROM push_subscriptions"
   ).first();
@@ -174,7 +201,6 @@ async function pollMatchesAndNotify(env) {
     throw new Error("VAPID secrets are not configured");
   }
 
-  const now = Date.now();
   try {
     await sendKickoffReminders(env, now);
   } catch (error) {
@@ -218,7 +244,10 @@ async function pollMatchesAndNotify(env) {
       // the historical baseline quiet for later subscribers.
       if (match.status === "full_time") {
         const notification = createNotification(null, match);
-        const delivery = await broadcast(env, notification, Date.parse(match.lastSeenAt));
+        const delivery = await broadcast(env, notification, {
+          deliveryId: matchDeliveryId(null, match),
+          createdBefore: Date.parse(match.lastSeenAt)
+        });
         if (delivery.targeted === 0) {
           console.log("Initial final score was not sent because no subscription predated the API update.", match.matchId);
         }
@@ -245,7 +274,9 @@ async function pollMatchesAndNotify(env) {
     const notification = createNotification(previous, match);
     if (notification) {
       const createdBefore = firstSeenFinal ? Date.parse(match.lastSeenAt) : null;
-      const delivery = await broadcast(env, notification, createdBefore);
+      const delivery = await broadcast(env, notification, {
+        deliveryId: matchDeliveryId(previous, match), createdBefore
+      });
       if (firstSeenFinal && delivery.targeted === 0) {
         console.log("New final score was not sent because no subscription predated the API update.", match.matchId);
       }
@@ -298,7 +329,7 @@ async function sendKickoffReminders(env, now) {
       renotify: false,
       data: { url: "https://chizumulu.github.io/UTD/" }
     };
-    const delivery = await broadcast(env, notification);
+    const delivery = await broadcast(env, notification, { deliveryId: settingKey + ":" + scheduledAt });
     if (delivery.transient > 0) {
       console.warn("Kickoff reminder delivery failed temporarily; it will be retried.", fixture.homeEn, fixture.awayEn);
       continue;
@@ -402,6 +433,12 @@ function createNotification(previous, match) {
   return null;
 }
 
+function matchDeliveryId(previous, match) {
+  // Polls may update the minute or last-seen timestamp during a retry.
+  const from = previous ? [previous.status, previous.home_score, previous.away_score] : null;
+  return JSON.stringify(["match", match.matchId, from, match.status, match.homeScore, match.awayScore]);
+}
+
 function notificationPayload(match, type) {
   const score = (match.homeScore === null ? "–" : match.homeScore)
     + "–"
@@ -462,7 +499,7 @@ async function sendTestSequenceToLatestSubscription(env) {
       renotify: false,
       data: { url: "https://chizumulu.github.io/UTD/" }
     };
-    const delivery = await broadcast(env, notification, null, latest.id);
+    const delivery = await broadcast(env, notification, { onlySubscriptionId: latest.id });
     if (delivery.success !== 1 || delivery.transient > 0 || delivery.permanent > 0) {
       return { ok: false, error: "delivery_failed", sentCount: index, failedStep: index + 1 };
     }
@@ -474,10 +511,26 @@ async function sendTestSequenceToLatestSubscription(env) {
   return { ok: true, sentCount: steps.length, target: "latest_subscription" };
 }
 
-async function broadcast(env, notification, createdBefore = null, onlySubscriptionId = null) {
+async function claimDelivery(db, deliveryId, subscriptionId) {
+  const now = Date.now();
+  const leaseUntil = now + DELIVERY_LEASE_MS;
+  const result = await db.prepare(
+    "INSERT INTO push_deliveries (delivery_id, subscription_id, lease_until, expires_at) VALUES (?, ?, ?, ?) " +
+    "ON CONFLICT(delivery_id, subscription_id) DO UPDATE SET " +
+    "lease_until = excluded.lease_until, expires_at = excluded.expires_at " +
+    "WHERE push_deliveries.delivered_at IS NULL AND push_deliveries.lease_until <= ?"
+  ).bind(deliveryId, subscriptionId, leaseUntil, now + DELIVERY_RETENTION_MS, now).run();
+  return result.meta.changes === 1 ? leaseUntil : null;
+}
+
+async function broadcast(env, notification, {
+  deliveryId = null, createdBefore = null, onlySubscriptionId = null
+} = {}) {
   const result = await env.DB.prepare(
-    "SELECT id, endpoint, p256dh, auth, created_at FROM push_subscriptions"
-  ).all();
+    "SELECT s.id, s.endpoint, s.p256dh, s.auth, s.created_at, d.delivered_at " +
+    "FROM push_subscriptions AS s LEFT JOIN push_deliveries AS d " +
+    "ON d.subscription_id = s.id AND d.delivery_id = ?"
+  ).bind(deliveryId).all();
   const allSubscriptions = result && Array.isArray(result.results) ? result.results : [];
   const subscriptions = allSubscriptions.filter(row => {
     if (onlySubscriptionId !== null && row.id !== onlySubscriptionId) return false;
@@ -495,7 +548,14 @@ async function broadcast(env, notification, createdBefore = null, onlySubscripti
   let permanent = 0;
 
   for (const row of subscriptions) {
+    if (row.delivered_at !== null) continue;
     try {
+      const leaseUntil = deliveryId === null ? null : await claimDelivery(env.DB, deliveryId, row.id);
+      if (deliveryId !== null && leaseUntil === null) {
+        // Another poll may still be sending this update.
+        transient += 1;
+        continue;
+      }
       const subscription = {
         endpoint: row.endpoint,
         expirationTime: null,
@@ -506,11 +566,18 @@ async function broadcast(env, notification, createdBefore = null, onlySubscripti
         subscription,
         vapid
       );
-      const response = await fetch(row.endpoint, init);
+      const response = await fetch(row.endpoint, { ...init, signal: AbortSignal.timeout(PUSH_TIMEOUT_MS) });
       if (response.status === 404 || response.status === 410) {
         await env.DB.prepare("DELETE FROM push_subscriptions WHERE id = ?").bind(row.id).run();
         permanent += 1;
       } else if (response.ok) {
+        if (deliveryId !== null) {
+          const receipt = await env.DB.prepare(
+            "UPDATE push_deliveries SET delivered_at = ? " +
+            "WHERE delivery_id = ? AND subscription_id = ? AND lease_until = ?"
+          ).bind(Date.now(), deliveryId, row.id, leaseUntil).run();
+          if (receipt.meta.changes !== 1) throw new Error("Push delivery lease expired before storing the receipt");
+        }
         success += 1;
       } else {
         console.warn("Push service returned HTTP " + response.status);
