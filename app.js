@@ -3271,7 +3271,7 @@
           <button class="nms-action-btn" onclick="downloadNextMatchICS()" aria-label="Add to calendar" title="${isKorean ? '캘린더에 추가' : 'Add to calendar'}">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21M7 3V5M17 3V5M6.2 5H17.8C19 5 20 6 20 7.2V18.8C20 20 19 21 17.8 21H6.2C5 21 4 20 4 18.8V7.2C4 6 5 5 6.2 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
           </button>
-          <button class="nms-action-btn" onclick="downloadRemainingFixturesICS()" aria-label="Download all remaining fixtures" title="${isKorean ? '남은 경기 전체 캘린더 받기' : 'All remaining fixtures (.ics)'}">
+          <button type="button" class="nms-action-btn" onclick="openLeagueCalendarSubscription()" aria-haspopup="dialog" aria-label="${isKorean ? '리그 일정 캘린더' : 'League fixtures calendar'}" title="${isKorean ? '리그 일정 캘린더' : 'League fixtures calendar'}">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21M7 3V5M17 3V5M6.2 5H17.8C19 5 20 6 20 7.2V18.8C20 20 19 21 17.8 21H6.2C5 21 4 20 4 18.8V7.2C4 6 5 5 6.2 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 13H16M8 17H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           </button>
           <button class="nms-action-btn" onclick="shareNextMatch()" aria-label="Share" title="${isKorean ? '공유하기' : 'Share'}">
@@ -3726,6 +3726,44 @@
 
   // ===== 다음 경기 캘린더 등록 (.ics 다운로드) =====
   // 브라우저 알림 대신, 어떤 캘린더 앱(구글/애플/아웃룩)에도 바로 등록 가능한 표준 .ics 파일을 생성합니다.
+  function openLeagueCalendarSubscription() {
+    const dialog = document.getElementById('calendarSubscriptionDialog');
+    const input = document.getElementById('calendarSubscriptionUrl');
+    const status = document.getElementById('calendarSubscriptionMessage');
+    input.value = '';
+    status.textContent = '';
+    try {
+      const url = new URL('/calendar/chizumulu.ics', window.UTD_PUSH_API_URL);
+      if (url.protocol === 'https:') input.value = url.href;
+    } catch (error) {
+      console.warn('Calendar subscription URL is unavailable', error);
+    }
+    dialog.querySelectorAll('[onclick="openLeagueCalendarApp()"], [onclick="copyLeagueCalendarUrl()"]')
+      .forEach(button => { button.disabled = !input.value; });
+    if (!input.value) {
+      status.textContent = isKorean ? '구독 주소를 사용할 수 없어요.' : 'The subscription URL is unavailable.';
+    }
+    if (!dialog.open) dialog.showModal();
+  }
+
+  function openLeagueCalendarApp() {
+    const url = document.getElementById('calendarSubscriptionUrl').value;
+    if (url.startsWith('https://')) location.href = url.replace(/^https:/, 'webcal:');
+  }
+
+  async function copyLeagueCalendarUrl() {
+    const input = document.getElementById('calendarSubscriptionUrl');
+    const status = document.getElementById('calendarSubscriptionMessage');
+    try {
+      await navigator.clipboard.writeText(input.value);
+      status.textContent = isKorean ? '구독 주소를 복사했어요.' : 'Subscription URL copied.';
+    } catch (error) {
+      input.focus();
+      input.select();
+      status.textContent = isKorean ? '선택한 주소를 직접 복사해 주세요.' : 'Copy the selected URL.';
+    }
+  }
+
   function toICSDate(ms) {
     return new Date(ms).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   }
@@ -11022,6 +11060,16 @@
       chip.setAttribute('onclick', 'toggleRoundMonthMine()');
       chip.innerHTML = `<span class="lbl" data-en="My team only" data-ko="내 경기만">${isKorean ? '내 경기만' : 'My team only'}</span>`;
       actions.appendChild(chip);
+      const calendar = document.createElement('button');
+      calendar.type = 'button';
+      calendar.className = 'round-mode-chip lbl';
+      calendar.id = 'roundCalendarButton';
+      calendar.dataset.ko = '캘린더';
+      calendar.dataset.en = 'Calendar';
+      calendar.textContent = isKorean ? calendar.dataset.ko : calendar.dataset.en;
+      calendar.setAttribute('aria-haspopup', 'dialog');
+      calendar.onclick = openLeagueCalendarSubscription;
+      actions.appendChild(calendar);
       const share = document.getElementById('roundShareBtn');
       const postponed = host.querySelector('.postponed-btn');
       // '치주물루에 유리한 예측 보기' 토글 버튼: 공유하기 왼쪽

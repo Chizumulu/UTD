@@ -1,6 +1,7 @@
 import { buildPushPayload } from "@block65/webcrypto-web-push";
 
 const API_PATH = "/api/push/";
+const CALENDAR_PATH = "/calendar/chizumulu.ics";
 const API_LIMIT = 100;
 const MAX_REQUEST_BYTES = 16 * 1024;
 const PUSH_TIMEOUT_MS = 15 * 1000;
@@ -16,6 +17,9 @@ const ALLOWED_PUSH_HOSTS = [
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname === CALENDAR_PATH) return serveLeagueCalendar(request, env);
+
     const origin = request.headers.get("Origin");
     if (!origin || origin !== env.SITE_ORIGIN) {
       return new Response("Forbidden", { status: 403 });
@@ -27,8 +31,6 @@ export default {
     }
 
     try {
-      const url = new URL(request.url);
-
       if (request.method === "POST" && url.pathname === API_PATH + "test-sequence") {
         if (!env.PUSH_TEST_TOKEN) return json({ error: "test_not_configured" }, 503, cors);
         if (request.headers.get("Authorization") !== "Bearer " + env.PUSH_TEST_TOKEN) {
@@ -297,7 +299,7 @@ const KICKOFF_REMINDER_WINDOW_MS = 5 * 60 * 1000;
 const KICKOFF_REMINDER_LEAD_MS = 60 * 60 * 1000;
 const SCHEDULE_CHANGE_RETRY_MS = 24 * 60 * 60 * 1000;
 
-async function checkScheduleNotifications(env, now) {
+async function readPublishedSchedule(env) {
   const scheduleUrl = env.SCHEDULE_DATA_URL || "https://chizumulu.github.io/UTD/data.js";
   const response = await fetch(scheduleUrl, {
     headers: { "Accept": "text/javascript, text/plain;q=0.9, */*;q=0.8" },
@@ -307,16 +309,26 @@ async function checkScheduleNotifications(env, now) {
 
   const sourceModifiedAt = Date.parse(response.headers.get("Last-Modified") || "") || null;
   const source = (await response.text()).replace(/\r\n/g, "\n");
-  const season = source.match(/\bconst SEASON_START\s*=\s*['"](\d{4})-/)?.[1];
+  const seasonStart = source.match(/\bconst SEASON_START\s*=\s*['"](\d{4}-\d{2}-\d{2})['"]/)?.[1];
   const scheduled = readScheduleBlock(source, "scheduledRounds");
   if (scheduled === null) throw new Error("scheduledRounds block is missing or incomplete");
   const upcoming = readChizumuluFixtures(scheduled);
+  return { source, seasonStart, sourceModifiedAt, upcoming };
+}
+
+function readLeagueFixtures(source, upcoming) {
+  const results = readScheduleBlock(source, "roundsData");
+  if (results === null) throw new Error("roundsData block is missing or incomplete");
+  return mergeScheduleFixtures(upcoming, readChizumuluFixtures(results));
+}
+
+async function checkScheduleNotifications(env, now) {
+  const { source, seasonStart, sourceModifiedAt, upcoming } = await readPublishedSchedule(env);
+  const season = seasonStart?.slice(0, 4);
 
   if (season) {
     try {
-      const results = readScheduleBlock(source, "roundsData");
-      if (results === null) throw new Error("roundsData block is missing or incomplete");
-      const fixtures = mergeScheduleFixtures(upcoming, readChizumuluFixtures(results));
+      const fixtures = readLeagueFixtures(source, upcoming);
       await sendScheduleChanges(env, season, fixtures, now, sourceModifiedAt);
     } catch (error) {
       console.error("Schedule change check failed:", error);
@@ -324,6 +336,97 @@ async function checkScheduleNotifications(env, now) {
   }
 
   await sendKickoffReminders(env, season, upcoming, now);
+}
+
+async function serveLeagueCalendar(request, env) {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response(null, { status: 405, headers: { Allow: "GET, HEAD" } });
+  }
+  try {
+    const { source, seasonStart, sourceModifiedAt, upcoming } = await readPublishedSchedule(env);
+    const seasonStartAt = Date.parse(seasonStart || "");
+    if (!Number.isFinite(seasonStartAt)) throw new Error("Schedule is missing a valid season start");
+    const fixtures = readLeagueFixtures(source, upcoming);
+    if (!fixtures.size) throw new Error("Schedule contains no Chizumulu fixtures");
+    const body = buildLeagueCalendar(seasonStart.slice(0, 4), sourceModifiedAt ?? seasonStartAt, fixtures);
+    const etag = '"' + await endpointId(body) + '"';
+    const headers = {
+      "Content-Type": "text/calendar; charset=utf-8",
+      "Content-Disposition": 'inline; filename="chizumulu.ics"',
+      "Cache-Control": "public, max-age=300",
+      ETag: etag
+    };
+    const tags = request.headers.get("If-None-Match")?.split(/\s*,\s*/) || [];
+    if (tags.some(tag => tag === "*" || tag.replace(/^W\//, "") === etag)) {
+      return new Response(null, { status: 304, headers });
+    }
+    return new Response(request.method === "HEAD" ? null : body, { headers });
+  } catch (error) {
+    console.error("League calendar could not be generated:", error);
+    return new Response(null, { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "300" } });
+  }
+}
+
+function calendarDate(ms) {
+  return new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+function calendarText(value) {
+  return value.replace(/\\/g, "\\\\").replace(/[;,]/g, "\\$&").replace(/\r\n|\r|\n/g, "\\n");
+}
+
+function foldCalendarLine(line) {
+  const encoder = new TextEncoder();
+  let result = "";
+  let bytes = 0;
+  for (const character of line) {
+    const length = encoder.encode(character).length;
+    if (bytes + length > 75) {
+      result += "\r\n ";
+      bytes = 1;
+    }
+    result += character;
+    bytes += length;
+  }
+  return result;
+}
+
+function buildLeagueCalendar(season, modifiedAt, fixtures) {
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Chizumulu United FC Fan Site//NRFA//KO",
+    "CALSCALE:GREGORIAN",
+    "X-WR-CALNAME:치주물루 유나이티드 FC 리그 일정",
+    "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
+    "X-PUBLISHED-TTL:PT1H"
+  ];
+  const dated = [...fixtures.values()].filter(fixture => fixture.kickoffAt !== null && fixture.status !== "undated")
+    .sort((a, b) => a.kickoffAt - b.kickoffAt || a.homeEn.localeCompare(b.homeEn) || a.awayEn.localeCompare(b.awayEn));
+  const stamp = calendarDate(modifiedAt);
+  for (const fixture of dated) {
+    const { homeEn, awayEn, homeKo, awayKo, kickoffAt, status } = fixture;
+    const url = matchNotificationUrl(season, homeEn, awayEn);
+    const cancelled = status === "postponed" || status === "cancelled";
+    const label = status === "postponed" ? "[연기] " : status === "cancelled" ? "[취소] " : "";
+    // Season and assigned home/away teams identify the match across changes to kickoff and round.
+    const uid = "utd-" + [season, homeEn, awayEn].map(matchTeamSlug).join(".") + "@chizumulu.github.io";
+    lines.push(
+      "BEGIN:VEVENT",
+      "UID:" + uid,
+      "DTSTAMP:" + stamp,
+      "LAST-MODIFIED:" + stamp,
+      "SEQUENCE:" + Math.floor(modifiedAt / 1000),
+      "DTSTART:" + calendarDate(kickoffAt),
+      "DTEND:" + calendarDate(kickoffAt + 2 * 60 * 60 * 1000),
+      "STATUS:" + (cancelled ? "CANCELLED" : "CONFIRMED"),
+      "SUMMARY:" + calendarText(label + homeKo + " vs " + awayKo),
+      "URL:" + url,
+      "END:VEVENT"
+    );
+  }
+  lines.push("END:VCALENDAR");
+  return lines.map(foldCalendarLine).join("\r\n") + "\r\n";
 }
 
 async function sendKickoffReminders(env, season, fixtures, now) {
@@ -579,11 +682,14 @@ function matchDeliveryId(previous, match) {
   return JSON.stringify(["match", match.matchId, from, match.status, match.homeScore, match.awayScore]);
 }
 
+function matchTeamSlug(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 function matchNotificationUrl(season, home, away, date) {
   const root = "https://chizumulu.github.io/UTD/";
   if (!home || !away || (!season && !date)) return root;
-  const slug = value => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  const parts = season ? [season, slug(home), slug(away)] : ["live", home, away, date];
+  const parts = season ? [season, matchTeamSlug(home), matchTeamSlug(away)] : ["live", home, away, date];
   return root + "#/match/" + parts.map(encodeURIComponent).join("/");
 }
 
