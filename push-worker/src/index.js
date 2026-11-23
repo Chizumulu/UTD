@@ -276,7 +276,7 @@ async function sendKickoffReminders(env, now) {
 
   const fixtures = parseUpcomingChizumuluFixtures(await response.text());
   for (const fixture of fixtures) {
-    const kickoffAt = parseKoreaKickoff(fixture.kickoffDate, fixture.kickoffTime);
+    const kickoffAt = parseCatKickoff(fixture.kickoffDate, fixture.kickoffTime);
     if (!Number.isFinite(kickoffAt)) continue;
 
     const notifyAt = kickoffAt - KICKOFF_REMINDER_LEAD_MS;
@@ -292,7 +292,7 @@ async function sendKickoffReminders(env, now) {
 
     const notification = {
       title: "경기 시작 1시간 전이에요",
-      body: fixture.homeKo + " vs " + fixture.awayKo + " · " + fixture.kickoffTime + " 킥오프",
+      body: fixture.homeKo + " vs " + fixture.awayKo + " · " + fixture.kickoffTime + " CAT 킥오프",
       icon: "/UTD/apple-touch-icon.png",
       tag: "utd-kickoff-" + fixtureId,
       renotify: false,
@@ -345,9 +345,9 @@ function quotedProperty(source, name) {
   return match ? match[1] : "";
 }
 
-function parseKoreaKickoff(date, time) {
+function parseCatKickoff(date, time) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) return NaN;
-  return Date.parse(date + "T" + time + ":00+09:00");
+  return Date.parse(date + "T" + time + ":00+02:00");
 }
 
 function normalizeMatch(item) {
