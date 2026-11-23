@@ -190,27 +190,6 @@ function extractBraceClaims(g, issues) {
   return [...claims.values()];
 }
 
-// ---------- 득점 이벤트 → 득점자 문자열 ----------');
-  const claims = new Map();
-  let sawCue = false, ambiguousCue = false;
-  for (const narrative of g.narratives || []) {
-    for (const sentence of narrative.split(/\\n|(?<=[.!?])\\s+/)) {
-      if (!cue.test(sentence)) continue;
-      sawCue = true;
-      const matched = candidates.filter(c => new RegExp(`(^|[^A-Za-z])${escapeRe(c.name)}(?=$|[^A-Za-z])`, 'i').test(sentence));
-      const unique = new Map(matched.map(c => [`${norm(c.team)}|${upperName(c.name)}`, c]));
-      if (unique.size > 1) ambiguousCue = true;
-      else if (unique.size === 1) {
-        const claim = [...unique.values()][0];
-        claims.set(`${norm(claim.team)}|${upperName(claim.name)}`, claim);
-      }
-    }
-  }
-  if (ambiguousCue) issues.push('멀티골 설명에 연결되는 득점자가 여러 명이라 확인 필요');
-  if (sawCue && !claims.size && !ambiguousCue) issues.push('멀티골 설명은 있지만 구조화된 득점자 이름과 연결되지 않아 확인 필요');
-  return [...claims.values()];
-}
-
 // ---------- 득점 이벤트 → 득점자 문자열 ----------
 // 득점 후 스코어(h-a)를 순서대로 따라가며 "누가 점수를 얻었는지"를 판정합니다(자책골도 이득 본 팀 기준).
 function buildScorers(g, finalHome, finalAway, issues) {
@@ -302,7 +281,7 @@ function alreadyRecorded(g) {
   return null;
 }
 function proposeLine(fixture, res) {
-  const lines = dataSrc.split('\n');
+  const lines = dataSrc.split(/\r?\n/);
   const start = lines.findIndex(l => /^const scheduledRounds\b/.test(l));
   const cands = [];
   for (let i = start; i < lines.length; i++) {
@@ -313,7 +292,7 @@ function proposeLine(fixture, res) {
   }
   if (cands.length !== 1) return { error: `data.js 에서 해당 경기 줄을 ${cands.length}개 찾음 — 자동 수정 불가(수동 확인)` };
   const old = lines[cands[0]];
-  const m = old.match(/^(.*?)(\s*)\}(,?)\s*$/);
+  const m = old.match(/^(.*?)([ \t]*)\}(,?[ \t]*(?:\/\/.*)?)$/);
   if (!m) return { error: '경기 줄의 끝 형식을 해석하지 못함' };
   const add = `, homeScore: ${res.homeScore}, awayScore: ${res.awayScore}, scorersHome: ${JSON.stringify(res.scorersHome)}, scorersAway: ${JSON.stringify(res.scorersAway)}`;
   return { lineNo: cands[0] + 1, old, next: `${m[1]}${add}${m[2]}}${m[3]}` };

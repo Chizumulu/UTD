@@ -33,7 +33,7 @@ const location = findFixture(
 
 if (!location) {
   throw new Error(
-    "No unique scheduled/completed fixture matched the approved teams."
+    "No unique scheduled/completed fixture matched the approved teams and available match date."
   );
 }
 
@@ -74,12 +74,7 @@ if (location.kind === "completed") {
     );
   }
 
-  // roundsData에서 해당 경기 객체를 가져옵니다.
-  // 여기의 순번은 roundsData 내부에서만 사용합니다.
-  const roundFixtures = (roundsData[location.roundKey] || [])
-    .filter(m => m && !m.byeKo && !m.byeEn);
-
-  const fixture = roundFixtures[location.matchIndex];
+  const fixture = roundsData[location.roundKey][location.matchIndex];
 
   if (
     !fixture ||
@@ -142,9 +137,7 @@ if (location.kind === "completed") {
       ? roundNode.value.elements
       : [];
 
-  const target = fixtures.filter(
-    m => m && !m.byeKo && !m.byeEn
-  )[location.matchIndex];
+  const target = fixtures[location.matchIndex];
 
   if (!target) {
     throw new Error(
@@ -481,48 +474,27 @@ function objectProperty(objectNode, key) {
 
 function findFixture(p, completed, scheduled) {
   const hits = [];
-
-  for (const [roundKey, list] of Object.entries(completed)) {
-    if (!Array.isArray(list)) continue;
-
-    const matchIndex = list
-      .filter(m => m && !m.byeKo && !m.byeEn)
-      .findIndex(m =>
-        sameTeam(m.homeEn || m.homeKo, p.home) &&
-        sameTeam(m.awayEn || m.awayKo, p.away)
-      );
-
-    if (matchIndex >= 0) {
-      hits.push({
-        roundKey,
-        matchIndex,
-        kind: "completed"
-      });
+  for (const [kind, rounds] of [["completed", completed], ["scheduled", scheduled]]) {
+    for (const [roundKey, list] of Object.entries(rounds)) {
+      if (!Array.isArray(list)) continue;
+      for (const [matchIndex, match] of list.entries()) {
+        if (!match || match.byeKo || match.byeEn) continue;
+        // The original round can retain a placeholder after the fixture moves.
+        const status = String(match.status || "").toLowerCase();
+        if (match.postponed || match.cancelled || match.movedToWeek != null ||
+            status === "postponed" || status === "cancelled") continue;
+        if (p.matchDate && match.kickoffDate && p.matchDate !== match.kickoffDate) continue;
+        if (sameTeam(match.homeEn || match.homeKo, p.home) &&
+            sameTeam(match.awayEn || match.awayKo, p.away)) {
+          hits.push({ roundKey, matchIndex, kind, kickoffDate: match.kickoffDate });
+        }
+      }
     }
   }
 
-  for (const [roundKey, list] of Object.entries(scheduled)) {
-    if (!Array.isArray(list)) continue;
-
-    const matchIndex = list
-      .filter(m => m && !m.byeKo && !m.byeEn)
-      .findIndex(m =>
-        sameTeam(m.homeEn || m.homeKo, p.home) &&
-        sameTeam(m.awayEn || m.awayKo, p.away)
-      );
-
-    if (matchIndex >= 0) {
-      hits.push({
-        roundKey,
-        matchIndex,
-        kind: "scheduled"
-      });
-    }
-  }
-
-  if (hits.length !== 1) return null;
-
-  return hits[0];
+  const datedHits = p.matchDate ? hits.filter(hit => hit.kickoffDate === p.matchDate) : [];
+  const candidates = datedHits.length ? datedHits : hits;
+  return candidates.length === 1 ? candidates[0] : null;
 }
 
 function sameTeam(left, right) {
