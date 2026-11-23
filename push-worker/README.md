@@ -33,6 +33,12 @@ The Worker also reads `scheduledRounds` and `roundsData` to detect changes to Ch
 
 Schedule snapshots and pending changes use the existing `app_settings` table. Temporary delivery failures are retried for up to 24 hours, or until the new kickoff if it comes sooner. Delivery receipts prevent sending the same change again to subscriptions that already received it.
 
+## Calendar subscription
+
+`GET /calendar/chizumulu.ics` publishes the current Chizumulu league season as a public iCalendar feed. It reads the same published league schedule as the notifications and does not require a push subscription. Copy the HTTPS address into a calendar that accepts URL subscriptions, or use the site's button to open a `webcal:` subscription. The calendar app controls how often it refreshes.
+
+Kickoff times are published in UTC using the Malawi time in the source schedule. Events keep the same UID when the kickoff moves. Known postponed or cancelled fixtures are marked as cancelled until a new date is published, and fixtures without a kickoff are omitted. The existing one-time downloads remain available in the dialog.
+
 The Worker records successful deliveries per notification and subscription in D1. Overlapping polls share the delivery state, and retries skip subscriptions whose delivery is already recorded. Delivery records expire after two days.
 
 The source API is independent of NRFA and may be delayed, corrected, or unavailable. The Worker retries on its next scheduled run; it cannot make a new API update arrive earlier.

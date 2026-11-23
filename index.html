@@ -23,7 +23,7 @@
   window.ASSET_VERSIONS = {
     style: '002',
     data: '004',
-    app: '007',
+    app: '008',
     report: '002',
     archive: '200',
     predictWorker: '220',
@@ -178,6 +178,20 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     <button type="button" class="lbl" data-ko="취소" data-en="Cancel" onclick="closeDisableMatchAlertsDialog()" autofocus>취소</button>
     <button type="button" class="match-alert-confirm-repair lbl" data-ko="연결 복구" data-en="Refresh connection" onclick="repairMatchAlerts()">연결 복구</button>
     <button type="button" class="match-alert-confirm-off lbl" data-ko="알림 끄기" data-en="Turn off alerts" onclick="confirmDisableMatchAlerts()">알림 끄기</button>
+  </div>
+</dialog>
+
+<dialog class="match-alert-confirm" id="calendarSubscriptionDialog" aria-labelledby="calendarSubscriptionTitle" aria-describedby="calendarSubscriptionDescription">
+  <h2 class="lbl" id="calendarSubscriptionTitle" data-ko="리그 일정 캘린더" data-en="League fixtures calendar">리그 일정 캘린더</h2>
+  <p class="lbl" id="calendarSubscriptionDescription" data-ko="한 번 구독하면 캘린더 앱이 일정 변경을 가져와요. Google Calendar는 PC에서 ‘다른 캘린더 → URL로 추가’를 선택하세요." data-en="Subscribe once and your calendar app can fetch updated fixtures. In Google Calendar on a computer, choose Other calendars → From URL.">한 번 구독하면 캘린더 앱이 일정 변경을 가져와요. Google Calendar는 PC에서 ‘다른 캘린더 → URL로 추가’를 선택하세요.</p>
+  <label class="lbl" for="calendarSubscriptionUrl" data-ko="구독 주소" data-en="Subscription URL">구독 주소</label>
+  <input type="url" id="calendarSubscriptionUrl" readonly dir="ltr" style="width:100%;box-sizing:border-box;">
+  <p id="calendarSubscriptionMessage" role="status"></p>
+  <div class="match-alert-confirm-actions" style="flex-wrap:wrap;">
+    <button type="button" class="lbl" onclick="openLeagueCalendarApp()" data-ko="캘린더 앱으로 구독" data-en="Subscribe in calendar">캘린더 앱으로 구독</button>
+    <button type="button" class="lbl" onclick="copyLeagueCalendarUrl()" data-ko="주소 복사" data-en="Copy URL">주소 복사</button>
+    <button type="button" class="lbl" onclick="this.closest('dialog').close(); downloadRemainingFixturesICS()" data-ko="일정 파일 다운로드" data-en="Download fixtures">일정 파일 다운로드</button>
+    <form method="dialog"><button type="submit" class="lbl" data-ko="닫기" data-en="Close" autofocus>닫기</button></form>
   </div>
 </dialog>
 
