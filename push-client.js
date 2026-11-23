@@ -6,8 +6,14 @@
   var SERVICE_WORKER_SCOPE = "/UTD/";
   var cachedConfig = null;
   var buttonStatusRequest = 0;
+  var NOTIFICATION_PREFERENCES_KEY = "utd-match-alert-types";
+  var NOTIFICATION_TYPES = ["schedule", "reminder", "live", "result"];
+  var activeNotificationTypes = null;
+  var preferencesRequest = 0;
+  var preferenceSubscription = null;
 
   function isKoreanUi() {
+    if (typeof isKorean === "boolean") return isKorean;
     return typeof window.isKorean === "undefined" ? true : !!window.isKorean;
   }
 
@@ -100,32 +106,57 @@
     return subscription;
   }
 
-  function sendSubscription(path, subscription) {
+  function validNotificationTypes(types) {
+    return Array.isArray(types) && types.length <= NOTIFICATION_TYPES.length &&
+      new Set(types).size === types.length &&
+      types.every(function (type) { return NOTIFICATION_TYPES.indexOf(type) !== -1; });
+  }
+
+  function rememberNotificationTypes(types) {
+    try { localStorage.setItem(NOTIFICATION_PREFERENCES_KEY, JSON.stringify(types)); } catch (_error) {}
+  }
+
+  function savedNotificationTypes() {
+    try {
+      var value = JSON.parse(localStorage.getItem(NOTIFICATION_PREFERENCES_KEY));
+      if (validNotificationTypes(value)) return value;
+    } catch (_error) {}
+    return undefined;
+  }
+
+  function sendSubscription(path, subscription, notificationTypes) {
     return api("/api/push/" + path, {
       method: "POST",
-      body: JSON.stringify({ subscription: subscription.toJSON() })
+      body: JSON.stringify({ subscription: subscription.toJSON(), notificationTypes: notificationTypes })
     });
   }
 
-  async function hasRegisteredMatchAlerts() {
-    if (Notification.permission === "denied") return false;
+  async function readMatchAlertStatus() {
+    if (Notification.permission === "denied") return { registered: false };
     var config = await getConfig();
     var subscription = await getMatchingSubscription(config);
-    if (!subscription) return false;
+    if (!subscription) return { registered: false };
     var status = await sendSubscription("subscriptions/status", subscription);
     if (!status || typeof status.registered !== "boolean") {
       throw new Error("Push server did not return the subscription status.");
     }
-    return status.registered;
+    return status;
+  }
+
+  async function hasRegisteredMatchAlerts() {
+    return (await readMatchAlertStatus()).registered;
   }
 
   async function registerSubscription(subscription) {
-    var result = await sendSubscription("subscriptions", subscription);
+    var remembered = savedNotificationTypes();
+    var result = await sendSubscription("subscriptions", subscription, remembered);
     if (!result || result.ok !== true) {
       throw new Error("Push server did not confirm registration.");
     }
     buttonStatusRequest += 1;
+    activeNotificationTypes = remembered || null;
     renderButton(true, null);
+    void refreshButton();
   }
 
   function renderButton(on, error) {
@@ -142,10 +173,11 @@
       button.title = error;
     } else {
       var blocked = Notification.permission === "denied";
+      var paused = on && activeNotificationTypes && activeNotificationTypes.length === 0;
       setLabel(
         label,
-        blocked ? "알림 차단됨 (브라우저 설정)" : (on ? "경기 알림 켜짐" : "경기 알림 받기"),
-        blocked ? "Blocked in browser settings" : (on ? "Match alerts on" : "Match alerts")
+        blocked ? "알림 차단됨 (브라우저 설정)" : (paused ? "경기 알림 일시 정지" : (on ? "경기 알림 켜짐" : "경기 알림 받기")),
+        blocked ? "Blocked in browser settings" : (paused ? "Match alerts paused" : (on ? "Match alerts on" : "Match alerts"))
       );
       button.disabled = blocked;
       button.title = "";
@@ -160,8 +192,12 @@
         !("serviceWorker" in navigator) || !("PushManager" in window)) return;
     var request = ++buttonStatusRequest;
     try {
-      var registered = await hasRegisteredMatchAlerts();
-      if (request === buttonStatusRequest) renderButton(registered, null);
+      var status = await readMatchAlertStatus();
+      if (request === buttonStatusRequest) {
+        activeNotificationTypes = validNotificationTypes(status.notificationTypes) ? status.notificationTypes : null;
+        if (activeNotificationTypes) rememberNotificationTypes(activeNotificationTypes);
+        renderButton(status.registered, null);
+      }
     } catch (error) {
       if (request === buttonStatusRequest) {
         renderButton(false, error && error.message ? error.message : String(error));
@@ -196,6 +232,72 @@
   function closeDisableMatchAlertsDialog() {
     var dialog = document.getElementById("disableMatchAlertsDialog");
     if (dialog && dialog.open) dialog.close();
+  }
+
+  function setPreferencesFormBusy(dialog, busy, messageKo, messageEn) {
+    dialog.querySelector("fieldset").disabled = busy;
+    document.getElementById("matchAlertPreferencesSave").disabled = busy;
+    setLabel(document.getElementById("matchAlertPreferencesMessage"), messageKo, messageEn);
+  }
+
+  async function openMatchAlertPreferences() {
+    closeDisableMatchAlertsDialog();
+    var dialog = document.getElementById("matchAlertPreferencesDialog");
+    if (dialog.dataset.saving) return;
+    var read = ++preferencesRequest;
+    preferenceSubscription = null;
+    document.getElementById("matchAlertPreferencesRetry").hidden = true;
+    dialog.querySelectorAll("input").forEach(function (input) { input.checked = false; });
+    setPreferencesFormBusy(dialog, true, "알림 설정을 불러오는 중…", "Loading alert settings…");
+    if (!dialog.open) dialog.showModal();
+    try {
+      var config = await getConfig();
+      var subscription = await getMatchingSubscription(config);
+      if (!subscription) throw new Error("This device has no matching push subscription.");
+      var response = await sendSubscription("subscriptions/preferences", subscription);
+      if (read !== preferencesRequest || !dialog.open) return;
+      var types = response && response.notificationTypes;
+      if (!validNotificationTypes(types)) throw new Error("Push server did not return valid notification types.");
+      preferenceSubscription = subscription;
+      activeNotificationTypes = types;
+      rememberNotificationTypes(types);
+      buttonStatusRequest += 1;
+      renderButton(true, null);
+      dialog.querySelectorAll("input").forEach(function (input) {
+        input.checked = types.indexOf(input.value) !== -1;
+      });
+      setPreferencesFormBusy(dialog, false, "", "");
+    } catch (error) {
+      if (read !== preferencesRequest || !dialog.open) return;
+      setPreferencesFormBusy(dialog, true, "알림 설정을 불러오지 못했어요.", "Could not load alert settings.");
+      document.getElementById("matchAlertPreferencesRetry").hidden = false;
+    }
+  }
+
+  async function saveMatchAlertPreferences() {
+    var dialog = document.getElementById("matchAlertPreferencesDialog");
+    if (!dialog.open || !preferenceSubscription || dialog.dataset.saving) return;
+    var types = Array.from(dialog.querySelectorAll("input:checked"), function (input) { return input.value; });
+    dialog.dataset.saving = "1";
+    setPreferencesFormBusy(dialog, true, "저장 중…", "Saving…");
+    try {
+      var response = await sendSubscription("subscriptions/preferences", preferenceSubscription, types);
+      var saved = response && response.notificationTypes;
+      if (!validNotificationTypes(saved) || saved.length !== types.length ||
+          !types.every(function (type) { return saved.indexOf(type) !== -1; })) {
+        throw new Error("Push server did not confirm alert settings.");
+      }
+      activeNotificationTypes = saved;
+      rememberNotificationTypes(saved);
+      buttonStatusRequest += 1;
+      renderButton(true, null);
+      dialog.close();
+      toast("이 기기의 알림 설정을 저장했어요.", "Alert settings saved for this device.");
+    } catch (error) {
+      setPreferencesFormBusy(dialog, false, "저장하지 못했어요. 다시 시도해 주세요.", "Could not save the settings. Please try again.");
+    } finally {
+      delete dialog.dataset.saving;
+    }
   }
 
   async function enableMatchAlerts() {
@@ -288,6 +390,8 @@
   window.repairMatchAlerts = repairMatchAlerts;
   window.closeEnableMatchAlertsDialog = closeEnableMatchAlertsDialog;
   window.closeDisableMatchAlertsDialog = closeDisableMatchAlertsDialog;
+  window.openMatchAlertPreferences = openMatchAlertPreferences;
+  window.saveMatchAlertPreferences = saveMatchAlertPreferences;
   window.matchAlertNotice = notice;
   window.matchAlertToast = toast;
   window.subscribeMatchAlerts = toggleMatchAlerts;
