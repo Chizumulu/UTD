@@ -6,6 +6,74 @@
   // data 버전을 직접 읽어옵니다.
   const ASSET_VERSIONS = window.ASSET_VERSIONS || {};
 
+  const optionalAssetLoads = new Map();
+
+  function loadOptionalAsset(url, ready, stylesheet = false) {
+    if (optionalAssetLoads.has(url)) return optionalAssetLoads.get(url);
+    const asset = document.createElement(stylesheet ? 'link' : 'script');
+    if (stylesheet) {
+      asset.rel = 'stylesheet';
+      asset.href = url;
+    } else {
+      asset.src = url;
+    }
+    const pending = new Promise((resolve, reject) => {
+      const fail = () => {
+        asset.remove();
+        optionalAssetLoads.delete(url);
+        reject(new Error('Could not load ' + url));
+      };
+      asset.onerror = fail;
+      asset.onload = () => !ready || ready() ? resolve() : fail();
+    });
+    optionalAssetLoads.set(url, pending);
+    document.head.appendChild(asset);
+    return pending;
+  }
+
+  function loadFeatureScript(file, versionKey, ready) {
+    const version = ASSET_VERSIONS[versionKey];
+    return loadOptionalAsset(version ? file + '?v=' + encodeURIComponent(version) : file, ready);
+  }
+
+  function loadFeaturePanel(panel, load, render, retry = render) {
+    if (panel.getAttribute('aria-busy') === 'true') return;
+    panel.setAttribute('aria-busy', 'true');
+    const status = document.createElement('p');
+    status.className = 'report-empty lbl';
+    status.dataset.ko = '불러오는 중…';
+    status.dataset.en = 'Loading…';
+    status.textContent = isKorean ? status.dataset.ko : status.dataset.en;
+    panel.replaceChildren(status);
+    load().then(() => {
+      panel.removeAttribute('aria-busy');
+      panel.replaceChildren();
+      render();
+    }).catch(error => {
+      console.error(error);
+      panel.removeAttribute('aria-busy');
+      status.dataset.ko = '불러오지 못했어요.';
+      status.dataset.en = 'Could not load this section.';
+      status.textContent = isKorean ? status.dataset.ko : status.dataset.en;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'rmd-act-btn lbl';
+      button.dataset.ko = '다시 시도';
+      button.dataset.en = 'Retry';
+      button.textContent = isKorean ? button.dataset.ko : button.dataset.en;
+      button.onclick = retry;
+      panel.replaceChildren(status, button);
+    });
+  }
+
+  function loadVenueRoutes() {
+    return loadFeatureScript('venue-routes.js', 'venueRoutes', () => typeof venueRoutes !== 'undefined');
+  }
+
+  function loadPathFinder() {
+    return loadFeatureScript('pathfinder-engine.js', 'pathfinderEngine', () => typeof PathFinderEngine !== 'undefined');
+  }
+
   // ===== 인라인 SVG 아이콘 (이모지 대체) =====
   // 24px viewBox, 선 스타일, currentColor — 사이드바 아이콘과 같은 규격입니다. 크기/색은 CSS(.ic)와 부모 글자 크기·색을 따라갑니다.
   const SVG_ICONS = {
@@ -210,7 +278,7 @@
     } else if (currentView === 'predict') {
       renderRankHistoryChart();
       renderAiTrackRecord();
-    } else if (currentView === 'venues') {
+    } else if (currentView === 'venues' && venueViewMode === 'travel') {
       renderTravelImpactCard();
     }
   }
@@ -1103,6 +1171,7 @@
     });
     const panel = document.querySelector('#predictView .predict-panel.active');
     if (panel) playViewEnterAnimation(panel);
+    if (tab === 'race') renderRaceAnswer();
   }
 
   // ===== 리그 예측: 내 팀(치주물루) 요약 카드 =====
@@ -2698,14 +2767,26 @@
 
 
   // ===== 리포트 문장 생성 로직은 report.js 로 분리되었습니다 =====
-  // (결과/예측 리포트의 문장 뱅크·문단 빌더·조사 보조 함수 등. index.html 에서 app.js 보다 먼저 로드됩니다.)
+  // 리포트 화면을 열면 결과·예측 문장을 만드는 모듈을 불러옵니다.
   // 이 파일에는 화면을 그리는 render* 함수와 REPORT_TEAM_* 상수만 남아 있습니다.
   const REPORT_TEAM_EN = 'Chizumulu United FC';
   const REPORT_TEAM_KO = '치주물루 유나이티드 FC';
 
+  function ordinalEn(n) {
+    const suffixes = ['th', 'st', 'nd', 'rd'];
+    const lastTwo = n % 100;
+    return n + (suffixes[(lastTwo - 20) % 10] || suffixes[lastTwo] || suffixes[0]);
+  }
+
   function renderRoundResultReport() {
     const container = document.getElementById('reportViewContent');
     if (!container) return;
+    if (typeof buildRoundResultReport !== 'function') {
+      loadFeaturePanel(container,
+        () => loadFeatureScript('report.js', 'report', () => typeof buildRoundResultReport === 'function'),
+        renderRoundResultReport);
+      return;
+    }
     const roundKey = latestReportReadyRoundKey();
     if (!roundKey) {
       container.innerHTML = `<div class="report-empty lbl" data-en="Not enough matches played yet this round. The report appears automatically once at least 6 of the 7 fixtures are in." data-ko="아직 이번 주차 결과가 충분히 모이지 않았어요. 7경기 중 6경기 이상 스코어가 채워지면 리포트가 자동으로 생성돼요.">${isKorean ? '아직 이번 주차 결과가 충분히 모이지 않았어요. 7경기 중 6경기 이상 스코어가 채워지면 리포트가 자동으로 생성돼요.' : 'Not enough matches played yet this round. The report appears automatically once at least 6 of the 7 fixtures are in.'}</div>`;
@@ -9101,6 +9182,7 @@
   // "지금 보고 있는 섹션"만 추정해서 탭을 하이라이트했습니다. 지금은 4개 탭으로
   // 정리하면서 실제로 선택한 탭의 .ti-tabpage만 보여주고 나머지는 숨깁니다.
   const TEAM_INFO_TABS = ['overview', 'story', 'squad', 'honors', 'results', 'predict', 'analysis'];
+  let teamAnalysisRendered = false;
   function applyTeamInfoTab(tab) {
     if (TEAM_INFO_TABS.indexOf(tab) === -1) tab = 'overview';
     currentTeamInfoTab = tab;
@@ -9109,6 +9191,8 @@
       if (sectionEl) sectionEl.classList.toggle('active', key === tab);
     });
     setActiveTeamInfoButton(tab);
+    if (tab === 'predict') renderPathFinder();
+    if (tab === 'analysis' && !teamAnalysisRendered) renderTeamAnalysisTab();
   }
   // 탭 버튼 클릭 시 호출 — 렌더링 시점(applyTeamInfoTab만 사용)과 달리
   // 사용자가 직접 누른 경우에만 탭 바 위치로 스크롤해줍니다.
@@ -9212,7 +9296,6 @@
     const magicTarget = document.getElementById('teamInfoMagicNumber');
     const mine = getMyRankedTeam();
     if (magicTarget) magicTarget.innerHTML = mine ? buildTeamMagicNumberHtml(mine.team, getRankedTeams('all')) : '';
-    renderPathFinder();
     renderTeamPointsHistoryChart('teamInfoPointsHistorySvg', mine ? mine.team : null);
     renderTeamInfoByeFlow();
     renderTeamH2HTab();
@@ -9226,7 +9309,7 @@
     renderTeamHalfReviewTab();
     renderTeamResultsTab();
     renderTeamInfoNextMatchTab();
-    renderTeamAnalysisTab();
+    teamAnalysisRendered = false;
     applyTeamInfoTab(currentTeamInfoTab);
     setupTeamInfoRevealObserver();
   }
@@ -9239,7 +9322,14 @@
     const el = document.getElementById('teamInfoAnalysisTab');
     if (!el) return;
     const mine = getMyRankedTeam();
-    if (!mine || typeof TeamAnalysis === 'undefined') { el.innerHTML = ''; return; }
+    if (!mine) { el.innerHTML = ''; return; }
+    if (typeof TeamAnalysis === 'undefined') {
+      loadFeaturePanel(el,
+        () => loadFeatureScript('team-analysis.js', 'teamAnalysis', () => typeof TeamAnalysis !== 'undefined'),
+        () => { if (currentView === 'squad' && currentTeamInfoTab === 'analysis') renderTeamAnalysisTab(); },
+        renderTeamAnalysisTab);
+      return;
+    }
     const ctx = {
       myEn: mine.team.nameEn,
       isKorean: isKorean,
@@ -9269,6 +9359,7 @@
     try {
       el.innerHTML = TeamAnalysis.render(ctx);
       TeamAnalysis.bind(el, ctx);
+      teamAnalysisRendered = true;
     } catch (err) {
       console.error('[전력분석] 렌더링 실패', err);
       el.innerHTML = '<div class="ti-card"><div class="ta-empty">' + (isKorean ? '전력분석을 불러오지 못했어요.' : 'Could not load the analysis.') + '</div></div>';
@@ -9286,6 +9377,12 @@
     if (!info) { el.innerHTML = ''; return; }
     el.innerHTML = `<div class="ti-next-mini">${nextMatchOpponentHtml(info.team, info.rank)}</div>`;
     hydrateWeatherWidgets();
+    const next = computeNextMatchPreview(info.team.nameEn, info.team.nameKo) || info.team.nextMatch;
+    if (next?.homeAway === 'A' && !next.isBye && typeof venueRoutes === 'undefined') {
+      loadVenueRoutes().then(() => {
+        if (currentView === 'squad') renderTeamInfoNextMatchTab();
+      }).catch(error => console.warn(error));
+    }
   }
 
   // ===== 팀별 득점 순위 카드 (재사용 가능한 빌더) =====
@@ -13502,7 +13599,7 @@
   }
 
   function renderMagicNumberStats() {
-    try { renderRaceAnswer(); } catch (e) { console.error('renderRaceAnswer failed:', e); }
+    if (predictTab === 'race') renderRaceAnswer();
     const tbody = document.getElementById('magicNumberStatsBody');
     if (!tbody) return;
     const ranked = getRankedTeams('all');
@@ -13649,7 +13746,12 @@
   function renderPathFinder() {
     const target = document.getElementById('teamInfoPathFinder');
     if (!target) return;
-    if (typeof PathFinderEngine === 'undefined' || typeof scheduledRounds === 'undefined') { target.innerHTML = ''; return; }
+    if (typeof PathFinderEngine === 'undefined') {
+      loadFeaturePanel(target, loadPathFinder,
+        () => { if (currentView === 'squad' && currentTeamInfoTab === 'predict') renderPathFinder(); },
+        renderPathFinder);
+      return;
+    }
     const mine = getMyRankedTeam();
     if (!mine) { target.innerHTML = ''; return; }
     const ranked = getRankedTeams('all');
@@ -13690,7 +13792,13 @@
     const pathBox = document.getElementById('raceAnswerPath');
     if (!section || !body) return;
     const hide = () => { section.hidden = true; body.innerHTML = ''; if (pathBox) pathBox.innerHTML = ''; };
-    if (typeof PathFinderEngine === 'undefined' || typeof scheduledRounds === 'undefined') { hide(); return; }
+    if (typeof PathFinderEngine === 'undefined') {
+      section.hidden = false;
+      loadFeaturePanel(body, loadPathFinder,
+        () => { if (currentView === 'predict' && predictTab === 'race') renderRaceAnswer(); },
+        renderRaceAnswer);
+      return;
+    }
     const mine = getMyRankedTeam();
     if (!mine) { hide(); return; }
     const ranked = getRankedTeams('all');
@@ -14275,10 +14383,6 @@
   }
 
   async function downloadMatchPoster(kind, btnId) {
-    if (typeof MatchPoster === 'undefined') {
-      showToast(isKorean ? '포스터 기능을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요' : 'Couldn\u2019t load the poster tool. Refresh the page and try again', { tone: 'error' });
-      return;
-    }
     const btn = btnId ? document.getElementById(btnId) : null;
     const btnLabel = btn ? btn.querySelector('.lbl') : null;
     const originalLabel = btnLabel ? btnLabel.textContent : '';
@@ -14286,6 +14390,7 @@
     if (btnLabel) btnLabel.textContent = isKorean ? '생성 중...' : 'Generating...';
 
     try {
+      await loadFeatureScript('poster.js', 'poster', () => typeof MatchPoster !== 'undefined');
       const weekLabelText = (document.getElementById('weekLabel') || {}).textContent || '';
       let data, drawFn, filenamePart;
 
@@ -16193,8 +16298,6 @@
   }
 
   function renderVenuesView() {
-    renderVenueLeafletMap();
-    renderTravelImpactCard();
     renderVenuesList();
     applyVenueMode();
   }
@@ -16213,7 +16316,8 @@
       btn.setAttribute('aria-selected', on ? 'true' : 'false');
     });
     // 숨겨져 있던 지도는 다시 보일 때 크기를 다시 계산해야 타일이 깨지지 않습니다
-    if (venueViewMode === 'map') setTimeout(() => { if (venueLeafletMap) venueLeafletMap.invalidateSize(); }, 60);
+    if (venueViewMode === 'map') renderVenueLeafletMap();
+    else renderTravelImpactCard();
   }
   function setVenueMode(mode) {
     venueViewMode = mode === 'travel' ? 'travel' : 'map';
@@ -16226,7 +16330,16 @@
   function renderTravelImpactCard() {
     const wrap = document.getElementById('travelImpactWrap');
     if (!wrap) return;
-    if (typeof TravelAnalysis === 'undefined' || typeof venueMatrix === 'undefined') { wrap.innerHTML = ''; return; }
+    if (typeof TravelAnalysis === 'undefined' || typeof venueMatrix === 'undefined' || typeof venueRoutes === 'undefined') {
+      loadFeaturePanel(wrap, () => Promise.all([
+        loadFeatureScript('travel-analysis.js', 'travelAnalysis', () => typeof TravelAnalysis !== 'undefined'),
+        loadFeatureScript('venue-matrix.js', 'venueMatrix', () => typeof venueMatrix !== 'undefined'),
+        loadVenueRoutes()
+      ]), () => {
+        if (currentView === 'venues' && venueViewMode === 'travel') renderTravelImpactCard();
+      }, renderTravelImpactCard);
+      return;
+    }
     const prevMore = wrap.querySelector('.ti-more');
     const wasOpen = !!(prevMore && prevMore.open);
     // 분석에서만 "전 경기를 현재 홈구장(leagueData.venue)에서 치른 것"으로 가정할 팀 목록입니다.
@@ -16366,9 +16479,27 @@
     }
   }
 
+  let venueMapAssetsReady = false;
+  function loadVenueMapAssets() {
+    const leaflet = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.';
+    return Promise.all([
+      loadOptionalAsset(leaflet + 'css', null, true),
+      loadOptionalAsset(leaflet + 'js', () => typeof L !== 'undefined'),
+      loadVenueRoutes()
+    ]).then(() => { venueMapAssetsReady = true; });
+  }
+
   function renderVenueLeafletMap() {
     const mapEl = document.getElementById('venueLeafletMap');
-    if (!mapEl || typeof L === 'undefined') return;
+    if (!mapEl) return;
+    if (!venueMapAssetsReady) {
+      loadFeaturePanel(mapEl, loadVenueMapAssets, () => {
+        if (currentView !== 'venues' || venueViewMode !== 'map') return;
+        renderVenuesList();
+        renderVenueLeafletMap();
+      }, renderVenueLeafletMap);
+      return;
+    }
 
     if (!venueLeafletMap) {
       venueLeafletMap = L.map('venueLeafletMap', { scrollWheelZoom: false });
@@ -16388,7 +16519,13 @@
   // ===== 구단 위치 지도 크게 보기 모달 =====
   function renderVenueLeafletMapLarge() {
     const mapEl = document.getElementById('venueLeafletMapLarge');
-    if (!mapEl || typeof L === 'undefined') return;
+    if (!mapEl) return;
+    if (!venueMapAssetsReady) {
+      loadFeaturePanel(mapEl, loadVenueMapAssets, () => {
+        if (document.getElementById('venueMapModal').style.display === 'flex') renderVenueLeafletMapLarge();
+      }, renderVenueLeafletMapLarge);
+      return;
+    }
 
     if (!venueLeafletMapLarge) {
       venueLeafletMapLarge = L.map('venueLeafletMapLarge', { scrollWheelZoom: true });
@@ -16402,6 +16539,10 @@
     // 보고 있던 경로가 있으면 크게 보기 지도에도 같이 그림 (크기가 확정된 뒤 openVenueMapModal에서 맞춤)
     const activeEntry = activeVenueRouteIdx !== null ? getVenueEntryByIdx(activeVenueRouteIdx) : null;
     if (activeEntry) drawVenueRouteOn('large', venueLeafletMapLarge, activeEntry, false);
+    setTimeout(() => {
+      venueLeafletMapLarge.invalidateSize();
+      fitVenueRouteOn('large');
+    }, 80);
   }
 
   function openVenueMapModal() {
@@ -16409,11 +16550,6 @@
     if (!modal) return;
     showModalAnimated(modal);
     renderVenueLeafletMapLarge();
-    setTimeout(() => {
-      if (!venueLeafletMapLarge) return;
-      venueLeafletMapLarge.invalidateSize();
-      fitVenueRouteOn('large');
-    }, 80);
   }
 
   function closeVenueMapModal() {
@@ -17971,7 +18107,7 @@
     document.getElementById('squadPlayerModalNumberChip').textContent = hasNumber ? player.number : '-';
     document.getElementById('squadPlayerModalLeft').setAttribute('data-num', hasNumber ? player.number : '-');
 
-    const myTeamObj = reportTeamByNameEn(REPORT_TEAM_EN);
+    const myTeamObj = leagueData.find(team => team.nameEn === REPORT_TEAM_EN);
     document.getElementById('squadPlayerModalTeamLogo').src = myTeamObj ? myTeamObj.logoSrc : '';
     document.getElementById('squadPlayerModalTeamLogo').alt = REPORT_TEAM_EN;
     document.getElementById('squadPlayerModalTeamName').textContent = isKorean ? REPORT_TEAM_KO : REPORT_TEAM_EN;

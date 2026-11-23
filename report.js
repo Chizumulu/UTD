@@ -190,12 +190,6 @@ function trailingStreakBefore(list, beforeWeekNum, predicate) {
   return count;
 }
 
-function ordinalEn(n) {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
-
 // 한 라운드에 우리 팀 경기가 둘 이상일 수 있습니다(연기 경기 재편성 등). 결과 리포트는
 // "실제로 치른(스코어가 있는)" 경기를 기준으로 해야 하므로, 스코어가 있는 경기를 우선 고르고
 // 없으면 첫 번째 경기를 돌려줍니다.

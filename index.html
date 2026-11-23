@@ -23,8 +23,8 @@
   window.ASSET_VERSIONS = {
     style: '002',
     data: '004',
-    app: '006',
-    report: '001',
+    app: '007',
+    report: '002',
     archive: '200',
     predictWorker: '220',
     pathfinderEngine: '221',
@@ -32,6 +32,7 @@
     poster: '001',
     travelAnalysis: '020',
     venueMatrix: '001',
+    venueRoutes: '009',
     a11y: '001'
   };
 </script>
@@ -126,8 +127,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script>document.write('<link rel="stylesheet" href="style.css?v=' + window.ASSET_VERSIONS.style + '">');</script>
 <!-- 구단 위치 지도용 Leaflet (OpenStreetMap) -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <!-- 스켈레톤→실데이터 전환 등 UI 애니메이션용 (전역 window.anime 객체로 노출) -->
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/lib/anime.iife.min.js"></script>
 
@@ -1725,14 +1724,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 </div>
 <script>
-  document.write('<script src="pathfinder-engine.js?v=' + window.ASSET_VERSIONS.pathfinderEngine + '"><\/script>');
-  document.write('<script src="team-analysis.js?v=' + window.ASSET_VERSIONS.teamAnalysis + '"><\/script>');
   document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
-  document.write('<script src="poster.js?v=' + window.ASSET_VERSIONS.poster + '"><\/script>');
-  document.write('<script src="report.js?v=' + window.ASSET_VERSIONS.report + '"><\/script>');
-  document.write('<script src="venue-routes.js?v=009"><\/script>');
-  document.write('<script src="venue-matrix.js?v=' + window.ASSET_VERSIONS.venueMatrix + '"><\/script>');
-  document.write('<script src="travel-analysis.js?v=' + window.ASSET_VERSIONS.travelAnalysis + '"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
   document.write('<script src="lang-ny.js?v=002"><\/script>');
   document.write('<script src="a11y.js?v=' + window.ASSET_VERSIONS.a11y + '"><\/script>');
