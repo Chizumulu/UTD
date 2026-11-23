@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '004',
+    style: '005',
     data: '004',
-    app: '010',
+    app: '011',
     report: '002',
     archive: '200',
     predictWorker: '220',
@@ -430,6 +430,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="llt-scroller" id="leagueLiveTickerScroller"></div>
   <p class="nmh-live-src" id="leagueLiveRefreshStatus" hidden></p>
 </div>
+<section class="pending-league-results" id="pendingLeagueResults" aria-labelledby="pendingLeagueResultsTitle" hidden>
+  <h2 class="lbl" id="pendingLeagueResultsTitle" data-ko="순위표 반영 대기" data-en="Awaiting table update">순위표 반영 대기</h2>
+  <div id="pendingLeagueResultList" aria-live="polite"></div>
+</section>
 <div id="archiveView" aria-live="polite">
   <div class="archive-hero" id="archiveHero">
     <img class="archive-hero-logo" src="./ddds.webp" alt="NRFA">
@@ -519,7 +523,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <section class="promo-race-strip" id="promoRaceStrip" aria-label="승격 레이스" data-aria-ko="승격 레이스" data-aria-en="Promotion race" aria-live="polite" hidden></section>
 <div class="home-matches-row">
   <div class="home-match-card">
-    <div class="home-match-card-title lbl" data-en="Recent Matches" data-ko="최근 경기">최근 경기</div>
+    <div class="home-match-card-title lbl" data-en="Recent Recorded Results" data-ko="최근 반영 완료 경기">최근 반영 완료 경기</div>
     <div class="home-match-strip" id="homeRecentStrip"></div>
   </div>
   <div class="home-match-card home-match-card--upcoming">

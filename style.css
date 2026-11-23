@@ -15329,6 +15329,15 @@ body {
 .rmd-num.is-lose { color: var(--color-text-muted); opacity: 0.75; font-weight: 600; }
 .rmd-status { font-size: var(--fs-sm); font-weight: 600; color: var(--color-text-muted); white-space: nowrap; text-align: center; }
 .rmd-mid.is-single { grid-template-columns: 1fr; }
+.rmd-result-note { grid-column: 1 / -1; font-size: var(--fs-xs); text-align: center; }
+.pending-league-results { margin: 12px 0; }
+.pending-league-results h2 { font-size: var(--fs-md); margin: 0 0 8px; }
+#pendingLeagueResultList { display: grid; gap: 6px; }
+.pending-league-result {
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px;
+  padding: 8px 12px; border-radius: var(--radius-sm); color: var(--color-text-toggle);
+  background: var(--color-surface); text-decoration: none;
+}
 .rmd-status.is-upcoming { color: var(--color-teal); font-weight: 600; }
 .rmd-status.is-postponed { color: #c2570c; font-weight: 600; }
 :root[data-theme="dark"] .rmd-status.is-postponed { color: #f0a15e; }
