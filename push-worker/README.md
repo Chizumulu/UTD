@@ -29,6 +29,10 @@ The Cron Trigger runs every two minutes. Change the expression in `wrangler.json
 
 Push subscriptions are stored in D1. Expired subscriptions that return HTTP 404 or 410 are removed automatically. The notification card is tagged by match so later score updates replace the prior card where the platform supports it.
 
+The Worker also reads `scheduledRounds` and `roundsData` to detect changes to Chizumulu league fixtures. The first observation of each fixture establishes a baseline silently. A subsequent kickoff date or time change, an explicit postponement, or a new kickoff for a postponed match sends a notification with Korean Standard Time and a link to that match. Completed matches and moved-from placeholders do not trigger change notifications. This uses the published `data.js` schedule, so edits become eligible after the site publishes them.
+
+Schedule snapshots and pending changes use the existing `app_settings` table. Temporary delivery failures are retried for up to 24 hours, or until the new kickoff if it comes sooner. Delivery receipts prevent sending the same change again to subscriptions that already received it.
+
 The Worker records successful deliveries per notification and subscription in D1. Overlapping polls share the delivery state, and retries skip subscriptions whose delivery is already recorded. Delivery records expire after two days.
 
 The source API is independent of NRFA and may be delayed, corrected, or unavailable. The Worker retries on its next scheduled run; it cannot make a new API update arrive earlier.
