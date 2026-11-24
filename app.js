@@ -3597,9 +3597,9 @@
   // 킥오프가 가장 빠른 경기를 리그 nextMatch와 같은 모양으로 돌려줍니다. 컵 데이터가 비어 있으면 null.
   function cupKickoffKey(x) { return (x.kickoffDate || '9999-12-31') + ' ' + (x.kickoffTime || '99:99'); }
 
-  function listMyCupFixtures() {
+  function listMyCupFixtures(onlyCup) {
     const out = [];
-    getCups().forEach(function (cup) {
+    (onlyCup ? [onlyCup] : getCups()).forEach(function (cup) {
     (Array.isArray(cup.rounds) ? cup.rounds : []).forEach(function (r) {
       ((r && r.matches) || []).forEach(function (m) {
         if (!m || !m.home || !m.away || !m.date) return;
@@ -5633,11 +5633,11 @@
   // 컵 경기가 아직 없으면(대진 발표 전) 일정표(scheduleKo/En)의 다음 일정을 대신 보여줍니다. PC(1101px↑)에서만 보입니다.
   function nmcStageIdx(label) {
     const s = String(label || '').toLowerCase();
-    if (/플레이오프|예선|지역|play-?off|qualif|regional/.test(s)) return 0;
     if (/32/.test(s)) return 1;
     if (/16/.test(s)) return 2;
     if (/quarter|8강/.test(s)) return 3;
     if (/semi|4강/.test(s)) return 4;
+    if (/플레이오프|예선|지역|play-?off|qualif|regional/.test(s)) return 0;
     if (/final|결승/.test(s)) return 5;
     return -1;
   }
@@ -5684,15 +5684,21 @@
 
     // --- 단계 ---
     const steps = ko ? ['예선', '32강', '16강', '8강', '4강', '결승'] : ['Qual.', 'R32', 'R16', 'QF', 'SF', 'Final'];
-    const fixtures = listMyCupFixtures();
+    const fixtures = listMyCupFixtures(cup);
     const next = fixtures[0] || null;
     const mine = nmcMyMatches(cup);
+    const undatedNext = mine.find(({ m }) => m.home && m.away && m.homeScore == null && m.awayScore == null && !m.date);
     let stage = 0, eliminated = false, stageTitle = '', stageSub = '';
     const region = nmcMyRegion(cup);
     if (next) {
       const si = nmcStageIdx(next.roundLabelKo + ' ' + next.roundLabelEn);
       if (si >= 0) stage = si;
       stageTitle = ko ? (next.roundLabelKo || steps[stage]) : (next.roundLabelEn || steps[stage]);
+    } else if (undatedNext) {
+      const round = undatedNext.r;
+      const si = nmcStageIdx((round.labelKo || '') + ' ' + (round.labelEn || ''));
+      if (si >= 0) stage = si;
+      stageTitle = ko ? (round.labelKo || steps[stage]) : (round.labelEn || steps[stage]);
     } else if (mine.length) {
       const last = mine[mine.length - 1];
       const si = nmcStageIdx((last.r.labelKo || '') + ' ' + (last.r.labelEn || ''));
@@ -5732,18 +5738,14 @@
       const sched = (ko ? cup.scheduleKo : cup.scheduleEn) || [];
       const item = sched.find(function (x) { return !(x[2] && x[2].end) || x[2].end >= todayStr; });
       // 날짜가 아직 안 나온 우리 경기(예: 지역 1라운드)가 있으면 상대 팀을 보여주고, 날짜 자리에는 지역 플레이오프 기간을 대신 넣습니다.
-      const pend = mine.find(function (x) {
-        const m = x.m;
-        return m.home && m.away && m.homeScore == null && m.awayScore == null && !m.date;
-      });
-      if (pend) {
-        const pm = pend.m, iAmHome = isMyTeamName(pm.home, pm.homeKo);
+      if (undatedNext) {
+        const pm = undatedNext.m, iAmHome = isMyTeamName(pm.home, pm.homeKo);
         const oEn = iAmHome ? pm.away : pm.home, oKo = iAmHome ? pm.awayKo : pm.homeKo;
         const oTeam = leagueData.find(function (x) { return x.nameEn === oEn; });
         const poItem = sched.find(function (x) { return /플레이오프|play-?off/i.test(String(x[1])) && !/추첨|draw|발표|announce/i.test(String(x[1])); }); // '지역 플레이오프' 경기 기간 줄 (추첨·발표 줄 제외)
         nextLabel = ko ? '다음 경기' : 'Next match';
         nextMain = 'vs ' + (ko ? (oKo || (oTeam && oTeam.nameKo) || oEn) : oEn);
-        nextSub = (poItem ? poItem[0] : (ko ? '11/28 – 12/27' : '28 Nov – 27 Dec')).replace(/\s*[–-]\s*/, ' ~ ');
+        nextSub = stage === 0 && poItem ? poItem[0].replace(/\s*[–-]\s*/, ' ~ ') : (ko ? '날짜 미정' : 'Date TBC');
       } else {
         nextLabel = ko ? '다음 일정' : 'Next date';
         nextMain = item ? item[1] : (ko ? '대진 발표 대기 중' : 'Awaiting fixtures');
