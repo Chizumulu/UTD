@@ -19173,6 +19173,21 @@ tr.my-team td.team::after,
   .nmc-next-fixture .nmc-vs { color: var(--color-text-muted); }
 }
 .nmc-state { flex: none; }
+.nmc-state-mobile { display: none; }
+@media (max-width: 720px) {
+  .nmc-state-desktop { display: none; }
+  .nmc-state-mobile {
+    display: inline;
+    padding: 3px 7px;
+    border-radius: var(--radius-pill);
+    background: rgba(var(--color-gold-rgb), .22);
+    color: var(--color-text-dark);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .nmc-state-mobile.nmc-state-live { background: var(--color-red); color: #fff; }
+}
 .nmc-btn { flex: none; border: 0; cursor: pointer; padding: 3px 10px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600;
   background: rgba(var(--color-tint-rgb), .08); color: var(--color-text-secondary); }
 body.season-archive .nmc { display: none !important; }
@@ -20338,12 +20353,10 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
 .home-match-card-title,
 .pms-title-label { color: var(--color-text-darkest); }
 
-.nmp-toggle-hint,
 #roundCurrentBtn,
 #statBoardMoreBtn,
 .pms-title-action,
 .home-match-more-btn,
-.nmc-btn,
 .round-tools summary,
 .round-adv > summary,
 .round-quick-actions .mobile-search-entry,
@@ -20354,7 +20367,6 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
   font-weight: 700;
 }
 
-.nmp-toggle-hint,
 #roundCurrentBtn,
 #statBoardMoreBtn,
 .pms-title-action {
@@ -20362,8 +20374,6 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
   background: var(--color-selected-bg);
   color: var(--color-selected-fg);
 }
-
-.nmp-toggle-hint { padding: 4px 7px; }
 
 #statBoardMoreBtn {
   display: inline-flex;
@@ -20373,7 +20383,6 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
 }
 
 .home-match-more-btn,
-.nmc-btn,
 .round-tools summary,
 .round-adv > summary,
 .round-quick-actions .mobile-search-entry,
@@ -20396,15 +20405,13 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
 @media (hover: hover) {
   #roundsView #roundCurrentBtn:hover,
   #statBoardMoreBtn:hover,
-  .pms-title-action:hover,
-  .nmp-toggle:hover .nmp-toggle-hint {
+  .pms-title-action:hover {
     background: var(--color-navy-light);
     color: var(--color-selected-fg);
     text-decoration: none;
   }
 
   .home-match-more-btn:hover,
-  .nmc-btn:hover,
   .round-tools summary:hover,
   .round-adv > summary:hover,
   .round-favor-btn:not(.active):hover,
@@ -20412,13 +20419,44 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
   #statsView .analysis-share:hover { background: var(--color-bg-row-hover); }
 }
 
-:is(.home-match-more-btn, .nmc-btn, .round-tools summary, .round-adv > summary,
+:is(.home-match-more-btn, .round-tools summary, .round-adv > summary,
     #roundCurrentBtn, .round-favor-btn, #statBoardMoreBtn, .predict-refresh-btn):focus-visible {
   outline: 2px solid var(--color-brand-text);
   outline-offset: 2px;
 }
 
 .predict-intro .predict-refresh-btn:focus-visible { outline-color: var(--color-white); }
+
+@media (min-width: 721px) {
+  .nmp-toggle-hint,
+  .nmc-btn {
+    border-radius: var(--page-action-radius);
+    font-weight: 700;
+  }
+
+  .nmp-toggle-hint {
+    padding: 4px 7px;
+    border: 1px solid transparent;
+    background: var(--color-selected-bg);
+    color: var(--color-selected-fg);
+  }
+
+  .nmc-btn {
+    border-color: transparent;
+    background: var(--color-bg-btn-hover);
+    color: var(--color-brand-text);
+  }
+
+  .nmc-btn:focus-visible {
+    outline: 2px solid var(--color-brand-text);
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    .nmp-toggle:hover .nmp-toggle-hint { background: var(--color-navy-light); }
+    .nmc-btn:hover { background: var(--color-bg-row-hover); }
+  }
+}
 
 /* 경기 상태 */
 .match-status {
