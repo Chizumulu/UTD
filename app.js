@@ -176,7 +176,7 @@
     cs:              { ko: '한 골도 내주지 않고 끝낸 경기 수예요.', en: 'Matches finished without conceding a goal.' },
     fts:             { ko: '한 골도 넣지 못하고 끝낸 경기 수예요. 많을수록 공격이 막힌 날이 많았다는 뜻이에요.', en: 'Matches where the team failed to score. More means more blank days in attack.' },
     ppg:             { ko: '승점을 치른 경기 수로 나눈 값이에요. 경기 수가 다른 팀끼리도 공평하게 비교할 수 있어요.', en: 'Points divided by games played, so teams with different game counts compare fairly.' },
-    pythag:          { ko: '득점과 실점만으로 계산한 “이론상 승점”이에요. 아래 작은 숫자가 +면 실제 승점이 이론보다 많은 거예요.', en: 'The points a team "should" have, based only on goals scored and conceded. A + below means actual points are above that.' },
+    pythag:          { ko: '득점과 실점으로 계산한 이론상 승점이에요. 팀별 순위에서 실제 승점과 얼마나 차이가 나는지도 볼 수 있어요.', en: 'Expected points based on goals scored and conceded. The team rankings also show the difference from actual points.' },
     attackIdx:       { ko: '리그 평균 득점력을 100%로 놓았을 때 이 팀의 득점력이에요. 100%보다 높으면 평균 이상이에요.', en: 'This team\'s scoring rate with the league average set to 100%. Above 100% means better than average.' },
     defenseIdx:      { ko: '리그 평균 실점을 100%로 놓았을 때 이 팀의 수비력이에요. 높을수록 평균보다 덜 내줘요.', en: 'This team\'s defense with the league average set to 100%. Higher means it concedes less than average.' },
     scorerDep:       { ko: '팀 득점 중 최다 득점자 한 명이 넣은 비율이에요. 높을수록 골이 한 선수에게 몰려 있어요.', en: 'Share of the team\'s goals scored by its top scorer. Higher means goals are concentrated in one player.' },
@@ -10603,10 +10603,10 @@
       ctx.extraSections = {};
     }
     try {
-      const note = scope === 'league' ? '' : `<p class="club-comp-note">${isKorean
+      ctx.scopeNote = scope === 'league' ? '' : `<p class="club-comp-note">${isKorean
         ? '컵 경기 결과와 등록된 라인업을 반영해요. 상대 등급은 리그 순위를 참고하며, 경기당 승점은 승·무·패를 3·1·0으로 환산한 분석 지표예요.'
         : 'Includes recorded cup results and lineups. Opponent tiers use league rank. Points per match is an analytical 3–1–0 conversion.'}</p>`;
-      el.innerHTML = note + TeamAnalysis.render(ctx);
+      el.innerHTML = TeamAnalysis.render(ctx);
       TeamAnalysis.bind(el, ctx);
       teamAnalysisRendered = true;
     } catch (err) {
@@ -16273,15 +16273,15 @@
   function getStatDisplay(team, statType) {
     const faintClass = '';
     if (statType === 'goalsFor') {
-      return { main: team.goalsFor, sub: team.goalsForPerGame.toFixed(2) + (isKorean ? ' / 경기' : ' / game') };
+      return { main: team.goalsForPerGame.toFixed(2), sub: isKorean ? `총 ${team.goalsFor}골` : `${team.goalsFor} goals scored` };
     }
     if (statType === 'goalsAgainst') {
-      return { main: team.goalsAgainst, sub: team.goalsAgainstPerGame.toFixed(2) + (isKorean ? ' / 경기' : ' / game') };
+      return { main: team.goalsAgainstPerGame.toFixed(2), sub: isKorean ? `총 ${team.goalsAgainst}실점` : `${team.goalsAgainst} goals conceded` };
     }
     if (statType === 'cs') return { main: team.cleanSheets, sub: null };
     if (statType === 'fts') return { main: team.failedToScore, sub: null };
     if (statType === 'ppg') {
-      return { main: team.pts, sub: 'PPG ' + team.ppg.toFixed(2) };
+      return { main: team.ppg.toFixed(2), sub: isKorean ? `총 ${team.pts}점` : `${team.pts} points total` };
     }
     if (statType === 'pythag') {
       const diff = team.pythagDiff;
@@ -16332,6 +16332,7 @@
   function renderStatCatNav() {
     const nav = document.getElementById('statCatNav');
     if (!nav) return;
+    const focusedControl = nav.contains(document.activeElement) ? document.activeElement : null;
     const group = statGroupOf(currentStatCategory);
     const groupTabs = STAT_GROUPS.map(g => {
       const activeCls = g.id === group.id ? ' active' : '';
@@ -16342,9 +16343,13 @@
       if (!cat) return '';
       const label = isKorean ? cat.labelKo : cat.labelEn;
       const activeCls = cat.id === currentStatCategory ? ' active' : '';
-      return `<div class="stat-cat-pill${activeCls}" data-cat="${cat.id}" onclick="selectStatCategory('${cat.id}')">${label}</div>`;
+      return `<button type="button" class="stat-cat-pill${activeCls}" data-cat="${cat.id}" aria-pressed="${cat.id === currentStatCategory}" aria-controls="statBoardFocus statBoardRows" onclick="selectStatCategory('${cat.id}')">${label}</button>`;
     }).join('');
-    nav.innerHTML = `<div class="stat-group-tabs" role="group">${groupTabs}</div><div class="stat-cat-pills">${pills}</div>`;
+    nav.innerHTML = `<div class="stat-group-tabs" role="group" aria-label="${isKorean ? '지표 분류' : 'Metric groups'}">${groupTabs}</div><div class="stat-cat-pills" role="group" aria-label="${isKorean ? '지표 선택' : 'Select a metric'}">${pills}</div>`;
+    if (focusedControl) {
+      const activeControl = focusedControl.dataset.group ? '.stat-group-tab.active' : '.stat-cat-pill.active';
+      nav.querySelector(activeControl)?.focus({ preventScroll: true });
+    }
   }
 
   function selectStatGroup(groupId) {
@@ -16474,6 +16479,29 @@
   }
 
   // ===== 리그 기록 - 리더보드 카드 렌더 (Stat Board) =====
+  function renderStatBoardFocus(cat, list) {
+    const host = document.getElementById('statBoardFocus');
+    if (!host) return;
+    const mineIndex = list.findIndex(team => isMyTeamName(team.nameEn, team.nameKo));
+    const mine = list[mineIndex];
+    const value = mine ? statMetricValue(mine, cat.id) : null;
+    if (!mine?.played || !Number.isFinite(value)) {
+      host.innerHTML = `<p class="metric-summary-note">${isKorean ? '치주물루의 이 지표를 집계할 기록이 아직 없어요.' : 'Chizumulu does not have a recorded value for this metric yet.'}</p>`;
+      return;
+    }
+    const ranks = computeStatRanks(list, cat.id);
+    const rank = statRowHasRank(mine, cat.id) ? ranks[mineIndex] : null;
+    const tied = rank !== null && ranks.filter(item => item === rank).length > 1;
+    const teamName = isKorean ? mine.nameKo : mine.nameEn;
+    const rankLabel = rank === null ? '' : isKorean ? `${tied ? '공동 ' : ''}${rank}위` : `${tied ? 'Tied ' : ''}#${rank}`;
+    const gamesLabel = isKorean ? `리그 ${mine.played}경기` : `${mine.played} league matches`;
+    const meta = [teamName, rankLabel, gamesLabel].filter(Boolean).join(' · ');
+    const displayValue = getStatDisplay(mine, cat.id).main;
+    const units = { goalsFor: '골', goalsAgainst: '골', ppg: '점', pythag: '점' };
+    const suffix = isKorean ? units[cat.id] || (STAT_ZERO_MEANS_NONE.includes(cat.id) ? '경기' : '') : '';
+    host.innerHTML = `<strong class="metric-summary-value">${escapeHtml(String(displayValue))}<span>${suffix}</span></strong><span class="metric-summary-meta">${escapeHtml(meta)}</span>`;
+  }
+
   function renderStatBoard() {
     const cat = STAT_CATEGORIES.find(c => c.id === currentStatCategory) || STAT_CATEGORIES[0];
     const titleEl = document.getElementById('statBoardTitleText');
@@ -16511,6 +16539,7 @@
     }
 
     const fullList = statsData[cat.id] || [];
+    renderStatBoardFocus(cat, fullList);
     const collapsedN = statCollapsedCount(fullList, cat.id, 5);
     const limit = statBoardExpanded ? null : collapsedN;
 

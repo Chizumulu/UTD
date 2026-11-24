@@ -1326,6 +1326,42 @@
         'Based on the ' + L.matches + ' matches with lineups; position labels are as entered.'));
   }
 
+  var selectedSummaryMetric = 'ppg';
+
+  function renderSummaryMetrics(ctx, data) {
+    var T = lang(ctx);
+    var totals = data.tiers.all;
+    if (!totals.g) {
+      return '<p class="metric-summary-note">' + T('이 범위에서 분석할 수 있는 경기 결과가 아직 없어요.', 'There are no match results to analyse in this view yet.') + '</p>';
+    }
+    var scope = ctx.competitionScope === 'cup' ? T('컵', 'Cup')
+      : ctx.competitionScope === 'total' ? T('토탈', 'Total') : T('리그', 'League');
+    var metrics = [
+      { id: 'ppg', label: T('경기당 승점', 'Points per game'), value: fmt2(totals.ppg), unit: T('점', ''),
+        note: T('승리 3점, 무승부 1점, 패배 0점으로 계산한 경기당 평균이에요.', 'Average points per game using 3 for a win, 1 for a draw, and 0 for a loss.') },
+      { id: 'gfpg', label: T('경기당 득점', 'Goals per game'), value: fmt2(totals.gfpg), unit: T('골', ''),
+        note: T('치주물루가 넣은 골을 경기 수로 나눈 평균이에요.', 'The goals Chizumulu scored divided by the number of games.') },
+      { id: 'gapg', label: T('경기당 실점', 'Goals conceded per game'), value: fmt2(totals.gapg), unit: T('골', ''),
+        note: T('치주물루가 내준 골을 경기 수로 나눈 평균이에요.', 'The goals Chizumulu conceded divided by the number of games.') }
+    ];
+    var panels = metrics.map(function (metric) {
+      return '<div data-summary-value="' + metric.id + '"' + (metric.id === selectedSummaryMetric ? '' : ' hidden') + '>' +
+        '<h2 class="metric-summary-title">' + metric.label + '</h2>' +
+        '<strong class="metric-summary-value">' + metric.value + '<span>' + metric.unit + '</span></strong>' +
+        '<p class="metric-summary-note">' + metric.note + '</p></div>';
+    }).join('');
+    var buttons = metrics.map(function (metric) {
+      var selected = metric.id === selectedSummaryMetric;
+      return '<button type="button" class="stat-cat-pill' + (selected ? ' active' : '') + '" data-summary-metric="' + metric.id +
+        '" aria-pressed="' + selected + '" aria-controls="taSummaryMetricValue">' + metric.label + '</button>';
+    }).join('');
+    var sample = scope + ' · ' + totals.g + T('경기', ' matches');
+    if (data.tiers.forfeits) sample += ' · ' + T('몰수 경기 제외', 'Forfeits excluded');
+    return '<div id="taSummaryMetricValue" aria-live="polite" aria-atomic="true">' + panels + '</div>' +
+      '<p class="metric-summary-meta">' + sample + '</p>' +
+      '<div class="stat-cat-pills ta-metric-options" role="group" aria-label="' + T('전력분석 지표 선택', 'Select a team metric') + '">' + buttons + '</div>';
+  }
+
   // ---- 맨 위 요약 + 섹션 이동 칩 ----
   function renderSummary(ctx, data) {
     var T = lang(ctx);
@@ -1360,7 +1396,8 @@
     ].map(function (c) {
       return '<button type="button" class="ta-nav-chip" data-target="' + c[0] + '">' + c[1] + '</button>';
     }).join('');
-    return '<div class="ti-card ta-card ta-summary" id="taSummary"><div class="ta-sum-title">' + T('핵심 요약', 'Key Takeaways') + '</div>' + rows.join('') +
+    return '<div class="ti-card ta-card ta-summary" id="taSummary">' + renderSummaryMetrics(ctx, data) +
+      '<div class="ta-sum-title">' + T('핵심 요약', 'Key Takeaways') + '</div>' + rows.join('') +
       '<div class="ta-nav">' + chips + '</div></div>';
   }
 
@@ -1370,7 +1407,7 @@
     var T = lang(ctx);
     var data = compute(ctx);
     var x = ctx.extraSections || {};
-    return renderSummary(ctx, data) +
+    return renderSummary(ctx, data) + (ctx.scopeNote || '') +
       sectionTitle(T('상대 유형별 성적', 'Results by Opponent Level'), 'taSecTiers') + renderTiers(ctx, data) +
       (ctx.scoreMarginHtml || '') +
       sectionTitle(T('득점 패턴', 'Scoring Patterns'), 'taSecScoring') + renderNetwork(ctx, data) + renderGoalTimes(ctx, data) + (x.scoring || '') +
@@ -1386,6 +1423,21 @@
   function bind(rootEl, ctx) {
     if (!rootEl) return;
     var reduce = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var metricButtons = rootEl.querySelectorAll('[data-summary-metric]');
+    var metricPanels = rootEl.querySelectorAll('[data-summary-value]');
+    metricButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        selectedSummaryMetric = button.dataset.summaryMetric;
+        metricButtons.forEach(function (item) {
+          var selected = item === button;
+          item.classList.toggle('active', selected);
+          item.setAttribute('aria-pressed', String(selected));
+        });
+        metricPanels.forEach(function (panel) {
+          panel.hidden = panel.dataset.summaryValue !== selectedSummaryMetric;
+        });
+      });
+    });
     Array.prototype.forEach.call(rootEl.querySelectorAll('.ta-nav-chip, .ta-top-link'), function (b) {
       b.addEventListener('click', function () {
         var t = rootEl.querySelector('#' + b.getAttribute('data-target'));

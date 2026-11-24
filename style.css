@@ -20515,3 +20515,71 @@ button.match-status:focus-visible {
 
 .rmc-score-result { flex-direction: column; gap: 2px; }
 .rmc-score-line { display: flex; align-items: center; gap: 4px; }
+
+/* 리그 기록과 전력분석에서 선택한 지표를 표보다 먼저 보여줍니다. */
+.stat-board-head { position: relative; }
+.stat-board-title,
+.metric-summary-title { margin: 0; }
+
+.metric-summary-title {
+  color: var(--color-text-darkest);
+  font-size: var(--page-card-heading);
+  line-height: 1.35;
+}
+
+.stat-board-focus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 0 var(--page-card-inset) 8px;
+}
+
+.metric-summary-value {
+  display: block;
+  color: var(--color-brand-text);
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.metric-summary-value > span { font-size: var(--fs-md); margin-inline-start: 0.15em; }
+.metric-summary-value > span:empty { margin: 0; }
+.metric-summary-meta,
+.metric-summary-note { margin: 0; line-height: 1.5; }
+.metric-summary-meta { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: 600; }
+.metric-summary-note { color: var(--color-text-secondary); font-size: var(--fs-sm); }
+
+.stat-board > .stat-cat-scroll,
+.stat-board-ranking-head {
+  padding: 12px var(--page-card-inset);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.stat-board-ranking-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 8px;
+  background: var(--color-bg-stripe);
+}
+
+.stat-board-ranking-head h3 { margin: 0; font-size: var(--fs-md); color: var(--color-text-darkest); }
+.stat-board-ranking-head .stat-board-unit { margin: 0; }
+
+#taSummary .metric-summary-title { margin-bottom: 6px; }
+#taSummary .metric-summary-value { margin-bottom: 6px; }
+#taSummary .metric-summary-meta { margin-top: 4px; }
+.ta-metric-options {
+  padding-bottom: 12px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+:is(.stat-cat-pill, .stat-group-tab):focus-visible {
+  outline: 2px solid var(--color-brand-text);
+  outline-offset: 2px;
+}

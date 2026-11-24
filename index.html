@@ -983,19 +983,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 
   <div class="stats-panel active" data-stats-panel="rank" role="tabpanel">
-    <div class="stat-cat-scroll" id="statCatNav"></div>
-
     <div class="stat-board" id="statBoard">
       <div class="stat-board-head">
-        <div class="stat-board-title">
-          <span id="statBoardTitleText"></span><span class="stat-board-unit" id="statBoardUnitText"></span>
-        </div>
+        <h2 class="stat-board-title" id="statBoardTitleText"></h2>
         <span class="info-icon-btn" id="statBoardInfoBtn" style="display:none;" onclick="toggleInfoTooltip(event, 'statBoardInfo')">ⓘ</span>
         <div class="info-tooltip" id="statBoardInfo" onclick="event.stopPropagation()">
           <span class="lbl" id="statBoardInfoText"></span>
         </div>
       </div>
+      <div class="stat-board-focus" id="statBoardFocus" aria-live="polite" aria-atomic="true"></div>
       <div class="stat-board-desc lbl" id="statBoardDesc"></div>
+      <div class="stat-cat-scroll" id="statCatNav"></div>
+      <div class="stat-board-ranking-head">
+        <h3 class="lbl" data-ko="팀별 순위" data-en="Team rankings">팀별 순위</h3>
+        <span class="stat-board-unit" id="statBoardUnitText"></span>
+      </div>
       <div id="statBoardRows"></div>
       <div class="stat-board-foot">
         <button type="button" class="more-link lbl" data-en="View Full Ranking" data-ko="전체 순위 더보기" id="statBoardMoreBtn" aria-expanded="false" aria-controls="statBoardRows" onclick="toggleStatBoardExpand()">전체 순위 더보기</button>
