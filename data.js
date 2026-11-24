@@ -2224,23 +2224,7 @@ function rankByTiebreakers(rows, matches, acc) {
 // 승자승 계산에 쓰는 '스코어가 확정된 리그 경기' 목록 (roundsData + scheduledRounds 중 스코어가 채워진 경기).
 // applyComputedLeagueStats()가 순위표 수치를 만들 때 쓰는 경기와 같은 범위입니다.
 function getLeagueMatchesForTiebreak() {
-  const out = [];
-  const seen = {};
-  [typeof roundsData !== 'undefined' ? roundsData : null,
-   typeof scheduledRounds !== 'undefined' ? scheduledRounds : null].forEach(src => {
-    if (!src) return;
-    Object.keys(src).forEach(k => {
-      if (seen[k]) return; // 같은 라운드가 roundsData 에 있으면 그쪽을 우선
-      seen[k] = true;
-      (src[k] || []).forEach(m => {
-        if (m.byeKo || m.byeEn) return;
-        if (!m.homeEn || !m.awayEn) return;
-        if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
-        out.push({ homeEn: m.homeEn, awayEn: m.awayEn, homeScore: m.homeScore, awayScore: m.awayScore });
-      });
-    });
-  });
-  return out;
+  return collectPlayedMatches();
 }
 
 // ============================================================
@@ -2486,7 +2470,6 @@ const extraVenues = [
 // ============================================================
 function applyComputedLeagueStats() {
   const byRoundNum = (a, b) => parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
-  const roundKeysSorted = Object.keys(roundsData).sort(byRoundNum);
   const scheduledKeysSorted = Object.keys(scheduledRounds || {})
     .filter(k => !roundsData[k])
     .sort(byRoundNum);
@@ -2499,9 +2482,6 @@ function applyComputedLeagueStats() {
   const nextMatchRoundKey = {}; // 팀별로 다음 경기가 잡힌 라운드 키(같은 라운드 안에서만 더 빠른 경기로 교체)
 
   function accumulate(m) {
-    if (m.byeKo || m.byeEn) return;
-    if (!m.homeEn || !m.awayEn) return;
-    if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
     const home = stats[m.homeEn], away = stats[m.awayEn];
     if (home) {
       home.played++; home.goalsFor += m.homeScore; home.goalsAgainst += m.awayScore;
@@ -2521,13 +2501,10 @@ function applyComputedLeagueStats() {
     }
   }
 
-  // 1) 확정된 라운드는 전부 결과로 반영 (지나간 라운드이므로 다음 경기 후보 아님)
-  roundKeysSorted.forEach(roundKey => {
-    (roundsData[roundKey] || []).forEach(accumulate);
-  });
+  // 예측과 순위표는 같은 공식 결과로 시작합니다.
+  collectPlayedMatches().forEach(accumulate);
 
-  // 2) 예정된 라운드: 스코어가 이미 채워진 경기는 결과 반영,
-  //    스코어 없는 경기/부전승은 각 팀의 "다음 경기" 후보(라운드 순으로 처음 만나는 것)
+  // 예정된 라운드에서는 각 팀의 다음 경기 후보를 찾습니다.
   scheduledKeysSorted.forEach(roundKey => {
     (scheduledRounds[roundKey] || []).forEach(m => {
       if (m.byeKo || m.byeEn) {
@@ -2537,9 +2514,7 @@ function applyComputedLeagueStats() {
       }
       if (!m.homeEn || !m.awayEn) return;
       const hasScore = typeof m.homeScore === 'number' && typeof m.awayScore === 'number';
-      if (hasScore) {
-        accumulate(m);
-      } else if (m.postponed) {
+      if (hasScore || m.postponed) {
         // 연기된 경기는 아직 새 날짜가 없으므로 "다음 경기" 후보가 되지 않습니다.
         // (재편성되어 날짜가 확정되면 postponed를 지우면 자연스럽게 다음 경기 후보로 다시 잡힙니다.)
         return;
@@ -4100,67 +4075,43 @@ function computeLeg1Homes() {
   return homes;
 }
 
-// 아직 열리지 않은 경기 목록(1라운드 잔여분 + 2라운드 전체)을 만듭니다.
-function generateRemainingFixtures() {
-  const teamByEn = {};
-  leagueData.forEach(t => { teamByEn[t.nameEn] = t; });
+// 홈·원정을 구분한 대진마다 결과나 잔여 일정 중 하나만 반영합니다.
+function generateRemainingFixtures(official = collectPlayedMatches()) {
+  const teams = new Map(leagueData.map(t => [t.nameEn, t]));
+  const completed = new Set(official.map(m => whatIfFixtureId(m.homeEn, m.awayEn)));
+  const candidates = new Map();
+  const priority = m => m.movedToWeek ? 0 : m.postponed ? 1 : m.movedFromWeek ? 3 : 2;
+  for (const source of [scheduledRounds, roundsData]) {
+    for (const [roundKey, matches] of Object.entries(source || {})) {
+      for (const m of matches) {
+        if (m.byeKo || m.byeEn || !teams.has(m.homeEn) || !teams.has(m.awayEn) || m.homeEn === m.awayEn) continue;
+        const id = whatIfFixtureId(m.homeEn, m.awayEn);
+        if (completed.has(id)) continue;
+        const round = Number(roundKey.slice(5));
+        const previous = candidates.get(id);
+        if (!previous || priority(m) > priority(previous.match) ||
+            (priority(m) === priority(previous.match) && round >= previous.round)) {
+          candidates.set(id, { match: m, round });
+        }
+      }
+    }
+  }
+  const fixtures = Array.from(candidates.values(), ({ match }) => {
+    const datePending = match.postponed || match.movedToWeek || !match.kickoffDate;
+    return {
+      home: teams.get(match.homeEn), away: teams.get(match.awayEn), leg: datePending ? 2 : 1,
+      kickoffDate: datePending ? undefined : match.kickoffDate,
+      kickoffTime: datePending ? undefined : match.kickoffTime
+    };
+  }).sort((a, b) =>
+    (a.kickoffDate || '9999').localeCompare(b.kickoffDate || '9999') ||
+    (a.kickoffTime || '99:99').localeCompare(b.kickoffTime || '99:99'));
 
-  const fixtures = [];
-
-  // 1라운드 잔여분: roundsData로 아직 안 옮겨진(=결과가 안 나온) scheduledRounds 라운드를 그대로 사용
-  // (scheduledRounds의 라운드 키는 라운드 번호 순서대로 등록돼 있어서, 아래 순서 그대로가
-  // 실제 "몇 주차에 열리는지"와 일치합니다 — leg: 1로 표시해 이 순서를 신뢰할 수 있음을 남겨둡니다.)
-  Object.keys(scheduledRounds || {}).forEach(roundKey => {
-    if (roundsData[roundKey]) return; // 이미 결과가 확정된 라운드는 제외
-    (scheduledRounds[roundKey] || []).forEach(m => {
-      if (m.byeKo || m.byeEn) return;
-      // 다른 주차로 옮겨진 경기의 자리표시자(postponed + movedToWeek)는 제외합니다.
-      // 실제 경기는 옮겨진 주차(예: 연기경기주차)에 별도 항목으로 들어 있어서,
-      // 여기서 또 세면 같은 경기가 이중으로 집계됩니다.
-      if (m.postponed && m.movedToWeek) return;
-      // 라운드가 통째로 끝나지 않았어도, 개별 경기에 이미 스코어가 채워져 있으면
-      // (=그 경기만 먼저 끝난 경우) 이미 leagueData에 반영된 결과이므로 제외합니다.
-      if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
-      const home = teamByEn[m.homeEn];
-      const away = teamByEn[m.awayEn];
-      // 일정이 이미 정해진 경기(예: 연기경기주차 경기)는 킥오프 정보를 함께 실어서
-      // '만약에 시뮬레이터' 같은 화면에서 날짜를 보여줄 수 있게 합니다. 시뮬레이션 계산에는 쓰이지 않습니다.
-      if (home && away) fixtures.push({ home, away, leg: 1, kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime });
-    });
-  });
-
-  // 이미 라운드 전체가 종료 처리되어 roundsData로 옮겨진 뒤에도, 그 라운드 안에
-  // 연기(postponed)되어 아직 스코어가 없는 경기가 남아있을 수 있습니다(라운드의
-  // 나머지 경기는 다 끝났지만 이 경기만 새 날짜를 기다리는 경우). 이런 경기는 위
-  // scheduledRounds 루프에서는 걸러지지 않으므로 별도로 찾아서 추가합니다.
-  // 원래 소속된 라운드가 1라운드(leg 1) 경기이므로 leg: 1로 표시합니다.
-  Object.keys(roundsData || {}).forEach(roundKey => {
-    (roundsData[roundKey] || []).forEach(m => {
-      if (m.byeKo || m.byeEn) return;
-      if (!m.postponed) return;
-      // 다른 주차로 이동이 확정된 경기(movedToWeek)는 이미 그 주차(scheduledRounds/roundsData)에
-      // 별도 항목으로 들어 있으므로, 여기서 또 세면 같은 경기가 이중으로 집계됩니다.
-      if (m.movedToWeek) return;
-      if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') return;
-      const home = teamByEn[m.homeEn];
-      const away = teamByEn[m.awayEn];
-      if (home && away) fixtures.push({ home, away, leg: 1 });
-    });
-  });
-
-  // 2라운드(재대결) 전체: 1라운드에서 홈이었던 팀을 원정으로 뒤집어 생성
-  // 주의: 이 경기들은 실제로 몇 주차에 열릴지 알 수 있는 라운드 정보가 없습니다.
-  // 아래 이중 루프(i<j)는 순전히 "팀 목록 순서"대로 대진을 나열할 뿐이라, 배열 안에서의
-  // 등장 순서가 실제 경기 순서를 전혀 반영하지 않습니다(leg: 2로 표시해 이 사실을
-  // computeFixtureFormWeights 등 순서에 의존하는 로직에 전달합니다).
-  // 후반기 일정이 scheduledRounds/roundsData에 이미 들어온 대진(홈/원정 방향까지 같은 경기)은
-  // 위에서 이미 세었거나(미경기) 결과에 반영됐으므로(경기 완료), 자동 생성에서 빼서 이중 집계를 막습니다.
-  const enteredDirected = new Set();
-  [roundsData, scheduledRounds].forEach(src => Object.keys(src || {}).forEach(rk => (src[rk] || []).forEach(m => {
-    if (m.byeKo || m.byeEn || !m.homeEn || !m.awayEn) return;
-    enteredDirected.add(m.homeEn + '||' + m.awayEn);
-  })));
-  const pushLeg2 = (home, away) => { if (!enteredDirected.has(home.nameEn + '||' + away.nameEn)) fixtures.push({ home, away, leg: 2 }); };
+  // 아직 등록되지 않은 2차전만 홈·원정을 뒤집어 채웁니다.
+  const pushLeg2 = (home, away) => {
+    const id = whatIfFixtureId(home.nameEn, away.nameEn);
+    if (!completed.has(id) && !candidates.has(id)) fixtures.push({ home, away, leg: 2 });
+  };
   const leg1Homes = computeLeg1Homes();
   for (let i = 0; i < leagueData.length; i++) {
     for (let j = i + 1; j < leagueData.length; j++) {
@@ -5425,7 +5376,7 @@ const LEAGUE_RULES = { promote: 1, relegate: 3 };
 function runMonteCarloSimulation(iterations, overrides, seed, snapshot) {
   const N = iterations || 4000;
   const official = snapshot ? snapshot.official : collectPlayedMatches();
-  const fixtures = snapshot ? snapshot.fixtures : generateRemainingFixtures();
+  const fixtures = snapshot ? snapshot.fixtures : generateRemainingFixtures(official);
   // 결과 고정: 남은 경기에 실제로 존재하는 대진만, 유효한 값(H/D/A)만 받아들입니다.
   const fixtureIds = fixtures.map(fx => whatIfFixtureId(fx.home.nameEn, fx.away.nameEn));
   const forcedByIdx = fixtureIds.map(id => {

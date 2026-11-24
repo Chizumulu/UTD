@@ -1780,6 +1780,16 @@
 
   // ===== 리그 예측: 내 팀(치주물루) 요약 카드 =====
   // 표에서 우리 팀 행을 찾지 않아도 우승·상위 3위·강등권 확률과 예상 순위/승점을 맨 위에서 바로 보여줍니다.
+  function seasonProbabilityLabel(pct, simulation) {
+    if (simulation.remainingFixtureCount > 0) {
+      if (pct === 0) return isKorean ? '미관측' : 'Not observed';
+      if (pct === 100) return isKorean ? '매회 관측' : 'Every run';
+      if (pct < 0.1) return '&lt;0.1%';
+      if (pct > 99.9) return '&gt;99.9%';
+    }
+    return pct.toFixed(1) + '%';
+  }
+
   function renderPredictMySummary() {
     const host = document.getElementById('predictMySummary');
     if (!host) return;
@@ -1806,11 +1816,12 @@
     if (r.championPct >= 50) chip = { cls: 'is-gold', ko: '우승 유력', en: 'Title favourite' };
     else if (r.relegatePct >= 50) chip = { cls: 'is-warn', ko: '강등권 위험', en: 'Relegation risk' };
     else if (r.top3Pct >= 50) chip = { cls: 'is-good', ko: '상위 3위 유력', en: 'Top-3 likely' };
-    else if (r.relegatePct < 5) chip = { cls: 'is-good', ko: '잔류 안정권', en: 'Safe from the drop' };
+    else if (r.relegatePct < 5) chip = { cls: 'is-good', ko: '강등 위험 낮음', en: 'Low relegation risk' };
     else chip = { cls: '', ko: '중위권 경쟁', en: 'Mid-table battle' };
 
     const relZoneLo = predictionCache.results.length - LEAGUE_RULES.relegate + 1; // 강등권 시작 순위
-    const pct = (v) => (v >= 99.95 ? '100' : (v < 0.05 ? '0' : v.toFixed(1))) + '%';
+    const pct = v => seasonProbabilityLabel(v, predictionCache);
+    const promoted = LEAGUE_RULES.promote;
     const hasRange = typeof r.ptsP10 === 'number' && typeof r.ptsP90 === 'number';
     const tile = (cls, ko, en, value, subKo, subEn) => `
       <div class="pms-tile ${cls}">
@@ -1829,9 +1840,11 @@
         <span class="pms-chip ${chip.cls}">${isKorean ? chip.ko : chip.en}</span>
       </div>
       <div class="pms-tiles">
-        ${tile('pms-champ', '우승·승격 확률', 'Title / promotion', pct(r.promotePct), `1위로 마칠 확률 (상위 ${LEAGUE_RULES.promote}팀 승격)`, `Finish 1st (top ${LEAGUE_RULES.promote} promoted)`)}
+        ${tile('pms-champ', promoted === 1 ? '우승·승격 확률' : '승격 확률', promoted === 1 ? 'Title / promotion' : 'Promotion chance', pct(r.promotePct), `상위 ${promoted}위 이내로 마칠 확률`, `Finish in the top ${promoted}`)}
         ${tile('pms-top3', '상위 3위 확률', 'Top-3 chance', pct(r.top3Pct), '3위 이내로 마칠 확률', 'Finish in top 3')}
-        ${tile('pms-bot3', '강등 확률', 'Relegation chance', pct(r.relegatePct), `${relZoneLo}~${predictionCache.results.length}위로 마칠 확률`, `Finish ${relZoneLo}th–${predictionCache.results.length}th`)}
+        ${tile('pms-bot3', '강등 확률', 'Relegation chance', pct(r.relegatePct),
+          r.relegatePct === 0 && predictionCache.remainingFixtureCount > 0 ? `${predictionCache.iterations.toLocaleString()}회 중 강등 0회` : `${relZoneLo}~${predictionCache.results.length}위로 마칠 확률`,
+          r.relegatePct === 0 && predictionCache.remainingFixtureCount > 0 ? `0 of ${predictionCache.iterations.toLocaleString()} runs` : `Finish ${relZoneLo}th–${predictionCache.results.length}th`)}
         ${tile('pms-rank', '예상 최종순위', 'Avg. final rank', r.avgFinalRank.toFixed(1) + (isKorean ? '위' : ''),
                hasRange ? `예상 승점 ${r.ptsP10}~${r.ptsP90}점` : '', hasRange ? `Proj. ${r.ptsP10}–${r.ptsP90} pts` : '')}
       </div>`;
@@ -1853,7 +1866,9 @@
     document.getElementById('predictMetaFixtures').textContent =
       (isKorean ? '남은 경기 수: ' : 'Remaining fixtures: ') + predictionCache.remainingFixtureCount;
 
-    predictionCache.results.forEach((r, idx) => {
+    const projected = predictionCache.results.slice().sort((a, b) =>
+      a.avgFinalRank - b.avgFinalRank || b.avgFinalPts - a.avgFinalPts || a.nameEn.localeCompare(b.nameEn));
+    projected.forEach((r, idx) => {
       const rank = idx + 1;
       const tr = document.createElement('tr');
       if (rank <= LEAGUE_RULES.promote) tr.classList.add('promo');
@@ -1871,13 +1886,13 @@
         return `
           <div class="pt-prob-bar-wrap">
             <div class="pt-prob-bar-fill ${cls}" style="width:${width}%;"></div>
-            <div class="pt-prob-bar-label">${pct.toFixed(1)}%</div>
+            <div class="pt-prob-bar-label" title="${Math.round(pct * predictionCache.iterations / 100).toLocaleString()} / ${predictionCache.iterations.toLocaleString()}">${seasonProbabilityLabel(pct, predictionCache)}</div>
           </div>
         `;
       }
 
       // 모바일(≤600px)에서는 표가 카드형으로 바뀌므로, 각 칸에 위치 클래스와 라벨(data-label)을 달아둡니다.
-      const lblChamp = isKorean ? '우승·승격' : 'Title/Promo';
+      const lblChamp = LEAGUE_RULES.promote === 1 ? (isKorean ? '우승·승격' : 'Title/Promo') : (isKorean ? '승격' : 'Promotion');
       const lblTop3 = isKorean ? '상위 3위' : 'Top 3';
       const lblBot3 = isKorean ? '강등' : 'Relegation';
       const avgRankTxt = isKorean ? `예상 ${r.avgFinalRank.toFixed(1)}위` : `Avg. #${r.avgFinalRank.toFixed(1)}`;
@@ -2009,8 +2024,8 @@
       const parts = [];
       if (t) parts.push(isKorean ? `우승 라인까지 +${need(t)}점` : `+${need(t)} to the title line`);
       if (sf) parts.push(sf.line.p50 <= myPts
-        ? (isKorean ? '잔류 라인은 이미 넘음' : 'already above the safety line')
-        : (isKorean ? `잔류 라인까지 +${need(sf)}점` : `+${need(sf)} to the safety line`));
+        ? (isKorean ? `예상 잔류선 중앙값 ${sf.line.p50}점 도달` : `At or above the simulated safety median of ${sf.line.p50}`)
+        : (isKorean ? `예상 잔류선 중앙값까지 +${need(sf)}점` : `+${need(sf)} to the simulated safety median`));
       summary = `<div class="rl-summary">${isKorean ? '치주물루' : 'Chizumulu'} ${isKorean ? '현재 ' : 'now '}${myPts}${isKorean ? '점' : ' pts'} · ${parts.join(' · ')} <span class="rl-summary-note">${isKorean ? '(중앙값 기준)' : '(vs. median)'}</span></div>`;
     }
 
@@ -2607,8 +2622,8 @@
     const byEn = {};
     ranked.forEach(t => { byEn[t.nameEn] = t; });
 
-    const releg1st = teamCount - 2; // 강등 시작 순위(13위). 13위 칸 오른쪽(12위와의 경계)에 강등선
-    const promoEdge = 2;            // 2위 칸 오른쪽(1위와의 경계)에 승격선
+    const releg1st = LEAGUE_RULES.relegate > 0 ? teamCount - LEAGUE_RULES.relegate + 1 : null;
+    const promoEdge = LEAGUE_RULES.promote > 0 ? LEAGUE_RULES.promote + 1 : null;
     const cols = [];
     for (let k = teamCount - 1; k >= 1; k--) cols.push(k); // 14위 ... 1위 (꼴찌=15위 칸은 항상 '확보'라 표시하지 않음)
 
@@ -2772,10 +2787,10 @@
 
     // 우승선/잔류선 (시뮬레이션 중앙값)
     let titleLine = null, safeLine = null;
-    if (predictionCache && Array.isArray(predictionCache.rankLines) && predictionCache.rankLines.length >= 4) {
+    if (predictionCache && Array.isArray(predictionCache.rankLines)) {
       const lines = predictionCache.rankLines;
       titleLine = lines[0] ? lines[0].p50 : null;
-      safeLine = lines[lines.length - 4] ? lines[lines.length - 4].p50 : null;
+      safeLine = LEAGUE_RULES.relegate > 0 ? lines[ctx.safeSlots - 1]?.p50 ?? null : null;
     }
 
     // 헤더
