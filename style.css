@@ -20363,7 +20363,6 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
 #roundCurrentBtn,
 #statBoardMoreBtn,
 .pms-title-action,
-.home-match-more-btn,
 .round-tools summary,
 .round-adv > summary,
 .round-quick-actions .mobile-search-entry,
@@ -20389,7 +20388,6 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
   padding-inline: 14px;
 }
 
-.home-match-more-btn,
 .round-tools summary,
 .round-adv > summary,
 .round-quick-actions .mobile-search-entry,
@@ -20401,14 +20399,6 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
   color: var(--color-brand-text);
 }
 
-.home-match-more-btn {
-  position: static;
-  min-height: 28px;
-  margin: 4px 0 0 auto;
-  padding: 4px 8px;
-  display: flex;
-}
-
 @media (hover: hover) {
   #roundsView #roundCurrentBtn:hover,
   #statBoardMoreBtn:hover,
@@ -20418,7 +20408,6 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
     text-decoration: none;
   }
 
-  .home-match-more-btn:hover,
   .round-tools summary:hover,
   .round-adv > summary:hover,
   .round-favor-btn:not(.active):hover,
