@@ -6268,7 +6268,7 @@ const cupTournaments = [
           { en: 'Mafu Stars FC', ko: '마푸 스타즈 FC' }
         ] },
         { labelKo: '4부 · 지역 2부 리그 (리그 투)', labelEn: 'Regional League Two', teams: [
-          { en: 'Mzwazwa FC', ko: '음즈와즈와 FC' },
+          { en: 'Mzwawa FC', ko: '음즈와와 FC' },
           { en: 'Bwabwa FC', ko: '브와브와 FC' },
           { en: 'Chipelembe FC', ko: '치펠렘베 FC' },
           { en: 'Chikaya FC', ko: '치카야 FC' }
@@ -6303,7 +6303,7 @@ const cupTournaments = [
         { home: 'Blue Spot / Brazil Vuwa / Karonga United Reserve', homeKo: '블루 스팟 / 브라질 부와 / 카롱가 리저브 승자', away: 'Bwabwa FC', awayKo: '브와브와 FC' },
         { home: 'Santos / Chandamale', homeKo: '산투스 / 찬다말레 승자', away: 'Likoma Stars / Emazwini', awayKo: '리코마 스타스 / 에마즈위니 승자' },
         { home: 'Chibavi Real Stars FC', homeKo: '치바비 리얼 스타즈 FC', away: 'Chipelembe FC', awayKo: '치펠렘베 FC' },
-        { home: 'Mzwazwa FC', homeKo: '음즈와즈와 FC', away: 'Chizumulu United FC', awayKo: '치주물루 유나이티드 FC' }
+        { home: 'Mzwawa FC', homeKo: '음즈와와 FC', away: 'Chizumulu United FC', awayKo: '치주물루 유나이티드 FC' }
       ] }
     ]
   },
