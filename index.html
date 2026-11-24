@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '017',
+    style: '021',
     data: '006',
-    app: '028',
+    app: '029',
     report: '002',
     archive: '200',
     predictWorker: '220',
@@ -909,21 +909,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <button type="button" role="tab" aria-selected="false" class="round-mode-btn lbl" data-mode="month" data-ko="월별" data-en="By month" onclick="setRoundViewMode('month')">월별</button>
       </div>
       <div class="round-half-bar" id="roundHalfBar" role="tablist" aria-label="시즌 구간" data-aria-ko="시즌 구간" data-aria-en="Season half"></div>
-      <details class="round-tools" id="roundTools">
-        <summary><span class="lbl" data-ko="일정 도구" data-en="Tools">일정 도구</span></summary>
-        <div class="round-tools-actions">
-          <button type="button" class="lbl" id="roundCalendarButton" data-ko="캘린더" data-en="Calendar" aria-haspopup="dialog" onclick="openLeagueCalendarSubscription()">캘린더</button>
-          <button type="button" class="lbl" data-ko="현재 보기 링크 공유" data-en="Share this schedule view" onclick="shareScheduleView()">현재 보기 링크 공유</button>
-          <button type="button" class="lbl" id="roundShareBtn" data-en="Share round results" data-ko="라운드 결과 공유" onclick="shareRoundResults()">라운드 결과 공유</button>
-          <button type="button" class="lbl" data-en="View postponed matches" data-ko="연기된 경기 보기" aria-haspopup="dialog" onclick="openPostponedMatchesModal()">연기된 경기 보기</button>
-        </div>
-      </details>
-    </div>
-    <div class="round-quick-actions">
-      <button type="button" id="roundCurrentBtn" class="round-mode-chip lbl"
-        data-ko="현재 주차로" data-en="Go to current week" onclick="goToCurrentSchedule()">현재 주차로</button>
-      <button type="button" class="mobile-search-entry round-mode-chip lbl" aria-haspopup="dialog"
-        data-ko="사이트 검색" data-en="Search site" onclick="openMoreSheet(this)">사이트 검색</button>
+      <div class="round-quick-actions">
+        <button type="button" id="roundCurrentBtn" class="round-mode-chip lbl"
+          data-ko="현재 주차로" data-en="Current week" onclick="goToCurrentSchedule()">현재 주차로</button>
+        <button type="button" class="mobile-search-entry round-mode-chip" aria-haspopup="dialog"
+          aria-label="사이트 검색" data-aria-ko="사이트 검색" data-aria-en="Search site" onclick="openMoreSheet(this)">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 15.5 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <details class="round-tools" id="roundTools">
+          <summary><span class="lbl" data-ko="일정 도구" data-en="Tools">일정 도구</span></summary>
+          <div class="round-tools-actions">
+            <button type="button" class="lbl" id="roundCalendarButton" data-ko="캘린더" data-en="Calendar" aria-haspopup="dialog" onclick="openLeagueCalendarSubscription()">캘린더</button>
+            <button type="button" class="lbl" data-ko="현재 보기 링크 공유" data-en="Share this schedule view" onclick="shareScheduleView()">현재 보기 링크 공유</button>
+            <button type="button" class="lbl" id="roundShareBtn" data-en="Share round results" data-ko="라운드 결과 공유" onclick="shareRoundResults()">라운드 결과 공유</button>
+            <button type="button" class="lbl" data-en="View postponed matches" data-ko="연기된 경기 보기" aria-haspopup="dialog" onclick="openPostponedMatchesModal()">연기된 경기 보기</button>
+          </div>
+        </details>
+      </div>
     </div>
     <button type="button" id="roundFavorBtn" class="round-favor-btn" aria-controls="roundFavorPanel" onclick="toggleRoundFavor()"></button>
     <form class="round-search" role="search" aria-labelledby="roundSearchLabel" onsubmit="event.preventDefault(); updateRoundSearch(true)">
@@ -980,7 +982,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button type="button" role="tab" class="predict-tab" data-stats-tab="analysis" aria-selected="false" onclick="setStatsTab('analysis')"><span class="lbl" data-en="Analysis" data-ko="분석">분석</span></button>
     <button type="button" role="tab" class="predict-tab" data-stats-tab="compare" aria-selected="false" onclick="setStatsTab('compare')"><span class="lbl" data-en="vs Last Season" data-ko="작년 비교">작년 비교</span></button>
   </div>
-  <button type="button" class="analysis-share lbl" data-ko="현재 탭 공유" data-en="Share this tab" onclick="shareAnalysisView()">현재 탭 공유</button>
 
   <div class="stats-panel active" data-stats-panel="rank" role="tabpanel">
     <div class="stat-cat-scroll" id="statCatNav"></div>
@@ -1070,7 +1071,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button type="button" role="tab" class="predict-tab" data-predict-tab="race" aria-selected="false" onclick="setPredictTab('race')"><span class="lbl" data-en="Scenarios" data-ko="경우의 수">경우의 수</span></button>
     <button type="button" role="tab" class="predict-tab" data-predict-tab="model" aria-selected="false" onclick="setPredictTab('model')"><span class="lbl" data-en="Model Record" data-ko="모델 성적">모델 성적</span></button>
   </div>
-  <button type="button" class="analysis-share lbl" data-ko="현재 탭 공유" data-en="Share this tab" onclick="shareAnalysisView()">현재 탭 공유</button>
 
   <div class="predict-panel active" data-predict-panel="outlook" role="tabpanel">
     <div class="predict-my-summary" id="predictMySummary"></div>
@@ -1740,6 +1740,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             aria-label="후원 버튼 닫기 (3일간 숨김)" data-aria-ko="후원 버튼 닫기 (3일간 숨김)" data-aria-en="Hide for 3 days">&times;</button>
   </div>
 </div>
+
+<button type="button" class="analysis-share analysis-share-fab" onclick="shareAnalysisView()"
+  aria-label="현재 탭 공유" data-aria-ko="현재 탭 공유" data-aria-en="Share this tab"
+  title="현재 탭 공유" data-title-ko="현재 탭 공유" data-title-en="Share this tab">
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>
+  <span class="lbl" data-ko="현재 탭 공유" data-en="Share this tab">현재 탭 공유</span>
+</button>
 
 <!-- 모바일 하단 탭바 (≤720px, 25/26 아카이브 화면에서는 숨김) -->
 <nav class="m-tabbar" id="mTabbar" aria-label="Main navigation">

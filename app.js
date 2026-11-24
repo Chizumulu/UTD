@@ -12569,10 +12569,13 @@
     const searching = terms.length > 0 || roundStatusFilter !== 'all';
     const currentButton = document.getElementById('roundCurrentBtn');
     const currentKo = monthMode ? '이번 달로' : '현재 주차로';
-    const currentEn = monthMode ? 'Go to this month' : 'Go to current week';
-    currentButton.dataset.ko = searching ? '검색 지우고 ' + currentKo : currentKo;
-    currentButton.dataset.en = searching ? 'Clear search and ' + currentEn.toLowerCase() : currentEn;
-    currentButton.textContent = isKorean ? currentButton.dataset.ko : currentButton.dataset.en;
+    const currentEn = monthMode ? 'This month' : 'Current week';
+    currentButton.dataset.ko = currentKo;
+    currentButton.dataset.en = currentEn;
+    currentButton.dataset.titleKo = searching ? '검색 지우고 ' + currentKo : currentKo;
+    currentButton.dataset.titleEn = searching ? 'Clear search and go to ' + (monthMode ? 'this month' : 'the current week') : currentEn;
+    currentButton.textContent = isKorean ? currentKo : currentEn;
+    currentButton.title = isKorean ? currentButton.dataset.titleKo : currentButton.dataset.titleEn;
     document.getElementById('roundSearchClear').hidden = !input.value;
     document.querySelectorAll('#roundStatusFilters button').forEach(button => {
       const selected = button.dataset.status === roundStatusFilter;
