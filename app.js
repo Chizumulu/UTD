@@ -6800,11 +6800,11 @@
     const tr = (ko, en) => isKorean ? ko : en;
     const byMargin = mode === 'margin';
     const groups = byMargin ? [
-      [tr('2골 차 이상 승', 'Won by 2+'), m => m.gf - m.ga >= 2],
-      [tr('1골 차 승', 'Won by 1'), m => m.gf - m.ga === 1],
-      [tr('무승부', 'Draw'), m => m.gf === m.ga],
-      [tr('1골 차 패', 'Lost by 1'), m => m.gf - m.ga === -1],
-      [tr('2골 차 이상 패', 'Lost by 2+'), m => m.ga - m.gf >= 2]
+      [tr('2골 차 이상 승', 'Won by 2+'), m => m.gf - m.ga >= 2, 'win'],
+      [tr('1골 차 승', 'Won by 1'), m => m.gf - m.ga === 1, 'win'],
+      [tr('무승부', 'Draw'), m => m.gf === m.ga, 'draw'],
+      [tr('1골 차 패', 'Lost by 1'), m => m.gf - m.ga === -1, 'loss'],
+      [tr('2골 차 이상 패', 'Lost by 2+'), m => m.ga - m.gf >= 2, 'loss']
     ] : [
       [tr('득점만', 'Scored only'), m => m.gf > 0 && m.ga === 0],
       [tr('양 팀 득점', 'Both teams scored'), m => m.gf > 0 && m.ga > 0],
@@ -6815,26 +6815,29 @@
     const title = byMargin ? tr('점수 차별 성적', 'Results by score margin')
       : tr('득점·실점 유형별 성적', 'Results by scoring pattern');
     const count = n => tr(`${n}경기`, `${n} ${n === 1 ? 'match' : 'matches'}`);
-    const cards = groups.map(([label, predicate]) => {
+    const cards = groups.map(([label, predicate, outcome]) => {
       const rows = games.filter(predicate);
-      if (byMargin && rows.length) {
+      if (byMargin) {
+        const header = `<span class="club-margin-label">${label}</span>
+          <span class="club-margin-count"><strong>${rows.length}</strong> <small>${tr('경기', rows.length === 1 ? 'match' : 'matches')}</small></span>`;
+        if (!rows.length) return `<div class="club-margin-card" data-outcome="${outcome}"><div class="club-margin-head">${header}</div></div>`;
         const items = rows.map(m => {
           const round = m.labels ? m.labels[isKorean ? 'ko' : 'en']
             : tr(wkKo(m.wk), wkEn(m.wk));
-          return `<li><span>${escapeHtml(round || '')} · ${escapeHtml(tr(m.oppKo || m.oppEn, m.oppEn) || '')}</span><strong>${m.gf}–${m.ga}</strong></li>`;
+          return `<li><span><small>${escapeHtml(round || '')}</small> ${escapeHtml(tr(m.oppKo || m.oppEn, m.oppEn) || '')}</span><strong>${m.gf}–${m.ga}</strong></li>`;
         }).join('');
-        return `<details class="club-score-item"><summary><span>${label}</span><strong>${count(rows.length)}</strong></summary><ul>${items}</ul></details>`;
+        return `<details class="club-margin-card" data-outcome="${outcome}"><summary class="club-margin-head">${header}<span class="club-margin-chevron" aria-hidden="true"></span></summary><ul>${items}</ul></details>`;
       }
       const wins = rows.filter(m => m.gf > m.ga).length;
       const draws = rows.filter(m => m.gf === m.ga).length;
       const losses = rows.length - wins - draws;
       const record = tr(`${wins}승 ${draws}무 ${losses}패`, `${wins}W ${draws}D ${losses}L`);
-      return `<div class="club-score-item"><span>${label}</span><strong>${count(rows.length)}</strong>${byMargin ? '' : `<small>${record}</small>`}</div>`;
+      return `<div class="club-score-item"><span>${label}</span><strong>${count(rows.length)}</strong><small>${record}</small></div>`;
     }).join('');
     const note = tr('최종 스코어 기준 · 몰수 경기와 승부차기 점수 제외', 'Final score · excludes forfeits and shootout scores');
     const empty = tr('집계할 경기 결과가 없어요.', 'No match results to count yet.');
     return `<section class="ti-card club-score-breakdown"><h3>${title}</h3>${games.length
-      ? `<div class="club-score-grid">${cards}</div><p>${note}</p>`
+      ? `<div class="${byMargin ? 'club-margin-grid' : 'club-score-grid'}">${cards}</div><p>${note}</p>`
       : `<p>${empty}</p>`}</section>`;
   }
 
@@ -19689,9 +19692,12 @@
       animateCountUp(document.getElementById('squadPlayerModalApps'), stats.appearances);
       animateCountUp(document.getElementById('squadPlayerModalGoals'), stats.goals, { delay: 60 });
       animateCountUp(document.getElementById('squadPlayerModalAssists'), stats.assists || 0, { delay: 90 });
-      const involvement = countScoringAppearances(stats.history || []);
-      document.getElementById('squadPlayerModalScoringApps').textContent = involvement.played
-        ? `${involvement.contributed} / ${involvement.played}` : '–';
+      const scoringAppsEl = document.getElementById('squadPlayerModalScoringApps');
+      if (scoringAppsEl) {
+        const involvement = countScoringAppearances(stats.history || []);
+        scoringAppsEl.textContent = involvement.played
+          ? `${involvement.contributed} / ${involvement.played}` : '–';
+      }
       document.getElementById('squadPlayerModalStarts').textContent = `${stats.starts} / ${stats.subApps}`;
       animateCountUp(document.getElementById('squadPlayerModalMotm'), stats.motmCount, { delay: 120 });
 
