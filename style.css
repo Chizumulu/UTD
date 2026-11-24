@@ -13795,6 +13795,9 @@ body {
 .ti-sponsor-card.is-featured .ti-sponsor-initial { width: 84px; height: 84px; border-radius: 22px; font-size: 34px; background: #fff; box-shadow: 0 4px 14px rgba(var(--color-navy-rgb), 0.14); }
 .ti-sponsor-card.is-featured .ti-sponsor-logo { width: 100%; max-width: 240px; height: 120px; margin-bottom: 4px; }
 .ti-sponsor-card.is-featured:not(.is-main) .ti-sponsor-logo { max-width: 190px; height: 96px; margin-top: 12px; margin-bottom: 16px; }
+/* 원본 이미지 여백을 감안해 두 로고의 실제 표시 폭을 맞춘다. */
+.ti-sponsor-card.is-featured.is-main .ti-sponsor-logo { transform: scale(1.25); }
+.ti-sponsor-card.is-featured:not(.is-main) .ti-sponsor-logo { transform: scale(0.83); }
 .ti-sponsor-card.is-featured .ti-sponsor-name { font-size: var(--fs-xl); font-weight: 800; }
 .ti-sponsor-cta { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 6px 14px; border-radius: 999px; font-size: var(--fs-sm); font-weight: 700; color: var(--color-navy); background: var(--color-bg-stripe); transition: background 0.18s ease, color 0.18s ease; }
 .ti-sponsor-cta i { font-style: normal; transition: transform 0.18s ease; }
