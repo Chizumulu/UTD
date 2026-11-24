@@ -1043,7 +1043,39 @@
         (hasSc ? '<div class="rmd-sc rmd-sc-home">' + homeSc + '</div><div class="rmd-sc rmd-sc-away">' + awaySc + '</div>' : '') +
         '</div></div></section>';
     }).join('');
-    return '<section class="cup-mymatch">' + title + '<div class="round-match-list rmd-list cup-mymatch-list">' + cards + '</div></section>';
+    return cupProgressHtml(mine) +
+      '<section class="cup-mymatch">' + title + '<div class="round-match-list rmd-list cup-mymatch-list">' + cards + '</div></section>';
+  }
+
+  function cupProgressHtml(matches) {
+    const ko = isKorean;
+    const steps = matches.map(({ r, m }) => {
+      const home = isMyTeamName(m.home, m.homeKo);
+      const name = home ? m.away : m.home;
+      const team = leagueData.find(t => t.nameEn === name);
+      const opponent = ko ? (home ? m.awayKo : m.homeKo) || team?.nameKo || name : name;
+      const label = (ko ? r.labelKo || r.labelEn : r.labelEn || r.labelKo) || '';
+      const played = Number.isInteger(m.homeScore) && Number.isInteger(m.awayScore);
+      const [homePens, awayPens] = /^\d+\s*:\s*\d+$/.test(m.pso || '') ? m.pso.split(':').map(Number) : [0, 0];
+      const difference = played ? (m.homeScore - m.awayScore || homePens - awayPens) * (home ? 1 : -1) : 0;
+      const state = !played ? 'next' : difference > 0 ? 'won' : difference < 0 ? 'lost' : 'played';
+      const score = played ? (home ? `${m.homeScore}–${m.awayScore}` : `${m.awayScore}–${m.homeScore}`) : '';
+      return { label, opponent, state, score, penalties: difference && homePens !== awayPens && m.homeScore === m.awayScore };
+    });
+    const labels = {
+      next: ko ? '경기 전' : 'Pre-match', won: ko ? '승리' : 'Won',
+      lost: ko ? '패배' : 'Lost', played: ko ? '경기 종료' : 'Played'
+    };
+    const last = steps[steps.length - 1];
+    const waiting = last.state === 'won' && nmcStageIdx(last.label) !== 5;
+    return `<section class="cup-progress">
+      <h3>${ko ? '치주물루 진출 경로' : 'Chizumulu’s cup run'}</h3>
+      <ol>${steps.map(step => `<li data-state="${step.state}">
+        <b>${cupEsc(step.label)}</b><span>vs ${cupEsc(step.opponent)}</span>
+        <small>${labels[step.state]}${step.score ? ' · ' + step.score : ''}${step.penalties ? (ko ? ' (승부차기)' : ' (pens)') : ''}</small>
+      </li>`).join('')}${waiting ? `<li data-state="next"><b>${ko ? '다음 라운드' : 'Next round'}</b>
+        <span>${ko ? '대진 발표 대기' : 'Awaiting the draw'}</span></li>` : ''}</ol>
+    </section>`;
   }
   // 컵 경기 카드의 "득점" 펼침 버튼 (HTML 문자열로 그리기 때문에 문서 전체에서 한 번만 이벤트를 받아 처리합니다)
   document.addEventListener('click', function (e) {
@@ -11159,8 +11191,57 @@
     });
 
     renderFormerSquadView();
+    renderSquadMoves();
     renderSquadTable();
     applySquadViewMode();
+  }
+
+  function renderSquadMoves() {
+    const section = document.getElementById('squadMoves');
+    if (!section) return;
+    const labels = {
+      ...FORMER_STATUS_LABEL,
+      signed: { ko: '영입', en: 'Signed' },
+      loan: { ko: '임대 합류', en: 'Joined on loan' },
+      returned: { ko: '복귀', en: 'Returned' }
+    };
+    const former = typeof formerSquadData !== 'undefined' ? formerSquadData : [];
+    const players = new Map([...squadData, ...former].map(player => [player.nameEn, player]));
+    const history = typeof squadMoveHistory !== 'undefined' ? squadMoveHistory : [];
+    const entries = history.filter(move => Object.hasOwn(labels, move.type)).slice();
+    const recorded = new Set(entries.map(move => `${move.nameEn}:${move.type}`));
+    squadData.filter(player => player.isLoan && !recorded.has(`${player.nameEn}:loan`)).forEach(player => {
+      entries.push({ nameEn: player.nameEn, type: 'loan', clubKo: player.loanClubKo, clubEn: player.loanClubEn });
+    });
+    former.filter(player => !recorded.has(`${player.nameEn}:${player.status}`)).forEach(player => {
+      if (Object.hasOwn(FORMER_STATUS_LABEL, player.status)) entries.push({ nameEn: player.nameEn, type: player.status });
+    });
+    section.hidden = !entries.length;
+    if (!entries.length) return;
+    entries.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    const heading = document.createElement('h3');
+    heading.textContent = isKorean ? '선수단 변동' : 'Squad changes';
+    const list = document.createElement('ul');
+    for (const move of entries) {
+      const player = players.get(move.nameEn);
+      const row = document.createElement('li');
+      const name = document.createElement(player ? 'button' : 'span');
+      name.textContent = (isKorean ? player?.nameKo || move.nameKo : player?.nameEn) || move.nameEn;
+      if (player) {
+        name.type = 'button';
+        const identifier = player.number == null ? player.nameEn : former.includes(player) ? 'F' + player.number : player.number;
+        name.addEventListener('click', () => openSquadPlayerModal(identifier));
+      }
+      const detail = document.createElement('span');
+      const club = isKorean ? move.clubKo || move.clubEn : move.clubEn || move.clubKo;
+      detail.textContent = [labels[move.type][isKorean ? 'ko' : 'en'], club].filter(Boolean).join(' · ');
+      const date = document.createElement(move.date ? 'time' : 'span');
+      if (move.date) date.dateTime = move.date;
+      date.textContent = move.date || (isKorean ? '날짜 미기록' : 'Date unrecorded');
+      row.append(name, detail, date);
+      list.append(row);
+    }
+    section.replaceChildren(heading, list);
   }
 
   // ===== 선수단 표(엑셀) 보기 =====

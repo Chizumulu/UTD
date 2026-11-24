@@ -555,6 +555,10 @@ const formerSquadData = [
   { number: 9, position: "FW", nameKo: "임마누엘 음칸다위레", nameEn: "Emmanuel Mkandawire", status: "released", photoSrc: "no9.png" }
 ];
 
+// 공식 날짜가 확인된 선수단 변동은 nameEn, type, date(YYYY-MM-DD)로 추가합니다.
+// type: signed, loan, returned, released, terminated. 상대 구단을 알면 clubKo/clubEn도 입력합니다.
+const squadMoveHistory = [];
+
 // ===== 스태프 명단 =====
 const staffData = [
   { roleKo: "구단주", roleEn: "Chairman", people: [

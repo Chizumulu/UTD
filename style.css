@@ -19969,6 +19969,61 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
 
 /* ---- 컵대회 소개 탭: 치주물루 경기 일정 (메인 다음경기 카드와 같은 모양) ---- */
 .cup-mymatch { margin: 4px 0 24px; }
+.cup-progress, .squad-moves {
+  margin: 12px 0 18px;
+  padding: 14px;
+  border: 1px solid var(--color-border-chip);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.cup-progress h3, .squad-moves h3 {
+  margin: 0 0 10px;
+  color: var(--color-text-darkest);
+  font-size: var(--fs-md);
+}
+.cup-progress ol, .squad-moves ul { margin: 0; padding: 0; list-style: none; }
+.cup-progress ol { display: flex; flex-wrap: wrap; gap: 8px; }
+.cup-progress li {
+  display: grid;
+  flex: 1 1 145px;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-left: 2px solid var(--color-border-chip);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-stripe);
+}
+.cup-progress li[data-state="won"] { border-left-color: var(--color-teal); }
+.cup-progress li[data-state="next"] { border-left-color: var(--color-brand-text); }
+.cup-progress li span, .cup-progress li small { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.squad-moves li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+.squad-moves li + li { border-top: 1px solid var(--color-border-chip); }
+.squad-moves li > :first-child { color: var(--color-text-darkest); font-weight: 650; overflow-wrap: anywhere; }
+.squad-moves button {
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 720px) {
+  .cup-progress li { flex-basis: 100%; }
+  .squad-moves li { grid-template-columns: minmax(0, 1fr) auto; }
+  .squad-moves li > :nth-child(2) { grid-row: 2; grid-column: 1 / -1; }
+  .squad-moves li > :last-child { grid-column: 2; grid-row: 1; }
+  .squad-moves button { min-height: 36px; }
+}
 .cup-mymatch .cup-mymatch-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 6px 4px 12px; color: var(--color-text-dark); }
 .cup-mymatch .next-match-strip { margin: 0 0 12px; }
 .cup-mymatch .next-match-strip:last-child { margin-bottom: 0; }
