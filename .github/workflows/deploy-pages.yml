@@ -13,6 +13,8 @@ jobs:
   build:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.name }}
     permissions:
       contents: read
     steps:
@@ -32,8 +34,12 @@ jobs:
         shell: bash
       - name: Build site with content-based asset versions
         run: node scripts/build-pages.mjs "$RUNNER_TEMP/pages"
+      - name: Name the artifact for this build attempt
+        id: artifact
+        run: echo "name=github-pages-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-pages-artifact@v4
         with:
+          name: ${{ steps.artifact.outputs.name }}
           path: ${{ runner.temp }}/pages
 
   deploy:
@@ -49,3 +55,5 @@ jobs:
       - name: Deploy validated site
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ needs.build.outputs.artifact_name }}
