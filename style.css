@@ -20199,3 +20199,41 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
 }
 @keyframes cup-br-nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
 @media (prefers-reduced-motion: reduce) { .cup-br-hint i { animation: none; } }
+
+/* PC 읽기 환경: 본문과 작은 라벨의 기본 크기를 한 단계 높인다. */
+@media (min-width: 1024px) {
+  :root {
+    --fs-2xs: 12px;
+    --fs-xs: 13px;
+    --fs-sm: 14px;
+    --fs-md: 16px;
+  }
+
+  :root:not([data-theme="dark"]) {
+    --color-text-muted: #586276;
+  }
+
+  :root[data-theme="dark"] {
+    --color-text-muted: #adb6cc;
+  }
+
+  .ti-section-title {
+    font-size: var(--fs-lg);
+    line-height: 1.4;
+  }
+
+  .ti-record-item-label,
+  .rmc-kickoff,
+  .ta-note {
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+  }
+
+  :is(#mainTable, #scorersTable, .stats-table) th {
+    line-height: 1.35;
+  }
+
+  :is(#mainTable, #scorersTable, .stats-table) td {
+    line-height: 1.45;
+  }
+}
