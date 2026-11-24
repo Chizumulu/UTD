@@ -23,7 +23,7 @@
   window.ASSET_VERSIONS = {
     style: '031',
     data: '009',
-    app: '038',
+    app: '039',
     report: '002',
     archive: '200',
     predictWorker: '220',
@@ -829,9 +829,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <section id="tiSection-overview" class="ti-section ti-tabpage active">
     <div class="ti-section-title lbl" data-en="Record" data-ko="구단 기록">구단 기록</div>
+    <div id="teamOverviewCompFilter" class="club-comp-filter"></div>
     <div id="teamInfoRecordTab" class="team-info-tab-content"></div>
     <div id="teamInfoOverviewTab" class="team-info-tab-content"></div>
-    <details class="team-points-trend-details">
+    <details class="team-points-trend-details" id="teamOverviewPointsTrend">
       <summary class="team-points-trend-summary lbl" data-en="Cumulative Points by Round" data-ko="라운드별 누적 승점">라운드별 누적 승점</summary>
       <div class="team-points-trend-card">
         <svg id="teamInfoPointsHistorySvg" viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg"></svg>

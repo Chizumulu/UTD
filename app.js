@@ -6513,11 +6513,11 @@
       </details>`;
   }
 
-  function buildFormGuideCardHtml(t) {
+  function buildFormGuideCardHtml(t, scopedGuide) {
     const gdClass = t.gd > 0 ? 'gd-pos' : (t.gd < 0 ? 'gd-neg' : 'gd-zero');
 
     // roundsData 순서대로 해당 팀의 W/D/L을 훑어서 최근 폼 + 역대 연승/무패 기록을 계산합니다.
-    const guide = (typeof computeFormGuide === 'function') ? computeFormGuide(t.nameEn, t.nameKo) : null;
+    const guide = scopedGuide || (typeof computeFormGuide === 'function' ? computeFormGuide(t.nameEn, t.nameKo) : null);
     const recentForm = guide ? guide.recentForm.map(m => m.result) : t.form;
 
     let formHtml = '';
@@ -6541,6 +6541,7 @@
     // 최다 연승/무패 기록은 "N연승 (3~7주차)"처럼 기록이 세워진 구간까지 함께 보여줍니다.
     function streakRangeLabel(streak) {
       if (!streak || streak.count === 0) return isKorean ? '기록 없음' : 'No streak yet';
+      if (scopedGuide) return escapeHtml(streak.rangeLabel);
       const weekLbl = (w) => isKorean ? `${wkKo(w)}` : `${wkEn(w, 'Wk', ' ')}`;
       return streak.startWeek === streak.endWeek
         ? weekLbl(streak.startWeek)
@@ -6551,12 +6552,12 @@
       <div class="ti-streak-row">
         <div class="ti-streak-item">
           <span class="ti-streak-value">${guide.longestWinStreak.count}${isKorean ? '연승' : 'W'}</span>
-          <span class="ti-streak-label lbl" data-en="Longest Win Streak" data-ko="역대 최다 연승">${isKorean ? '역대 최다 연승' : 'Longest Win Streak'}</span>
+          <span class="ti-streak-label lbl" data-en="Longest Win Streak" data-ko="${scopedGuide ? '최다 연승' : '역대 최다 연승'}">${isKorean ? (scopedGuide ? '최다 연승' : '역대 최다 연승') : 'Longest Win Streak'}</span>
           <span class="ti-streak-sub">${streakRangeLabel(guide.longestWinStreak)}</span>
         </div>
         <div class="ti-streak-item">
           <span class="ti-streak-value">${guide.longestUnbeatenStreak.count}${isKorean ? '경기' : ''}</span>
-          <span class="ti-streak-label lbl" data-en="Longest Unbeaten Run" data-ko="역대 최다 무패">${isKorean ? '역대 최다 무패' : 'Longest Unbeaten Run'}</span>
+          <span class="ti-streak-label lbl" data-en="Longest Unbeaten Run" data-ko="${scopedGuide ? '최장 무패' : '역대 최다 무패'}">${isKorean ? (scopedGuide ? '최장 무패' : '역대 최다 무패') : 'Longest Unbeaten Run'}</span>
           <span class="ti-streak-sub">${streakRangeLabel(guide.longestUnbeatenStreak)}</span>
         </div>
       </div>` : '';
@@ -6588,10 +6589,33 @@
 
   function renderTeamInfoOverview() {
     const el = document.getElementById('teamInfoOverviewTab');
-    if (!el) return;
+    const record = document.getElementById('teamInfoRecordTab');
+    if (!el || !record) return;
+    syncClubCompetitionFilter('teamOverviewCompFilter', teamOverviewCompetition, mode => {
+      teamOverviewCompetition = mode;
+      renderTeamInfoOverview();
+    });
     const info = getMyRankedTeam();
-    if (!info) { el.innerHTML = ''; return; }
+    if (!info) { el.replaceChildren(); record.replaceChildren(); return; }
+    const league = teamOverviewCompetition === 'league';
+    for (const id of ['teamOverviewPointsTrend', 'teamInfoByeFlowTab']) {
+      const section = document.getElementById(id);
+      if (section) section.hidden = !league;
+    }
+    if (!league) {
+      const matches = collectMyTeamResults(teamOverviewCompetition);
+      if (!matches.length) {
+        record.innerHTML = `<p class="club-comp-note">${isKorean ? '이 범위에 확정된 경기 결과가 없어요.' : 'No confirmed results in this scope.'}</p>`;
+        el.replaceChildren();
+        return;
+      }
+      const { team, split, guide } = summarizeClubOverview(matches);
+      record.innerHTML = buildRecordCardHtml(team, null, null, false, split);
+      el.innerHTML = buildFormGuideCardHtml(team, guide);
+      return;
+    }
     const t = info.team;
+    record.innerHTML = buildRecordCardHtml(t, info.rank, info.total) + buildPrevSeasonCardHtml(t, info.rank);
 
     const formGuideHtml = buildFormGuideCardHtml(t);
     const homeAwayHtml = renderHomeAwaySplitCard(t);
@@ -6603,6 +6627,37 @@
       </div>
     `;
     attachImageFallback();
+  }
+
+  function summarizeClubOverview(matches) {
+    const wins = matches.filter(m => m.res === 'W').length;
+    const losses = matches.filter(m => m.res === 'L').length;
+    const goalsFor = matches.reduce((sum, m) => sum + m.gf, 0);
+    const goalsAgainst = matches.reduce((sum, m) => sum + m.ga, 0);
+    const summarizeVenue = home => {
+      const games = matches.filter(m => m.isHome === home);
+      return { played: games.length, won: games.filter(m => m.res === 'W').length };
+    };
+    const describe = m => m.labels ? m.labels[isKorean ? 'ko' : 'en'] : (isKorean ? wkKo(m.wk) : wkEn(m.wk, 'Wk', ' '));
+    const summarizeStreak = predicate => {
+      const run = longestRun(matches, predicate);
+      const current = matches.findLastIndex(m => !predicate(m));
+      if (!run) return { count: 0, current: 0 };
+      const first = describe(run.from), last = describe(run.to);
+      return { count: run.len, current: matches.length - current - 1, rangeLabel: first === last ? first : first + ' ~ ' + last };
+    };
+    const win = summarizeStreak(m => m.res === 'W');
+    const unbeaten = summarizeStreak(m => m.res !== 'L');
+    return {
+      team: {
+        played: matches.length, won: wins, drawn: matches.length - wins - losses, lost: losses, goalsFor, goalsAgainst,
+        gd: goalsFor - goalsAgainst, cleanSheets: matches.filter(m => m.ga === 0).length,
+        failedToScore: matches.filter(m => m.gf === 0).length
+      },
+      split: { home: summarizeVenue(true), away: summarizeVenue(false) },
+      guide: { recentForm: matches.slice(-5).map(m => ({ result: m.res })), longestWinStreak: win, longestUnbeatenStreak: unbeaten,
+        currentWinStreak: win.current, currentUnbeatenStreak: unbeaten.current }
+    };
   }
 
   // ===== 휴식 주간 전후 흐름 카드 (개요 탭에서 라운드별 누적 승점 아래로 독립 배치) =====
@@ -6623,6 +6678,7 @@
   // 경기를 추가하면 자동으로 갱신됩니다. (시즌 합계는 개요 탭의 "구단 기록" 카드가 담당)
   let teamRecordCompetition = 'league';
   let teamAnalysisCompetition = 'league';
+  let teamOverviewCompetition = 'league';
   function syncClubCompetitionFilter(id, mode, onChange) {
     const filter = document.getElementById(id);
     if (!filter) return;
@@ -7125,19 +7181,19 @@
     return 'idx-avg';
   }
 
-  function buildRecordCardHtml(t, rank, total, compact) {
+  function buildRecordCardHtml(t, rank, total, compact, scopedSplit) {
     const gpg = t.played > 0 ? (t.goalsFor / t.played).toFixed(1) : '0.0';
     const gapg = t.played > 0 ? (t.goalsAgainst / t.played).toFixed(1) : '0.0';
     const gdClass = t.gd > 0 ? 'gd-pos' : (t.gd < 0 ? 'gd-neg' : 'gd-zero');
-    const { home, away } = computeHomeAwayRecord(t.nameEn, t.nameKo);
+    const { home, away } = scopedSplit || computeHomeAwayRecord(t.nameEn, t.nameKo);
     const homeAwayValue = (rec) => `${rec.won}/${rec.played}${isKorean ? '승' : ' W'}`;
 
-    const leagueAvgGpg = computeLeagueAvgGoalsPerGame();
+    const leagueAvgGpg = scopedSplit ? 0 : computeLeagueAvgGoalsPerGame();
     const played = t.played || 0;
     const gfPerGame = played > 0 ? t.goalsFor / played : 0;
     const gaPerGame = played > 0 ? t.goalsAgainst / played : 0;
     const attackIndex = (played > 0 && leagueAvgGpg > 0) ? Math.round((gfPerGame / leagueAvgGpg) * 100) : null;
-    const defensePerfect = played > 0 && t.goalsAgainst === 0;
+    const defensePerfect = !scopedSplit && played > 0 && t.goalsAgainst === 0;
     const defenseIndex = (played > 0 && leagueAvgGpg > 0 && !defensePerfect)
       ? Math.round((leagueAvgGpg / gaPerGame) * 100) : null;
 
@@ -7171,15 +7227,16 @@
     const recordTier = { pts: 'a', played: 'a', wdl: 'a', gf: 'b', ga: 'b', gd: 'b' };
     const recordRowsOrdered = compact
       ? recordOrder.map(k => rows.find(r => r.k === k))
-      : rows;
+      : scopedSplit ? rows.filter(r => !['pts', 'atk', 'def'].includes(r.k) &&
+        (r.k !== 'home' || home.played > 0) && (r.k !== 'away' || away.played > 0)) : rows;
     recordRowsOrdered.forEach(r => { if (!recordTier[r.k]) recordTier[r.k] = 'c'; });
 
     return `
       <div class="ti-record-card${compact ? ' ti-record-card-compact' : ''}">
-        <div class="ti-record-rank">
+        ${scopedSplit ? '' : `<div class="ti-record-rank">
           <span class="ti-record-rank-num">${rank}</span>
           <span class="ti-record-rank-label lbl" data-en="of ${total} teams" data-ko="위 (총 ${total}팀)">${isKorean ? `위 (총 ${total}팀)` : `of ${total} teams`}</span>
-        </div>
+        </div>`}
         <div class="ti-record-grid">
           ${recordRowsOrdered.map(r => `
             <div class="ti-record-item"${compact ? ` data-tier="${recordTier[r.k]}"` : ''}>
@@ -7307,14 +7364,6 @@
         ${buildPrevSeasonDeltaHtml(t, rank, p)}
       </div>
     `;
-  }
-
-  function renderTeamRecordTab() {
-    const el = document.getElementById('teamInfoRecordTab');
-    if (!el) return;
-    const info = getMyRankedTeam();
-    if (!info) { el.innerHTML = ''; return; }
-    el.innerHTML = buildRecordCardHtml(info.team, info.rank, info.total) + buildPrevSeasonCardHtml(info.team, info.rank);
   }
 
   // 상대전적(H2H) 탭 렌더링 — h2hHistory(data.js에서 roundsData + matchLineups의
@@ -10347,7 +10396,6 @@
   function renderTeamInfoView() {
     renderTeamInfoHeader();
     renderTeamInfoOverview();
-    renderTeamRecordTab();
     const magicTarget = document.getElementById('teamInfoMagicNumber');
     const mine = getMyRankedTeam();
     if (magicTarget) magicTarget.innerHTML = mine ? buildTeamMagicNumberHtml(mine.team, getRankedTeams('all')) : '';
