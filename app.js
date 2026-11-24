@@ -1830,55 +1830,53 @@
     if (info) {
       subParts.push(isKorean ? `현재 ${info.rank}위` : `Now #${info.rank}`);
       if (typeof info.team.pts === 'number') subParts.push(isKorean ? `승점 ${info.team.pts}` : `${info.team.pts} pts`);
-      if (typeof info.team.played === 'number') subParts.push(isKorean ? `${info.team.played}경기` : `${info.team.played} played`);
     }
+    const remaining = predictionCache.myRemainingGames;
+    if (Number.isInteger(remaining)) subParts.push(isKorean ? `${remaining}경기 남음` : `${remaining} left`);
 
-    // 한 줄 요약 칩: 가장 두드러지는 상태만 짧게 알려줍니다 (확률 기준).
-    let chip = null;
-    if (r.championPct >= 50) chip = { cls: 'is-gold', ko: '우승 유력', en: 'Title favourite' };
-    else if (r.relegatePct >= 50) chip = { cls: 'is-warn', ko: '강등권 위험', en: 'Relegation risk' };
-    else if (r.top3Pct >= 50) chip = { cls: 'is-good', ko: '상위 3위 유력', en: 'Top-3 likely' };
-    else if (r.relegatePct < 5) chip = { cls: 'is-good', ko: '강등 위험 낮음', en: 'Low relegation risk' };
-    else chip = { cls: '', ko: '중위권 경쟁', en: 'Mid-table battle' };
-
-    const relZoneLo = predictionCache.results.length - LEAGUE_RULES.relegate + 1; // 강등권 시작 순위
     const { promotion, relegation } = seasonRaceLabels(raceLimits, r.nameEn);
     const sampledNoRelegation = !relegation && r.relegatePct === 0 && predictionCache.remainingFixtureCount > 0;
-    const promoted = LEAGUE_RULES.promote;
     const hasRange = typeof r.ptsP10 === 'number' && typeof r.ptsP90 === 'number';
-    const tile = (cls, ko, en, value, subKo, subEn) => `
+    const promotionDetail = promotion || (LEAGUE_RULES.promote > 1
+      ? `${isKorean ? '승격 확률' : 'Promotion chance'} ${seasonProbabilityLabel(r.promotePct)}` : '');
+    const tile = (cls, ko, en, value, subKo = '', subEn = '') => `
       <div class="pms-tile ${cls}">
         <div class="pms-tile-label">${isKorean ? ko : en}</div>
         <div class="pms-tile-value">${value}</div>
-        ${subKo ? `<div class="pms-tile-sub">${isKorean ? subKo : subEn}</div>` : '<div class="pms-tile-sub">&nbsp;</div>'}
+        ${subKo ? `<div class="pms-tile-sub">${isKorean ? subKo : subEn}</div>` : ''}
       </div>`;
 
     host.innerHTML = `
       <div class="pms-head">
         <img class="team-logo pms-logo" src="${r.logoSrc}" data-en-name="${r.nameEn}" alt="${r.nameEn}">
-        <div class="pms-head-text">
-          <div class="pms-name">${name}</div>
-          <div class="pms-sub">${subParts.join(' · ')}</div>
-        </div>
-        <span class="pms-chip ${chip.cls}">${isKorean ? chip.ko : chip.en}</span>
+        <div class="pms-name">${name}</div>
+      </div>
+      <div class="pms-title">
+        <h2 class="pms-title-label">${isKorean ? '우승 확률' : 'Title chance'}</h2>
+        <div class="pms-title-value">${seasonProbabilityLabel(r.championPct)}</div>
+        <div class="pms-sub">${subParts.join(' · ')}</div>
+        ${promotionDetail ? `<div class="pms-sub">${promotionDetail}</div>` : ''}
       </div>
       <div class="pms-tiles">
-        ${tile('pms-champ', promoted === 1 ? '우승·승격 확률' : '승격 확률', promoted === 1 ? 'Title / promotion' : 'Promotion chance',
-          seasonProbabilityLabel(r.promotePct, promotion),
-          promotion ? '현재 순위와 남은 경기 기준' : `상위 ${promoted}위 이내로 마칠 확률`,
-          promotion ? 'Based on standings and remaining fixtures' : `Finish in the top ${promoted}`)}
-        ${tile('pms-top3', '상위 3위 확률', 'Top-3 chance', seasonProbabilityLabel(r.top3Pct), '3위 이내로 마칠 확률', 'Finish in top 3')}
+        ${tile('pms-top3', '상위 3위 확률', 'Top-3 chance', seasonProbabilityLabel(r.top3Pct))}
         ${tile('pms-bot3', '강등 확률', 'Relegation chance', seasonProbabilityLabel(r.relegatePct, relegation),
-          relegation ? '현재 순위와 남은 경기 기준' : sampledNoRelegation ? `${predictionCache.iterations.toLocaleString()}회 중 강등 0회` : `${relZoneLo}~${predictionCache.results.length}위로 마칠 확률`,
-          relegation ? 'Based on standings and remaining fixtures' : sampledNoRelegation ? `0 of ${predictionCache.iterations.toLocaleString()} runs` : `Finish ${relZoneLo}th–${predictionCache.results.length}th`)}
+          sampledNoRelegation ? `${predictionCache.iterations.toLocaleString()}회 중 0회` : '',
+          sampledNoRelegation ? `0 of ${predictionCache.iterations.toLocaleString()} runs` : '')}
         ${tile('pms-rank', '예상 최종순위', 'Avg. final rank', r.avgFinalRank.toFixed(1) + (isKorean ? '위' : ''),
                hasRange ? `예상 승점 ${r.ptsP10}~${r.ptsP90}점` : '', hasRange ? `Proj. ${r.ptsP10}–${r.ptsP90} pts` : '')}
-      </div>`;
+      </div>
+      <button type="button" class="pms-title-action">${isKorean ? '우승하려면?' : 'What would it take to win?'} <span aria-hidden="true">›</span></button>`;
+
+    host.querySelector('.pms-title-action').addEventListener('click', () => {
+      raceQuestion = 'title';
+      window.setPredictTab('race');
+      document.querySelector('#raceAnswer [data-race-q="title"]')?.focus();
+    });
 
     // 시뮬레이션 결과가 새로 나왔을 때만 숫자를 세어 올립니다 (언어 전환 같은 재렌더링에서는 그대로 표시).
     if (predictCountedRef !== predictionCache) {
       predictCountedRef = predictionCache;
-      host.querySelectorAll('.pms-tile-value').forEach((el, k) => countUpTextWhenVisible(el, { delay: k * 70 }));
+      host.querySelectorAll('.pms-title-value, .pms-tile-value').forEach((el, k) => countUpTextWhenVisible(el, { delay: k * 70 }));
     }
   }
 
