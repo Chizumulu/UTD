@@ -19656,3 +19656,70 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
     filter: none;
   }
 }
+
+/* 대진표 탭: 접어 둔 본선 대진표와 그 아래 지역 플레이오프 대진 사이 간격 */
+.cup-rqb-fold { margin-bottom: 12px; }
+.cup-rqb-fold .cup-fold-body { padding: 4px 10px 14px; }
+.cup-rqb-fold .cup-fold-toggle { flex: 0 0 auto; font-size: var(--fs-xs); font-weight: 700; color: var(--color-brand-text); }
+.cup-rqb-fold .cup-fold-toggle .is-open { display: none; }
+.cup-rqb-fold .cup-fold[open] .cup-fold-toggle .is-closed { display: none; }
+.cup-rqb-fold .cup-fold[open] .cup-fold-toggle .is-open { display: inline; }
+.cup-rqb-fold .cup-fold > summary::after { margin-left: 2px; }
+.cup-rqb-fold .cup-fold-title { flex: 1 1 auto; }
+
+/* ---- 지역 플레이오프: 대진표로 보기 / 표로 보기 ---- */
+.cup-view-toggle { display: inline-flex; gap: 2px; padding: 4px; margin: 4px 0 14px; border-radius: 14px; background: rgba(var(--color-tint-rgb), .08); }
+.cup-view-toggle button { border: 0; background: transparent; padding: 8px 16px; border-radius: 11px; font: inherit; font-size: var(--fs-sm); font-weight: 700; color: var(--color-text-muted); cursor: pointer; }
+.cup-view-toggle button.is-on { background: var(--color-surface); color: var(--color-text-darkest); box-shadow: 0 1px 4px rgba(var(--color-navy-rgb), .12); }
+.cup-view-toggle button:focus-visible { outline: 2px solid var(--color-navy); outline-offset: 2px; }
+.cup-rview[hidden] { display: none; }
+.cup-rd-canvas { position: relative; --br-line: rgba(var(--color-navy-rgb), .28); }
+.cup-rd-box { position: absolute; width: auto; }
+.cup-rd-head { position: absolute; top: 0; }
+.cup-rd-l { position: absolute; background: var(--br-line); border-radius: 1px; }
+.cup-rdraw .cup-br-team.is-mine { color: var(--color-brand-text); }
+.cup-rdraw .cup-br-match:has(.is-mine) { box-shadow: 0 0 0 2px rgba(var(--color-tint-rgb), .35); }
+.cup-rd-box.is-empty { background: transparent; box-shadow: inset 0 0 0 2px rgba(var(--color-navy-rgb), .14); border-style: dashed; }
+.cup-rd-box.is-empty .cup-br-team + .cup-br-team { border-top-color: rgba(var(--color-navy-rgb), .1); }
+.cup-rd-canvas { width: 100%; min-width: 880px; }
+
+/* ---- 컵대회 소개 탭: 치주물루 경기 일정 (메인 다음경기 카드와 같은 모양) ---- */
+.cup-mymatch { margin: 4px 0 24px; }
+.cup-mymatch .cup-mymatch-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 6px 4px 12px; color: var(--color-text-dark); }
+.cup-mymatch .next-match-strip { margin: 0 0 12px; }
+.cup-mymatch .next-match-strip:last-child { margin-bottom: 0; }
+.cup-mymatch-card .cup-mymatch-big { display: block; font-weight: 900; line-height: 1.2; color: var(--color-text-darkest); }
+.cup-mymatch-card .cup-mymatch-score { font-size: var(--fs-2xl); }
+.cup-mymatch-card .cup-mymatch-tbd { font-size: var(--fs-xl); color: var(--color-text-muted); }
+@media (max-width: 600px) {
+  .cup-mymatch-card .cup-mymatch-tbd { font-size: var(--fs-lg); }
+}
+.ha-badge.ha-tbd { background: var(--color-bg-table-alt); color: var(--color-text-muted); }
+
+/* 컵 패널: 상대 팀명 강조 ("vs"는 작고 흐리게, 팀명은 크고 진하게) */
+.nmc-next .nmc-vs { font-size: var(--fs-xs); font-weight: 600; color: var(--color-text-muted); margin-right: 2px; }
+.nmc-next .nmc-opp { font-size: var(--fs-md); font-weight: 800; color: var(--color-brand-text); }
+
+/* =====================================================================
+   다음경기 카드(PC): 하단 줄(홈 · 날씨 · 미리보기 · 아이콘) 높이를 더 축소 (32px → 22px)
+   - 카드가 옆 칸(컵 박스)에 맞춰 세로로 늘어날 때 남는 공간이 하단 줄 아래에 생기던 문제도 같이 해결:
+     카드를 세로 flex로 만들고 위쪽(.nmh-top)이 남는 높이를 가져가게 해서 하단 줄은 항상 카드 맨 아래에 붙습니다.
+   - 줄 높이는 --nmh-row 하나로 조절하세요. (되돌리려면 이 블록만 지우면 됩니다.)
+   ===================================================================== */
+@media (min-width: 721px) {
+  .next-match-strip.nms-merged { --nmh-row: 22px; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding-bottom: 4px; }
+  .next-match-strip.nms-merged .nmh-top { flex: 1 1 auto; padding: 4px 0; }
+  .next-match-strip.nms-merged .nmh-bottom { flex: none; align-self: stretch; width: 100%; padding-top: 1px; margin-top: 6px; }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged { flex: none; align-self: stretch; width: 100%; }
+  .next-match-strip.nms-merged .nmp-card.nmp-merged .nmp-toggle { margin: 2px auto; height: calc(var(--nmh-row) - 4px); }
+  .next-match-strip.nms-merged .nms-action-btn { width: 20px; height: 20px; }
+}
+
+/* 컵 패널(오른쪽 세로 카드, ≥1200px): 영문처럼 단계명이 길면 잘리지 않고 줄바꿈되게 (기본 nowrap/overflow 해제) */
+@media (min-width: 1200px) {
+  .nmc:not([hidden]) .nmc-body { width: 100%; white-space: normal; overflow: visible; text-align: center; }
+  .nmc:not([hidden]) .nmc-stage,
+  .nmc:not([hidden]) .nmc-stage-sub,
+  .nmc:not([hidden]) .nmc-next { max-width: 100%; text-align: center; overflow-wrap: anywhere; text-wrap: balance; }
+  .nmc:not([hidden]) .nmc-next { white-space: normal; }
+}

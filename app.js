@@ -493,6 +493,7 @@
     return cups.find(function (x) { return x.id === cupSelectedId; }) || cups[0] || null;
   }
   let cupTab = 'about', cupStickyObs = null;
+  let cupRegionalView = 'bracket'; // 지역 플레이오프 보기 방식: 'bracket'(대진표로 보기) | 'table'(표로 보기)
   // data.js 에 divisionTwo 가 없을 때 쓰는 FA컵 2부 12팀 기본값 (data.js 의 divisionTwo 가 있으면 그쪽이 우선)
   const CUP_FA_DIV2_FALLBACK = [
     { en: 'Songwe Border United FC', ko: '송궤 보더 유나이티드 FC' }, { en: 'Mzuzu City Hammers FC', ko: '음주주 시티 해머스 FC' },
@@ -657,6 +658,137 @@
     const name = isKorean ? (nameKoOverride || (t && t.nameKo) || nameEn) : nameEn;
     const logo = t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '';
     return '<div class="cup-team' + (away ? ' is-away' : '') + '">' + logo + '<span>' + cupEsc(name) + '</span></div>';
+  }
+  // 컵대회 소개 탭 맨 위: 치주물루가 낀 컵 경기 일정. 카드 모양은 메인의 "다음경기"(next-match-strip / nmh-*)를 그대로 씁니다.
+  // 날짜(date)·시간(time)이 아직 없으면 "일정 미정"으로 보여주고, 점수가 들어오면 날짜 자리에 스코어가 나와요.
+  function cupMyMatchesHtml(c) {
+    const ko = isKorean;
+    const mine = [];
+    (Array.isArray(c.rounds) ? c.rounds : []).forEach(function (r) {
+      ((r && r.matches) || []).forEach(function (m) {
+        if (!m || !m.home || !m.away) return;
+        if (isMyTeamName(m.home, m.homeKo) || isMyTeamName(m.away, m.awayKo)) mine.push({ r: r, m: m });
+      });
+    });
+    const title = '<h3 class="cup-round-title cup-mymatch-title">' + (ko ? '치주물루 경기 일정' : 'Chizumulu fixtures') + '</h3>';
+    if (!mine.length) {
+      return '<section class="cup-mymatch">' + title + '<p class="cup-br-note">' + (ko ? '치주물루의 컵 경기 대진이 나오면 이곳에 표시돼요.' : 'Chizumulu\'s cup fixtures will appear here once the draw is out.') + '</p></section>';
+    }
+    const nmName = function (full) { const f = String(full); return '<span class="nm-short">' + cupEsc(f.split(' ')[0]) + '</span><span class="nm-full">' + cupEsc(f) + '</span>'; };
+    const team = function (en, koName, isMine) {
+      const t = leagueData.find(function (x) { return x.nameEn === en; });
+      const full = ko ? (koName || (t && t.nameKo) || en) : en;
+      let crest;
+      if (isMine) crest = '<img class="team-logo nmh-crest" src="./dd.svg" alt="Chizumulu United FC">';
+      else if (t && t.logoSrc) crest = '<img class="team-logo nmh-crest opp-logo" title="' + cupEsc(full) + '" src="' + cupEsc(t.logoSrc) + '" alt="' + cupEsc(en) + '">';
+      else crest = '<span class="team-logo nmh-crest opp-logo nmh-crest-fallback" title="' + cupEsc(full) + '">' + cupEsc(String(en || '?').trim().charAt(0).toUpperCase()) + '</span>';
+      return '<div class="nmh-team' + (isMine ? ' nmh-team-mine' : '') + '">' + crest + '<span title="' + cupEsc(full) + '">' + nmName(full) + '</span></div>';
+    };
+    const cards = mine.map(function (x) {
+      const m = x.m, r = x.r;
+      const iAmHome = isMyTeamName(m.home, m.homeKo);
+      const played = m.homeScore != null && m.awayScore != null;
+      const roundLbl = ko ? (r.labelKo || r.labelEn) : (r.labelEn || r.labelKo);
+      let dday = '', meta = '';
+      if (played) {
+        meta = '<div class="cup-mymatch-big cup-mymatch-score">' + m.homeScore + ' : ' + m.awayScore + '</div>' + (m.pso ? '<div class="nmh-meta">PSO ' + cupEsc(m.pso) + '</div>' : '');
+      } else if (m.date) {
+        const ms = kickoffUTCMillis(m.date, m.time);
+        if (ms) {
+          const left = Math.max(0, Math.round((kstMidnightUTCMillis(ms) - kstMidnightUTCMillis(Date.now())) / 86400000));
+          dday = left === 0 ? 'D-DAY' : 'D-' + left;
+        }
+        const kt = formatKickoff({ kickoffDate: m.date, kickoffTime: m.time });
+        meta = (dday ? '<div class="nmh-dday">' + dday + '</div>' : '') + '<div class="nmh-meta-line"><div class="nmh-meta">' + (kt || cupEsc(m.date)) + '</div></div>';
+      } else {
+        meta = '<div class="cup-mymatch-big cup-mymatch-tbd">' + (ko ? '일정 미정' : 'TBD') + '</div>' +
+          '<div class="nmh-meta-line"><div class="nmh-meta">' + (ko ? '날짜·시간·장소 발표 대기' : 'Date, time and venue to be announced') + '</div></div>';
+      }
+      const venue = ko ? (m.venueKo || m.venueEn) : (m.venueEn || m.venueKo);
+      // 홈/원정은 포스터에 적혀 있지 않아요. 날짜나 장소가 발표되기 전(또는 data.js 경기에 haConfirmed: true 가 없을 때)에는 "미정"으로 둡니다.
+      const haKnown = !!(m.haConfirmed || m.venueKo || m.venueEn);
+      const ha = !haKnown ? 'ha-tbd' : (iAmHome ? 'ha-home' : 'ha-away');
+      const haText = !haKnown ? (ko ? '홈·원정 미정' : 'Home/away TBD') : (iAmHome ? (ko ? '홈' : 'HOME') : (ko ? '원정' : 'AWAY'));
+      return '<div class="next-match-strip cup-mymatch-card">' +
+        '<div class="nmh-eyebrow"><span>' + (ko ? '컵대회' : 'Cup') + ' · ' + cupEsc(roundLbl) + '</span>' + (dday ? '<span class="nmh-eyebrow-dday">' + dday + '</span>' : '') + '</div>' +
+        '<div class="nmh-top">' + team(m.home, m.homeKo, iAmHome) +
+        '<div class="nmh-center">' + meta + (venue ? '<div class="nmh-venue">' + svgIcon('stadium') + ' ' + cupEsc(venue) + '</div>' : '') + '</div>' +
+        team(m.away, m.awayKo, !iAmHome) + '</div>' +
+        '<div class="nmh-bottom"><span class="ha-badge ' + ha + ' nms-ha">' + haText + '</span></div></div>';
+    }).join('');
+    return '<section class="cup-mymatch">' + title + cards + '</section>';
+  }
+  // 지역 플레이오프 대진을 본선 대진표와 같은 모양으로 그립니다. (플레이오프 1 → 플레이오프 2라운드 → 지역 1라운드)
+  // 칸 위치는 고정 픽셀로 계산해서 연결선까지 CSS만으로 그려요. (화면 크기를 재지 않아 숨겨진 탭에서도 안전)
+  // 어느 승자가 어느 경기로 가는지는 이번 FAM 대진 기준: PO1 → PO2 3번째 경기 → 1라운드 5번째 경기, PO2 2번째·1번째 경기 → 1라운드 6번째 경기.
+  function cupRegionalDrawHtml(c) {
+    const ko = isKorean;
+    const byLabel = function (labelKo) { return (c.rounds || []).find(function (r) { return r && r.labelKo === labelKo; }); };
+    const po1 = byLabel('플레이오프 1라운드'), po2 = byLabel('플레이오프 2라운드'), r1 = byLabel('지역 1라운드');
+    if (!po1 || !po2 || !r1 || (po1.matches || []).length < 1 || (po2.matches || []).length < 3 || (r1.matches || []).length < 8) return '';
+    const PW = 22, PG = 4, HEAD = 56, M = 72, S = 96; // 가로는 % (열 너비 22% + 간격 4%) → 화면 폭에 맞춰 늘고 줄어요. 세로는 px
+    const yR1 = function (i) { return HEAD + S * (i + 0.5); };
+    const y5 = yR1(4);
+    const winnerSide = function (m) {
+      if (!m || m.homeScore == null || m.awayScore == null) return '';
+      if (m.homeScore !== m.awayScore) return m.homeScore > m.awayScore ? 'h' : 'a';
+      if (m.pso && /^\d+\s*:\s*\d+$/.test(m.pso)) { const q = m.pso.split(':').map(Number); return q[0] > q[1] ? 'h' : (q[1] > q[0] ? 'a' : ''); }
+      return '';
+    };
+    const row = function (nameEn, nameKo, score, isWin) {
+      if (!nameEn) return '<div class="cup-br-team is-tbd"><span class="cup-br-name">' + (ko ? '미정' : 'TBD') + '</span><span class="cup-br-score"></span></div>';
+      if (nameEn.indexOf(' / ') >= 0) {
+        return '<div class="cup-br-team is-tbd" title="' + cupEsc(ko ? (nameKo || nameEn) : nameEn) + '"><i class="cup-br-dot"></i><span class="cup-br-name">' + (ko ? '앞 경기 승자' : 'Winner TBD') + '</span><span class="cup-br-score"></span></div>';
+      }
+      const t = leagueData.find(function (x) { return x.nameEn === nameEn; });
+      const name = ko ? (nameKo || (t && t.nameKo) || nameEn) : nameEn;
+      const logo = t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '<i class="cup-br-dot"></i>';
+      const mine = isMyTeamName(nameEn, nameKo) ? ' is-mine' : '';
+      return '<div class="cup-br-team' + (isWin ? ' is-win' : '') + mine + '">' + logo + '<span class="cup-br-name">' + cupEsc(name) + '</span><span class="cup-br-score">' + (score != null ? score : '') + '</span></div>';
+    };
+    const box = function (m, x, yc) {
+      const w = winnerSide(m);
+      return '<div class="cup-br-match cup-rd-box" style="left:' + x + '%;top:' + (yc - M / 2) + 'px;width:' + PW + '%">' +
+        row(m.home, m.homeKo, m.homeScore, w === 'h') + row(m.away, m.awayKo, m.awayScore, w === 'a') + '</div>';
+    };
+    const hl = function (x1, x2, y) { return '<i class="cup-rd-l" style="left:' + x1 + '%;top:' + (y - 1) + 'px;width:' + (x2 - x1) + '%;height:2px"></i>'; };
+    const vl = function (x, y1, y2) { return '<i class="cup-rd-l" style="left:calc(' + x + '% - 1px);top:' + Math.min(y1, y2) + 'px;width:2px;height:' + Math.abs(y2 - y1) + 'px"></i>'; };
+    const x1 = 0, x2 = PW + PG, x3 = 2 * (PW + PG), x4 = 3 * (PW + PG);
+    let out = '';
+    // 열 제목
+    [[x1, po1, 1], [x2, po2, 3], [x3, r1, 8]].forEach(function (h) {
+      out += '<div class="cup-br-head cup-rd-head" style="left:' + h[0] + '%;width:' + PW + '%;height:' + HEAD + 'px"><b>' + cupEsc(ko ? h[1].labelKo : h[1].labelEn) + '</b><small>' + h[2] + (ko ? '경기' : (h[2] === 1 ? ' match' : ' matches')) + '</small></div>';
+    });
+    // 지역 2라운드: 아직 발표 전이라 빈 칸만 만들어 둡니다. (1라운드 승자 8팀 → 4팀. 대진이 없어 연결선 없이 빈 칸만)
+    out += '<div class="cup-br-head cup-rd-head" style="left:' + x4 + '%;width:' + PW + '%;height:' + HEAD + 'px"><b>' + (ko ? '지역 2라운드' : 'Regional Round 2') + '</b><small>' + (ko ? '대진 미정' : 'Draw TBD') + '</small></div>';
+    // 경기 칸
+    out += box(po1.matches[0], x1, y5);
+    out += box(po2.matches[2], x2, y5);
+    out += box(po2.matches[1], x2, y5 + 80);
+    out += box(po2.matches[0], x2, y5 + 160);
+    r1.matches.slice(0, 8).forEach(function (m, i) { out += box(m, x3, yR1(i)); });
+    // 연결선
+    out += hl(x1 + PW, x2, y5);                 // PO1 → PO2(3번째)
+    out += hl(x2 + PW, x3, y5);                 // PO2(3번째) → 1라운드(5번째)
+    const xm = x2 + PW + PG / 2, y6 = yR1(5);
+    out += hl(x2 + PW, xm, y5 + 80) + hl(x2 + PW, xm, y5 + 160) + vl(xm, y5 + 80, y5 + 160) + hl(xm, x3, y6); // PO2(2·1번째) → 1라운드(6번째)
+    for (let k = 0; k < 4; k++) {
+      const ym = (yR1(2 * k) + yR1(2 * k + 1)) / 2;
+      out += '<div class="cup-br-match cup-rd-box is-empty" style="left:' + x4 + '%;top:' + (ym - M / 2) + 'px;width:' + PW + '%">' + row(null) + row(null) + '</div>';
+    }
+    const ch = HEAD + S * 8 + 8;
+    return '<section class="cup-bracket cup-rdraw"><div class="cup-br-scroll"><div class="cup-rd-canvas" style="height:' + ch + 'px">' + out + '</div></div>' +
+      '<p class="cup-br-note">' + (ko ? '한 경기에서 지면 탈락하는 토너먼트예요. 지역 2라운드 칸은 자리만 만들어 둔 것이고, 실제 대진과 연결은 발표되면 채워 넣을게요. 날짜와 장소도 나오는 대로 업데이트돼요.' : 'This is a knockout: lose once and you are out. The Regional Round 2 slots are placeholders; the real fixtures and links will be added once announced, along with dates and venues.') + '</p></section>';
+  }
+  function setCupRegionalView(v) {
+    cupRegionalView = v === 'table' ? 'table' : 'bracket';
+    document.querySelectorAll('#cupViewContent .cup-view-toggle button').forEach(function (b) {
+      const on = b.getAttribute('data-v') === cupRegionalView;
+      b.classList.toggle('is-on', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('#cupViewContent .cup-rview').forEach(function (p) {
+      p.hidden = p.getAttribute('data-rview') !== cupRegionalView;
+    });
   }
   function cupBracketHtml(c) {
     const defs = c.bracket;
@@ -847,7 +979,7 @@
     const bracketHtml = cupBracketHtml(c);
     const roundsList = (c.rounds || []).filter(function (r) { return r && r.matches && r.matches.length; });
     const panels = [
-      { id: 'about', ko: '소개', en: 'About', html: heroHtml + kvBlock(ko ? '대회 안내' : 'About', rowsAbout) },
+      { id: 'about', ko: '소개', en: 'About', html: heroHtml + cupMyMatchesHtml(c) + kvBlock(ko ? '대회 안내' : 'About', rowsAbout) },
       { id: 'schedule', ko: '일정', en: 'Schedule', html: scheduleBlock(ko ? '일정' : 'Schedule', schedRows) },
       { id: 'teams', ko: '참가팀', en: 'Teams', html: kvBlock('', rowsTeams) + topFlightHtml + regionalHtml },
       { id: 'prize', ko: '상금', en: 'Prize', html: kvBlock('', rowsPrize) },
@@ -876,9 +1008,16 @@
         '<div class="cup-rqb-flow"><div class="cup-rqb-from"><div class="cup-rqb-cap">' + (ko ? '참가 ' + total + '팀' : total + ' teams') + '</div>' + pills + '</div>' +
         '<div class="cup-rqb-arrow" aria-hidden="true">›</div>' +
         '<div class="cup-rqb-to"><div class="cup-rqb-cap">' + (ko ? '32강 진출 ' + adv + '팀' : adv + ' advance') + '</div>' + slots + '</div></div>' +
-        '<p class="cup-br-note">' + (ko ? '지역 플레이오프 추첨(11/20) 후 대진이 확정돼요 · 경기는 11/28 – 12/27 · 대진이 나오면 이곳에 업데이트돼요.' : 'The bracket is set after the regional draw (20 Nov). Matches run 28 Nov – 27 Dec and will be updated here.') + '</p></section>';
+        '<p class="cup-br-note">' + (ko ? '지역 플레이오프는 리그가 아니라 토너먼트예요 · 한 경기에서 지면 탈락 · 경기는 11/28 – 12/27 · 아래 대진은 FAM 발표 기준이고, 날짜와 장소는 나오는 대로 업데이트돼요.' : 'The regional play-offs are a knockout, not a league: lose once and you are out. Matches run 28 Nov – 27 Dec. Fixtures below follow the FAM draw; dates and venues will be added once announced.') + '</p></section>';
     }).join('');
-    let bracketPanel = regionalBracketHtml + (regionalBracketHtml && bracketHtml ? '<h3 class="cup-rqb-sec">' + (ko ? '본선 대진표 (32강~결승)' : 'Main bracket (Round of 32 – Final)') + '</h3>' : '') + bracketHtml;
+    // 본선 대진표(32강~결승)는 접어 두고(기본 닫힘), 그 아래에 지역 플레이오프 대진을 둡니다.
+    const mainBracketFold = bracketHtml
+      ? '<div class="cup-folds cup-rqb-fold"><details class="cup-fold"><summary><span class="cup-fold-title">' + (ko ? '본선 대진표' : 'Main bracket') + '</span>' +
+        '<span class="cup-fold-meta">' + (ko ? '32강 ~ 결승' : 'Round of 32 – Final') + '</span>' +
+        '<span class="cup-fold-toggle"><span class="is-closed">' + (ko ? '펼쳐보기' : 'Show') + '</span><span class="is-open">' + (ko ? '접기' : 'Hide') + '</span></span></summary>' +
+        '<div class="cup-fold-body">' + bracketHtml + '</div></details></div>'
+      : '';
+    let bracketPanel = mainBracketFold + regionalBracketHtml;
 
     const rounds = roundsList;
     let rhtml = '';
@@ -901,7 +1040,18 @@
         rhtml += '</div></section>';
       });
     }
-    bracketPanel += rhtml;
+    const regionalDrawHtml = cupRegionalDrawHtml(c);
+    if (regionalDrawHtml) {
+      if (cupRegionalView !== 'table') cupRegionalView = 'bracket';
+      const tgl = function (v, label) {
+        return '<button type="button" role="tab" data-v="' + v + '" class="' + (cupRegionalView === v ? 'is-on' : '') + '" aria-selected="' + (cupRegionalView === v ? 'true' : 'false') + '" onclick="setCupRegionalView(\'' + v + '\')">' + label + '</button>';
+      };
+      bracketPanel += '<div class="cup-view-toggle" role="tablist">' + tgl('bracket', ko ? '대진표로 보기' : 'Bracket view') + tgl('table', ko ? '표로 보기' : 'List view') + '</div>' +
+        '<div class="cup-rview" data-rview="bracket"' + (cupRegionalView === 'bracket' ? '' : ' hidden') + '>' + regionalDrawHtml + '</div>' +
+        '<div class="cup-rview" data-rview="table"' + (cupRegionalView === 'table' ? '' : ' hidden') + '>' + rhtml + '</div>';
+    } else {
+      bracketPanel += rhtml;
+    }
     html += '<div class="cup-panels">' + panels.map(function (t) {
       return '<div class="cup-panel' + (t.id === cupTab ? ' is-on' : '') + '" data-cup-panel="' + t.id + '"' + (t.id === cupTab ? '' : ' hidden') + '>' +
         (t.id === 'bracket' ? bracketPanel : t.html) + '</div>';
@@ -5056,7 +5206,7 @@
   // 컵 경기가 아직 없으면(대진 발표 전) 일정표(scheduleKo/En)의 다음 일정을 대신 보여줍니다. PC(1101px↑)에서만 보입니다.
   function nmcStageIdx(label) {
     const s = String(label || '').toLowerCase();
-    if (/플레이오프|예선|play-?off|qualif/.test(s)) return 0;
+    if (/플레이오프|예선|지역|play-?off|qualif|regional/.test(s)) return 0;
     if (/32/.test(s)) return 1;
     if (/16/.test(s)) return 2;
     if (/quarter|8강/.test(s)) return 3;
@@ -5127,7 +5277,7 @@
         const draw = m.homeScore === m.awayScore;
         if (draw && m.pso && /^\d+\s*:\s*\d+$/.test(m.pso)) { const p = m.pso.split(':').map(Number); myW = iAmHome ? p[0] > p[1] : p[1] > p[0]; }
         else if (draw) myW = true;
-        if (!myW && stage >= 1) eliminated = true; // 예선은 조별 리그라 한 경기 패배로 탈락 처리하지 않음
+        if (!myW) eliminated = true; // 예선(지역 플레이오프)도 토너먼트라 한 경기 패배로 탈락
       }
       stageTitle = ko ? (last.r.labelKo || steps[stage]) : (last.r.labelEn || steps[stage]);
     }
@@ -5154,38 +5304,34 @@
     } else {
       const sched = (ko ? cup.scheduleKo : cup.scheduleEn) || [];
       const item = sched.find(function (x) { return !(x[2] && x[2].end) || x[2].end >= todayStr; });
-      nextLabel = ko ? '다음 일정' : 'Next date';
-      nextMain = item ? item[1] : (ko ? '대진 발표 대기 중' : 'Awaiting fixtures');
-      nextSub = item ? item[0] : '';
+      // 날짜가 아직 안 나온 우리 경기(예: 지역 1라운드)가 있으면 상대 팀을 보여주고, 날짜 자리에는 지역 플레이오프 기간을 대신 넣습니다.
+      const pend = mine.find(function (x) { return x.m.homeScore == null && x.m.awayScore == null && !x.m.date; });
+      if (pend) {
+        const pm = pend.m, iAmHome = isMyTeamName(pm.home, pm.homeKo);
+        const oEn = iAmHome ? pm.away : pm.home, oKo = iAmHome ? pm.awayKo : pm.homeKo;
+        const oTeam = leagueData.find(function (x) { return x.nameEn === oEn; });
+        const poItem = sched.find(function (x) { return /플레이오프|play-?off/i.test(String(x[1])) && !/추첨|draw|발표|announce/i.test(String(x[1])); }); // '지역 플레이오프' 경기 기간 줄 (추첨·발표 줄 제외)
+        nextLabel = ko ? '다음 경기' : 'Next match';
+        nextMain = 'vs ' + (ko ? (oKo || (oTeam && oTeam.nameKo) || oEn) : oEn);
+        nextSub = (poItem ? poItem[0] : (ko ? '11/28 – 12/27' : '28 Nov – 27 Dec')).replace(/\s*[–-]\s*/, ' ~ ');
+      } else {
+        nextLabel = ko ? '다음 일정' : 'Next date';
+        nextMain = item ? item[1] : (ko ? '대진 발표 대기 중' : 'Awaiting fixtures');
+        nextSub = item ? item[0] : '';
+      }
     }
     const logo = cup.logoSrc2 || cup.logoSrc;
     const logoHtml = logo
       ? `<img class="nmc-logo" src="${esc(logo)}" alt="" onerror="this.outerHTML='<span class=&quot;nmc-logo nmc-logo-ph&quot;>🏆</span>'">`
       : '<span class="nmc-logo nmc-logo-ph">🏆</span>';
     let stageLine = eliminated ? (ko ? '탈락' : 'Eliminated') : [stageTitle.replace(/\s*\(.*\)/, ''), stageSub].filter(Boolean).join(' · ');
-    // 예선(조별 리그) 진행 중: "3위 | 2승 1무 0패". cup.standing = { rank, w, d, l } 을 직접 적으면 그 값을 쓰고,
-    // 없으면 rounds 의 예선 경기 결과로 승/무/패만 계산합니다(순위는 생략). 기록이 없으면 기존 문구("예선 · 북부 20팀").
-    let stageSubLine = '';
-    if (stage === 0 && !eliminated) {
-      let rec = cup.standing && typeof cup.standing === 'object' ? cup.standing : null;
-      if (!rec) {
-        let w = 0, d = 0, l = 0, played = 0;
-        mine.forEach(function (x) {
-          const m = x.m;
-          if (m.homeScore == null || m.awayScore == null) return;
-          if (nmcStageIdx((x.r.labelKo || '') + ' ' + (x.r.labelEn || '')) > 0) return;
-          const iAmHome = isMyTeamName(m.home, m.homeKo);
-          const my = iAmHome ? m.homeScore : m.awayScore, op = iAmHome ? m.awayScore : m.homeScore;
-          played++; if (my > op) w++; else if (my === op) d++; else l++;
-        });
-        if (played) rec = { w: w, d: d, l: l };
-      }
-      if (rec) {
-        const wdl = ko ? `${rec.w || 0}승 ${rec.d || 0}무 ${rec.l || 0}패` : `W${rec.w || 0} D${rec.d || 0} L${rec.l || 0}`;
-        stageLine = rec.rank ? (ko ? `${rec.rank}위 | ${wdl}` : `#${rec.rank} | ${wdl}`) : wdl;
-        stageSubLine = [stageTitle.replace(/\s*\(.*\)/, ''), stageSub].filter(Boolean).join(' · ');
-      }
+    // 예선(지역 플레이오프) 단계에서는 "북부 | 지역 1라운드" 형태로 권역을 앞에 보여줍니다.
+    if (!eliminated && stage === 0 && region) {
+      const regShort = ko ? region.nameKo.replace(/\s*지역$/, '') : region.nameEn.replace(/\s*Region$/, '');
+      stageLine = regShort + ' | ' + stageTitle.replace(/\s*\(.*\)/, '');
     }
+    // 예선(지역 플레이오프)은 리그가 아니라 토너먼트라 승/무/패 대신 단계와 다음 경기만 보여줍니다.
+    const stageSubLine = '';
     el.hidden = false;
     el.setAttribute('role', 'group');
     el.onclick = function (e) { if (window.matchMedia('(max-width: 1199px)').matches && !cupMode && !(e.target.closest && e.target.closest('.nmc-btn'))) toggleCupView(); }; // nmc-click: 모바일 슬림 바는 바 전체가 버튼
@@ -5193,7 +5339,7 @@
       <div class="nmc-head" title="${esc(ko ? cup.nameKo : cup.nameEn)}">${logoHtml}<span class="nmc-tag">${ko ? '컵대회' : 'Cup'}</span></div>
       <div class="nmc-body">
         <p class="nmc-stage">${esc(stageLine)}</p><span class="nmc-state nmc-state-${esc(cup.status || 'upcoming')}">${esc(({ upcoming: ko ? '개막 전' : 'Upcoming', live: ko ? '진행 중' : 'Live', finished: ko ? '종료' : 'Finished' })[cup.status] || (ko ? '개막 전' : 'Upcoming'))}</span>${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
-        <div class="nmc-next"><b>${esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
+        <div class="nmc-next"><b>${/^vs /.test(nextMain) ? `<span class="nmc-vs">vs</span> <span class="nmc-opp">${esc(nextMain.slice(3))}</span>` : esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
       </div>
       <button type="button" class="nmc-btn" onclick="toggleCupView()">${ko ? '자세히 보기' : 'Details'}</button>`;
     try { nmsSyncPanelLive(); } catch (e) { /* 실황 소식은 부가 기능 */ }

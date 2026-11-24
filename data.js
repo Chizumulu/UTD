@@ -6090,14 +6090,13 @@ const cupTournaments = [
     logoSrc2: './fa-cup-logo.png', // 컵 화면 상단 두 번째 로고(FAM 로고 오른쪽). 없으면 표시 안 함
     chipKo: '대통령배 FA컵', chipEn: 'Presidential FA Cup',
     status: 'upcoming',
-    // 상단 우측 컵 패널의 "3위 | 2승 1무 0패" 표시용(예선 조별 리그 진행 중에만). 경기 후 직접 수정하세요. 이 줄이 없으면 rounds 의 예선 결과로 승/무/패만 자동 계산합니다.
-    // standing: { rank: 3, w: 2, d: 1, l: 0 },
-    descKo: '말라위 공화국 대통령과 말라위축구협회(FAM)가 주최하고 축구협회가 주관하는 컵대회예요. 32강 이전은 지역 플레이오프로 치르고, 32강부터 결승까지는 토너먼트로 진행돼요. 1부 16개 팀은 32강에 자동 진출해요. 초대 대회로, 모든 디비전 클럽에 전국 무대를 열어 주고 유망주 발굴과 풀뿌리 축구 발전을 도모해요.',
-    descEn: 'A cup competition hosted by the President of the Republic of Malawi and the Football Association of Malawi (FAM), and organised by FAM. Regional play-offs are held before the Round of 32, and a knockout bracket runs from the Round of 32 to the final. The 16 top-flight teams advance automatically to the Round of 32. The inaugural edition aims to give clubs at every level a national stage while promoting talent identification and grassroots development.',
+    // 지역 플레이오프(예선)는 리그가 아니라 토너먼트(한 경기 패배 = 탈락)라 순위/승무패 표시는 쓰지 않습니다.
+    descKo: '말라위 공화국 대통령과 말라위축구협회(FAM)가 주최하고 말라위 스포츠부와 축구협회가 주관하는 컵대회예요. 32강 이전은 지역 플레이오프로 치르고, 32강부터 결승까지는 토너먼트로 진행돼요. 1부 16개 팀은 32강에 자동 진출해요. 초대 대회로, 모든 디비전 클럽에 전국 무대를 열어 주고 유망주 발굴과 풀뿌리 축구 발전을 도모해요.',
+    descEn: 'A cup competition hosted by the President of the Republic of Malawi and the Football Association of Malawi (FAM), and organised by the Ministry of Sports and FAM. Regional play-offs are held before the Round of 32, and a knockout bracket runs from the Round of 32 to the final. The 16 top-flight teams advance automatically to the Round of 32. The inaugural edition aims to give clubs at every level a national stage while promoting talent identification and grassroots development.',
     // 값 형식: 문자열 | 문자열 배열(줄바꿈) | { tag, name, sub, meta, badge } 목록(등급·단계 표시) | { note } 작은 주석 | { teams: [영문팀명…] } 로고 칩
     infoKo: [
       ['주최', '말라위 공화국 대통령 · FAM (말라위축구협회)'],
-      ['주관', 'FAM (말라위축구협회)'],
+      ['주관', '말라위 스포츠부 (Ministry of Sports) · FAM (말라위축구협회)'],
       ['참가 팀', [
         { tag: '1부', name: '슈퍼 리그 오브 말라위', sub: 'Super League of Malawi', meta: '16팀', badge: '32강 자동 진출', hl: true },
         { tag: '2부', name: '내셔널 디비전 리그', sub: 'National Division League', meta: '12팀' },
@@ -6143,7 +6142,7 @@ const cupTournaments = [
     ],
     infoEn: [
       ['Host', 'President of the Republic of Malawi · FAM (Football Association of Malawi)'],
-      ['Organiser', 'FAM (Football Association of Malawi)'],
+      ['Organiser', 'Ministry of Sports · FAM (Football Association of Malawi)'],
       ['Teams', [
         { tag: 'T1', name: 'Super League of Malawi', meta: '16 teams', badge: 'Auto Round of 32', hl: true },
         { tag: 'T2', name: 'National Division League', meta: '12 teams' },
@@ -6269,7 +6268,7 @@ const cupTournaments = [
           { en: 'Mafu Stars FC', ko: '마푸 스타즈 FC' }
         ] },
         { labelKo: '4부 · 지역 2부 리그 (리그 투)', labelEn: 'Regional League Two', teams: [
-          { en: 'Mzwawa FC', ko: '음즈와와 FC' },
+          { en: 'Mzwazwa FC', ko: '음즈와즈와 FC' },
           { en: 'Bwabwa FC', ko: '브와브와 FC' },
           { en: 'Chipelembe FC', ko: '치펠렘베 FC' },
           { en: 'Chikaya FC', ko: '치카야 FC' }
@@ -6285,7 +6284,28 @@ const cupTournaments = [
         ] }
       ] }
     ],
-    rounds: []
+    // 북부 지역 플레이오프 대진 (FAM 대진 포스터 기준). 날짜·시간·장소는 아직 발표 전이라 넣지 않았어요 — 나오면 date/time/venueKo 를 추가하세요.
+    // 'A / B' 로 적힌 칸은 앞 경기 승자가 들어갈 자리입니다. 지역 플레이오프는 토너먼트(패하면 탈락)이고 권역별 4팀만 32강에 진출해요.
+    rounds: [
+      { labelKo: '플레이오프 1라운드', labelEn: 'Play-off 1', matches: [
+        { home: 'Brazil Vuwa FC', homeKo: '브라질 부와 FC', away: 'Karonga United Reserve', awayKo: '카롱가 유나이티드 리저브' }
+      ] },
+      { labelKo: '플레이오프 2라운드', labelEn: 'Play-off Second Round', matches: [
+        { home: 'Likoma Stars FC', homeKo: '리코마 스타스 FC', away: 'Emazwini FC', awayKo: '에마즈위니 FC' },
+        { home: 'Santos FC', homeKo: '산투스 FC', away: 'Chandamale FC', awayKo: '찬다말레 FC' },
+        { home: 'Blue Spot FC', homeKo: '블루 스팟 FC', away: 'Brazil Vuwa / Karonga United Reserve', awayKo: '브라질 부와 / 카롱가 유나이티드 리저브 승자' }
+      ] },
+      { labelKo: '지역 1라운드', labelEn: 'First Round – Regional', matches: [
+        { home: 'Mafu Stars FC', homeKo: '마푸 스타즈 FC', away: 'Embangweni United FC', awayKo: '엠방웨니 유나이티드 FC' },
+        { home: 'Jenda United FC', homeKo: '젠다 유나이티드 FC', away: 'Songwe Border United FC', awayKo: '송궤 보더 유나이티드 FC' },
+        { home: 'Raiply FC', homeKo: '라이플리 FC', away: 'Mzuzu City Hammers FC', awayKo: '음주주 시티 해머스 FC' },
+        { home: 'Chikaya FC', homeKo: '치카야 FC', away: 'Chilumba Barracks FC', awayKo: '칠룸바 배럭스 FC' },
+        { home: 'Blue Spot / Brazil Vuwa / Karonga United Reserve', homeKo: '블루 스팟 / 브라질 부와 / 카롱가 리저브 승자', away: 'Bwabwa FC', awayKo: '브와브와 FC' },
+        { home: 'Santos / Chandamale', homeKo: '산투스 / 찬다말레 승자', away: 'Likoma Stars / Emazwini', awayKo: '리코마 스타스 / 에마즈위니 승자' },
+        { home: 'Chibavi Real Stars FC', homeKo: '치바비 리얼 스타즈 FC', away: 'Chipelembe FC', awayKo: '치펠렘베 FC' },
+        { home: 'Mzwazwa FC', homeKo: '음즈와즈와 FC', away: 'Chizumulu United FC', awayKo: '치주물루 유나이티드 FC' }
+      ] }
+    ]
   },
   {
     id: 'mmbelwaCup',
