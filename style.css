@@ -20111,12 +20111,16 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
 
 /* 컵대회 > 치주물루 경기 일정: 리그 일정과 같은 날짜 카드(rmd-day/rmd-row) 디자인.
    - 로고가 없는 상대 팀은 이름 첫 글자를 동그라미로 보여줍니다. */
-.cup-mymatch .rmd-logo.cup-logo-fb {
+.rmd-cup-card .rmd-logo.cup-logo-fb {
   display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
   border-radius: 50%; background: var(--color-border-light); color: var(--color-text-faint);
   font-weight: 700; font-size: var(--fs-lg);
 }
 .cup-mymatch .cup-mymatch-list { margin-top: 0; }
+.team-results-filters, .club-comp-filter { display: flex; flex-wrap: wrap; gap: 6px; }
+.team-results-filters .round-mode-chip, .club-comp-filter .round-mode-chip { min-width: 52px; }
+.club-comp-filter { margin-bottom: 10px; }
+.club-comp-note { margin: 0 0 10px; color: var(--color-text-muted); font-size: var(--fs-sm); }
 
 /* 컵대회 대진표(가로 스크롤): 오른쪽에 더 있다는 힌트
    1) 위쪽 안내 줄(좁은 화면에서만)  2) 스크롤 가장자리 그림자: 가려진 쪽에만 보이고 끝까지 밀면 사라집니다 */

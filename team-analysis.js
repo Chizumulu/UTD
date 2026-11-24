@@ -133,6 +133,17 @@
         if (played || src === ctx.roundsData) seen[key] = true;
       });
     });
+    (ctx.cupFixtures || []).forEach(function (fixture) {
+      var m = fixture.match;
+      if (m.postponed || !isNum(m.homeScore) || !isNum(m.awayScore)) return;
+      out.push({ roundKey: fixture.key, m: m, cup: true });
+    });
+    if (ctx.competitionScope && ctx.competitionScope !== 'league') {
+      out.sort(function (a, b) {
+        return String(a.m.kickoffDate || '').localeCompare(String(b.m.kickoffDate || ''));
+      });
+      out.forEach(function (entry, index) { entry.round = index + 1; });
+    }
     return out;
   }
 
@@ -142,11 +153,12 @@
     if (!home && !away) return null;
     var gf = home ? m.homeScore : m.awayScore;
     var ga = home ? m.awayScore : m.homeScore;
+    var penalty = entry.cup && gf === ga && /^\d+\s*:\s*\d+$/.test(m.pso || '') ? m.pso.split(':').map(Number) : null;
     return {
-      roundKey: entry.roundKey, round: entry.round, home: home,
+      roundKey: entry.roundKey, round: entry.round, home: entry.cup && !m.haKnown ? null : home,
       oppEn: home ? m.awayEn : m.homeEn,
       oppKo: home ? m.awayKo : m.homeKo,
-      gf: gf, ga: ga, res: resOf(gf, ga),
+      gf: gf, ga: ga, res: penalty ? resOf(penalty[home ? 0 : 1], penalty[home ? 1 : 0]) : resOf(gf, ga),
       forfeit: !!m.forfeit, date: m.kickoffDate || null
     };
   }
@@ -245,7 +257,7 @@
     return {
       tiers: tiers,
       home: aggregate(real.filter(function (g) { return g.home; })),
-      away: aggregate(real.filter(function (g) { return !g.home; })),
+      away: aggregate(real.filter(function (g) { return g.home === false; })),
       all: aggregate(real),
       forfeits: forfeits,
       rank: ri
@@ -392,6 +404,7 @@
   }
 
   function nextFixtureAgainst(ctx, oppEn) {
+    var candidates = [];
     var keys = sortedKeys(ctx.scheduledRounds);
     for (var i = 0; i < keys.length; i++) {
       var list = ctx.scheduledRounds[keys[i]] || [];
@@ -403,17 +416,30 @@
         if (!meHome && !meAway) continue;
         var opp = meHome ? m.awayEn : m.homeEn;
         if (oppEn && opp !== oppEn) continue;
-        return {
+        candidates.push({
           roundKey: keys[i], oppEn: opp, oppKo: meHome ? m.awayKo : m.homeKo,
           meHome: meHome, date: m.kickoffDate || null, time: m.kickoffTime || null
-        };
+        });
       }
     }
-    return null;
+    (ctx.cupFixtures || []).forEach(function (fixture) {
+      var m = fixture.match;
+      if (m.postponed || (isNum(m.homeScore) && isNum(m.awayScore))) return;
+      var home = m.homeEn === ctx.myEn;
+      if (!home && m.awayEn !== ctx.myEn) return;
+      var opp = home ? m.awayEn : m.homeEn;
+      if (oppEn && opp !== oppEn) return;
+      candidates.push({ roundKey: fixture.key, oppEn: opp, oppKo: home ? m.awayKo : m.homeKo,
+        meHome: m.haKnown ? home : null, date: m.kickoffDate || null, time: m.kickoffTime || null });
+    });
+    if (ctx.competitionScope && ctx.competitionScope !== 'league') {
+      candidates.sort(function (a, b) { return String(a.date || '9999').localeCompare(String(b.date || '9999')); });
+    }
+    return candidates[0] || null;
   }
 
   function computeOpponentReport(ctx, oppEn, myGames) {
-    var team = (ctx.rankedTeams || []).filter(function (t) { return t.nameEn === oppEn; })[0];
+    var team = (ctx.opponents || ctx.rankedTeams || []).find(function (t) { return t.nameEn === oppEn; });
     if (!team) return null;
     var ri = rankInfo(ctx);
     var all = buildGames(ctx, oppEn, false);
@@ -421,7 +447,7 @@
     var recent = real.slice(-5);
     var agg = aggregate(real);
     var home = aggregate(real.filter(function (g) { return g.home; }));
-    var away = aggregate(real.filter(function (g) { return !g.home; }));
+    var away = aggregate(real.filter(function (g) { return g.home === false; }));
     var cs = real.filter(function (g) { return g.ga === 0; }).length;
     var fts = real.filter(function (g) { return g.gf === 0; }).length;
     var scorers = (ctx.topScorers || [])
@@ -431,7 +457,7 @@
     var next = nextFixtureAgainst(ctx, oppEn);
     var tierKey = ri.tierOf(oppEn);
     var tierAgg = aggregate(myGames.filter(function (g) {
-      return !g.forfeit && ri.tierOf(g.oppEn) === tierKey;
+      return Boolean(tierKey) && !g.forfeit && ri.tierOf(g.oppEn) === tierKey;
     }));
     return {
       team: team, rank: ri.map[oppEn], total: ri.total, tierKey: tierKey,
@@ -632,7 +658,7 @@
   function resultChip(ctx, g, withOpp) {
     var T = lang(ctx);
     var opp = ctx.isKorean ? g.oppKo : g.oppEn;
-    var title = (g.home ? T('홈', 'H') : T('원정', 'A')) + ' ' + shortTeam(opp) + ' ' + g.gf + '-' + g.ga;
+    var title = (g.home == null ? '' : (g.home ? T('홈', 'H') : T('원정', 'A')) + ' ') + shortTeam(opp) + ' ' + g.gf + '-' + g.ga;
     return '<span class="ta-chip ' + CHIP_CLASS[g.res] + '" title="' + esc(title) + '">' +
       (withOpp ? '<span class="ta-chip-opp">' + esc(shortTeam(opp)) + '</span>' : '') +
       '<span class="ta-chip-main">' + resText(ctx, g.res) +
@@ -815,7 +841,7 @@
   function defaultOpponent(ctx) {
     var nx = nextFixtureAgainst(ctx, null);
     if (nx) return nx.oppEn;
-    var others = (ctx.rankedTeams || []).filter(function (t) { return t.nameEn !== ctx.myEn; });
+    var others = (ctx.opponents || ctx.rankedTeams || []).filter(function (t) { return t.nameEn !== ctx.myEn; });
     return others.length ? others[0].nameEn : null;
   }
 
@@ -825,26 +851,29 @@
     var a = r.agg;
     if (!a.g) return out;
     var lg = r.league;
+    var scoped = ctx.competitionScope && ctx.competitionScope !== 'league';
+    var average = scoped ? '선택 범위 평균' : '리그 평균';
+    var avgEn = scoped ? 'selected-scope average' : 'league average';
     if (r.recent.length >= 3) {
       var ra = aggregate(r.recent);
       out.push(T('최근 ' + ra.g + '경기 ' + record(ctx, ra) + ' (경기당 ' + fmt1(ra.gfpg) + '득점 ' + fmt1(ra.gapg) + '실점).',
         'Last ' + ra.g + ': ' + record(ctx, ra) + ' (' + fmt1(ra.gfpg) + ' scored, ' + fmt1(ra.gapg) + ' conceded per game).'));
     }
-    if (a.gapg <= lg.gpg - 0.3) out.push(T('실점이 경기당 ' + fmt1(a.gapg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')보다 적은 단단한 수비예요.',
-      'Solid defence: ' + fmt1(a.gapg) + ' conceded per game vs league average ' + fmt1(lg.gpg) + '.'));
-    else if (a.gapg >= lg.gpg + 0.3) out.push(T('실점이 경기당 ' + fmt1(a.gapg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')보다 많아 수비가 흔들려요.',
-      'Leaky: ' + fmt1(a.gapg) + ' conceded per game vs league average ' + fmt1(lg.gpg) + '.'));
-    if (a.gfpg >= lg.gpg + 0.3) out.push(T('경기당 ' + fmt1(a.gfpg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')을 웃도는 공격력이에요.',
-      'Strong attack: ' + fmt1(a.gfpg) + ' scored per game vs league average ' + fmt1(lg.gpg) + '.'));
-    else if (a.gfpg <= lg.gpg - 0.3) out.push(T('경기당 ' + fmt1(a.gfpg) + '골로 리그 평균(' + fmt1(lg.gpg) + ')보다 득점이 적어요.',
-      'Low-scoring: ' + fmt1(a.gfpg) + ' per game vs league average ' + fmt1(lg.gpg) + '.'));
+    if (a.gapg <= lg.gpg - 0.3) out.push(T('실점이 경기당 ' + fmt1(a.gapg) + '골로 ' + average + '(' + fmt1(lg.gpg) + ')보다 적은 단단한 수비예요.',
+      'Solid defence: ' + fmt1(a.gapg) + ' conceded per game vs ' + avgEn + ' ' + fmt1(lg.gpg) + '.'));
+    else if (a.gapg >= lg.gpg + 0.3) out.push(T('실점이 경기당 ' + fmt1(a.gapg) + '골로 ' + average + '(' + fmt1(lg.gpg) + ')보다 많아 수비가 흔들려요.',
+      'Leaky: ' + fmt1(a.gapg) + ' conceded per game vs ' + avgEn + ' ' + fmt1(lg.gpg) + '.'));
+    if (a.gfpg >= lg.gpg + 0.3) out.push(T('경기당 ' + fmt1(a.gfpg) + '골로 ' + average + '(' + fmt1(lg.gpg) + ')을 웃도는 공격력이에요.',
+      'Strong attack: ' + fmt1(a.gfpg) + ' scored per game vs ' + avgEn + ' ' + fmt1(lg.gpg) + '.'));
+    else if (a.gfpg <= lg.gpg - 0.3) out.push(T('경기당 ' + fmt1(a.gfpg) + '골로 ' + average + '(' + fmt1(lg.gpg) + ')보다 득점이 적어요.',
+      'Low-scoring: ' + fmt1(a.gfpg) + ' per game vs ' + avgEn + ' ' + fmt1(lg.gpg) + '.'));
     if (r.scorers.length && a.gf >= 4) {
       var s0 = r.scorers[0];
       var share = s0.goals / a.gf;
       if (share >= 0.4) out.push(T((ctx.isKorean ? s0.nameKo : s0.nameEn) + ' 한 명이 팀 득점의 ' + pct(share) + '(' + s0.goals + '골)를 책임져요.',
         (ctx.isKorean ? s0.nameKo : s0.nameEn) + ' accounts for ' + pct(share) + ' of the team\'s goals (' + s0.goals + ').'));
     }
-    if (r.next) {
+    if (r.next && r.next.meHome != null) {
       var oppVenue = r.next.meHome ? r.away : r.home;
       var oppAt = r.next.meHome ? T('원정', 'away') : T('홈', 'home');
       if (oppVenue.g >= 2) out.push(T('다음 경기에서 상대는 ' + oppAt + ' 경기 ' + record(ctx, oppVenue) + '(경기당 ' + fmt2(oppVenue.ppg) + '점)이에요.',
@@ -865,15 +894,18 @@
     var t = r.team, a = r.agg, lg = r.league;
     var oppName = ctx.isKorean ? t.nameKo : t.nameEn;
     var gd = (t.goalsFor || 0) - (t.goalsAgainst || 0);
-
-    var head = '<div class="ta-rep-head"><div class="ta-rep-rank">' + r.rank + '<small>' + T('위', '') + '</small></div>' +
-      '<div class="ta-rep-title"><b>' + esc(oppName) + '</b><div class="ta-dim">' +
+    var scoped = ctx.competitionScope && ctx.competitionScope !== 'league';
+    var rank = r.rank ? '<div class="ta-rep-rank">' + r.rank + '<small>' + T('위', '') + '</small></div>' : '';
+    var standing = scoped ? record(ctx, a) :
       T((t.pts || 0) + '점 · ' + record(ctx, { w: t.won || 0, d: t.drawn || 0, l: Math.max(0, (t.played || 0) - (t.won || 0) - (t.drawn || 0)) }) + ' · 득실 ' + (gd > 0 ? '+' : '') + gd,
-        (t.pts || 0) + ' pts · ' + record(ctx, { w: t.won || 0, d: t.drawn || 0, l: Math.max(0, (t.played || 0) - (t.won || 0) - (t.drawn || 0)) }) + ' · GD ' + (gd > 0 ? '+' : '') + gd) +
+        (t.pts || 0) + ' pts · ' + record(ctx, { w: t.won || 0, d: t.drawn || 0, l: Math.max(0, (t.played || 0) - (t.won || 0) - (t.drawn || 0)) }) + ' · GD ' + (gd > 0 ? '+' : '') + gd);
+    var head = '<div class="ta-rep-head">' + rank +
+      '<div class="ta-rep-title"><b>' + esc(oppName) + '</b><div class="ta-dim">' +
+      standing +
       '</div></div></div>';
 
-    var next = r.next ? '<div class="ta-next">' + T('다음 맞대결', 'Next meeting') + ': <b>' + esc(roundName(ctx, r.next.roundKey)) + '</b> · ' +
-      (r.next.meHome ? T('홈', 'Home') : T('원정', 'Away')) +
+    var next = r.next ? '<div class="ta-next">' + T('다음 맞대결', 'Next meeting') + ': <b>' + esc(roundName(ctx, r.next.roundKey)) + '</b>' +
+      (r.next.meHome == null ? '' : ' · ' + (r.next.meHome ? T('홈', 'Home') : T('원정', 'Away'))) +
       (r.next.date ? ' · ' + esc(r.next.date) + (r.next.time ? ' ' + esc(r.next.time) : '') : ' · ' + T('일정 미정', 'TBD')) + '</div>' : '';
 
     var form = r.recent.length
@@ -885,7 +917,7 @@
       return '<div class="ta-tile"><div class="ta-tile-label">' + label + '</div><div class="ta-tile-value">' + value + '</div>' +
         (sub ? '<div class="ta-tile-sub">' + sub + '</div>' : '') + '</div>';
     }
-    var lgTxt = T('리그 평균 ', 'League avg ');
+    var lgTxt = scoped ? T('선택 범위 평균 ', 'Scope avg ') : T('리그 평균 ', 'League avg ');
     var stats = a.g ? '<div class="ta-tiles ta-tiles-4">' +
       stat(T('경기당 득점', 'Goals/g'), fmt1(a.gfpg), lgTxt + fmt1(lg.gpg)) +
       stat(T('경기당 실점', 'Conceded/g'), fmt1(a.gapg), lgTxt + fmt1(lg.gpg)) +
@@ -909,7 +941,7 @@
     var h2h = r.h2h.length
       ? '<div class="ta-subtitle">' + T('이번 시즌 맞대결', 'Head to Head This Season') + '</div><div class="ta-chips">' +
         r.h2h.map(function (g) {
-          return '<span class="ta-chip ' + CHIP_CLASS[g.res] + '"><span class="ta-chip-opp">' + esc(roundName(ctx, g.roundKey)) + ' · ' + (g.home ? T('홈', 'H') : T('원정', 'A')) + '</span><span class="ta-chip-main">' +
+          return '<span class="ta-chip ' + CHIP_CLASS[g.res] + '"><span class="ta-chip-opp">' + esc(roundName(ctx, g.roundKey)) + (g.home == null ? '' : ' · ' + (g.home ? T('홈', 'H') : T('원정', 'A'))) + '</span><span class="ta-chip-main">' +
             resText(ctx, g.res) + ' ' + g.gf + '-' + g.ga + (g.forfeit ? ' ' + T('(몰수)', '(forf.)') : '') + '</span></span>';
         }).join('') + '</div>' : '';
 
@@ -924,14 +956,15 @@
   function renderOpponentReport(ctx, data) {
     var T = lang(ctx);
     var title = T('상대별 한 장 리포트', 'Opponent Scouting Report');
-    var others = (ctx.rankedTeams || []).filter(function (t) { return t.nameEn !== ctx.myEn; });
+    var others = (ctx.opponents || ctx.rankedTeams || []).filter(function (t) { return t.nameEn !== ctx.myEn; });
     if (!others.length) return card(title, empty(T('비교할 팀이 없어요.', 'No teams to compare.')));
     var valid = others.some(function (t) { return t.nameEn === selectedOpp; });
     if (!valid) selectedOpp = defaultOpponent(ctx);
     var nx = nextFixtureAgainst(ctx, null);
     var ri = rankInfo(ctx);
     var opts = others.map(function (t) {
-      var label = ri.map[t.nameEn] + T('위 ', '. ') + (ctx.isKorean ? t.nameKo : t.nameEn) + (nx && nx.oppEn === t.nameEn ? T(' (다음 경기)', ' (next)') : '');
+      var prefix = ri.map[t.nameEn] ? ri.map[t.nameEn] + T('위 ', '. ') : '';
+      var label = prefix + (ctx.isKorean ? t.nameKo : t.nameEn) + (nx && nx.oppEn === t.nameEn ? T(' (다음 경기)', ' (next)') : '');
       return '<option value="' + esc(t.nameEn) + '"' + (t.nameEn === selectedOpp ? ' selected' : '') + '>' + esc(label) + '</option>';
     }).join('');
     var select = '<label class="ta-select-wrap"><span class="ta-dim">' + T('상대 팀', 'Opponent') + '</span>' +

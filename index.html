@@ -21,14 +21,14 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '029',
+    style: '031',
     data: '008',
-    app: '035',
+    app: '037',
     report: '002',
     archive: '200',
     predictWorker: '220',
     pathfinderEngine: '221',
-    teamAnalysis: '021',
+    teamAnalysis: '022',
     poster: '001',
     travelAnalysis: '020',
     venueMatrix: '001',
@@ -875,6 +875,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </section>
   <section id="tiSection-honors" class="ti-section ti-tabpage">
     <div class="ti-section-title lbl" data-en="Team Records" data-ko="팀 기록실">팀 기록실</div>
+    <div id="teamRecordCompFilter" class="club-comp-filter"></div>
     <div id="teamInfoRecordRoomTab" class="team-info-tab-content"></div>
     <div class="ti-section-title lbl" data-en="Player Records" data-ko="선수 기록">선수 기록</div>
     <div id="teamInfoScorersTab" class="team-info-tab-content"></div>
@@ -893,6 +894,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div id="teamInfoPathFinder" class="team-info-tab-content"></div>
   </section>
   <section id="tiSection-analysis" class="ti-section ti-tabpage">
+    <div id="teamAnalysisCompFilter" class="club-comp-filter"></div>
     <div id="teamInfoAnalysisTab" class="team-info-tab-content"></div>
   </section>
   </div>
