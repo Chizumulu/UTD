@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '014',
+    style: '016',
     data: '005',
-    app: '023',
+    app: '026',
     report: '002',
     archive: '200',
     predictWorker: '220',
@@ -280,9 +280,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span id="dateLabel" class="date-label-full">2026년 8월 12일</span>
         <span id="dateLabelShort" class="date-label-short">8.12</span>
       </div>
-      <button type="button" class="side-week-search" aria-haspopup="dialog" aria-label="팀·선수 검색"
-        title="팀·선수 검색" data-aria-ko="팀·선수 검색" data-aria-en="Search teams and players"
-        data-title-ko="팀·선수 검색" data-title-en="Search teams and players" onclick="openMoreSheet(this)">
+      <button type="button" class="side-week-search" aria-haspopup="dialog" aria-label="사이트 검색"
+        title="사이트 검색" data-aria-ko="사이트 검색" data-aria-en="Search site"
+        data-title-ko="사이트 검색" data-title-en="Search site" onclick="openMoreSheet(this)">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 15.5 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </button>
     </div>
@@ -773,7 +773,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
   <div class="club-search-entry">
     <button type="button" class="mobile-search-entry round-mode-chip lbl" aria-haspopup="dialog"
-      data-ko="팀·선수 검색" data-en="Search teams and players" onclick="openMoreSheet(this)">팀·선수 검색</button>
+      data-ko="사이트 검색" data-en="Search site" onclick="openMoreSheet(this)">사이트 검색</button>
   </div>
 
   <div id="myTeamInfoView">
@@ -923,7 +923,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button type="button" id="roundCurrentBtn" class="round-mode-chip lbl"
         data-ko="현재 주차로" data-en="Go to current week" onclick="goToCurrentSchedule()">현재 주차로</button>
       <button type="button" class="mobile-search-entry round-mode-chip lbl" aria-haspopup="dialog"
-        data-ko="팀·선수 검색" data-en="Search teams and players" onclick="openMoreSheet(this)">팀·선수 검색</button>
+        data-ko="사이트 검색" data-en="Search site" onclick="openMoreSheet(this)">사이트 검색</button>
     </div>
     <button type="button" id="roundFavorBtn" class="round-favor-btn" aria-controls="roundFavorPanel" onclick="toggleRoundFavor()"></button>
     <form class="round-search" role="search" aria-labelledby="roundSearchLabel" onsubmit="event.preventDefault(); updateRoundSearch(true)">
@@ -1005,7 +1005,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 
   <div class="stats-panel" data-stats-panel="analysis" role="tabpanel">
-    <div class="scatter-card">
+    <div class="scatter-card" id="leagueAttackDefense">
       <div class="stats-title">
         <span class="lbl" data-en="Attack vs Defense (Goals for vs Goals Against per Game)" data-ko="공격 vs 수비 (경기당 득점 vs 경기당 실점)">공격 vs 수비 (경기당 득점 vs 경기당 실점)</span>
         <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'scatterInfo')">ⓘ</span>
@@ -1765,12 +1765,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="modal-content more-sheet-content">
     <div class="modal-header">
       <h2 id="moreSheetTitle" class="lbl" data-en="More" data-ko="더보기">더보기</h2>
-      <button class="close-btn" onclick="closeMoreSheet()" aria-label="Close">&times;</button>
+      <button class="close-btn" onclick="closeMoreSheet()" aria-label="닫기" data-aria-ko="닫기" data-aria-en="Close">&times;</button>
     </div>
     <div class="modal-body">
       <div class="more-search" role="search">
-        <label for="moreSearchInput" class="lbl" data-ko="팀·선수 검색" data-en="Search teams and players">팀·선수 검색</label>
+        <label for="moreSearchInput" class="lbl sr-only" data-ko="팀·선수·기능 검색" data-en="Search teams, players and features">팀·선수·기능 검색</label>
         <div class="more-search-field">
+          <span class="more-search-icon" aria-hidden="true"></span>
           <input id="moreSearchInput" type="search" autocomplete="off" maxlength="100"
             aria-controls="moreSearchHints moreSearchResults" oninput="renderMoreSearch()"
             oncompositionend="renderMoreSearch()" onkeydown="handleMoreSearchKey(event)">

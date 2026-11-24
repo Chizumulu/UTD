@@ -408,8 +408,8 @@
     moreSearchTrigger = searchTrigger;
     modal.classList.toggle('is-search-only', Boolean(searchTrigger));
     const title = document.getElementById('moreSheetTitle');
-    title.dataset.ko = searchTrigger ? '팀·선수 검색' : '더보기';
-    title.dataset.en = searchTrigger ? 'Search teams and players' : 'More';
+    title.dataset.ko = searchTrigger ? '사이트 검색' : '더보기';
+    title.dataset.en = searchTrigger ? 'Search site' : 'More';
     title.textContent = isKorean ? title.dataset.ko : title.dataset.en;
     renderMoreSearch();
     showModalAnimated(modal);
@@ -424,7 +424,7 @@
     const hints = document.getElementById('moreSearchHints');
     const status = document.getElementById('moreSearchStatus');
     const menu = document.querySelector('#moreSheetModal .more-sheet-list');
-    input.placeholder = isKorean ? '팀 이름 또는 선수 이름' : 'Team or player name';
+    input.placeholder = isKorean ? '팀, 선수, 스탯, 일정 검색' : 'Search teams, players, stats or fixtures';
     document.getElementById('moreSearchClear').hidden = !input.value;
     const query = normalizeRoundSearch(input.value);
     const terms = input.value.split(/\s+/).map(normalizeRoundSearch).filter(Boolean);
@@ -446,6 +446,7 @@
     const entries = leagueData.map(team => ({
       key: 'team:' + team.nameEn,
       names: [team.nameKo, team.nameEn],
+      image: team.logoSrc,
       detail: isKorean ? '구단 정보' : 'Club info',
       open: () => goToTeamInfo(team.nameEn)
     }));
@@ -455,6 +456,8 @@
       entries.push({
         key: 'roster:' + identifier,
         names: playerNames(player),
+        image: player.photoSrc || club?.logoSrc,
+        portrait: Boolean(player.photoSrc),
         detail: wasFormer ? clubName + (isKorean ? ' · 이전 선수' : ' · Former player') : clubName,
         open: () => {
           showView('squad');
@@ -471,6 +474,7 @@
       entries.push({
         key: 'scorer:' + player.key,
         names,
+        image: player.teamLogo,
         detail: isKorean ? player.teamKo + ' · 득점 기록' : player.teamEn + ' · Goal record',
         open: () => {
           showView('scorers');
@@ -479,6 +483,7 @@
         }
       });
     });
+    entries.push(...moreSearchFeatures(club));
 
     let matches = query ? entries.flatMap(entry => {
       const names = entry.names.map(normalizeRoundSearch);
@@ -512,17 +517,36 @@
     status.textContent = matches.length
       ? (isKorean ? `검색 결과 ${matches.length}개` : `Results: ${matches.length}`)
       : suggestions.length ? (isKorean ? '추천 검색어를 선택해 보세요.' : 'Try a suggested search.')
-      : (isKorean ? '일치하는 팀이나 선수가 없습니다.' : 'No matching teams or players.');
+      : (isKorean ? '일치하는 팀, 선수 또는 기능이 없습니다.' : 'No matching teams, players or features.');
     results.hidden = !matches.length;
     matches.forEach(entry => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'more-sheet-item';
+      const avatar = document.createElement('span');
+      avatar.className = 'more-search-avatar';
+      avatar.setAttribute('aria-hidden', 'true');
+      if (entry.image) {
+        const img = document.createElement('img');
+        img.src = entry.image;
+        img.alt = '';
+        if (entry.portrait) avatar.classList.add('is-portrait');
+        img.addEventListener('error', () => {
+          avatar.textContent = displayName(entry)?.[0] || '';
+          avatar.classList.remove('is-portrait');
+        }, { once: true });
+        avatar.append(img);
+      } else {
+        avatar.textContent = displayName(entry)?.[0] || '';
+      }
+      const text = document.createElement('span');
+      text.className = 'more-search-result-text';
       const name = document.createElement('span');
       name.textContent = displayName(entry);
       const detail = document.createElement('small');
       detail.textContent = entry.detail;
-      button.append(name, detail);
+      text.append(name, detail);
+      button.append(avatar, text);
       button.addEventListener('click', () => {
         moreSearchRecent = [entry.key, ...moreSearchRecent.filter(key => key !== entry.key)].slice(0, 4);
         saveMoreSearchRecent();
@@ -532,6 +556,54 @@
       });
       results.append(button);
     });
+  }
+
+  function moreSearchFeatures(club) {
+    const features = [
+      ['stats', ['리그 기록', 'League Records', '스탯', '스텟', '통계', 'Stats', 'Statistics'], 'stats', () => setStatsTab('rank')],
+      ['analysis', ['리그 기록 분석', 'League Stats Analysis', '스탯 분석'], 'stats', () => setStatsTab('analysis')],
+      ['attack-defense', ['공격력·수비력', 'Attack vs Defense', '공격', '수비', '경기당 득점', '경기당 실점', 'Goals per game', 'Goals conceded'], 'stats', () => {
+        setStatsTab('analysis');
+        document.getElementById('leagueAttackDefense')?.scrollIntoView({ block: 'start' });
+      }],
+      ['standings', ['리그 순위', 'League Standings', '순위표', 'Table', 'Rankings'], 'leagueRank'],
+      ['fixtures', ['리그 일정', 'League Schedule', '경기 일정', '경기 결과', 'Fixtures', 'Results'], 'rounds'],
+      ['scorers', ['득점 순위', 'Top Scorers', '득점', '득점왕', '골 순위', 'Goals', 'Scoring'], 'scorers', () => setScorersGroupMode('flat')],
+      ['teamCompare', ['팀 비교', 'Team Comparison', '상대 전적', '맞대결', 'Head to head'], 'teamCompare'],
+      ['predict', ['리그 예측', 'League Projections', '순위 예측', '시뮬레이터', 'Predictions'], 'predict', () => setPredictTab('outlook')],
+      ['scenarios', ['경우의 수', 'League Scenarios', '승격 확률', '강등 확률', '매직넘버'], 'predict', () => setPredictTab('race')],
+      ['venues', ['구단 위치', 'Club Venues', '경기장 지도', '구장', 'Stadium map'], 'venues', () => setVenueMode('map')],
+      ['travel', ['원정 거리', 'Away Distance', '이동 거리', '원정거리 분석', 'Travel distance'], 'venues', () => setVenueMode('travel')],
+      ['report', ['주차별 리포트', 'Weekly Report', '라운드 리포트', '경기 요약'], 'report'],
+      ['calendar', ['일정 캘린더', 'Fixtures Calendar', '캘린더 구독', '일정 구독', 'ICS'], 'rounds', openLeagueCalendarSubscription]
+    ];
+    if (club) {
+      features.push(['assists', ['치주물루 도움 기록', 'Chizumulu Assists', '어시스트', '도움', '도움 순위', '공격포인트', 'Assist', 'Goal contributions'], 'squad', () => {
+        showTeamInfoForKey(club.nameEn);
+        applyTeamInfoTab('honors');
+        document.getElementById('teamAssistRecords')?.scrollIntoView({ block: 'start' });
+      }]);
+      features.push(['players', ['선수 비교', 'Player Comparison', '선수 스탯 비교'], 'squad', () => {
+        showTeamInfoForKey(club.nameEn);
+        applyTeamInfoTab('analysis');
+        loadFeatureScript('team-analysis.js', 'teamAnalysis', () => typeof TeamAnalysis !== 'undefined')
+          .then(() => {
+            if (currentView === 'squad' && currentTeamInfoKey === club.nameEn && currentTeamInfoTab === 'analysis') {
+              document.getElementById('taSecPlayers')?.scrollIntoView({ block: 'start' });
+            }
+          }).catch(() => {});
+      }]);
+    }
+    return features.map(([id, names, view, openSection]) => ({
+      key: 'feature:' + id,
+      names,
+      detail: isKorean ? '기능 바로가기' : 'Feature shortcut',
+      open: () => {
+        showView(view);
+        window.scrollTo(0, 0);
+        openSection?.();
+      }
+    }));
   }
 
   function recommendedMoreSearchEntries(entries, club) {
@@ -10298,7 +10370,7 @@
     const noteKo = `라인업에 기록된 ${totalGoals}골 중 ${assistedGoals}골에 도움 기록이 있어요`;
     const noteEn = `${assistedGoals} of ${totalGoals} recorded goals have an assist logged`;
     return `
-      <div class="ti-card ti-appear-card">
+      <div class="ti-card ti-appear-card"${isCombo ? '' : ' id="teamAssistRecords"'}>
         <div class="ti-card-title lbl" data-en="${isCombo ? 'Scoring Duos' : 'Assists'}" data-ko="${isCombo ? '합작 콤비' : '도움 기록'}">${isCombo ? (isKorean ? '합작 콤비' : 'Scoring Duos') : (isKorean ? '도움 기록' : 'Assists')}</div>
         <div class="ti-gk-card-note lbl" data-en="${noteEn}" data-ko="${noteKo}">${isKorean ? noteKo : noteEn}</div>
         <div class="ti-appear-grid">${blocksHtml}</div>

@@ -16478,28 +16478,94 @@ button.rmc-pending-badge:active {
 
   /* 더보기 및 팀·선수 검색 */
   .more-sheet-content .modal-body { padding: 4px 12px 14px; }
+  #moreSheetModal.is-search-only .more-sheet-content { border-radius: 22px; }
+  #moreSheetModal.is-search-only .modal-header {
+    padding: 14px 20px 6px;
+    background: var(--color-surface);
+    color: var(--color-text-darkest);
+  }
+  #moreSheetModal.is-search-only .modal-header h2 { font-size: var(--fs-xl); }
+  #moreSheetModal.is-search-only .modal-header .close-btn {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-bg-stripe);
+    color: var(--color-text-dark);
+    font-size: 23px;
+    opacity: 1;
+  }
+  #moreSheetModal.is-search-only .modal-header .close-btn:hover { background: var(--color-bg-btn-hover); }
+  #moreSheetModal.is-search-only .modal-body { padding: 0 20px 16px; }
+  @media (min-width: 881px) {
+    #moreSheetModal.is-search-only .more-sheet-content {
+      width: 520px;
+      max-width: calc(100vw - 32px);
+      height: min(500px, calc(100vh - 32px));
+      height: min(500px, calc(100dvh - 32px));
+      max-height: none;
+    }
+    #moreSheetModal.is-search-only .modal-header { flex: none; }
+    #moreSheetModal.is-search-only .modal-body,
+    #moreSheetModal.is-search-only .more-search {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #moreSheetModal.is-search-only .more-search > :not(#moreSearchResults) { flex: none; }
+    #moreSheetModal.is-search-only #moreSearchResults {
+      flex: 1;
+      min-height: 0;
+      align-content: start;
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+      scrollbar-gutter: stable;
+    }
+    #moreSheetModal.is-search-only #moreSearchHints:not([hidden]) {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+    }
+    #moreSheetModal.is-search-only #moreSearchHints button { flex: none; }
+  }
   .more-sheet-list { display: flex; flex-direction: column; }
   .more-sheet-list[hidden] { display: none; }
   .more-search { padding: 8px 0; }
-  .more-search label {
-    display: block;
-    margin-bottom: 6px;
-    color: var(--color-text-dark);
-    font-weight: 600;
-  }
   .more-search input {
     width: 100%;
     min-width: 0;
-    min-height: 44px;
-    padding: 8px 12px;
+    min-height: 48px;
+    padding: 10px 12px 10px 42px;
     border: 1px solid var(--color-border-chip);
     border-radius: var(--radius-md);
-    background: var(--color-surface);
+    background: var(--color-bg-stripe);
     color: var(--color-text-dark);
     font: inherit;
     font-size: 16px;
   }
-  .more-search-field { display: flex; align-items: center; gap: 6px; }
+  .more-search-field { position: relative; display: flex; align-items: center; gap: 6px; }
+  .more-search-icon {
+    position: absolute;
+    left: 15px;
+    width: 13px;
+    height: 13px;
+    border: 1.7px solid currentColor;
+    border-radius: 50%;
+    color: var(--color-text-muted);
+    pointer-events: none;
+  }
+  .more-search-icon::after {
+    content: "";
+    position: absolute;
+    right: -5px;
+    bottom: -3px;
+    width: 6px;
+    height: 1.7px;
+    border-radius: 2px;
+    background: currentColor;
+    transform: rotate(45deg);
+  }
   #moreSearchClear { flex: none; min-height: 44px; }
   #moreSearchClear[hidden] { display: none; }
   .more-search input:focus-visible,
@@ -16514,7 +16580,7 @@ button.rmc-pending-badge:active {
     min-height: 36px;
     padding: 5px 10px;
     border: 1px solid var(--color-border-chip);
-    border-radius: var(--radius-md);
+    border-radius: 999px;
     background: var(--color-bg-stripe);
     color: var(--color-text-dark);
     font: inherit;
@@ -16532,16 +16598,46 @@ button.rmc-pending-badge:active {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-top: 8px;
+    margin: 14px 2px 8px;
     color: var(--color-text-muted);
     font-size: var(--fs-sm);
+    font-weight: 600;
   }
+  #moreSearchResults:not([hidden]) { display: grid; gap: 5px; margin-top: 6px; }
   #moreSearchResults .more-sheet-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 3px;
-    padding: 10px;
+    gap: 12px;
+    min-height: 58px;
+    padding: 8px 11px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: var(--color-bg-stripe);
+    font-size: var(--fs-md);
   }
+  #moreSearchResults .more-sheet-item::after {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-left: auto;
+    margin-right: 3px;
+    border-top: 1.5px solid var(--color-text-muted);
+    border-right: 1.5px solid var(--color-text-muted);
+    transform: rotate(45deg);
+  }
+  .more-search-avatar {
+    display: grid;
+    place-items: center;
+    flex: 0 0 38px;
+    height: 38px;
+    overflow: hidden;
+    border: 1px solid var(--color-border-chip);
+    border-radius: 12px;
+    background: var(--color-surface);
+    color: var(--color-brand-text);
+  }
+  .more-search-avatar img { width: 25px; height: 25px; object-fit: contain; }
+  .more-search-avatar.is-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .more-search-result-text { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
   #moreSearchResults small {
     color: var(--color-text-muted);
     font-size: var(--fs-sm);
@@ -16571,7 +16667,10 @@ button.rmc-pending-badge:active {
   .more-sheet-ico { width: 22px; height: 22px; flex-shrink: 0; color: var(--color-text-faint); }
   .more-sheet-item.is-active .more-sheet-ico { color: var(--color-brand-text); }
   @media (hover: hover) {
-    .more-search .more-sheet-item:hover { background: var(--color-bg-stripe); }
+    #moreSearchResults .more-sheet-item:hover {
+      border-color: var(--color-border-chip);
+      background: var(--color-bg-btn-hover);
+    }
   }
 @media (prefers-reduced-motion: reduce) {
   .m-tab, .m-ico, .more-sheet-item { transition: none; }
