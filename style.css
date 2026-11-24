@@ -15422,7 +15422,7 @@ body {
 
 .rmd-row {
   display: grid;
-  grid-template-columns: 64px 124px minmax(0, 1fr) 100px minmax(0, 1fr) 176px;
+  grid-template-columns: 64px 124px minmax(0, 1fr) 100px minmax(0, 1fr) 248px;
   align-items: center;
   column-gap: 12px;
   padding: 14px 24px;
@@ -15455,10 +15455,9 @@ body {
   color: var(--color-text-darkest);
 }
 .rmd-home .rmd-team-name { justify-content: flex-end; }
-.rmd-team-name > .lbl:first-child { min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
+.rmd-team-name > span:first-child { min-width: 0; word-break: keep-all; overflow-wrap: anywhere; }
 .rmd-home { position: relative; }
-.rmd-team-name > .lbl:first-child { white-space: nowrap; }
-/* 넓은 화면: '홈' 칩은 이름 옆이 아니라 로고 모서리에 얹어 이름이 줄바꿈되지 않게 함 */
+/* 넓은 화면에서는 '홈' 칩을 로고 모서리에 배치해 팀명에 공간을 준다. */
 .rmd-home .rmd-home-chip { position: absolute; right: -4px; bottom: -4px; line-height: 1.4; font-size: var(--fs-2xs); padding: 0 5px; box-shadow: 0 0 0 2px var(--color-surface); }
 .rmd-home-chip {
   flex: none;
@@ -15511,7 +15510,7 @@ button.rmd-status-link {
 }
 
 /* 오른쪽: 주차 · (날씨) · 전적 비교 버튼 */
-.rmd-end { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.rmd-end { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; min-width: 0; gap: 8px; }
 .rmd-week { font-size: var(--fs-xs); font-weight: 600; color: var(--color-text-muted); white-space: nowrap; }
 .rmd-weather { font-size: var(--fs-sm); white-space: nowrap; margin-top: 2px; }
 .rmd-venue .rmd-weather { align-self: flex-start; }
@@ -15707,7 +15706,7 @@ button.rmd-status-link {
   .rmd-row.rmd-tv { padding-left: 12px; padding-right: 12px; }
 }
 
-/* ===== 리그 일정: 치주물루 경기 행의 상세보기 버튼 (PC 오른쪽 176px 칸 안에서 2열로 정리) ===== */
+/* ===== 리그 일정: 치주물루 경기 행의 상세보기 버튼을 오른쪽 칸에서 2열로 정리 ===== */
 .rmd-end.rmd-end-detail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; justify-content: stretch; }
 .rmd-end-detail .rmd-toggle { order: 0; }
 .rmd-end-detail .rmd-btn { order: 1; }
