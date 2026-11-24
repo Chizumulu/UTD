@@ -12533,7 +12533,7 @@
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(match);
     });
-    const { addDayCard } = makeRoundRowTools(listEl);
+    const { addDayCard } = makeRoundRowTools(listEl, { openRows: roundViewMode === 'month' });
     for (const list of groups.values()) {
       const { kickoffDate } = list[0];
       const weeks = [...new Set(list.map(match => roundKeyPos(match.__rk)))];
@@ -12574,7 +12574,8 @@
 
   // 월별/주차별 보기가 함께 쓰는 "날짜 카드 + 경기 행(row)" 생성 도구.
   // 경기 객체의 __rk(실제 라운드 키)를 기준으로 주차·구장·전적 비교를 처리합니다.
-  function makeRoundRowTools(listEl, teamOpts) {
+  function makeRoundRowTools(listEl, options) {
+    const teamOpts = options?.teamEn ? options : null;
     // ===== 월별 보기: 날짜 카드 1개 안에 그날 경기를 한 줄(row)씩 나열하는 디자인 =====
     // [시간 · 구장 | 홈팀 · 스코어/상태 · 원정팀 | 주차 · 전적 비교] 한 줄 구성.
     const pad2 = (n) => String(n).padStart(2, '0');
@@ -12591,6 +12592,8 @@
       const mine = (teamOpts && teamOpts.teamEn && isMyTeamName(teamOpts.teamEn, teamOpts.teamKo)) ? false : mineMatch;
       const played = !m.isScheduled;
       const pendingScore = played ? null : pendingLeagueResultForFixture(m);
+      const fixturePath = leagueFixturePath(m.homeEn, m.awayEn, m.fixtureId);
+      const openRow = options?.openRows && !m.movedToWeek && fixturePath;
       const homeWin = played && m.homeScore > m.awayScore;
       const awayWin = played && m.awayScore > m.homeScore;
       const wn = roundKeyPos(m.__rk);
@@ -12605,7 +12608,7 @@
       const kst = kstOf(m);
       // 예정 경기(다른 주차로 옮겨간 자리표시자 제외)에는 "프리뷰" 펼침 패널을 붙입니다.
       // 계산이 가벼운 편은 아니라서 내용은 처음 펼칠 때 만들고(matchPreviewHtml), 목록을 그릴 때는 버튼만 둡니다.
-      const pvEligible = !played && !pendingScore && !m.movedToWeek && !m.postponed && m.fixtureStatus !== 'pending'
+      const pvEligible = !openRow && !played && !pendingScore && !m.movedToWeek && !m.postponed && m.fixtureStatus !== 'pending'
         && leagueData.some(t => t.nameEn === m.homeEn) && leagueData.some(t => t.nameEn === m.awayEn);
 
       // 득점자 한 줄 (각 팀 이름 아래)
@@ -12644,7 +12647,7 @@
             </a>`;
           }
         }
-      } else if (!teamOpts && played && mineMatch) {
+      } else if (!openRow && !teamOpts && played && mineMatch) {
         // ===== 리그 일정: 치주물루 경기에는 "상세보기" 버튼을 붙입니다 (구단정보 경기결과와 같은 조건) =====
         const key = m.__rk;
         const isHomeTeam = isMyTeamName(m.homeEn, m.homeKo);
@@ -12675,8 +12678,11 @@
       if (teamOpts && teamOpts.teamEn && !played && (m.movedToWeek || m.postponed)) m.__res = 'P';
 
       const row = document.createElement('div');
-      row.className = 'rmd-row' + (played ? '' : ' is-scheduled') + (mine ? ' rmd-mine' : '') + ((teamOpts && teamOpts.teamEn) ? ' rmd-tv' : '');
+      row.className = 'rmd-row' + (played ? '' : ' is-scheduled') + (mine ? ' rmd-mine' : '') + (teamOpts ? ' rmd-tv' : '') + (openRow ? ' rmd-fixture-row' : '');
+      const infoLabel = isKorean ? `${homeName} 대 ${awayName} 경기 정보` : `Match info: ${homeName} vs ${awayName}`;
+      const fixtureHref = '#/' + escapeHtml(fixturePath);
       row.innerHTML = `
+        ${openRow ? `<a class="rmd-fixture-link" data-fixture-link href="${fixtureHref}" aria-label="${escapeHtml(infoLabel)}" aria-haspopup="dialog"><span aria-hidden="true">›</span></a>` : ''}
         <div class="rmd-meta">
         <div class="rmd-time${(IS_SEOUL_TZ && kst) ? ' rmd-kst-only' : ''}">${m.kickoffTime ? `<b class="rmd-t-cat">${m.kickoffTime}</b>${kst ? `<small class="rmd-t-kst">KST ${kst.time}${kst.shifted ? ' <i>+1</i>' : ''}</small>` : ''}` : '<b class="rmd-time-none">–</b>'}</div>
         <div class="rmd-venue">
@@ -12686,7 +12692,7 @@
           ${(mineMatch && !played) ? matchWeatherPlaceholderHtml(m.homeEn, m.kickoffDate, m.kickoffTime, 'rmd-weather', true) : ''}
         </div>
         </div>
-        <div class="rmd-team rmd-home${homeWin ? ' is-winner' : ''}"${teamLinkAttrs(m.homeEn)}>
+        <div class="rmd-team rmd-home${homeWin ? ' is-winner' : ''}"${openRow ? '' : teamLinkAttrs(m.homeEn)}>
           <div class="rmd-team-text">
             <div class="rmd-team-name"><span class="lbl" data-en="${homeEnS}" data-ko="${homeKoS}">${homeName}</span><span class="rmd-home-chip lbl" data-en="HOME" data-ko="홈">${isKorean ? '홈' : 'HOME'}</span></div>
             ${homeSub ? `<div class="rmd-team-sub">${homeSub}</div>` : ''}
@@ -12694,7 +12700,7 @@
           ${homeLogo ? `<img class="rmd-logo" src="${homeLogo}" alt="${m.homeEn}">` : ''}
         </div>
         <div class="rmd-mid${played || pendingScore ? '' : ' is-single'}">${mid}</div>
-        <div class="rmd-team rmd-away${awayWin ? ' is-winner' : ''}"${teamLinkAttrs(m.awayEn)}>
+        <div class="rmd-team rmd-away${awayWin ? ' is-winner' : ''}"${openRow ? '' : teamLinkAttrs(m.awayEn)}>
           ${awayLogo ? `<img class="rmd-logo" src="${awayLogo}" alt="${m.awayEn}">` : ''}
           <div class="rmd-team-text">
             <div class="rmd-team-name"><span class="lbl" data-en="${awayEnS}" data-ko="${awayKoS}">${awayName}</span></div>
@@ -12702,18 +12708,18 @@
           </div>
         </div>
         <div class="rmd-end${(detailBtnHtml && !teamOpts) ? ' rmd-end-detail' : ''}">
-          ${hasSc ? `<button type="button" class="rmd-toggle" aria-expanded="false"><span class="lbl" data-en="Goals" data-ko="득점">${isKorean ? '득점' : 'Goals'}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''}
+          ${!openRow && hasSc ? `<button type="button" class="rmd-toggle" aria-expanded="false"><span class="lbl" data-en="Goals" data-ko="득점">${isKorean ? '득점' : 'Goals'}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''}
           ${pvEligible ? `<button type="button" class="rmd-pvbtn" aria-expanded="false"><span class="lbl" data-en="Preview" data-ko="프리뷰">${isKorean ? '프리뷰' : 'Preview'}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''}
-          ${detailBtnHtml || (!m.movedToWeek ? '<a class="rmd-act-btn" data-fixture-link href="#/' + leagueFixturePath(m.homeEn, m.awayEn, m.fixtureId) + '">' + (isKorean ? '경기 정보' : 'Match info') + '</a>' : '')}
+          ${detailBtnHtml || (!openRow && !m.movedToWeek ? '<a class="rmd-act-btn" data-fixture-link href="' + fixtureHref + '">' + (isKorean ? '경기 정보' : 'Match info') + '</a>' : '')}
           <button type="button" class="rmd-btn lbl" data-en="Compare" data-ko="전적 비교">${isKorean ? '전적 비교' : 'Compare'}</button>
           ${actionsHtml}
         </div>
         ${pvEligible ? '<div class="rmd-pv"></div>' : ''}
-        ${hasSc ? `<div class="rmd-sc rmd-sc-home">${homeSc}</div><div class="rmd-sc rmd-sc-away">${awaySc}</div>` : ''}`;
+        ${!openRow && hasSc ? `<div class="rmd-sc rmd-sc-home">${homeSc}</div><div class="rmd-sc rmd-sc-away">${awaySc}</div>` : ''}`;
       row.querySelector('[data-fixture-link]')?.addEventListener('click', event => {
         if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
-        openLinkedFixture({ ...m, roundKey: m.__rk });
+        openLinkedFixture({ ...m, roundKey: m.__rk }, Boolean(openRow));
       });
       const btn = row.querySelector('.rmd-btn');
       if (btn) {
@@ -12965,7 +12971,7 @@
     });
     if (activeBtn) activeBtn.scrollIntoView({ block: 'nearest', inline: 'center' });
 
-    const { addDayCard } = makeRoundRowTools(listEl);
+    const { addDayCard } = makeRoundRowTools(listEl, { openRows: true });
 
     if (roundMonthKey === 'tbd' || roundMonthKey === 'before') {
       const byRound = new Map();
@@ -13046,6 +13052,13 @@
     return isKorean
       ? `이번 시즌 맞대결 ${homeShort} 기준 ${w}승 ${d}무 ${l}패 · 직전 ${homeShort} ${lhg} : ${lag} ${awayShort}`
       : `Season H2H (${homeShort}) ${w}W ${d}D ${l}L · Last: ${homeShort} ${lhg} : ${lag} ${awayShort}`;
+  }
+
+  function fixtureHasPreview(match) {
+    return !match.movedToWeek && !match.postponed
+      && (match.fixtureStatus || seasonFixtureStatus(match, Date.now())) === 'upcoming'
+      && leagueData.some(team => team.nameEn === match.homeEn)
+      && leagueData.some(team => team.nameEn === match.awayEn);
   }
 
   function matchPreviewHtml(m) {
@@ -20204,7 +20217,7 @@
     if (isSheetViewport() && typeof showNoticeSheet === 'function') {
       tip.classList.remove('show');
       const head = tip.parentElement;
-      const titleEl = head && (head.querySelector(':scope > .lbl') || head.querySelector('.stat-board-title > span:first-child'));
+      const titleEl = head && (head.querySelector(':scope > .lbl') || head.querySelector('.stat-board-title'));
       const bodyEl = tip.querySelector('.lbl') || tip;
       showNoticeSheet({
         title: titleEl ? titleEl.textContent.trim() : '',
@@ -20234,8 +20247,8 @@
     { id: 'squadPlayerModal', close: () => closeSquadPlayerModal() },
     { id: 'fullRecordModal', close: () => closeFullRecordModal() },
     { id: 'playerModal', close: () => closePlayerModal() },
-    { id: 'matchDetailModal', close: () => closeMatchDetail() },
     { id: 'matchCompareModal', close: () => closeMatchCompareModal() },
+    { id: 'matchDetailModal', close: () => closeMatchDetail() },
     { id: 'statModal', close: () => closeModal() },
     { id: 'venueMapModal', close: () => closeVenueMapModal() },
     { id: 'postponedMatchesModal', close: () => closePostponedMatchesModal() },
@@ -21227,11 +21240,11 @@
       </section>`;
   }
 
-  function openLinkedFixture(match) {
+  function openLinkedFixture(match, showSummary = false) {
     const homeIsMine = isMyTeamName(match.homeEn, match.homeKo);
     const ownMatch = homeIsMine || isMyTeamName(match.awayEn, match.awayKo);
     const played = Number.isInteger(match.homeScore) && Number.isInteger(match.awayScore);
-    if (played && ownMatch && isMatchDetailAvailable(match.roundKey, homeIsMine ? match.awayKo : match.homeKo, match.forfeit)) {
+    if (!showSummary && played && ownMatch && isMatchDetailAvailable(match.roundKey, homeIsMine ? match.awayKo : match.homeKo, match.forfeit)) {
       openMatchDetail(match.roundKey, roundKeyPos(match.roundKey));
       return;
     }
@@ -21241,6 +21254,7 @@
     activeLinkedFixture = match;
     setActiveMatchPath(match);
     renderLinkedFixtureSummary();
+    document.getElementById('matchDetailBody').scrollTop = 0;
     showModalAnimated(document.getElementById('matchDetailModal'));
   }
 
@@ -21271,19 +21285,57 @@
     }
     const venue = getTeamVenue(match.homeEn, roundKeyPos(match.roundKey));
     const kickoff = formatKickoff(match, true);
-    const parts = [
-      '<p>' + (score ? (score.home ?? '–') + ' : ' + (score.away ?? '–') + ' · ' : '') + status +
-        (played ? ' · ' + recordedLeagueResultText() : pending ? ' · ' + pendingLeagueResultText() : '') + '</p>',
-      kickoff ? '<p>' + kickoff + '</p>' : '',
-      venue ? '<p>' + escapeHtml(isKorean ? venue.nameKo : venue.nameEn) + '</p>' : '',
-      live ? '<p>' + escapeHtml(leagueLiveRefreshText()) + '</p>' : ''
-    ];
-    for (const [name, scorers] of [[home, match.scorersHome], [away, match.scorersAway]]) {
-      if (scorers && scorers !== '없음') {
-        parts.push('<p>' + escapeHtml(name) + ' · ' + renderScorerNamesHtml(scorers, isKorean) + '</p>');
-      }
-    }
-    document.getElementById('matchDetailBody').innerHTML = parts.join('');
+    const teams = [[match.homeEn, home, match.scorersHome], [match.awayEn, away, match.scorersAway]];
+    const teamLinks = teams.filter(([nameEn]) => leagueData.some(team => team.nameEn === nameEn));
+    const mineHome = isMyTeamName(match.homeEn, match.homeKo);
+    const knownLineup = played && (mineHome || isMyTeamName(match.awayEn, match.awayKo))
+      && isMatchDetailAvailable(match.roundKey, mineHome ? match.awayKo : match.homeKo, match.forfeit);
+    const preview = !played && !pending && !live && !inLiveWindow && fixtureHasPreview(match) ? matchPreviewHtml(match) : '';
+    const scoreText = score ? `${score.home ?? '–'} : ${score.away ?? '–'}` : '';
+    const note = played ? recordedLeagueResultText() : pending ? pendingLeagueResultText() : live ? leagueLiveRefreshText() : '';
+    const info = [kickoff, venue && escapeHtml(isKorean ? venue.nameKo : venue.nameEn)].filter(Boolean);
+    const goals = teams.filter(([, , scorers]) => scorers && scorers !== '없음');
+    const body = document.getElementById('matchDetailBody');
+    body.innerHTML = `
+      <section class="linked-fixture-info">
+        <div class="fixture-info-score">
+          ${scoreText ? `<strong>${scoreText}</strong>` : ''}
+          <span>${status}</span>
+        </div>
+        ${note ? `<p class="fixture-info-note">${escapeHtml(note)}</p>` : ''}
+        ${info.length ? `<div class="fixture-info-meta">${info.map(text => `<p>${text}</p>`).join('')}</div>` : ''}
+        ${goals.length ? `<div class="fixture-info-meta">${goals.map(([, name, scorers]) => `<p><b>${escapeHtml(name)}</b> · ${renderScorerNamesHtml(scorers, isKorean)}</p>`).join('')}</div>` : ''}
+        ${preview}
+        ${teamLinks.length === 2 || knownLineup ? `<div class="fixture-info-actions">
+          ${teamLinks.length === 2 ? `<button type="button" class="rmd-act-btn fixture-info-compare" data-fixture-action="compare" aria-haspopup="dialog">${isKorean ? '전적 비교' : 'Compare teams'}</button>` : ''}
+          ${knownLineup ? `<button type="button" class="rmd-act-btn" data-fixture-action="lineup">${isKorean ? '라인업·상세 기록' : 'Lineup and match report'}</button>` : ''}
+        </div>` : ''}
+        ${teamLinks.length ? `<div class="fixture-info-teams" role="group" aria-label="${isKorean ? '구단 정보' : 'Club information'}">${teamLinks.map(([nameEn, name]) =>
+          `<button type="button" class="rmd-act-btn" data-fixture-team="${escapeHtml(nameEn)}" aria-label="${escapeHtml(isKorean ? name + ' 구단 정보' : name + ' club information')}">${escapeHtml(name)} <span aria-hidden="true">›</span></button>`).join('')}</div>` : ''}
+      </section>`;
+    body.querySelector('[data-fixture-action="compare"]')?.addEventListener('click', () => {
+      matchCompareFromFixture = true;
+      openMatchCompareModal(match.homeEn, match.homeKo, match.awayEn, match.awayKo, match.roundKey,
+        played ? { homeScore: match.homeScore, awayScore: match.awayScore }
+          : pending ? { homeScore: pending.home, awayScore: pending.away } : undefined);
+    });
+    body.querySelector('[data-fixture-action="lineup"]')?.addEventListener('click', () => {
+      openMatchDetail(match.roundKey, roundKeyPos(match.roundKey));
+      body.scrollTop = 0;
+      document.querySelector('#matchDetailModal .close-btn')?.focus({ preventScroll: true });
+    });
+    body.querySelectorAll('[data-fixture-team]').forEach(button => {
+      button.addEventListener('click', () => {
+        dismissLinkedFixtureForNavigation();
+        goToTeamInfo(button.dataset.fixtureTeam);
+      });
+    });
+  }
+
+  function dismissLinkedFixtureForNavigation() {
+    activeLinkedFixture = null;
+    activeMatchPath = '';
+    closeModalAnimated(document.getElementById('matchDetailModal'));
   }
 
   function closeMatchDetail() {
@@ -21711,7 +21763,7 @@
         : (act === 'player' ? el.dataset.playerKey
         : (el.dataset.a + ' vs ' + el.dataset.b)))
     }, 'related_chip_' + chipGroup + (chipGroup === 'shortcut' ? '_' + act : ''));
-    closeMatchCompareModal();
+    closeMatchCompareModal(act === 'player');
     if (act === 'week') {
       goToRoundWeek(Number(el.dataset.week));
     } else if (act === 'team') {
@@ -21726,6 +21778,7 @@
   // played = { homeScore, awayScore } 가 넘어오면 "이미 끝난 경기"용 화면입니다:
   // VS 자리에 실제 스코어를 보여주고, 의미가 없는 AI 예측 블록은 숨깁니다.
   let lastMatchCompareArgs = null; // 모달이 열려 있는 동안 언어 전환 시 다시 그리기 위해 기억해둡니다.
+  let matchCompareFromFixture = false;
   let mcRerendering = false;       // 언어 전환으로 다시 그리는 중에는 '열기' 이벤트를 세지 않기 위한 플래그
 
   function openMatchCompareModal(homeEn, homeKo, awayEn, awayKo, roundKey, played) {
@@ -22356,9 +22409,15 @@
     if (roundFavorOpen && roundViewMode === 'week') rfvStart();
   }
 
-  function closeMatchCompareModal() {
+  function closeMatchCompareModal(returnToFixture = true) {
+    const fromFixture = matchCompareFromFixture;
+    matchCompareFromFixture = false;
     lastMatchCompareArgs = null;
     closeModalAnimated(document.getElementById('matchCompareModal'));
+    if (fromFixture && !returnToFixture) dismissLinkedFixtureForNavigation();
+    if (fromFixture && returnToFixture) {
+      document.querySelector('#matchDetailBody [data-fixture-action="compare"]')?.focus({ preventScroll: true });
+    }
   }
 
   // ===================================================================
@@ -22887,6 +22946,8 @@
     if (currentSquadPlayerModalNumber) {
       openSquadPlayerModal(currentSquadPlayerModalNumber);
     }
+
+    renderLinkedFixtureSummary();
 
     // 전적 비교 모달이 열려 있으면 .lbl 이 아닌 텍스트(팀 이름, 주차 표기 등)도 새 언어로 다시 그립니다.
     const matchCompareModalEl = document.getElementById('matchCompareModal');
@@ -24035,11 +24096,8 @@
       const head = parts[0] || '';
       applying = true;
       try {
-        if (activeMatchPath) {
-          activeMatchPath = '';
-          activeLinkedFixture = null;
-          closeModalAnimated(document.getElementById('matchDetailModal'));
-        }
+        if (matchCompareFromFixture) closeMatchCompareModal(false);
+        if (activeMatchPath) dismissLinkedFixtureForNavigation();
         if (head === 'archive') {
           const tab = (parts[1] === 'weekly' || parts[1] === 'clubs') ? parts[1] : 'main';
           if (archiveMode) setArchiveTab(tab);
@@ -24083,7 +24141,7 @@
             }
             showView('rounds');
           }
-          if (match) openLinkedFixture(match);
+          if (match) openLinkedFixture(match, roundViewMode === 'month');
           else showToast(isKorean ? '경기를 찾을 수 없어 리그 일정을 열었어요.' : 'Match unavailable. Showing the league schedule.');
         } else if (head === 'compare') {
           const a = findTeamBySlug(parts[1]), b = findTeamBySlug(parts[2]);
@@ -24141,9 +24199,8 @@
       const target = normHash(location.hash);
       if (target === lastHash) return; // popstate + hashchange 중복 방지
       if (currentView === 'rounds' && lastHash.startsWith('match/') && target === roundOverlayOrigin?.hash) {
-        if (activeMatchPath) closeModalAnimated(document.getElementById('matchDetailModal'));
-        activeMatchPath = '';
-        activeLinkedFixture = null;
+        if (matchCompareFromFixture) closeMatchCompareModal(false);
+        if (activeMatchPath) dismissLinkedFixtureForNavigation();
         lastHash = target;
         const { top } = roundOverlayOrigin;
         requestAnimationFrame(() => {

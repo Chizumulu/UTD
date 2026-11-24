@@ -20583,3 +20583,68 @@ button.match-status:focus-visible {
   outline: 2px solid var(--color-brand-text);
   outline-offset: 2px;
 }
+
+/* 월별 일정은 경기 행 전체에서 경기 정보를 열고 PC에는 전적 비교를 함께 둡니다. */
+.rmd-fixture-row { position: relative; isolation: isolate; }
+.rmd-fixture-link { position: absolute; inset: 0; z-index: 1; color: var(--color-brand-text); text-decoration: none; }
+.rmd-fixture-link > span {
+  position: absolute;
+  inset-inline-end: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--fs-xl);
+  line-height: 1;
+}
+.rmd-fixture-link:focus-visible {
+  outline: 2px solid var(--color-brand-text);
+  outline-offset: -3px;
+  border-radius: var(--radius-xs);
+}
+@media (hover: hover) {
+  .rmd-fixture-link:hover { background: rgba(var(--color-tint-rgb), .04); }
+}
+.rmd-fixture-row .rmd-end { padding-inline-end: 16px; }
+.rmd-fixture-row .rmd-btn { position: relative; z-index: 2; }
+
+@container rmdlist (min-width: 960px) {
+  .rmd-fixture-row {
+    grid-template-columns: 64px 124px minmax(0, 1fr) 100px minmax(0, 1fr) 130px;
+  }
+}
+
+@media (max-width: 720px) {
+  .rmd-fixture-row { grid-template-areas: "meta meta meta" "home mid away"; }
+  .rmd-fixture-row .rmd-end { display: none; }
+  .rmd-fixture-row .rmd-meta { padding-inline-end: 16px; }
+  .rmd-fixture-link > span { top: 14px; transform: none; }
+}
+
+#matchDetailModal > .match-detail-modal-content:has(.linked-fixture-info) {
+  max-width: 620px;
+  height: auto;
+}
+#matchDetailBody:has(> .linked-fixture-info) {
+  display: block;
+  padding: var(--page-card-inset);
+}
+.linked-fixture-info { display: grid; gap: 12px; }
+.fixture-info-score { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.fixture-info-score strong { color: var(--color-brand-text); font-size: var(--fs-3xl); line-height: 1.2; }
+.fixture-info-note,
+.fixture-info-meta p { margin: 0; color: var(--color-text-secondary); line-height: 1.5; }
+.fixture-info-note { font-size: var(--fs-xs); }
+.fixture-info-meta { display: grid; gap: 4px; }
+.linked-fixture-info .rmc-preview { margin: 0; }
+.fixture-info-actions,
+.fixture-info-teams { display: flex; flex-wrap: wrap; gap: 8px; }
+.fixture-info-actions .rmd-act-btn,
+.fixture-info-teams .rmd-act-btn { min-height: 44px; white-space: normal; }
+.fixture-info-compare {
+  background: var(--color-selected-bg);
+  color: var(--color-selected-fg);
+  border-color: transparent;
+}
+.fixture-info-teams {
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-light);
+}
