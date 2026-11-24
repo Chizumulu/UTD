@@ -16450,6 +16450,43 @@ button.rmc-pending-badge:active {
   /* 더보기 시트 */
   .more-sheet-content .modal-body { padding: 4px 12px 14px; }
   .more-sheet-list { display: flex; flex-direction: column; }
+  .more-sheet-list[hidden] { display: none; }
+  .more-search { padding: 8px 0; }
+  .more-search label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--color-text-dark);
+    font-weight: 600;
+  }
+  .more-search input {
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border-chip);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text-dark);
+    font: inherit;
+    font-size: 16px;
+  }
+  .more-search input:focus-visible,
+  .more-search button:focus-visible { outline: 2px solid var(--color-brand-text); outline-offset: -2px; }
+  #moreSearchStatus {
+    margin: 8px 10px 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+  }
+  #moreSearchResults .more-sheet-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 10px;
+  }
+  #moreSearchResults small {
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+    font-weight: 400;
+  }
   .more-sheet-item {
     display: flex;
     align-items: center;

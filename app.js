@@ -386,7 +386,88 @@
   }
   function openMoreSheet() {
     const modal = document.getElementById('moreSheetModal');
-    if (modal) showModalAnimated(modal);
+    if (!modal) return;
+    renderMoreSearch();
+    showModalAnimated(modal);
+  }
+
+  function renderMoreSearch() {
+    const input = document.getElementById('moreSearchInput');
+    const results = document.getElementById('moreSearchResults');
+    const status = document.getElementById('moreSearchStatus');
+    const menu = document.querySelector('#moreSheetModal .more-sheet-list');
+    input.placeholder = isKorean ? '팀 이름 또는 선수 이름' : 'Team or player name';
+    const query = normalizeRoundSearch(input.value);
+    results.replaceChildren();
+    results.hidden = !query;
+    status.hidden = !query;
+    menu.hidden = Boolean(query);
+    if (!query) return;
+
+    const club = leagueData.find(team => isMyTeamName(team.nameEn, team.nameKo));
+    const clubName = isKorean ? club?.nameKo : club?.nameEn;
+    const former = typeof formerSquadData === 'undefined' ? [] : formerSquadData;
+    const roster = [...squadData, ...former];
+    const playerNames = player => [player.nameKo, player.nameEn, ...(player.aliasesKo || []), ...(player.aliasesEn || [])];
+    const rosterNames = new Set(roster.flatMap(playerNames).map(normalizeRoundSearch).filter(Boolean));
+    const entries = leagueData.map(team => ({
+      names: [team.nameKo, team.nameEn],
+      detail: isKorean ? '구단 정보' : 'Club info',
+      open: () => goToTeamInfo(team.nameEn)
+    }));
+    roster.forEach(player => {
+      const wasFormer = former.includes(player);
+      const identifier = player.number == null ? player.nameEn : (wasFormer ? 'F' + player.number : player.number);
+      entries.push({
+        names: playerNames(player),
+        detail: wasFormer ? clubName + (isKorean ? ' · 이전 선수' : ' · Former player') : clubName,
+        open: () => {
+          showView('squad');
+          showTeamInfoForKey(club.nameEn);
+          applyTeamInfoTab('squad');
+          window.scrollTo(0, 0);
+          openSquadPlayerModal(identifier);
+        }
+      });
+    });
+    topScorersData.forEach(player => {
+      const names = [player.nameKo, player.nameEn];
+      if (isMyTeamName(player.teamEn, player.teamKo) && names.some(name => rosterNames.has(normalizeRoundSearch(name)))) return;
+      entries.push({
+        names,
+        detail: isKorean ? player.teamKo + ' · 득점 기록' : player.teamEn + ' · Goal record',
+        open: () => {
+          showView('scorers');
+          window.scrollTo(0, 0);
+          openPlayerModal(player.key);
+        }
+      });
+    });
+
+    const matches = entries.flatMap(entry => {
+      const names = entry.names.map(normalizeRoundSearch);
+      const rank = names.includes(query) ? 0 : names.some(name => name.startsWith(query)) ? 1 : 2;
+      return names.some(name => name.includes(query)) ? [{ entry, rank }] : [];
+    }).sort((a, b) => a.rank - b.rank);
+    status.textContent = matches.length
+      ? (isKorean ? `검색 결과 ${matches.length}개` : `Results: ${matches.length}`)
+      : (isKorean ? '일치하는 팀이나 선수가 없습니다.' : 'No matching teams or players.');
+    matches.forEach(({ entry }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'more-sheet-item';
+      const name = document.createElement('span');
+      name.textContent = entry.names[isKorean ? 0 : 1] || entry.names.find(Boolean);
+      const detail = document.createElement('small');
+      detail.textContent = entry.detail;
+      button.append(name, detail);
+      button.addEventListener('click', () => {
+        closeMoreSheet();
+        input.value = '';
+        entry.open();
+      });
+      results.append(button);
+    });
   }
   function closeMoreSheet() {
     const modal = document.getElementById('moreSheetModal');
@@ -560,6 +641,7 @@
     window.scrollTo(0, 0);
   }
   function showCupView() {
+    rememberRoundScroll();
     setArchiveMode(false);
     currentView = 'cup';
     document.body.setAttribute('data-view', 'cup');
@@ -1123,6 +1205,8 @@
   }
 
   function showView(view) {
+    const returningToRounds = view === 'rounds' && (currentView !== 'rounds' || archiveMode);
+    if (view !== 'rounds') rememberRoundScroll();
     setArchiveMode(false); // 25/26 전용 화면에서 다른 화면으로 가면 항상 현재 시즌으로 복귀
     setCupMode(false);     // 컵대회 화면에서 다른 화면으로 가면 컵 모드 해제
     // 다른 화면으로 옮길 때는 맨 위에서 시작합니다. 사이드바·상단 메뉴·표에서 팀을 눌러 들어가는 경로 등
@@ -1187,9 +1271,12 @@
     } else if (view === 'rounds') {
       roundsView.style.display = '';
       roundsBtn.classList.add('active');
-      currentRoundHalf = null; // 다른 탭에서 돌아오면 현재 보던 라운드의 반기로 다시 맞춥니다.
       renderRoundsView();
-      playViewEnterAnimation(roundsView);
+      if (returningToRounds && roundScroll?.selection === roundScrollSelection()) {
+        window.scrollTo(0, roundScroll.top);
+      } else {
+        playViewEnterAnimation(roundsView);
+      }
     } else if (view === 'stats') {
       statsView.style.display = 'block';
       statsBtn.classList.add('active');
@@ -11425,6 +11512,7 @@
     if (roundsData[key] || (scheduledRounds && scheduledRounds[key])) {
       currentRoundKey = key;
     }
+    currentRoundHalf = null;
     roundViewMode = 'week'; // 특정 주차로 이동하므로 주차별 보기로 전환
     roundStatusFilter = 'all';
     clearRoundSearch(false);
@@ -11445,6 +11533,18 @@
   let roundStatusFilter = 'all';
   let roundSearchLimit = ROUND_SEARCH_PAGE_SIZE;
   let roundSearchTimer;
+  let roundScroll;
+
+  function roundScrollSelection() {
+    return JSON.stringify([roundViewMode, roundMonthKey, currentRoundKey, currentRoundHalf, roundStatusFilter,
+      roundMonthMineOnly, document.getElementById('roundSearchInput').value]);
+  }
+
+  function rememberRoundScroll() {
+    if (currentView === 'rounds' && !archiveMode) {
+      roundScroll = { selection: roundScrollSelection(), top: window.scrollY };
+    }
+  }
   try {
     if (localStorage.getItem('roundViewMode') === 'month') roundViewMode = 'month';
     roundMonthMineOnly = localStorage.getItem('roundMonthMineOnly') === '1';
@@ -13416,6 +13516,7 @@
       return;
     }
     const o = (opts && typeof opts === 'object' && !opts.target) ? opts : {};
+    rememberRoundScroll();
     archiveWeekIdx = null;
     archiveReturnToTeamInfo = !!o.fromTeamInfo;
     const rows = archiveFinalRows();
@@ -22986,9 +23087,17 @@
       Promise.resolve().then(sync);
     }
 
+    let roundOverlayOrigin;
     syncMatchPath = closing => {
       if (applying) return;
-      if (!closing) { sync(); return; }
+      if (!closing) {
+        if (!normHash(location.hash).startsWith('match/')) {
+          roundOverlayOrigin = currentView === 'rounds' && !archiveMode
+            ? { hash: normHash(location.hash), top: window.scrollY } : null;
+        }
+        sync();
+        return;
+      }
       if (!normHash(location.hash).startsWith('match/')) return;
       if (history.state?.matchOverlay) history.back();
       else writeUrl(buildHash(), true);
@@ -23020,17 +23129,23 @@
             roundViewMode = 'month';
             if (/^(?:\d{4}-\d{2}|before|tbd)$/.test(parts[2] || '')) roundMonthKey = parts[2];
           } else if (roundsData[key] || scheduledRounds[key]) {
+            if (currentRoundKey !== key) currentRoundHalf = null;
             currentRoundKey = key;
             roundViewMode = 'week';
           }
           showView('rounds');
         } else if (head === 'match') {
           const match = findLinkedFixture(parts.slice(1));
-          if (match) {
-            currentRoundKey = match.roundKey;
-            roundViewMode = 'week';
+          if (history.state?.matchOverlay && currentView === 'rounds' && !archiveMode) {
+            roundOverlayOrigin = { hash: lastHash, top: window.scrollY };
+          } else {
+            if (match) {
+              currentRoundKey = match.roundKey;
+              currentRoundHalf = null;
+              roundViewMode = 'week';
+            }
+            showView('rounds');
           }
-          showView('rounds');
           if (match) openLinkedFixture(match);
           else showToast(isKorean ? '경기를 찾을 수 없어 리그 일정을 열었어요.' : 'Match unavailable. Showing the league schedule.');
         } else if (head === 'compare') {
@@ -23070,9 +23185,21 @@
     });
 
     function onNav() {
-      if (normHash(location.hash) === lastHash) return; // popstate + hashchange 중복 방지
+      const target = normHash(location.hash);
+      if (target === lastHash) return; // popstate + hashchange 중복 방지
+      if (currentView === 'rounds' && lastHash.startsWith('match/') && target === roundOverlayOrigin?.hash) {
+        if (activeMatchPath) closeModalAnimated(document.getElementById('matchDetailModal'));
+        activeMatchPath = '';
+        activeLinkedFixture = null;
+        lastHash = target;
+        const { top } = roundOverlayOrigin;
+        requestAnimationFrame(() => {
+          if (currentView === 'rounds' && !archiveMode && lastHash === target) window.scrollTo(0, top);
+        });
+        return;
+      }
       applyRoute();
-      window.scrollTo(0, 0);
+      if (currentView !== 'rounds') window.scrollTo(0, 0);
     }
     window.addEventListener('popstate', onNav);
     window.addEventListener('hashchange', onNav);
