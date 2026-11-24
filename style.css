@@ -15366,7 +15366,7 @@ body {
 
 .rmd-row {
   display: grid;
-  grid-template-columns: 64px 124px minmax(0, 1fr) 100px minmax(0, 1fr) 248px;
+  grid-template-columns: 64px 124px minmax(0, 1fr) minmax(100px, max-content) minmax(0, 1fr) 248px;
   align-items: center;
   column-gap: 12px;
   padding: 14px 24px;
@@ -15555,11 +15555,13 @@ body {
   .rmd-mid { min-width: 84px; grid-template-columns: 1fr 30px 1fr; }
 }
 
-@media (max-width: 720px) {
-  .rmd-mid:not(.is-single) {
-    grid-template-columns: 1fr max-content 1fr;
-    column-gap: 6px;
-  }
+.rmd-mid:not(.is-single) {
+  grid-template-columns: 1fr max-content 1fr;
+  column-gap: 6px;
+}
+
+@media (min-width: 721px) {
+  .rmd-mid:not(.is-single) { column-gap: 12px; }
 }
 
 /* 주차별 보기의 휴식주 행 (월별과 같은 날짜 카드 디자인 안에서 사용) */
@@ -15609,7 +15611,7 @@ body {
 
 /* PC: 마지막 칸(버튼) 없이 5칸 고정 → 팀명/스코어 위치가 행마다 같음. 버튼은 아래 줄 전체 폭에 오른쪽 정렬 */
 /* 왼쪽(시간 64 + 구장 124 + 간격)과 같은 폭의 빈 칸을 오른쪽에 둬서, 팀명·스코어가 카드 정중앙에 오게 함 */
-.rmd-row.rmd-tv { grid-template-columns: 64px 124px minmax(0, 1fr) 100px minmax(0, 1fr) 200px; }
+.rmd-row.rmd-tv { grid-template-columns: 64px 124px minmax(0, 1fr) minmax(100px, max-content) minmax(0, 1fr) 200px; }
 /* 버튼 묶음은 팀명·스코어와 같은 가운데 축(3~5번 칸) 아래에 가운데 정렬 */
 .rmd-tv .rmd-end { grid-column: 3 / 6; order: 5; justify-content: center; flex-wrap: wrap; gap: 8px; padding-top: 10px; }
 .rmd-tv .rmd-end .rmd-toggle,
@@ -20592,7 +20594,7 @@ button.match-status:focus-visible {
 
 @container rmdlist (min-width: 960px) {
   .rmd-fixture-row {
-    grid-template-columns: 64px 124px minmax(0, 1fr) 100px minmax(0, 1fr) 130px;
+    grid-template-columns: 64px 124px minmax(0, 1fr) minmax(100px, max-content) minmax(0, 1fr) 130px;
   }
 }
 
