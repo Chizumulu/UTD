@@ -6740,7 +6740,7 @@
     if (!el) return;
     syncClubCompetitionFilter('teamRecordCompFilter', teamRecordCompetition, mode => {
       teamRecordCompetition = mode;
-      renderTeamRecordRoomTab();
+      renderClubHonors();
     });
     const L = collectMyTeamResults(teamRecordCompetition);
     if (!L.length) {
@@ -6841,6 +6841,7 @@
   function renderTeamAwardsTab() {
     const el = document.getElementById('teamInfoAwardsTab');
     if (!el) return;
+    if (teamRecordCompetition !== 'league') { el.replaceChildren(); return; }
     el.innerHTML = renderTeamAwardsCard();
     attachImageFallback();
   }
@@ -7322,21 +7323,27 @@
     const el = document.getElementById('teamInfoH2hTab');
     if (!el) return;
 
-    const list = (typeof computeH2HHistory === 'function') ? computeH2HHistory() : [];
-    if (!list.length) { el.innerHTML = ''; return; }
+    const list = teamRecordCompetition === 'league'
+      ? (typeof computeH2HHistory === 'function' ? computeH2HHistory() : [])
+      : collectScopedClubH2H(teamRecordCompetition);
+    if (!list.length) {
+      el.innerHTML = teamRecordCompetition === 'league' ? '' :
+        `<p class="club-comp-note">${isKorean ? '이 범위에 확정된 상대전적이 없어요.' : 'No head-to-head results in this scope.'}</p>`;
+      return;
+    }
 
     const cardsHtml = list.map(rec => {
       const gdClass = rec.goalDiff > 0 ? 'gd-pos' : (rec.goalDiff < 0 ? 'gd-neg' : 'gd-zero');
       const logoImg = rec.logoSrc
-        ? `<img class="team-logo team-logo-sm" src="${rec.logoSrc}" data-en-name="${rec.nameEn}" alt="${rec.nameEn}">`
-        : `<span class="ti-h2h-noimg">${(rec.nameKo || rec.nameEn || '?').charAt(0)}</span>`;
+        ? `<img class="team-logo team-logo-sm" src="${escapeHtml(rec.logoSrc)}" data-en-name="${escapeHtml(rec.nameEn)}" alt="${escapeHtml(rec.nameEn)}">`
+        : `<span class="ti-h2h-noimg">${escapeHtml((rec.nameKo || rec.nameEn || '?').charAt(0))}</span>`;
       const playedLabel = isKorean ? `${rec.played}경기` : `${rec.played} PLD`;
 
       return `
         <div class="ti-h2h-card">
           <div class="ti-h2h-card-top">
             ${logoImg}
-            <span class="ti-h2h-name lbl" data-en="${rec.nameEn}" data-ko="${rec.nameKo}">${isKorean ? rec.nameKo : rec.nameEn}</span>
+            <span class="ti-h2h-name lbl" data-en="${escapeHtml(rec.nameEn)}" data-ko="${escapeHtml(rec.nameKo)}">${escapeHtml(isKorean ? rec.nameKo : rec.nameEn)}</span>
           </div>
           <div class="ti-h2h-wdl">
             <span class="ti-h2h-wdl-item ti-h2h-w"><b>${rec.won}</b><small class="lbl" data-en="W" data-ko="승">${isKorean ? '승' : 'W'}</small></span>
@@ -7352,6 +7359,26 @@
 
     el.innerHTML = `<div class="ti-h2h-grid">${cardsHtml}</div>`;
     attachImageFallback();
+  }
+
+  function collectScopedClubH2H(scope) {
+    const opponents = new Map();
+    for (const match of collectMyTeamResults(scope)) {
+      if (!opponents.has(match.oppEn)) {
+        opponents.set(match.oppEn, {
+          nameEn: match.oppEn, nameKo: match.oppKo || match.oppEn, played: 0, won: 0, drawn: 0, lost: 0,
+          goalsFor: 0, goalsAgainst: 0, goalDiff: 0,
+          logoSrc: leagueData.find(team => team.nameEn === match.oppEn)?.logoSrc
+        });
+      }
+      const record = opponents.get(match.oppEn);
+      record.played++;
+      record[{ W: 'won', D: 'drawn', L: 'lost' }[match.res]]++;
+      record.goalsFor += match.gf;
+      record.goalsAgainst += match.ga;
+      record.goalDiff = record.goalsFor - record.goalsAgainst;
+    }
+    return [...opponents.values()].sort((a, b) => b.played - a.played || a.nameEn.localeCompare(b.nameEn));
   }
 
   // 유튜브 링크(watch?v=, youtu.be, embed)에서 11자리 영상 ID만 뽑아냅니다.
@@ -10326,13 +10353,10 @@
     if (magicTarget) magicTarget.innerHTML = mine ? buildTeamMagicNumberHtml(mine.team, getRankedTeams('all')) : '';
     renderTeamPointsHistoryChart('teamInfoPointsHistorySvg', mine ? mine.team : null);
     renderTeamInfoByeFlow();
-    renderTeamH2HTab();
     renderTeamStaffTab();
     renderTeamStoryTab();
     renderSquadView();
-    renderTeamRecordRoomTab();
-    renderTeamScorersTab();
-    renderTeamAwardsTab();
+    renderClubHonors();
     renderTeamYoutubeTab();
     renderTeamHalfReviewTab();
     renderTeamResultsTab();
@@ -11236,6 +11260,10 @@
   function renderTeamScorersTab() {
     const el = document.getElementById('teamInfoScorersTab');
     if (!el) return;
+    if (teamRecordCompetition !== 'league') {
+      renderScopedClubPlayerRecords(el, teamRecordCompetition);
+      return;
+    }
     el.innerHTML = buildTeamScorerCardsHtml('Chizumulu United FC', '치주물루 유나이티드 FC')
       + fullRecordBtnHtml('goals')
       + renderAssistLeadersCard('rank')
@@ -11243,6 +11271,44 @@
       + renderGoalkeeperRecordCard()
       + renderAppearanceStatsCard();
     // 콤비·포지션 분포·영향도·조합 효과·교체 비율은 "분석" 성격이라 전력분석 탭으로 옮겼습니다 (renderTeamAnalysisTab).
+  }
+
+  function renderClubHonors() {
+    renderTeamRecordRoomTab();
+    renderTeamScorersTab();
+    renderTeamAwardsTab();
+    renderTeamH2HTab();
+  }
+
+  function renderScopedClubPlayerRecords(el, scope) {
+    const fields = [['appearances', '출전', 'Apps'], ['starts', '선발', 'Starts'],
+      ['goals', '득점', 'Goals'], ['assists', '도움', 'Assists'], ['motmCount', 'MOTM', 'MOTM']];
+    const former = typeof formerSquadData === 'undefined' ? [] : formerSquadData;
+    const league = scope === 'total' ? squadPlayerStats : {};
+    const cup = typeof squadPlayerStatsCup === 'undefined' ? {} : squadPlayerStatsCup;
+    const players = [...squadData, ...former].flatMap(player => {
+      if (player.number == null) return [];
+      const id = former.includes(player) ? 'F' + player.number : String(player.number);
+      const stats = Object.fromEntries(fields.map(([key]) => [key, (league[id]?.[key] || 0) + (cup[id]?.[key] || 0)]));
+      return fields.some(([key]) => stats[key]) ? [{ player, id, stats }] : [];
+    }).sort((a, b) => b.stats.goals - a.stats.goals || b.stats.assists - a.stats.assists ||
+      b.stats.appearances - a.stats.appearances || a.player.nameEn.localeCompare(b.player.nameEn));
+    if (!players.length) {
+      el.innerHTML = `<p class="club-comp-note">${isKorean ? '이 범위에 등록된 선수 기록이 없어요.' : 'No player records in this scope.'}</p>`;
+      return;
+    }
+    el.innerHTML = `<p class="club-comp-note">${isKorean ? '등록된 라인업과 경기별 수상 기록 기준이에요.' : 'Based on recorded lineups and match awards.'}</p>
+    <div class="table-wrap"><table class="stats-table"><thead><tr>
+      <th scope="col">${isKorean ? '선수' : 'Player'}</th>
+      ${fields.map(([, ko, en]) => `<th scope="col">${isKorean ? ko : en}</th>`).join('')}
+      </tr></thead><tbody>${players.map(({ player, id, stats }) => `<tr>
+      <th scope="row"><button type="button" class="player-name-link" data-record-player="${escapeHtml(id)}">
+        ${escapeHtml(isKorean ? player.nameKo || player.nameEn : player.nameEn)}
+      </button></th>${fields.map(([key]) => `<td>${stats[key]}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    el.querySelectorAll('[data-record-player]').forEach(button => button.addEventListener('click', () => {
+      openSquadPlayerModal(button.dataset.recordPlayer);
+      setSquadPlayerComp(scope);
+    }));
   }
 
   // ===== 팀 스폰서 탭 (내부 id/함수명은 story 그대로) =====
