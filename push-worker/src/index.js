@@ -529,11 +529,10 @@ function buildLeagueCalendar(season, modifiedAt, fixtures) {
   const stamp = calendarDate(modifiedAt);
   for (const fixture of dated) {
     const { homeEn, awayEn, homeKo, awayKo, kickoffAt, status } = fixture;
-    const url = matchNotificationUrl(season, homeEn, awayEn);
+    const url = matchNotificationUrl(season, homeEn, awayEn, null, fixture.fixtureId);
     const cancelled = status === "postponed" || status === "cancelled";
     const label = status === "postponed" ? "[연기] " : status === "cancelled" ? "[취소] " : "";
-    // Season and assigned home/away teams identify the match across changes to kickoff and round.
-    const uid = "utd-" + [season, homeEn, awayEn].map(matchTeamSlug).join(".") + "@chizumulu.github.io";
+    const uid = (fixture.fixtureId || legacyCalendarId(season, fixture)) + "@chizumulu.github.io";
     lines.push(
       "BEGIN:VEVENT",
       "UID:" + uid,
@@ -561,21 +560,28 @@ async function sendKickoffReminders(env, season, fixtures, now) {
     if (now < notifyAt || now > notifyAt + KICKOFF_REMINDER_WINDOW_MS) continue;
 
     const pair = fixture.homeEn + "|" + fixture.awayEn;
+    const identity = fixture.fixtureId || pair;
+    const previousIdentity = fixture.fixtureId === legacyCalendarId(season, fixture) ? pair : identity;
     if (season) {
-      const saved = await env.DB.prepare("SELECT value FROM app_settings WHERE key = ?")
-        .bind(scheduleFixtureStateKey(season, pair)).first();
+      const saved = await readFixtureSetting(env.DB, scheduleFixtureStateKey(season, identity),
+        scheduleFixtureStateKey(season, previousIdentity));
       if (saved) {
         const latest = JSON.parse(saved.value);
         if (latest.status !== "scheduled" || latest.kickoffAt !== kickoffAt) continue;
       }
     }
-    const fixtureId = await endpointId(pair);
+    const fixtureId = await endpointId(identity);
     const settingKey = "kickoff_reminder:" + fixtureId;
+    const legacyKey = previousIdentity === identity ? settingKey : "kickoff_reminder:" + await endpointId(previousIdentity);
     const scheduledAt = new Date(kickoffAt).toISOString();
-    const previous = await env.DB.prepare(
-      "SELECT value FROM app_settings WHERE key = ?"
-    ).bind(settingKey).first();
-    if (previous && previous.value === scheduledAt) continue;
+    const previous = await readFixtureSetting(env.DB, settingKey, legacyKey);
+    if (previous && previous.value === scheduledAt) {
+      if (previous.key !== settingKey) {
+        await env.DB.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING")
+          .bind(settingKey, scheduledAt).run();
+      }
+      continue;
+    }
 
     const notification = {
       category: "reminder",
@@ -585,10 +591,10 @@ async function sendKickoffReminders(env, season, fixtures, now) {
       tag: "utd-kickoff-" + fixtureId,
       renotify: false,
       data: { url: matchNotificationUrl(
-        season, fixture.homeEn, fixture.awayEn, fixture.kickoffDate
+        season, fixture.homeEn, fixture.awayEn, fixture.kickoffDate, fixture.fixtureId
       ) }
     };
-    const delivery = await broadcast(env, notification, { deliveryId: settingKey + ":" + scheduledAt });
+    const delivery = await broadcast(env, notification, { deliveryId: legacyKey + ":" + scheduledAt });
     if (delivery.transient > 0) {
       console.warn("Kickoff reminder delivery failed temporarily; it will be retried.", fixture.homeEn, fixture.awayEn);
       continue;
@@ -623,6 +629,8 @@ function readChizumuluFixtures(block) {
 
     const kickoffDate = quotedProperty(item, "kickoffDate");
     const kickoffTime = quotedProperty(item, "kickoffTime");
+    const rawId = quotedProperty(item, "fixtureId");
+    const fixtureId = /^[a-z0-9][a-z0-9.-]{0,127}$/.test(rawId) ? rawId : "";
     const homeKo = quotedProperty(item, "homeKo");
     const awayKo = quotedProperty(item, "awayKo");
     if (!homeKo || !awayKo) continue;
@@ -635,7 +643,7 @@ function readChizumuluFixtures(block) {
       : fixtureProperty(item, "postponed") === "true" ? "postponed"
       : kickoffAt === null || fixtureProperty(item, "pendingResult") === "true" ? "undated"
       : "scheduled";
-    fixtures.push({ homeEn, awayEn, homeKo, awayKo, kickoffDate, kickoffTime, kickoffAt, status });
+    fixtures.push({ fixtureId, homeEn, awayEn, homeKo, awayKo, kickoffDate, kickoffTime, kickoffAt, status });
   }
   return fixtures;
 }
@@ -654,7 +662,7 @@ function mergeScheduleFixtures(upcoming, results) {
   const priority = { undated: 0, postponed: 1, cancelled: 2, scheduled: 3, completed: 4 };
   const fixtures = new Map();
   for (const fixture of [...upcoming, ...results]) {
-    const id = fixture.homeEn + "|" + fixture.awayEn;
+    const id = fixture.fixtureId || fixture.homeEn + "|" + fixture.awayEn;
     const existing = fixtures.get(id);
     if (!existing || priority[fixture.status] > priority[existing.status]) fixtures.set(id, fixture);
   }
@@ -673,7 +681,16 @@ function scheduleChangeType(previous, fixture, now) {
 async function sendScheduleChanges(env, season, fixtures, now, sourceModifiedAt) {
   for (const [id, fixture] of fixtures) {
     const key = scheduleFixtureStateKey(season, id);
-    const saved = await env.DB.prepare("SELECT value FROM app_settings WHERE key = ?").bind(key).first();
+    const legacyKey = fixture.fixtureId === legacyCalendarId(season, fixture)
+      ? scheduleFixtureStateKey(season, fixture.homeEn + "|" + fixture.awayEn) : key;
+    let saved = await readFixtureSetting(env.DB, key, legacyKey);
+    if (saved && saved.key !== key) {
+      const migrated = JSON.parse(saved.value);
+      if (migrated.pending) migrated.pending.deliveryKey = legacyKey;
+      await env.DB.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING")
+        .bind(key, JSON.stringify(migrated)).run();
+      saved = await readFixtureSetting(env.DB, key, key);
+    }
     const previous = saved ? JSON.parse(saved.value) : null;
     if (previous && (previous.status === "completed" || now < previous.observedAt)) continue;
     if (sourceModifiedAt && previous?.sourceModifiedAt > sourceModifiedAt) continue;
@@ -705,12 +722,18 @@ async function sendScheduleChanges(env, season, fixtures, now, sourceModifiedAt)
       (state.status === "scheduled" && state.kickoffAt <= now);
     if (!tooLate) {
       const delivery = await broadcast(env, scheduleChangeNotification(season, fixture, state), {
-        deliveryId: key + ":" + state.revision, createdBefore: state.observedAt
+        deliveryId: (state.pending.deliveryKey || key) + ":" + state.revision, createdBefore: state.observedAt
       });
       if (delivery.transient > 0) continue;
     }
     await compareScheduleState(env.DB, key, storedValue, JSON.stringify({ ...state, pending: null }));
   }
+}
+
+async function readFixtureSetting(db, key, legacyKey) {
+  const fetchSetting = id => db.prepare("SELECT key, value FROM app_settings WHERE key = ?").bind(id).first();
+  const saved = await fetchSetting(key);
+  return saved || (legacyKey !== key ? fetchSetting(legacyKey) : null);
 }
 
 function scheduleFixtureStateKey(season, id) {
@@ -738,9 +761,9 @@ function scheduleChangeNotification(season, fixture, state) {
     title: titles[type],
     body: fixture.homeKo + " vs " + fixture.awayKo + " · " + timing,
     icon: "/UTD/apple-touch-icon.png",
-    tag: "utd-schedule-" + season + "-" + fixture.homeEn + "-" + fixture.awayEn,
+    tag: "utd-schedule-" + (fixture.fixtureId || season + "-" + fixture.homeEn + "-" + fixture.awayEn),
     renotify: true,
-    data: { url: matchNotificationUrl(season, fixture.homeEn, fixture.awayEn) }
+    data: { url: matchNotificationUrl(season, fixture.homeEn, fixture.awayEn, null, fixture.fixtureId) }
   };
 }
 
@@ -811,8 +834,13 @@ function matchTeamSlug(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-function matchNotificationUrl(season, home, away, date) {
+function legacyCalendarId(season, fixture) {
+  return "utd-" + [season || "", fixture.homeEn, fixture.awayEn].map(matchTeamSlug).join(".");
+}
+
+function matchNotificationUrl(season, home, away, date, fixtureId) {
   const root = "https://chizumulu.github.io/UTD/";
+  if (fixtureId) return root + "#/match/id/" + encodeURIComponent(fixtureId);
   if (!home || !away || (!season && !date)) return root;
   const parts = season ? [season, matchTeamSlug(home), matchTeamSlug(away)] : ["live", home, away, date];
   return root + "#/match/" + parts.map(encodeURIComponent).join("/");

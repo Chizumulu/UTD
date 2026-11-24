@@ -1543,6 +1543,10 @@
   let predictWorker = null;
   let predictWorkerFailed = false; // 워커 생성/로드가 실패하는 환경(예: file://로 직접 열람)에서는 메인 스레드 계산으로 폴백합니다.
   let predictWorkerRequestSeq = 0;
+  const PREDICT_WORKER_TIMEOUT_MS = 30000;
+  const pendingPredictRequests = new WeakMap();
+  let predictionRenderSeq = 0;
+  let predictionRunning = false;
 
   // ===== 경기 예측 / 몬테카를로 시뮬레이션 (Match Projections) =====
   // 4000회 몬테카를로 시뮬레이션 + Dixon-Coles ρ 추정 같은 무거운 수학 연산은
@@ -1559,8 +1563,11 @@
       const workerV = ASSET_VERSIONS.predictWorker || '001';
       const dataV = ASSET_VERSIONS.data || '007';
       predictWorker = new Worker('predict-worker.js?v=' + workerV + '&dataV=' + dataV);
-      predictWorker.onerror = function(err) {
+      const worker = predictWorker;
+      worker.onerror = function(err) {
+        if (predictWorker !== worker) return;
         console.error('predict-worker 로드/실행 실패, 메인 스레드 계산으로 전환합니다.', err);
+        worker.terminate();
         predictWorker = null;
         predictWorkerFailed = true;
       };
@@ -1582,11 +1589,29 @@
       });
     }
     const requestId = ++predictWorkerRequestSeq;
+    let pending = pendingPredictRequests.get(worker);
+    if (!pending) {
+      pending = new Set();
+      pendingPredictRequests.set(worker, pending);
+    }
     return new Promise((resolve, reject) => {
       function cleanup() {
+        clearTimeout(timeout);
+        pending.delete(abort);
         worker.removeEventListener('message', handleMessage);
         worker.removeEventListener('error', handleError);
       }
+      function abort(error) {
+        cleanup();
+        reject(error);
+      }
+      const timeout = setTimeout(() => {
+        if (predictWorker === worker) predictWorker = null;
+        worker.terminate();
+        const error = new Error('Prediction timed out');
+        error.name = 'TimeoutError';
+        for (const cancel of pending) cancel(error);
+      }, PREDICT_WORKER_TIMEOUT_MS);
       function handleMessage(e) {
         if (!e.data || e.data.requestId !== requestId) return; // 이전 요청의 응답은 무시
         cleanup();
@@ -1607,7 +1632,12 @@
       }
       worker.addEventListener('message', handleMessage);
       worker.addEventListener('error', handleError);
-      worker.postMessage(Object.assign({ requestId }, payload));
+      pending.add(abort);
+      try {
+        worker.postMessage(Object.assign({ requestId }, payload));
+      } catch (err) {
+        abort(err);
+      }
     });
   }
 
@@ -1627,17 +1657,29 @@
     renderScenarioTable(); // 시뮬레이션 전에도 표 자체는 바로 보여줍니다(우승선/잔류선 구분은 결과 도착 후 추가)
 
     if (!predictionCache) {
+      if (predictionRunning && !forceRerun) return;
+      const renderSeq = ++predictionRenderSeq;
+      predictionRunning = true;
       renderPredictMySummary(); // 결과가 오기 전에는 요약 카드를 '계산 중' 상태로 둡니다
       tbody.innerHTML = `<tr><td colspan="7" class="predict-loading"><span class="predict-loading-inner"><span class="predict-spinner"></span><span>${isKorean ? '시뮬레이션 실행 중...' : 'Running simulation...'}</span></span></td></tr>`;
       refreshBtn.disabled = true;
       renderWhatIf(); // 기본 예측이 끝나기 전에는 '다시 계산' 버튼이 비활성 상태로 보입니다
       runMonteCarloSimulationAsync(4000).then(result => {
+        if (renderSeq !== predictionRenderSeq) return;
         predictionCache = result;
         drawPredictionTable();
-        refreshBtn.disabled = false;
       }).catch(err => {
+        if (renderSeq !== predictionRenderSeq) return;
         console.error('몬테카를로 시뮬레이션 실행 중 오류:', err);
-        tbody.innerHTML = `<tr><td colspan="7" class="predict-loading">${isKorean ? '시뮬레이션 실행에 실패했어요. 새로고침 후 다시 시도해 주세요.' : 'Simulation failed. Please refresh and try again.'}</td></tr>`;
+        const timedOut = err.name === 'TimeoutError';
+        const message = timedOut
+          ? (isKorean ? '시뮬레이션 응답 시간이 초과됐어요.' : 'The simulation timed out.')
+          : (isKorean ? '시뮬레이션 실행에 실패했어요.' : 'The simulation failed.');
+        tbody.innerHTML = `<tr><td colspan="7" class="predict-loading">${message}
+          <button type="button" class="analysis-share" onclick="renderPredictions(true)">${isKorean ? '다시 시도' : 'Retry'}</button></td></tr>`;
+      }).finally(() => {
+        if (renderSeq !== predictionRenderSeq) return;
+        predictionRunning = false;
         refreshBtn.disabled = false;
       });
     } else {
@@ -4187,7 +4229,8 @@
     return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   }
 
-  function leagueFixturePath(home, away) {
+  function leagueFixturePath(home, away, fixtureId) {
+    if (fixtureId) return 'match/id/' + encodeURIComponent(fixtureId);
     if (!home || !away) return '';
     return 'match/' + SEASON_START.slice(0, 4) + '/' + matchTeamSlug(home) + '/' + matchTeamSlug(away);
   }
@@ -4201,13 +4244,17 @@
   function findLinkedFixture(parts) {
     const [mode, home, away, observedDate] = parts;
     const live = mode === 'live';
-    if ((!live && mode !== SEASON_START.slice(0, 4)) || !home || !away) return null;
+    const byId = mode === 'id';
+    if ((!live && !byId && mode !== SEASON_START.slice(0, 4)) || !home || (!byId && !away)) return null;
     if (live && !/^\d{4}-\d{2}-\d{2}$/.test(observedDate || '')) return null;
 
     const fixtures = allRoundKeysIncludingScheduled().flatMap(roundKey =>
       buildRoundMatches(roundKey).filter(m => !m.isBye && !m.movedToWeek).map(m => ({ ...m, roundKey })));
+    if (byId) return fixtures.find(m => m.fixtureId === home) || null;
     if (!live) {
-      return fixtures.find(m => matchTeamSlug(m.homeEn) === home && matchTeamSlug(m.awayEn) === away) || null;
+      const oldId = `utd-${mode}.${home}.${away}`;
+      return fixtures.find(m => m.fixtureId === oldId) ||
+        fixtures.find(m => matchTeamSlug(m.homeEn) === home && matchTeamSlug(m.awayEn) === away) || null;
     }
 
     const homeEn = resolveLeagueTeamNameEn({name: home});
@@ -4232,7 +4279,7 @@
   }
 
   function setActiveMatchPath(match) {
-    activeMatchPath = match ? leagueFixturePath(match.homeEn, match.awayEn) : '';
+    activeMatchPath = match ? leagueFixturePath(match.homeEn, match.awayEn, match.fixtureId) : '';
     document.getElementById('matchDetailShareBtn').style.display = activeMatchPath ? '' : 'none';
     syncMatchPath();
   }
@@ -4251,7 +4298,7 @@
       : `⚽ Chizumulu United FC: Next Match\n${compTxt}${haTxt} vs ${oppName}\n${kickoffTxt}`;
     const us = info.team.nameEn;
     const path = nm.comp === 'cup' ? 'cup' : leagueFixturePath(
-      nm.homeAway === 'H' ? us : nm.oppEn, nm.homeAway === 'H' ? nm.oppEn : us);
+      nm.homeAway === 'H' ? us : nm.oppEn, nm.homeAway === 'H' ? nm.oppEn : us, nm.fixtureId);
     shareContent(isKorean ? '치주물루 다음 경기' : 'Chizumulu Next Match', text, fixtureUrl(path));
   }
 
@@ -4345,7 +4392,7 @@
       `DESCRIPTION:${icsEscape(description)}`
     ];
     if (venue) lines.push(`LOCATION:${icsEscape(isKorean ? venue.nameKo : venue.nameEn)}`);
-    const path = m.compEn ? 'cup' : leagueFixturePath(m.homeEn, m.awayEn);
+    const path = m.compEn ? 'cup' : leagueFixturePath(m.homeEn, m.awayEn, m.fixtureId);
     lines.push(`URL:${fixtureUrl(path)}`, 'END:VEVENT');
     return lines;
   }
@@ -4381,6 +4428,7 @@
     const ev = buildMatchVEvent({
       homeEn: iAmHome ? 'Chizumulu United FC' : nm.oppEn, homeKo: iAmHome ? '치주물루 유나이티드 FC' : nm.oppKo,
       awayEn: iAmHome ? nm.oppEn : 'Chizumulu United FC', awayKo: iAmHome ? nm.oppKo : '치주물루 유나이티드 FC',
+      fixtureId: nm.fixtureId,
       kickoffDate: nm.kickoffDate, kickoffTime: nm.kickoffTime,
       compKo: nm.comp === 'cup' ? nm.compKo : undefined, compEn: nm.comp === 'cup' ? nm.compEn : undefined
     });
@@ -7303,7 +7351,7 @@
     const html = pending.map(({ match, score }) => {
       const home = escapeHtml(isKorean ? match.homeKo : match.homeEn);
       const away = escapeHtml(isKorean ? match.awayKo : match.awayEn);
-      return `<a class="pending-league-result" href="#/${leagueFixturePath(match.homeEn, match.awayEn)}">
+      return `<a class="pending-league-result" href="#/${leagueFixturePath(match.homeEn, match.awayEn, match.fixtureId)}">
         <span>${home} <b>${score.home} : ${score.away}</b> ${away}</span>
         <small>${isKorean ? '경기 종료' : 'Full time'} · ${pendingLeagueResultText()}</small>
       </a>`;
@@ -11497,7 +11545,7 @@
         // (그렇지 않으면 이후 경기들의 득점자가 한 칸씩 밀려서 엉뚱하게 매칭됩니다.)
         if (m.postponed || typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') {
           return {
-            isBye: false, isScheduled: true,
+            isBye: false, isScheduled: true, fixtureId: m.fixtureId,
             homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
             homeScore: m.homeScore, awayScore: m.awayScore,
             postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek, changed: m.changed,
@@ -11509,7 +11557,7 @@
         const d = details[detailIdx] || {};
         detailIdx++;
         return {
-          isBye: false, isScheduled: false,
+          isBye: false, isScheduled: false, fixtureId: m.fixtureId,
           homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
           homeScore: m.homeScore, awayScore: m.awayScore,
           movedFromWeek: m.movedFromWeek, changed: m.changed, forfeit: m.forfeit,
@@ -11527,7 +11575,7 @@
       // 미리 채워져 있으면(=그 경기만 먼저 끝난 경우) 완료된 경기로 표시합니다.
       if (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') {
         return {
-          isBye: false, isScheduled: false,
+          isBye: false, isScheduled: false, fixtureId: m.fixtureId,
           homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
           homeScore: m.homeScore, awayScore: m.awayScore,
           movedFromWeek: m.movedFromWeek, changed: m.changed, forfeit: m.forfeit,
@@ -11536,7 +11584,7 @@
         };
       }
       return {
-        isBye: false, isScheduled: true,
+        isBye: false, isScheduled: true, fixtureId: m.fixtureId,
         homeKo: m.homeKo, homeEn: m.homeEn, awayKo: m.awayKo, awayEn: m.awayEn,
         kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime,
         postponed: m.postponed, movedToWeek: m.movedToWeek, movedFromWeek: m.movedFromWeek, changed: m.changed,
@@ -12141,7 +12189,7 @@
         <div class="rmd-end${(detailBtnHtml && !teamOpts) ? ' rmd-end-detail' : ''}">
           ${hasSc ? `<button type="button" class="rmd-toggle" aria-expanded="false"><span class="lbl" data-en="Goals" data-ko="득점">${isKorean ? '득점' : 'Goals'}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''}
           ${pvEligible ? `<button type="button" class="rmd-pvbtn" aria-expanded="false"><span class="lbl" data-en="Preview" data-ko="프리뷰">${isKorean ? '프리뷰' : 'Preview'}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''}
-          ${detailBtnHtml || (!m.movedToWeek ? '<a class="rmd-act-btn" data-fixture-link href="#/' + leagueFixturePath(m.homeEn, m.awayEn) + '">' + (isKorean ? '경기 정보' : 'Match info') + '</a>' : '')}
+          ${detailBtnHtml || (!m.movedToWeek ? '<a class="rmd-act-btn" data-fixture-link href="#/' + leagueFixturePath(m.homeEn, m.awayEn, m.fixtureId) + '">' + (isKorean ? '경기 정보' : 'Match info') + '</a>' : '')}
           <button type="button" class="rmd-btn lbl" data-en="Compare" data-ko="전적 비교">${isKorean ? '전적 비교' : 'Compare'}</button>
           ${actionsHtml}
         </div>
@@ -18346,6 +18394,7 @@
   // 계산은 predict-worker.js(Web Worker)에서 하므로, 결과가 오기 전(cache === null)에는
   // 차트 자리에 "계산 중..."만 보여주고, 도착하면 차트를 다시 그립니다.
   let titleProbHistoryCache = null;
+  let titleProbHistoryFailed = false;
   let titleProbHistoryPromise = null; // 계산 중인 요청(중복 요청 방지)
   function ensureTitleProbabilityHistory() {
     if (titleProbHistoryCache !== null) return Promise.resolve(titleProbHistoryCache);
@@ -18358,12 +18407,17 @@
         .then(h => { titleProbHistoryCache = h || []; return titleProbHistoryCache; })
         .catch(err => {
           console.error('우승확률 추이 계산 중 오류:', err);
-          titleProbHistoryCache = []; // 실패해도 무한 재시도하지 않고 차트만 비워둡니다.
-          return titleProbHistoryCache;
+          titleProbHistoryFailed = true;
+          return null;
         })
         .then(h => { titleProbHistoryPromise = null; return h; });
     }
     return titleProbHistoryPromise;
+  }
+
+  function retryTitleProbabilityHistory() {
+    titleProbHistoryFailed = false;
+    renderTitleProbabilityHistoryChart();
   }
 
   function titleProbColor(nameEn, colorIndex) {
@@ -18376,13 +18430,17 @@
     if (!svg) return;
     svg.innerHTML = '';
     if (legendEl) legendEl.innerHTML = '';
+    const retry = document.getElementById('titleProbHistoryRetry');
+    retry.hidden = !titleProbHistoryFailed;
 
     const history = titleProbHistoryCache;
     if (history === null) {
       const loading = svgEl('text', { x: 410, y: 205, 'text-anchor': 'middle', class: 'rank-hist-axis-label' });
-      loading.textContent = isKorean ? '계산 중...' : 'Calculating...';
+      loading.textContent = titleProbHistoryFailed
+        ? (isKorean ? '우승확률 추이를 계산하지 못했어요.' : 'Could not calculate title probability history.')
+        : (isKorean ? '계산 중...' : 'Calculating...');
       svg.appendChild(loading);
-      ensureTitleProbabilityHistory().then(() => renderTitleProbabilityHistoryChart());
+      if (!titleProbHistoryFailed) ensureTitleProbabilityHistory().then(() => renderTitleProbabilityHistoryChart());
       return;
     }
     if (!history.length) return;

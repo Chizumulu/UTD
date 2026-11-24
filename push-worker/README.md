@@ -35,6 +35,8 @@ The match alert settings offer a one-alert connection test for the current devic
 
 The Worker also reads `scheduledRounds` and `roundsData` to detect changes to Chizumulu league fixtures. The first observation of each fixture establishes a baseline silently. A subsequent kickoff date or time change, an explicit postponement, or a new kickoff for a postponed match sends a notification with Korean Standard Time and a link to that match. Completed matches and moved-from placeholders do not trigger change notifications. This uses the published `data.js` schedule, so edits become eligible after the site publishes them.
 
+Keep each league match's `fixtureId` when moving it to another round or updating its name, date, or result. Use the same ID on the postponed placeholder and its replacement. Existing fixtures keep their original subscription calendar UIDs and schedule notification state when the Worker is upgraded.
+
 Schedule snapshots and pending changes use the existing `app_settings` table. Temporary delivery failures are retried for up to 24 hours, or until the new kickoff if it comes sooner. Delivery receipts prevent sending the same change again to subscriptions that already received it.
 
 ## Calendar subscription
