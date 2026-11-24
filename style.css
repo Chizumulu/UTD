@@ -20201,6 +20201,8 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
 @media (prefers-reduced-motion: reduce) { .cup-br-hint i { animation: none; } }
 
 /* PC 읽기 환경: 본문과 작은 라벨의 기본 크기를 한 단계 높인다. */
+.rmc-score-kickoff { display: none; }
+
 @media (min-width: 1024px) {
   :root {
     --fs-2xs: 12px;
@@ -20235,5 +20237,69 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
 
   :is(#mainTable, #scorersTable, .stats-table) td {
     line-height: 1.45;
+  }
+
+  #roundsView .rmc-teams {
+    grid-template-columns: minmax(0, 1fr) minmax(82px, auto) minmax(0, 1fr);
+  }
+
+  #roundsView .rmc-team {
+    color: var(--color-text-darkest);
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  #roundsView .rmc-score {
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #roundsView .rmc-score-pending {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+
+  #roundsView .rmc-score-kickoff {
+    display: block;
+    max-width: 134px;
+    font-size: var(--fs-sm);
+    line-height: 1.35;
+    font-weight: 700;
+    color: var(--color-text-darkest);
+  }
+
+  #roundsView .rmc-kickoff-mobile { display: none; }
+
+  #myTeamInfoView .ti-record-card:not(.ti-record-card-prev) .ti-record-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  #myTeamInfoView .ti-record-item-value,
+  #tiSection-analysis .ta-sum-value {
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #tiSection-analysis .ta-sum-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  #tiSection-analysis .ta-sum-value { text-align: start; }
+
+  #myTeamInfoView .ti-record-index-note,
+  #tiSection-analysis .ta-card > .ta-note:not(.ta-hint):not(.ta-caution) {
+    padding: 8px 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-stripe);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
   }
 }

@@ -13097,6 +13097,7 @@
 
       if (m.isScheduled) {
         const kickoffTxt = formatKickoff({ kickoffDate: m.kickoffDate, kickoffTime: m.kickoffTime });
+        const showKickoffInScore = kickoffTxt && !m.postponed && !m.movedToWeek && !m.pendingResult;
         const card = document.createElement('div');
         card.className = 'round-match-card round-match-scheduled' + (m.postponed && !m.movedToWeek ? ' rmc-postponed-card' : '') + mineClass;
         card.innerHTML = `
@@ -13108,6 +13109,7 @@
               <span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span>
             </div>
             <div class="rmc-score rmc-score-pending">
+              ${showKickoffInScore ? `<span class="rmc-score-kickoff">${kickoffTxt}</span>` : ''}
               ${m.movedToWeek
                 ? `<button type="button" class="rmc-pending-badge rmc-moved-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`
                 : `<span class="rmc-pending-badge${m.postponed ? ' rmc-postponed-badge' : ''} lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
@@ -13117,7 +13119,7 @@
               ${awayLogo ? `<img class="team-logo-sm" src="${awayLogo}" alt="${m.awayEn}">` : ''}
             </div>
           </div>
-          ${kickoffTxt ? `<div class="rmc-kickoff">${kickoffTxt}</div>` : ''}
+          ${kickoffTxt ? `<div class="rmc-kickoff${showKickoffInScore ? ' rmc-kickoff-mobile' : ''}">${kickoffTxt}</div>` : ''}
           ${venueCaptionHtml(m.homeEn)}
           ${mine ? matchWeatherPlaceholderHtml(m.homeEn, m.kickoffDate, m.kickoffTime, 'rmc-weather') : ''}
           ${matchPreviewHtml(m)}
