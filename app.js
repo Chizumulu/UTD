@@ -1011,13 +1011,13 @@
     let mid;
     if (played) {
       mid = '<span class="rmd-num rmd-num-home' + (homeWin ? ' is-win' : (awayWin ? ' is-lose' : '')) + '">' + m.homeScore + '</span>' +
-        '<span class="rmd-status">' + (ko ? '종료' : 'FT') + '</span>' +
+        matchStatusBadge('finished', 'rmd-status', ko) +
         '<span class="rmd-num rmd-num-away' + (awayWin ? ' is-win' : (homeWin ? ' is-lose' : '')) + '">' + m.awayScore + '</span>' +
         (m.pso ? '<small class="rmd-result-note">PSO ' + cupEsc(m.pso) + '</small>' : '');
     } else if (m.date) {
-      mid = '<span class="rmd-status is-upcoming">' + (ko ? '예정' : 'Upcoming') + '</span>';
+      mid = matchStatusBadge('upcoming', 'rmd-status', ko);
     } else {
-      mid = '<span class="rmd-status is-postponed">' + (ko ? '일정 미정' : 'TBD') + '</span>';
+      mid = matchStatusBadge('date-pending', 'rmd-status', ko);
     }
 
     // 버튼은 내용이 있을 때만: 득점 · 하이라이트
@@ -5876,15 +5876,15 @@
     const stageHtml = compactStage === stageLine ? esc(stageLine)
       : `<span class="nmc-stage-full">${esc(stageLine)}</span><abbr class="nmc-stage-compact" title="${esc(stageLine)}">${esc(compactStage)}</abbr>`;
     const opponent = nextMain.startsWith('vs ') ? nextMain.slice(3) : '';
-    const cupState = cup.status || 'upcoming';
-    const stateLabels = { upcoming: ko ? '경기 전' : 'Pre-match', live: ko ? '진행 중' : 'Live', finished: ko ? '종료' : 'Finished' };
+    const cupState = cup.status === 'live' || cup.status === 'finished' ? cup.status
+      : next ? 'upcoming' : 'date-pending';
     el.hidden = false;
     el.setAttribute('role', 'group');
     el.onclick = function (e) { if (window.matchMedia('(max-width: 1199px)').matches && !cupMode && !(e.target.closest && e.target.closest('.nmc-btn'))) toggleCupView(); }; // nmc-click: 모바일 슬림 바는 바 전체가 버튼
     el.innerHTML = `
       <div class="nmc-head" title="${esc(ko ? cup.nameKo : cup.nameEn)}">${logoHtml}<span class="nmc-tag">${ko ? '컵' : 'Cup'}</span></div>
       <div class="nmc-body">
-        <p class="nmc-stage">${stageHtml}</p><span class="nmc-state nmc-state-${esc(cupState)}">${esc(stateLabels[cupState] || stateLabels.upcoming)}</span>${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
+        <p class="nmc-stage">${stageHtml}</p>${matchStatusBadge(cupState, 'nmc-state', ko)}${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
         <div class="nmc-next${opponent ? ' nmc-next-fixture' : ''}"><b>${opponent ? `<span class="nmc-vs">vs</span> <span class="nmc-opp">${esc(opponent)}</span>` : esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
       </div>
       <button type="button" class="nmc-btn" onclick="toggleCupView()">${ko ? '자세히' : 'Details'}</button>`;
@@ -9802,9 +9802,7 @@
           <div class="round-match-card round-match-scheduled ti-sched-card${m.postponed && !m.movedToWeek ? ' rmc-postponed-card' : ''}">
             <div class="ti-sched-head">
               <span class="ti-result-week lbl" data-en="${wkEn(weekNum, 'Week', ' ')}" data-ko="${wkKo(weekNum)}">${weekLabel}</span>
-              ${m.movedToWeek
-                ? `<button type="button" class="rmc-pending-badge rmc-moved-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`
-                : `<span class="rmc-pending-badge${m.postponed ? ' rmc-postponed-badge' : ''} lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
+              ${scheduledMatchStatusBadge(m, 'rmc-pending-badge', 'rmc-moved-badge')}
             </div>
             <div class="ti-sched-teams">
               <div class="rmc-team rmc-home"${teamLinkAttrs(m.homeEn)}>${hLogo ? `<img class="team-logo-sm" src="${hLogo}" alt="${m.homeEn}">` : ''}<span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span></div>
@@ -11902,18 +11900,30 @@
   // ===== 라운드별 경기결과 렌더링 (Round Results View) =====
   let currentRoundKey = null;
 
-  // 연기/이동된 경기의 배지 문구를 계산합니다.
-  // - noBadge가 true면 배지를 아예 표시하지 않습니다(빈 문자열 반환)
-  // - movedToWeek가 있으면(=새 일정이 확정돼 다른 주차로 옮겨간 경기) "N주차로 연기"
-  // - postponed이면서 pendingResult가 true면(=아직 새 일정도 안 잡히고 결과 대기 상태) "경기 결과 미정"
-  // - 그렇지 않고 postponed만 true면 "경기 연기"
-  // - 넷 다 아니면 "경기 시작 전"
-  function scheduledBadgeText(m, ko) {
-    if (m.noBadge) return '';
-    if (m.movedToWeek) return ko ? `${wkKo(m.movedToWeek)}로\n연기` : `Postponed to\n${wkEn(m.movedToWeek, 'Week', ' ')}`;
-    if (m.postponed && m.pendingResult) return ko ? '경기 결과 미정' : 'Result Pending';
-    if (m.postponed) return ko ? '경기 연기' : 'Postponed';
-    return ko ? '경기 시작 전' : 'Upcoming';
+  function matchStatusBadge(status, classes, ko = isKorean) {
+    const state = status === 'pending' ? 'result-pending' : status === 'result' ? 'finished' : status;
+    const labels = {
+      upcoming: ['예정', 'Upcoming'],
+      finished: ['종료', 'FT'],
+      postponed: ['연기', 'Postponed'],
+      live: ['진행 중', 'Live'],
+      'date-pending': ['일정 미정', 'TBD'],
+      'result-pending': ['결과 대기', 'Awaiting result']
+    };
+    const [textKo, textEn] = labels[state];
+    return `<span class="match-status lbl ${classes}" data-match-status="${state}" data-ko="${textKo}" data-en="${textEn}">${ko ? textKo : textEn}</span>`;
+  }
+
+  function scheduledMatchStatusBadge(match, classes, movedClass) {
+    if (match.noBadge) return '';
+    if (match.movedToWeek) {
+      const week = match.movedToWeek;
+      const ko = `${wkKo(week)}로\n연기`;
+      const en = `Postponed to\n${wkEn(week, 'Week', ' ')}`;
+      return `<button type="button" class="${classes} ${movedClass} match-status lbl" data-match-status="postponed" data-ko="${ko}" data-en="${en}" onclick="goToRoundWeek(${week})">${isKorean ? ko : en}</button>`;
+    }
+    const status = match.fixtureStatus || seasonFixtureStatus(match, Date.now());
+    return matchStatusBadge(status, classes);
   }
 
   // movedFromWeek가 있는(=다른 주차에서 연기되어 이 주차로 옮겨온) 완료 경기 카드 위에
@@ -12641,23 +12651,17 @@
       if (played) {
         mid = `
           <span class="rmd-num rmd-num-home${homeWin ? ' is-win' : (awayWin ? ' is-lose' : '')}">${m.homeScore}</span>
-          <span class="rmd-status lbl" data-en="FT" data-ko="종료">${isKorean ? '종료' : 'FT'}</span>
+          ${matchStatusBadge('finished', 'rmd-status')}
           <span class="rmd-num rmd-num-away${awayWin ? ' is-win' : (homeWin ? ' is-lose' : '')}">${m.awayScore}</span>
           <small class="rmd-result-note">${recordedLeagueResultText()}</small>`;
       } else if (pendingScore) {
         mid = `
           <span class="rmd-num rmd-num-home">${pendingScore.home}</span>
-          <span class="rmd-status lbl" data-en="FT" data-ko="종료">${isKorean ? '종료' : 'FT'}</span>
+          ${matchStatusBadge('finished', 'rmd-status')}
           <span class="rmd-num rmd-num-away">${pendingScore.away}</span>
           <small class="rmd-result-note">${pendingLeagueResultText()}</small>`;
-      } else if (m.movedToWeek) {
-        mid = `<button type="button" class="rmd-status rmd-status-link lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`;
-      } else if (m.fixtureStatus === 'pending') {
-        mid = `<span class="rmd-status lbl" data-en="Awaiting result" data-ko="결과 대기">${isKorean ? '결과 대기' : 'Awaiting result'}</span>`;
-      } else if (m.postponed) {
-        mid = `<span class="rmd-status is-postponed lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`;
       } else {
-        mid = `<span class="rmd-status is-upcoming lbl" data-en="Upcoming" data-ko="예정">${isKorean ? '예정' : 'Upcoming'}</span>`;
+        mid = scheduledMatchStatusBadge(m, 'rmd-status', 'rmd-status-link');
       }
       // 구단정보 > 경기결과: 연기된 경기는 헤더 오른쪽에 승/무/패 자리와 같은 방식으로 "연기"를 표시합니다.
       if (teamOpts && teamOpts.teamEn && !played && (m.movedToWeek || m.postponed)) m.__res = 'P';
@@ -13211,9 +13215,7 @@
             </div>
             <div class="rmc-score rmc-score-pending">
               ${showKickoffInScore ? `<span class="rmc-score-kickoff">${kickoffTxt}</span>` : ''}
-              ${m.movedToWeek
-                ? `<button type="button" class="rmc-pending-badge rmc-moved-badge lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}" onclick="goToRoundWeek(${m.movedToWeek})">${scheduledBadgeText(m, isKorean)}</button>`
-                : `<span class="rmc-pending-badge${m.postponed ? ' rmc-postponed-badge' : ''} lbl" data-en="${scheduledBadgeText(m, false)}" data-ko="${scheduledBadgeText(m, true)}">${scheduledBadgeText(m, isKorean)}</span>`}
+              ${scheduledMatchStatusBadge(m, 'rmc-pending-badge', 'rmc-moved-badge')}
             </div>
             <div class="rmc-team rmc-away"${teamLinkAttrs(m.awayEn)}>
               <span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span>
@@ -13259,10 +13261,13 @@
             <span class="lbl" data-en="${m.homeEn}" data-ko="${m.homeKo}">${homeName}</span>
             ${forfeitBadgeHtml(homeWin)}
           </div>
-          <div class="rmc-score">
-            <span class="rmc-score-num${homeWin ? ' rmc-score-win' : (awayWin ? ' rmc-score-lose' : '')}">${m.homeScore}</span>
-            <span class="rmc-score-sep">:</span>
-            <span class="rmc-score-num${awayWin ? ' rmc-score-win' : (homeWin ? ' rmc-score-lose' : '')}">${m.awayScore}</span>
+          <div class="rmc-score rmc-score-result">
+            <span class="rmc-score-line">
+              <span class="rmc-score-num${homeWin ? ' rmc-score-win' : (awayWin ? ' rmc-score-lose' : '')}">${m.homeScore}</span>
+              <span class="rmc-score-sep">:</span>
+              <span class="rmc-score-num${awayWin ? ' rmc-score-win' : (homeWin ? ' rmc-score-lose' : '')}">${m.awayScore}</span>
+            </span>
+            ${matchStatusBadge('finished', 'rmc-pending-badge')}
           </div>
           <div class="rmc-team rmc-away${awayWin ? ' rmc-winner' : (homeWin ? ' rmc-loser' : '')}"${teamLinkAttrs(m.awayEn)}>
             <span class="lbl" data-en="${m.awayEn}" data-ko="${m.awayKo}">${awayName}</span>
@@ -16511,6 +16516,7 @@
         const expandKo = '전체 순위 더보기', expandEn = 'View Full Ranking';
         moreBtn.setAttribute('data-ko', statBoardExpanded ? collapseKo : expandKo);
         moreBtn.setAttribute('data-en', statBoardExpanded ? collapseEn : expandEn);
+        moreBtn.setAttribute('aria-expanded', String(statBoardExpanded));
         moreBtn.textContent = isKorean ? (statBoardExpanded ? collapseKo : expandKo) : (statBoardExpanded ? collapseEn : expandEn);
       }
     }
@@ -21215,18 +21221,21 @@
       resolveLeagueTeamNameEn(item.homeTeam) === match.homeEn &&
       resolveLeagueTeamNameEn(item.awayTeam) === match.awayEn && isLeagueMatchInLiveWindow(item));
     const score = played ? { home: match.homeScore, away: match.awayScore } : pending || live?.score;
-    const status = match.forfeit ? (isKorean ? '몰수 경기' : 'Forfeit')
-      : played ? (isKorean ? '경기 종료' : 'Full time')
-      : pending ? (isKorean ? '경기 종료' : 'Full time')
-      : live ? (leagueLiveRefreshFailed && !live.ended ? (isKorean ? '마지막 확인' : 'Last known') : formatLeagueLiveMinute(live))
-      : match.postponed ? (isKorean ? '경기 연기' : 'Postponed')
-      : match.pendingResult || (kickoffAt && kickoffAt < Date.now())
-        ? (isKorean ? '결과 확인 중' : 'Awaiting result')
-        : (isKorean ? '경기 예정' : 'Upcoming');
+    let status;
+    if (match.forfeit) {
+      status = isKorean ? '몰수 경기' : 'Forfeit';
+    } else if (played || pending) {
+      status = matchStatusBadge('finished', '');
+    } else if (live) {
+      status = escapeHtml(leagueLiveRefreshFailed && !live.ended
+        ? (isKorean ? '마지막 확인' : 'Last known') : formatLeagueLiveMinute(live));
+    } else {
+      status = matchStatusBadge(seasonFixtureStatus(match, Date.now()), '');
+    }
     const venue = getTeamVenue(match.homeEn, roundKeyPos(match.roundKey));
     const kickoff = formatKickoff(match, true);
     const parts = [
-      '<p>' + (score ? (score.home ?? '–') + ' : ' + (score.away ?? '–') + ' · ' : '') + escapeHtml(status) +
+      '<p>' + (score ? (score.home ?? '–') + ' : ' + (score.away ?? '–') + ' · ' : '') + status +
         (played ? ' · ' + recordedLeagueResultText() : pending ? ' · ' + pendingLeagueResultText() : '') + '</p>',
       kickoff ? '<p>' + kickoff + '</p>' : '',
       venue ? '<p>' + escapeHtml(isKorean ? venue.nameKo : venue.nameEn) + '</p>' : '',

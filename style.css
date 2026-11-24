@@ -105,6 +105,10 @@
   --fs-2xl: 24px;    /* 큰 제목·강조 숫자 */
   --fs-3xl: 28px;    /* 핵심 숫자 */
 
+  --page-card-inset: 18px;
+  --page-card-heading: var(--fs-lg);
+  --page-action-radius: var(--radius-sm);
+
   --theme-transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 
   /* --- 모서리 반경(border-radius) 스케일 ---
@@ -9010,14 +9014,6 @@
   }
   .rmc-pending-badge {
     display: inline-block;
-    white-space: nowrap;
-    background: var(--color-bg-table-alt);
-    color: var(--color-teal-dark);
-    font-size: var(--fs-xs);
-    font-weight: 600;
-    letter-spacing: 0.2px;
-    padding: 4px 9px;
-    border-radius: var(--radius-md);
   }
   /* 연기(postponed)된 경기 카드 - 예정 경기와 시각적으로 구분되도록
      왼쪽에 붉은 포인트 라인 + 점선 테두리를 줘서 "일정이 확정되지 않음"을
@@ -9026,57 +9022,6 @@
     border: 1px dashed rgba(var(--color-red-rgb), 0.35);
     box-shadow: inset 3px 0 0 rgba(var(--color-red-rgb), 0.55), 0 4px 14px rgba(var(--color-navy-rgb), 0.1);
     background: linear-gradient(90deg, rgba(var(--color-red-rgb), 0.05), transparent 60%);
-  }
-  /* 연기 배지("경기 연기" / "경기 결과 미정") - 기존의 밋밋한 회색-틸 배지 대신
-     붉은 톤 배경 + 은은하게 깜빡이는 점을 붙여서 "대기 중" 느낌을 살립니다. */
-  .rmc-pending-badge.rmc-postponed-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: rgba(var(--color-red-rgb), 0.12);
-    color: var(--color-red-text);
-    border: 1px solid rgba(var(--color-red-rgb), 0.25);
-  }
-  .rmc-pending-badge.rmc-postponed-badge::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    background: currentColor;
-    animation: rmcPostponedPulse 1.8s ease-in-out infinite;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .rmc-pending-badge.rmc-postponed-badge::before {
-      animation: none;
-    }
-  }
-  @keyframes rmcPostponedPulse {
-    0%, 100% { opacity: 0.35; }
-    50% { opacity: 1; }
-  }
-  /* 다른 주차로 이동된 연기 경기 배지 ("N주차 경기로 이동") - 누르면 해당 주차로 이동합니다 */
-  .rmc-pending-badge.rmc-moved-badge {
-    background: rgba(var(--color-tint-rgb), 0.1);
-    color: var(--color-brand-text);
-    border: none;
-    appearance: none;
-    font: inherit;
-    font-size: var(--fs-xs);
-    font-weight: 600;
-    letter-spacing: 0.2px;
-    cursor: pointer;
-    transition: background 0.15s ease;
-  }
-  button.rmc-pending-badge.rmc-moved-badge:focus-visible {
-    background: rgba(var(--color-tint-rgb), 0.2);
-    outline: none;
-  }
-  @media (hover: hover) {
-    button.rmc-pending-badge.rmc-moved-badge:hover {
-      background: rgba(var(--color-tint-rgb), 0.2);
-      outline: none;
-    }
   }
   /* 다른 주차에서 이 주차로 옮겨온 경기 카드에 붙는 안내 배지
      ("N주차에서 연기된 경기") - 완료된 경기 카드 상단에 표시 */
@@ -15488,7 +15433,6 @@ body {
 .rmd-num-home { justify-self: end; }
 .rmd-num-away { justify-self: start; }
 .rmd-num.is-lose { color: var(--color-text-muted); opacity: 0.75; font-weight: 600; }
-.rmd-status { font-size: var(--fs-sm); font-weight: 600; color: var(--color-text-muted); white-space: nowrap; text-align: center; }
 .rmd-mid.is-single { grid-template-columns: 1fr; }
 .rmd-result-note { grid-column: 1 / -1; font-size: var(--fs-xs); text-align: center; }
 .pending-league-results { margin: 12px 0; }
@@ -15498,14 +15442,6 @@ body {
   display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px;
   padding: 8px 12px; border-radius: var(--radius-sm); color: var(--color-text-toggle);
   background: var(--color-surface); text-decoration: none;
-}
-.rmd-status.is-upcoming { color: var(--color-teal); font-weight: 600; }
-.rmd-status.is-postponed { color: #c2570c; font-weight: 600; }
-:root[data-theme="dark"] .rmd-status.is-postponed { color: #f0a15e; }
-button.rmd-status-link {
-  border: 0; background: transparent; font-family: inherit; cursor: pointer;
-  color: var(--color-brand-text); font-weight: 600;
-  text-decoration: underline; text-underline-offset: 3px;
 }
 
 /* 오른쪽: 주차 · (날씨) · 전적 비교 버튼 */
@@ -15736,7 +15672,7 @@ button.rmd-status-link {
 
 /* 연기/이동 상태 문구("N주차 경기로 이동" 등): 한 줄로 길게 늘어나 팀 로고를 덮지 않도록 줄바꿈 */
 .rmd-mid.is-single { min-width: 0; }
-.rmd-mid.is-single .rmd-status { white-space: normal; max-width: 108px; line-height: 1.35; word-break: keep-all; overflow-wrap: anywhere; }
+.rmd-mid.is-single .rmd-status { white-space: normal; max-width: 108px; word-break: keep-all; overflow-wrap: anywhere; }
 
 /* 구단 위치: 구장이 2곳 이상인 팀의 '현구장' 마커 */
 .venue-current-tag {
@@ -18261,36 +18197,6 @@ html[lang="ny"] .lang-btn .lang-flag-uk { display: block !important; }
 .rmd-day.rmd-moved-in-head .rmd-moved { display: none; }
 .rmd-day-head { flex-wrap: wrap; }
 
-/* ===== "N주차 경기로 이동" 링크: 장식 없이 글자 + 얇은 화살표 하나만 ===== */
-button.rmd-status-link {
-  display: inline-block; max-width: 100%; box-sizing: border-box;
-  padding: 2px 0; margin: 0;
-  border: 0; background: transparent;
-  color: var(--color-brand-text);
-  font-size: var(--fs-sm); font-weight: 600; line-height: 1.4;
-  text-decoration: none;
-  white-space: pre-line; text-align: center; word-break: keep-all; /* 문구 안의 \n에서 줄바꿈 */
-  -webkit-tap-highlight-color: transparent;
-}
-button.rmd-status-link::after {
-  content: "›"; display: inline-block; margin-left: 3px;
-  font-weight: 500; transition: transform 0.15s;
-}
-button.rmd-status-link:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
-@media (hover: hover) {
-  button.rmd-status-link:hover { text-decoration: underline; text-underline-offset: 3px;
-  }
-}
-button.rmd-status-link:focus-visible::after { transform: translateX(2px); }
-@media (hover: hover) {
-  button.rmd-status-link:hover::after { transform: translateX(2px);
-  }
-}
-button.rmd-status-link:active { opacity: 0.6; }
-@media (prefers-reduced-motion: reduce) { button.rmd-status-link::after { transition: none; } }
-/* 위쪽 `.rmd-mid.is-single .rmd-status { white-space: normal }` 규칙이 더 강해서 줄바꿈이 무시되던 문제 수정 */
-.rmd-mid.is-single button.rmd-status-link { white-space: pre-line; max-width: none; }
-
 /* ===== 구단정보 > 경기결과: 날짜 카드 헤더 오른쪽 15%를 사선으로 칠하고 승/무/패 글자만 표시 ===== */
 .rmd-day.rmd-res-w { --rmd-res-bg: #1e6fe0; }
 .rmd-day.rmd-res-d { --rmd-res-bg: var(--color-neutral-badge); }
@@ -18812,7 +18718,6 @@ tr.releg,
 tr.promo .rank-cell::after,
 tr.releg .rank-cell::after,
 tr.my-team td.team::after,
-.rmc-pending-badge.rmc-postponed-badge::before,
 .app-sidebar::before {
   animation: none !important;
 }
@@ -19267,8 +19172,7 @@ tr.my-team td.team::after,
   .nmc-next-fixture small { display: none; }
   .nmc-next-fixture .nmc-vs { color: var(--color-text-muted); }
 }
-.nmc-state { flex: none; font-size: 11px; font-weight: 700; line-height: 1; padding: 3px 7px; border-radius: 999px; background: rgba(var(--color-gold-rgb), .22); color: var(--color-text-dark); }
-.nmc-state-live { background: var(--color-red); color: #fff; }
+.nmc-state { flex: none; }
 .nmc-btn { flex: none; border: 0; cursor: pointer; padding: 3px 10px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600;
   background: rgba(var(--color-tint-rgb), .08); color: var(--color-text-secondary); }
 body.season-archive .nmc { display: none !important; }
@@ -20398,3 +20302,178 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
     line-height: 1.5;
   }
 }
+
+/* 홈 · 일정 · 기록 · 예측의 카드와 주요 동작 */
+@media (max-width: 720px) {
+  :root { --page-card-inset: 14px; }
+}
+
+.home-match-card,
+.round-controls,
+.predict-my-summary,
+.predict-intro,
+.stat-board-head,
+#statsView .scatter-body,
+#predictView .scatter-body {
+  padding: var(--page-card-inset);
+}
+
+.stat-board-head { padding-block-end: 12px; }
+.stat-board-desc,
+.stat-board-foot,
+#statsView .stat-row { padding-inline: var(--page-card-inset); }
+
+.home-match-card-title,
+#roundsView .rmd-day-title,
+#roundsView .round-date-heading,
+.stat-board-title,
+#statsView .stats-title,
+#predictView .stats-title,
+.pms-title-label {
+  font-size: var(--page-card-heading);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.home-match-card-title,
+.pms-title-label { color: var(--color-text-darkest); }
+
+.nmp-toggle-hint,
+#roundCurrentBtn,
+#statBoardMoreBtn,
+.pms-title-action,
+.home-match-more-btn,
+.nmc-btn,
+.round-tools summary,
+.round-adv > summary,
+.round-quick-actions .mobile-search-entry,
+.round-favor-btn,
+.predict-refresh-btn,
+#statsView .analysis-share {
+  border-radius: var(--page-action-radius);
+  font-weight: 700;
+}
+
+.nmp-toggle-hint,
+#roundCurrentBtn,
+#statBoardMoreBtn,
+.pms-title-action {
+  border: 1px solid transparent;
+  background: var(--color-selected-bg);
+  color: var(--color-selected-fg);
+}
+
+.nmp-toggle-hint { padding: 4px 7px; }
+
+#statBoardMoreBtn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 14px;
+}
+
+.home-match-more-btn,
+.nmc-btn,
+.round-tools summary,
+.round-adv > summary,
+.round-quick-actions .mobile-search-entry,
+.round-favor-btn:not(.active),
+.predict-refresh-btn,
+#statsView .analysis-share {
+  border-color: transparent;
+  background: var(--color-bg-btn-hover);
+  color: var(--color-brand-text);
+}
+
+.home-match-more-btn {
+  position: static;
+  min-height: 28px;
+  margin: 4px 0 0 auto;
+  padding: 4px 8px;
+  display: flex;
+}
+
+@media (hover: hover) {
+  #roundsView #roundCurrentBtn:hover,
+  #statBoardMoreBtn:hover,
+  .pms-title-action:hover,
+  .nmp-toggle:hover .nmp-toggle-hint {
+    background: var(--color-navy-light);
+    color: var(--color-selected-fg);
+    text-decoration: none;
+  }
+
+  .home-match-more-btn:hover,
+  .nmc-btn:hover,
+  .round-tools summary:hover,
+  .round-adv > summary:hover,
+  .round-favor-btn:not(.active):hover,
+  .predict-refresh-btn:not(:disabled):hover,
+  #statsView .analysis-share:hover { background: var(--color-bg-row-hover); }
+}
+
+:is(.home-match-more-btn, .nmc-btn, .round-tools summary, .round-adv > summary,
+    #roundCurrentBtn, .round-favor-btn, #statBoardMoreBtn, .predict-refresh-btn):focus-visible {
+  outline: 2px solid var(--color-brand-text);
+  outline-offset: 2px;
+}
+
+.predict-intro .predict-refresh-btn:focus-visible { outline-color: var(--color-white); }
+
+/* 경기 상태 */
+.match-status {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-table-alt);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.match-status[data-match-status="upcoming"] {
+  background: var(--color-bg-btn-hover);
+  color: var(--color-brand-text);
+}
+
+.match-status[data-match-status="postponed"] {
+  background: #fff0db;
+  color: #8c4500;
+}
+
+:root[data-theme="dark"] .match-status[data-match-status="postponed"] {
+  background: #412b1a;
+  color: #ffc487;
+}
+
+.match-status[data-match-status="live"] {
+  background: rgba(var(--color-red-rgb), 0.12);
+  color: var(--color-red-text);
+}
+
+button.match-status {
+  cursor: pointer;
+  white-space: pre-line;
+}
+
+.rmd-mid.is-single button.match-status { white-space: pre-line; }
+
+button.match-status::after {
+  content: "›";
+  margin-inline-start: 3px;
+}
+
+button.match-status:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  button.match-status:hover { text-decoration: underline; }
+}
+
+.rmc-score-result { flex-direction: column; gap: 2px; }
+.rmc-score-line { display: flex; align-items: center; gap: 4px; }

@@ -942,7 +942,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <div class="round-status-filters" id="roundStatusFilters" role="group" aria-label="시즌 경기 상태" data-aria-ko="시즌 경기 상태" data-aria-en="Season fixture status" aria-controls="roundMatchList">
             <button type="button" class="round-mode-chip lbl active" data-status="all" data-ko="전체" data-en="All" aria-pressed="true" onclick="setRoundStatusFilter(this.dataset.status)">전체</button>
             <button type="button" class="round-mode-chip lbl" data-status="upcoming" data-ko="예정" data-en="Upcoming" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">예정</button>
-            <button type="button" class="round-mode-chip lbl" data-status="result" data-ko="결과" data-en="Results" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">결과</button>
+            <button type="button" class="round-mode-chip lbl" data-status="result" data-ko="종료" data-en="FT" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">종료</button>
             <button type="button" class="round-mode-chip lbl" data-status="postponed" data-ko="연기" data-en="Postponed" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">연기</button>
             <button type="button" class="round-mode-chip lbl" data-status="pending" data-ko="결과 대기" data-en="Awaiting result" aria-pressed="false" onclick="setRoundStatusFilter(this.dataset.status)">결과 대기</button>
           </div>
@@ -998,7 +998,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="stat-board-desc lbl" id="statBoardDesc"></div>
       <div id="statBoardRows"></div>
       <div class="stat-board-foot">
-        <span class="more-link lbl" data-en="View Full Ranking" data-ko="전체 순위 더보기" id="statBoardMoreBtn" onclick="toggleStatBoardExpand()">전체 순위 더보기</span>
+        <button type="button" class="more-link lbl" data-en="View Full Ranking" data-ko="전체 순위 더보기" id="statBoardMoreBtn" aria-expanded="false" aria-controls="statBoardRows" onclick="toggleStatBoardExpand()">전체 순위 더보기</button>
       </div>
     </div>
 
