@@ -586,12 +586,7 @@
       features.push(['players', ['선수 비교', 'Player Comparison', '선수 스탯 비교'], 'squad', () => {
         showTeamInfoForKey(club.nameEn);
         applyTeamInfoTab('analysis');
-        loadFeatureScript('team-analysis.js', 'teamAnalysis', () => typeof TeamAnalysis !== 'undefined')
-          .then(() => {
-            if (currentView === 'squad' && currentTeamInfoKey === club.nameEn && currentTeamInfoTab === 'analysis') {
-              document.getElementById('taSecPlayers')?.scrollIntoView({ block: 'start' });
-            }
-          }).catch(() => {});
+        scrollToPlayerComparison(club.nameEn);
       }]);
     }
     return features.map(([id, names, view, openSection]) => ({
@@ -4119,6 +4114,40 @@
     } catch (e) {
       showShareToast(isKorean ? '공유에 실패했어요' : 'Share failed');
     }
+  }
+
+  function shareAnalysisView(section) {
+    const url = new URL(location.href);
+    let path;
+    let title;
+    if (section === 'player-comparison') {
+      const team = String(currentTeamInfoKey).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      path = 'club/' + team + '/analysis/player-comparison';
+      title = isKorean ? '선수 비교' : 'Player Comparison';
+    } else if (section === 'attack-defense') {
+      path = 'stats/analysis/attack-defense';
+      title = isKorean ? '공격·수비 비교' : 'Attack vs Defense';
+    } else if (currentView === 'stats') {
+      path = 'stats/' + statsTab;
+      title = isKorean ? '리그 기록' : 'League Records';
+    } else if (currentView === 'predict') {
+      path = 'predict/' + predictTab;
+      title = isKorean ? '리그 예측' : 'League Projections';
+    } else {
+      return;
+    }
+    url.hash = '/' + path;
+    return shareContent(title, title, url.href);
+  }
+
+  function scrollToPlayerComparison(team) {
+    const ready = typeof TeamAnalysis !== 'undefined' ? Promise.resolve()
+      : loadFeatureScript('team-analysis.js', 'teamAnalysis', () => typeof TeamAnalysis !== 'undefined');
+    ready.then(() => requestAnimationFrame(() => {
+      if (currentView === 'squad' && currentTeamInfoKey === team && currentTeamInfoTab === 'analysis') {
+        document.getElementById('taSecPlayers')?.scrollIntoView({ block: 'start' });
+      }
+    })).catch(() => {});
   }
 
   // 현재 순위표 상위 5팀(+내 팀 순위)을 공유합니다.
@@ -23297,6 +23326,12 @@
       const head = VIEW_PATH[currentView];
       if (head === undefined || head === '') return '';
       if (head === 'rounds') return scheduleViewHash();
+      if (head === 'stats') {
+        const path = 'stats/' + statsTab;
+        return path === 'stats/analysis' && normHash(location.hash) === path + '/attack-defense'
+          ? path + '/attack-defense' : path;
+      }
+      if (head === 'predict') return 'predict/' + predictTab;
       if (head === 'compare') {
         return (teamCompareA && teamCompareB) ? `compare/${slugify(teamCompareA)}/${slugify(teamCompareB)}` : 'compare';
       }
@@ -23305,6 +23340,9 @@
         const mineEl = document.getElementById('myTeamInfoView');
         const isMine = mineEl && mineEl.style.display !== 'none';
         if (isMine && currentTeamInfoTab && currentTeamInfoTab !== 'overview') h += '/' + currentTeamInfoTab;
+        if (isMine && currentTeamInfoTab === 'analysis' && normHash(location.hash) === h + '/player-comparison') {
+          h += '/player-comparison';
+        }
         return h;
       }
       return head;
@@ -23314,6 +23352,7 @@
     function sameBase(a, b) {
       if (a.split('?')[0] === b.split('?')[0] && /^rounds(?:\/|\?|$)/.test(a)) return true;
       const pa = a.split('/'), pb = b.split('/');
+      if (pa[0] === pb[0] && (pa[0] === 'stats' || pa[0] === 'predict')) return true;
       return pa[0] === 'club' && pb[0] === 'club' && pa[1] === pb[1];
     }
 
@@ -23415,6 +23454,19 @@
           const a = findTeamBySlug(parts[1]), b = findTeamBySlug(parts[2]);
           if (a && b && a.nameEn !== b.nameEn) { teamCompareA = a.nameEn; teamCompareB = b.nameEn; }
           showView('teamCompare');
+        } else if (head === 'stats') {
+          showView('stats');
+          setStatsTab(parts[1] || 'rank');
+          if (statsTab === 'analysis' && parts[2] === 'attack-defense') {
+            requestAnimationFrame(() => {
+              if (currentView === 'stats' && statsTab === 'analysis') {
+                document.getElementById('leagueAttackDefense')?.scrollIntoView({ block: 'start' });
+              }
+            });
+          }
+        } else if (head === 'predict') {
+          showView('predict');
+          setPredictTab(parts[1] || 'outlook');
         } else if (head === 'club') {
           const team = findTeamBySlug(parts[1]);
           if (team) currentTeamInfoKey = team.nameEn;
@@ -23422,6 +23474,9 @@
           currentTeamInfoTab = TEAM_INFO_TABS.indexOf(tab) !== -1 ? tab : 'overview';
           showView('squad');
           applyTeamInfoTab(currentTeamInfoTab);
+          if (team && isMyTeamName(team.nameEn, team.nameKo) && currentTeamInfoTab === 'analysis' && parts[3] === 'player-comparison') {
+            scrollToPlayerComparison(team.nameEn);
+          }
         } else if (head === 'cup') {
           showCupView();
         } else {
@@ -23436,7 +23491,7 @@
     }
 
     // 기존 함수 래핑: 원본을 먼저 실행한 뒤 주소 동기화를 예약합니다.
-    ['showView', 'showCupView', 'showTeamInfoForKey', 'applyTeamInfoTab', 'renderRoundsView',
+    ['showView', 'showCupView', 'showTeamInfoForKey', 'applyTeamInfoTab', 'setStatsTab', 'setPredictTab', 'renderRoundsView',
      'renderTeamCompareView', 'setArchiveTab', 'openSeasonArchive'].forEach(name => {
       const orig = window[name];
       if (typeof orig !== 'function') return;

@@ -649,7 +649,10 @@
   }
   function sectionTitle(text, id) {
     if (!id) return '<div class="ti-section-title">' + text + '</div>';
+    var share = id === 'taSecPlayers' ? '<button type="button" class="analysis-share" onclick="shareAnalysisView(\'player-comparison\')">' +
+      lang(CUR_CTX)('선수 비교 공유', 'Share player comparison') + '</button>' : '';
     return '<div class="ti-section-title ta-sec-title" id="' + id + '"><span>' + text + '</span>' +
+      share +
       '<button type="button" class="ta-top-link" data-target="taSummary" aria-label="' + esc(lang(CUR_CTX)('요약으로 돌아가기', 'Back to summary')) + '">' + lang(CUR_CTX)('↑ 요약', '↑ Summary') + '</button></div>';
   }
   var CUR_CTX = { isKorean: true };   // sectionTitle 이 언어를 알 수 있게 render() 가 채워 둡니다

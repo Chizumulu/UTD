@@ -21,14 +21,14 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '016',
+    style: '017',
     data: '005',
-    app: '026',
+    app: '027',
     report: '002',
     archive: '200',
     predictWorker: '220',
     pathfinderEngine: '221',
-    teamAnalysis: '020',
+    teamAnalysis: '021',
     poster: '001',
     travelAnalysis: '020',
     venueMatrix: '001',
@@ -980,6 +980,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button type="button" role="tab" class="predict-tab" data-stats-tab="analysis" aria-selected="false" onclick="setStatsTab('analysis')"><span class="lbl" data-en="Analysis" data-ko="분석">분석</span></button>
     <button type="button" role="tab" class="predict-tab" data-stats-tab="compare" aria-selected="false" onclick="setStatsTab('compare')"><span class="lbl" data-en="vs Last Season" data-ko="작년 비교">작년 비교</span></button>
   </div>
+  <button type="button" class="analysis-share lbl" data-ko="현재 탭 공유" data-en="Share this tab" onclick="shareAnalysisView()">현재 탭 공유</button>
 
   <div class="stats-panel active" data-stats-panel="rank" role="tabpanel">
     <div class="stat-cat-scroll" id="statCatNav"></div>
@@ -1008,6 +1009,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="scatter-card" id="leagueAttackDefense">
       <div class="stats-title">
         <span class="lbl" data-en="Attack vs Defense (Goals for vs Goals Against per Game)" data-ko="공격 vs 수비 (경기당 득점 vs 경기당 실점)">공격 vs 수비 (경기당 득점 vs 경기당 실점)</span>
+        <button type="button" class="analysis-share lbl" data-ko="차트 공유" data-en="Share chart" onclick="shareAnalysisView('attack-defense')">차트 공유</button>
         <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'scatterInfo')">ⓘ</span>
         <div class="info-tooltip" id="scatterInfo" onclick="event.stopPropagation()">
           <span class="lbl" data-ko="X축은 경기당 실점(오른쪽일수록 적음), Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줘요: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하). 흐린 점과 옅은 선은 이전 라운드까지의 위치 변화(궤적)를 팀마다 다른 색으로 보여줘요. 팀 로고를 클릭하면 그 팀의 궤적만 크게 강조되고, 다시 클릭하면 해제돼요." data-en="X-axis is goals conceded per game (fewer toward the right), Y-axis is goals scored per game. Teams are split into four zones based on the league average: Strong (above average at both ends), Attacking (scores a lot but concedes a lot too), Defensive (low scoring, low conceding), and Weak (below average at both ends). The faded dots and trail line, shown in a distinct color per team, show how each team's position has moved round by round. Click a team's logo to highlight just that team's trail. Click again to clear it.">X축은 경기당 실점(오른쪽일수록 적음), Y축은 경기당 득점이에요. 리그 평균을 기준으로 4개 구역으로 나눠서 팀 성향을 보여줘요: 강팀(공격·수비 모두 평균 이상), 공격형(득점은 많지만 실점도 많음), 수비형(득실 모두 적음), 약팀(공격·수비 모두 평균 이하). 흐린 점과 옅은 선은 이전 라운드까지의 위치 변화(궤적)를 팀마다 다른 색으로 보여줘요. 팀 로고를 클릭하면 그 팀의 궤적만 크게 강조되고, 다시 클릭하면 해제돼요.</span>
@@ -1068,6 +1070,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button type="button" role="tab" class="predict-tab" data-predict-tab="race" aria-selected="false" onclick="setPredictTab('race')"><span class="lbl" data-en="Scenarios" data-ko="경우의 수">경우의 수</span></button>
     <button type="button" role="tab" class="predict-tab" data-predict-tab="model" aria-selected="false" onclick="setPredictTab('model')"><span class="lbl" data-en="Model Record" data-ko="모델 성적">모델 성적</span></button>
   </div>
+  <button type="button" class="analysis-share lbl" data-ko="현재 탭 공유" data-en="Share this tab" onclick="shareAnalysisView()">현재 탭 공유</button>
 
   <div class="predict-panel active" data-predict-panel="outlook" role="tabpanel">
     <div class="predict-my-summary" id="predictMySummary"></div>

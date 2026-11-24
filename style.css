@@ -17651,6 +17651,20 @@ html.celebrate-lock { overflow: hidden; }
 
 /* ---- 전력분석 UX 개선 ---- */
 .ta-sec-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.analysis-share {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-chip);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-brand-text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+#statsView > .analysis-share, #predictView > .analysis-share { margin: 0 0 12px; }
+.analysis-share:hover { background: var(--color-bg-stripe); }
+.analysis-share:focus-visible { outline: 2px solid var(--color-brand-text); outline-offset: 2px; }
+#leagueAttackDefense, #taSecPlayers { scroll-margin-top: 80px; }
 .ta-top-link { flex: none; padding: 3px 9px; border: 0; border-radius: 999px; background: transparent; color: var(--color-text-muted); font: inherit; font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
 .ta-top-link:focus-visible { background: var(--color-bg-btn-hover); color: var(--color-stat-value); }
 @media (hover: hover) {
