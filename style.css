@@ -19242,6 +19242,12 @@ tr.my-team td.team::after,
 .nmc-logo-ph { display: grid; place-items: center; font-size: 18px; }
 .nmc-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
 .nmc-stage { margin: 0; font-size: var(--fs-sm); font-weight: 700; line-height: 1.2; color: var(--color-text-darkest); }
+.nmc-stage-compact { display: none; text-decoration: none; }
+@media (max-width: 720px) {
+  #nmCupPanel { position: relative; z-index: 2; }
+  .nmc-stage-full { display: none; }
+  .nmc-stage-compact { display: inline; }
+}
 .nmc-stage-sub, .nmc-next { display: none; }
 @media (max-width: 1199px) {
   .nmc-head { padding-right: 8px; border-right: 1px solid var(--color-border-chip); }

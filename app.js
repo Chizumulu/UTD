@@ -5762,6 +5762,9 @@
     }
     // 예선(지역 플레이오프)은 리그가 아니라 토너먼트라 승/무/패 대신 단계와 다음 경기만 보여줍니다.
     const stageSubLine = '';
+    const compactStage = ko ? stageLine.replace(/(\d+)\s*라운드/g, '$1R') : stageLine;
+    const stageHtml = compactStage === stageLine ? esc(stageLine)
+      : `<span class="nmc-stage-full">${esc(stageLine)}</span><abbr class="nmc-stage-compact" title="${esc(stageLine)}">${esc(compactStage)}</abbr>`;
     const opponent = nextMain.startsWith('vs ') ? nextMain.slice(3) : '';
     const cupState = cup.status || 'upcoming';
     const stateLabels = { upcoming: ko ? '경기 전' : 'Pre-match', live: ko ? '진행 중' : 'Live', finished: ko ? '종료' : 'Finished' };
@@ -5771,7 +5774,7 @@
     el.innerHTML = `
       <div class="nmc-head" title="${esc(ko ? cup.nameKo : cup.nameEn)}">${logoHtml}<span class="nmc-tag">${ko ? '컵' : 'Cup'}</span></div>
       <div class="nmc-body">
-        <p class="nmc-stage">${esc(stageLine)}</p><span class="nmc-state nmc-state-${esc(cupState)}">${esc(stateLabels[cupState] || stateLabels.upcoming)}</span>${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
+        <p class="nmc-stage">${stageHtml}</p><span class="nmc-state nmc-state-${esc(cupState)}">${esc(stateLabels[cupState] || stateLabels.upcoming)}</span>${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
         <div class="nmc-next${opponent ? ' nmc-next-fixture' : ''}"><b>${opponent ? `<span class="nmc-vs">vs</span> <span class="nmc-opp">${esc(opponent)}</span>` : esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
       </div>
       <button type="button" class="nmc-btn" onclick="toggleCupView()">${ko ? '자세히' : 'Details'}</button>`;
