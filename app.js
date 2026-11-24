@@ -5732,7 +5732,10 @@
       const sched = (ko ? cup.scheduleKo : cup.scheduleEn) || [];
       const item = sched.find(function (x) { return !(x[2] && x[2].end) || x[2].end >= todayStr; });
       // 날짜가 아직 안 나온 우리 경기(예: 지역 1라운드)가 있으면 상대 팀을 보여주고, 날짜 자리에는 지역 플레이오프 기간을 대신 넣습니다.
-      const pend = mine.find(function (x) { return x.m.homeScore == null && x.m.awayScore == null && !x.m.date; });
+      const pend = mine.find(function (x) {
+        const m = x.m;
+        return m.home && m.away && m.homeScore == null && m.awayScore == null && !m.date;
+      });
       if (pend) {
         const pm = pend.m, iAmHome = isMyTeamName(pm.home, pm.homeKo);
         const oEn = iAmHome ? pm.away : pm.home, oKo = iAmHome ? pm.awayKo : pm.homeKo;
@@ -5759,16 +5762,19 @@
     }
     // 예선(지역 플레이오프)은 리그가 아니라 토너먼트라 승/무/패 대신 단계와 다음 경기만 보여줍니다.
     const stageSubLine = '';
+    const opponent = nextMain.startsWith('vs ') ? nextMain.slice(3) : '';
+    const cupState = cup.status || 'upcoming';
+    const stateLabels = { upcoming: ko ? '경기 전' : 'Pre-match', live: ko ? '진행 중' : 'Live', finished: ko ? '종료' : 'Finished' };
     el.hidden = false;
     el.setAttribute('role', 'group');
     el.onclick = function (e) { if (window.matchMedia('(max-width: 1199px)').matches && !cupMode && !(e.target.closest && e.target.closest('.nmc-btn'))) toggleCupView(); }; // nmc-click: 모바일 슬림 바는 바 전체가 버튼
     el.innerHTML = `
-      <div class="nmc-head" title="${esc(ko ? cup.nameKo : cup.nameEn)}">${logoHtml}<span class="nmc-tag">${ko ? '컵대회' : 'Cup'}</span></div>
+      <div class="nmc-head" title="${esc(ko ? cup.nameKo : cup.nameEn)}">${logoHtml}<span class="nmc-tag">${ko ? '컵' : 'Cup'}</span></div>
       <div class="nmc-body">
-        <p class="nmc-stage">${esc(stageLine)}</p><span class="nmc-state nmc-state-${esc(cup.status || 'upcoming')}">${esc(({ upcoming: ko ? '개막 전' : 'Upcoming', live: ko ? '진행 중' : 'Live', finished: ko ? '종료' : 'Finished' })[cup.status] || (ko ? '개막 전' : 'Upcoming'))}</span>${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
-        <div class="nmc-next"><b>${/^vs /.test(nextMain) ? `<span class="nmc-vs">vs</span> <span class="nmc-opp">${esc(nextMain.slice(3))}</span>` : esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
+        <p class="nmc-stage">${esc(stageLine)}</p><span class="nmc-state nmc-state-${esc(cupState)}">${esc(stateLabels[cupState] || stateLabels.upcoming)}</span>${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
+        <div class="nmc-next${opponent ? ' nmc-next-fixture' : ''}"><b>${opponent ? `<span class="nmc-vs">vs</span> <span class="nmc-opp">${esc(opponent)}</span>` : esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
       </div>
-      <button type="button" class="nmc-btn" onclick="toggleCupView()">${ko ? '자세히 보기' : 'Details'}</button>`;
+      <button type="button" class="nmc-btn" onclick="toggleCupView()">${ko ? '자세히' : 'Details'}</button>`;
     try { nmsSyncPanelLive(); } catch (e) { /* 실황 소식은 부가 기능 */ }
   }
 

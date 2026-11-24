@@ -19243,6 +19243,21 @@ tr.my-team td.team::after,
 .nmc-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
 .nmc-stage { margin: 0; font-size: var(--fs-sm); font-weight: 700; line-height: 1.2; color: var(--color-text-darkest); }
 .nmc-stage-sub, .nmc-next { display: none; }
+@media (max-width: 1199px) {
+  .nmc-head { padding-right: 8px; border-right: 1px solid var(--color-border-chip); }
+  .nmc-body:has(.nmc-next-fixture) { flex-wrap: wrap; row-gap: 3px; }
+  .nmc-stage { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .nmc-next-fixture {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--fs-sm);
+    color: var(--color-text-secondary);
+  }
+  .nmc-next-fixture small { display: none; }
+  .nmc-next-fixture .nmc-vs { color: var(--color-text-muted); }
+}
 .nmc-state { flex: none; font-size: 11px; font-weight: 700; line-height: 1; padding: 3px 7px; border-radius: 999px; background: rgba(var(--color-gold-rgb), .22); color: var(--color-text-dark); }
 .nmc-state-live { background: var(--color-red); color: #fff; }
 .nmc-btn { flex: none; border: 0; cursor: pointer; padding: 3px 10px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600;
