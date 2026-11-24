@@ -10105,8 +10105,27 @@
   margin-bottom: 1px;
 }
 .side-week-text .date-label-short { display: none; }
+.side-week-search {
+  display: none;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid rgba(255,255,255,.18);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+.side-week-search svg { width: 19px; height: 19px; }
+.side-week-search:hover { background: rgba(255,255,255,.12); }
+.side-week-search:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
 
 @media (min-width: 881px) {
+  .side-week-search { display: inline-flex; }
   /* position: sticky는 부모(.app-shell)의 높이를 벗어날 수 없어서, 페이지
      맨 아래까지 스크롤하면 사이드바가 컨테이너 하단에 맞춰지느라 살짝
      움직이는 것처럼 보였습니다. 스크롤 위치와 무관하게 완전히 고정되도록
@@ -14113,6 +14132,15 @@ body {
   background: var(--color-surface);
 }
 .round-mode-bar { display: flex; align-items: center; gap: 8px; }
+.round-quick-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mobile-search-entry.round-mode-chip, .club-search-entry { display: none; }
+#moreSheetModal.is-search-only .more-sheet-list,
+#moreSheetModal.is-search-only .more-sheet-settings { display: none; }
+@media (max-width: 720px) {
+  .mobile-search-entry.round-mode-chip { display: inline-flex; min-height: 44px; }
+  .club-search-entry { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+  .round-quick-actions .round-mode-chip { min-height: 44px; }
+}
 .round-mode-seg,
 .round-mode-bar .round-half-bar {
   display: flex;
@@ -16446,8 +16474,9 @@ button.rmc-pending-badge:active {
   /* 하단에 고정되는 다른 요소는 탭바 위로 올립니다 */
   .share-toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   .pwa-install-banner { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+}
 
-  /* 더보기 시트 */
+  /* 더보기 및 팀·선수 검색 */
   .more-sheet-content .modal-body { padding: 4px 12px 14px; }
   .more-sheet-list { display: flex; flex-direction: column; }
   .more-sheet-list[hidden] { display: none; }
@@ -16460,6 +16489,7 @@ button.rmc-pending-badge:active {
   }
   .more-search input {
     width: 100%;
+    min-width: 0;
     min-height: 44px;
     padding: 8px 12px;
     border: 1px solid var(--color-border-chip);
@@ -16469,10 +16499,40 @@ button.rmc-pending-badge:active {
     font: inherit;
     font-size: 16px;
   }
+  .more-search-field { display: flex; align-items: center; gap: 6px; }
+  #moreSearchClear { flex: none; min-height: 44px; }
+  #moreSearchClear[hidden] { display: none; }
   .more-search input:focus-visible,
   .more-search button:focus-visible { outline: 2px solid var(--color-brand-text); outline-offset: -2px; }
+  #moreSearchHints:not([hidden]) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  #moreSearchHints button {
+    min-height: 36px;
+    padding: 5px 10px;
+    border: 1px solid var(--color-border-chip);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-stripe);
+    color: var(--color-text-dark);
+    font: inherit;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+  #moreSearchHints button:hover { border-color: var(--color-brand-text); }
   #moreSearchStatus {
     margin: 8px 10px 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+  }
+  .more-search-recent:not([hidden]) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
     color: var(--color-text-muted);
     font-size: var(--fs-sm);
   }
@@ -16510,7 +16570,9 @@ button.rmc-pending-badge:active {
   .more-sheet-item.is-active { color: var(--color-brand-text); font-weight: 800; }
   .more-sheet-ico { width: 22px; height: 22px; flex-shrink: 0; color: var(--color-text-faint); }
   .more-sheet-item.is-active .more-sheet-ico { color: var(--color-brand-text); }
-}
+  @media (hover: hover) {
+    .more-search .more-sheet-item:hover { background: var(--color-bg-stripe); }
+  }
 @media (prefers-reduced-motion: reduce) {
   .m-tab, .m-ico, .more-sheet-item { transition: none; }
   .m-tab:active, .more-sheet-item:active { transform: none; }

@@ -384,25 +384,58 @@
     showView(view);
     window.scrollTo(0, 0);
   }
-  function openMoreSheet() {
+  let moreSearchTrigger = null;
+  const MORE_SEARCH_RECENT_KEY = 'nrfa-search-recent';
+  let moreSearchRecent = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem(MORE_SEARCH_RECENT_KEY) || '[]');
+    if (Array.isArray(saved)) moreSearchRecent = saved.filter(key => typeof key === 'string').slice(0, 4);
+  } catch (e) {}
+
+  function saveMoreSearchRecent() {
+    try { localStorage.setItem(MORE_SEARCH_RECENT_KEY, JSON.stringify(moreSearchRecent)); } catch (e) {}
+  }
+
+  function clearMoreSearchRecent() {
+    moreSearchRecent = [];
+    saveMoreSearchRecent();
+    setMoreSearchQuery('');
+  }
+
+  function openMoreSheet(searchTrigger = null) {
     const modal = document.getElementById('moreSheetModal');
     if (!modal) return;
+    moreSearchTrigger = searchTrigger;
+    modal.classList.toggle('is-search-only', Boolean(searchTrigger));
+    const title = document.getElementById('moreSheetTitle');
+    title.dataset.ko = searchTrigger ? '팀·선수 검색' : '더보기';
+    title.dataset.en = searchTrigger ? 'Search teams and players' : 'More';
+    title.textContent = isKorean ? title.dataset.ko : title.dataset.en;
     renderMoreSearch();
     showModalAnimated(modal);
+    if (searchTrigger) document.getElementById('moreSearchInput').focus({ preventScroll: true });
   }
 
   function renderMoreSearch() {
     const input = document.getElementById('moreSearchInput');
     const results = document.getElementById('moreSearchResults');
+    const recent = document.getElementById('moreSearchRecent');
+    const recommended = document.getElementById('moreSearchRecommended');
+    const hints = document.getElementById('moreSearchHints');
     const status = document.getElementById('moreSearchStatus');
     const menu = document.querySelector('#moreSheetModal .more-sheet-list');
     input.placeholder = isKorean ? '팀 이름 또는 선수 이름' : 'Team or player name';
+    document.getElementById('moreSearchClear').hidden = !input.value;
     const query = normalizeRoundSearch(input.value);
+    const terms = input.value.split(/\s+/).map(normalizeRoundSearch).filter(Boolean);
     results.replaceChildren();
-    results.hidden = !query;
+    hints.replaceChildren();
+    hints.hidden = true;
+    recent.hidden = true;
+    recommended.hidden = true;
+    results.hidden = true;
     status.hidden = !query;
     menu.hidden = Boolean(query);
-    if (!query) return;
 
     const club = leagueData.find(team => isMyTeamName(team.nameEn, team.nameKo));
     const clubName = isKorean ? club?.nameKo : club?.nameEn;
@@ -411,6 +444,7 @@
     const playerNames = player => [player.nameKo, player.nameEn, ...(player.aliasesKo || []), ...(player.aliasesEn || [])];
     const rosterNames = new Set(roster.flatMap(playerNames).map(normalizeRoundSearch).filter(Boolean));
     const entries = leagueData.map(team => ({
+      key: 'team:' + team.nameEn,
       names: [team.nameKo, team.nameEn],
       detail: isKorean ? '구단 정보' : 'Club info',
       open: () => goToTeamInfo(team.nameEn)
@@ -419,6 +453,7 @@
       const wasFormer = former.includes(player);
       const identifier = player.number == null ? player.nameEn : (wasFormer ? 'F' + player.number : player.number);
       entries.push({
+        key: 'roster:' + identifier,
         names: playerNames(player),
         detail: wasFormer ? clubName + (isKorean ? ' · 이전 선수' : ' · Former player') : clubName,
         open: () => {
@@ -434,6 +469,7 @@
       const names = [player.nameKo, player.nameEn];
       if (isMyTeamName(player.teamEn, player.teamKo) && names.some(name => rosterNames.has(normalizeRoundSearch(name)))) return;
       entries.push({
+        key: 'scorer:' + player.key,
         names,
         detail: isKorean ? player.teamKo + ' · 득점 기록' : player.teamEn + ' · Goal record',
         open: () => {
@@ -444,34 +480,129 @@
       });
     });
 
-    const matches = entries.flatMap(entry => {
+    let matches = query ? entries.flatMap(entry => {
       const names = entry.names.map(normalizeRoundSearch);
-      const rank = names.includes(query) ? 0 : names.some(name => name.startsWith(query)) ? 1 : 2;
-      return names.some(name => name.includes(query)) ? [{ entry, rank }] : [];
-    }).sort((a, b) => a.rank - b.rank);
+      if (names.includes(query)) return [{ entry, rank: 0 }];
+      if (names.some(name => name.startsWith(query))) return [{ entry, rank: 1 }];
+      if (names.some(name => name.includes(query))) return [{ entry, rank: 2 }];
+      return terms.every(term => names.some(name => name.includes(term))) ? [{ entry, rank: 3 }] : [];
+    }).sort((a, b) => a.rank - b.rank).map(({ entry }) => entry)
+      : moreSearchRecent.map(key => entries.find(entry => entry.key === key)).filter(Boolean);
+    if (!query) {
+      recent.hidden = !matches.length;
+      if (!matches.length) {
+        matches = recommendedMoreSearchEntries(entries, club);
+        recommended.hidden = !matches.length;
+      }
+    }
+    const displayName = entry => entry.names[isKorean ? 0 : 1] || entry.names.find(Boolean);
+    const initialQuery = input.value.normalize('NFC').replace(/\s+/g, '');
+    const candidates = !query ? [] : matches.length ? matches : entries.filter(entry => entry.names.some(name =>
+      matchesSearchInitials(name, initialQuery) || matchesSearchTypo(normalizeRoundSearch(name), query)));
+    const suggestions = [...new Set(candidates.map(displayName))]
+      .filter(name => name && normalizeRoundSearch(name) !== query).slice(0, 5);
+    for (const suggestion of suggestions) {
+      const hint = document.createElement('button');
+      hint.type = 'button';
+      hint.textContent = suggestion;
+      hint.addEventListener('click', () => setMoreSearchQuery(suggestion));
+      hints.append(hint);
+    }
+    hints.hidden = !suggestions.length;
     status.textContent = matches.length
       ? (isKorean ? `검색 결과 ${matches.length}개` : `Results: ${matches.length}`)
+      : suggestions.length ? (isKorean ? '추천 검색어를 선택해 보세요.' : 'Try a suggested search.')
       : (isKorean ? '일치하는 팀이나 선수가 없습니다.' : 'No matching teams or players.');
-    matches.forEach(({ entry }) => {
+    results.hidden = !matches.length;
+    matches.forEach(entry => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'more-sheet-item';
       const name = document.createElement('span');
-      name.textContent = entry.names[isKorean ? 0 : 1] || entry.names.find(Boolean);
+      name.textContent = displayName(entry);
       const detail = document.createElement('small');
       detail.textContent = entry.detail;
       button.append(name, detail);
       button.addEventListener('click', () => {
-        closeMoreSheet();
+        moreSearchRecent = [entry.key, ...moreSearchRecent.filter(key => key !== entry.key)].slice(0, 4);
+        saveMoreSearchRecent();
+        closeMoreSheet(false);
         input.value = '';
         entry.open();
       });
       results.append(button);
     });
   }
-  function closeMoreSheet() {
+
+  function recommendedMoreSearchEntries(entries, club) {
+    const opponent = getMyRankedTeam()?.team?.nextMatch;
+    const topScorer = topScorersData[0];
+    const ourClub = entries.find(entry => entry.key === 'team:' + club?.nameEn);
+    const nextClub = entries.find(entry => entry.key === 'team:' + opponent?.oppEn);
+    const scorer = topScorer && (entries.find(entry => entry.key === 'scorer:' + topScorer.key) ||
+      entries.find(entry => entry.key.startsWith('roster:') &&
+        [topScorer.nameKo, topScorer.nameEn].some(name => name && entry.names.includes(name))));
+    return [...new Set([ourClub, nextClub, scorer].filter(Boolean))];
+  }
+
+  function setMoreSearchQuery(value) {
+    const input = document.getElementById('moreSearchInput');
+    input.value = value;
+    input.focus({ preventScroll: true });
+    renderMoreSearch();
+  }
+
+  function matchesSearchInitials(name, query) {
+    const initials = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+    if (![...query].some(char => initials.includes(char))) return false;
+    const characters = [...String(name || '').normalize('NFC').replace(/[\s\p{P}]/gu, '')];
+    return [...query].every((char, index) => {
+      const text = characters[index];
+      if (!text) return false;
+      const offset = text.charCodeAt(0) - 0xAC00;
+      return char === text || (offset >= 0 && offset < 11172 && char === initials[Math.floor(offset / 588)]);
+    });
+  }
+
+  function matchesSearchTypo(name, query) {
+    if (query.length < 4 && !(query.length === 3 && /[가-힣]/.test(query))) return false;
+    return [query.length - 1, query.length, query.length + 1].some(length => {
+      const prefix = name.slice(0, length);
+      if (prefix.length !== length) return false;
+      let index = 0;
+      while (index < prefix.length && index < query.length && prefix[index] === query[index]) index++;
+      if (prefix.length > query.length) return prefix.slice(index + 1) === query.slice(index);
+      if (prefix.length < query.length) return prefix.slice(index) === query.slice(index + 1);
+      return prefix.slice(index + 1) === query.slice(index + 1) ||
+        (prefix[index] === query[index + 1] && prefix[index + 1] === query[index] &&
+          prefix.slice(index + 2) === query.slice(index + 2));
+    });
+  }
+
+  function handleMoreSearchKey(event) {
+    if (event.isComposing || event.keyCode === 229 || (event.key !== 'ArrowDown' && event.key !== 'Enter')) return;
+    const first = document.querySelector('#moreSearchResults button') || document.querySelector('#moreSearchHints button');
+    if (!first) return;
+    event.preventDefault();
+    if (event.key === 'Enter') first.click();
+    else first.focus();
+  }
+
+  function handleMoreSearchResultKey(event) {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const result = event.target;
+    if (result.tagName !== 'BUTTON') return;
+    const next = event.key === 'ArrowDown' ? result.nextElementSibling
+      : result.previousElementSibling || document.getElementById('moreSearchInput');
+    if (!next) return;
+    event.preventDefault();
+    next.focus();
+  }
+  function closeMoreSheet(restoreFocus = true) {
     const modal = document.getElementById('moreSheetModal');
     if (modal) closeModalAnimated(modal);
+    if (restoreFocus) moreSearchTrigger?.focus({ preventScroll: true });
+    moreSearchTrigger = null;
   }
   function openViewFromMore(view) {
     closeMoreSheet();
@@ -11619,7 +11750,8 @@
   }
 
   function normalizeRoundSearch(value) {
-    return String(value || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    return String(value || '').normalize('NFKD').replace(/\p{M}/gu, '').normalize('NFC')
+      .toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
   }
 
   function roundSearchTerms() {
@@ -11643,8 +11775,7 @@
     return past ? 'pending' : 'upcoming';
   }
 
-  function updateRoundSearch(event, immediately = false) {
-    if (event?.isComposing) return;
+  function updateRoundSearch(immediately = false) {
     clearTimeout(roundSearchTimer);
     roundSearchLimit = ROUND_SEARCH_PAGE_SIZE;
     if (immediately || !roundSearchTerms().length) renderRoundsView();
@@ -11662,6 +11793,44 @@
       renderRoundsView();
       input.focus();
     }
+  }
+
+  function currentScheduleMonth() {
+    return new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 7);
+  }
+
+  function goToCurrentSchedule() {
+    clearRoundSearch(false);
+    roundStatusFilter = 'all';
+    if (roundViewMode === 'month') {
+      selectScheduleMonth(currentScheduleMonth());
+    } else {
+      currentRoundKey = defaultDisplayRoundKey();
+      currentRoundHalf = null;
+      renderRoundsView();
+    }
+  }
+
+  function scheduleViewHash() {
+    const path = roundViewMode === 'month'
+      ? 'rounds/month' + (roundMonthKey ? '/' + roundMonthKey : '')
+      : 'rounds' + (currentRoundKey ? '/' + currentRoundKey.slice('round'.length) : '');
+    const params = new URLSearchParams();
+    const query = document.getElementById('roundSearchInput').value.trim();
+    if (query) params.set('q', query);
+    if (roundStatusFilter !== 'all') params.set('status', roundStatusFilter);
+    if (roundMonthMineOnly) params.set('mine', '1');
+    if (roundViewMode === 'week' && currentRoundKey && currentRoundHalf && currentRoundHalf !== roundHalfOfKey(currentRoundKey)) {
+      params.set('half', currentRoundHalf);
+    }
+    return params.size ? path + '?' + params : path;
+  }
+
+  function shareScheduleView() {
+    const url = new URL(window.location.href);
+    url.hash = '/' + scheduleViewHash();
+    const title = isKorean ? 'NRFA 리그 일정' : 'NRFA League Schedule';
+    return shareContent(title, title, url.href);
   }
 
   function renderRoundSearchResults(listEl, status, terms) {
@@ -12066,6 +12235,9 @@
     if (shareBtn) shareBtn.style.display = 'none';
     rfvSetVisible(false);
     const { months, before, tbd } = collectRoundMonthData();
+    if (/^\d{4}-(0[1-9]|1[0-2])$/.test(roundMonthKey) && !months.has(roundMonthKey)) {
+      months.set(roundMonthKey, new Map());
+    }
     const monthOnly = Array.from(months.keys()).sort();
     const tabKeys = (before.length ? ['before'] : []).concat(monthOnly, tbd.length ? ['tbd'] : []);
     roundMonthKeysCache = tabKeys;
@@ -12082,7 +12254,7 @@
     tabBar.style.display = '';
 
     if (!tabKeys.includes(roundMonthKey)) {
-      const todayMk = new Date(Date.now() + KST_OFFSET_MS).toISOString().slice(0, 7);
+      const todayMk = currentScheduleMonth();
       roundMonthKey = monthOnly.includes(todayMk) ? todayMk
         : (monthOnly.filter(k => k <= todayMk).pop() || monthOnly[0] || tabKeys[0]);
     }
@@ -12126,6 +12298,10 @@
       return;
     }
     const days = months.get(roundMonthKey) || new Map();
+    if (!days.size) {
+      listEl.textContent = isKorean ? '이 달에 표시할 경기가 없어요.' : 'No matches to show this month.';
+      return;
+    }
     Array.from(days.keys()).sort().forEach(dk => {
       const list = days.get(dk);
       const [y, mo, d] = dk.split('-').map(Number);
@@ -12242,6 +12418,12 @@
     input.placeholder = isKorean ? '팀 이름 검색' : 'Team name · e.g. Raiply';
     const terms = roundSearchTerms();
     const searching = terms.length > 0 || roundStatusFilter !== 'all';
+    const currentButton = document.getElementById('roundCurrentBtn');
+    const currentKo = monthMode ? '이번 달로' : '현재 주차로';
+    const currentEn = monthMode ? 'Go to this month' : 'Go to current week';
+    currentButton.dataset.ko = searching ? '검색 지우고 ' + currentKo : currentKo;
+    currentButton.dataset.en = searching ? 'Clear search and ' + currentEn.toLowerCase() : currentEn;
+    currentButton.textContent = isKorean ? currentButton.dataset.ko : currentButton.dataset.en;
     document.getElementById('roundSearchClear').hidden = !input.value;
     document.querySelectorAll('#roundStatusFilters button').forEach(button => {
       const selected = button.dataset.status === roundStatusFilter;
@@ -23042,11 +23224,7 @@
       }
       const head = VIEW_PATH[currentView];
       if (head === undefined || head === '') return '';
-      if (head === 'rounds') {
-        if (roundViewMode === 'month') return 'rounds/month' + (roundMonthKey ? '/' + roundMonthKey : '');
-        const n = currentRoundKey ? parseInt(String(currentRoundKey).replace('round', ''), 10) : NaN;
-        return 'rounds' + (isNaN(n) ? '' : '/' + n);
-      }
+      if (head === 'rounds') return scheduleViewHash();
       if (head === 'compare') {
         return (teamCompareA && teamCompareB) ? `compare/${slugify(teamCompareA)}/${slugify(teamCompareB)}` : 'compare';
       }
@@ -23062,6 +23240,7 @@
 
     // 구단 정보 안에서 탭만 바뀐 경우는 뒤로가기 기록을 쌓지 않고 덮어씁니다.
     function sameBase(a, b) {
+      if (a.split('?')[0] === b.split('?')[0] && /^rounds(?:\/|\?|$)/.test(a)) return true;
       const pa = a.split('/'), pb = b.split('/');
       return pa[0] === 'club' && pb[0] === 'club' && pa[1] === pb[1];
     }
@@ -23105,7 +23284,8 @@
 
     // 해시 → 화면 상태
     function applyRoute() {
-      const parts = normHash(location.hash).split('/').filter(Boolean).map(p => { try { return decodeURIComponent(p); } catch (e) { return p; } });
+      const [path, query] = normHash(location.hash).split('?');
+      const parts = path.split('/').filter(Boolean).map(p => { try { return decodeURIComponent(p); } catch (e) { return p; } });
       const head = parts[0] || '';
       applying = true;
       try {
@@ -23124,13 +23304,24 @@
             showView('rank'); // 아카이브 데이터가 없으면 메인으로
           }
         } else if (head === 'rounds') {
+          const params = new URLSearchParams(query);
+          const status = params.get('status');
+          clearRoundSearch(false);
+          const input = document.getElementById('roundSearchInput');
+          input.value = (params.get('q') || '').slice(0, input.maxLength);
+          roundStatusFilter = ['upcoming', 'result', 'postponed', 'pending'].includes(status) ? status : 'all';
+          roundMonthMineOnly = params.get('mine') === '1';
+          if (input.value || roundStatusFilter !== 'all' || roundMonthMineOnly) {
+            document.getElementById('roundAdv').open = true;
+          }
           const key = 'round' + parseInt(parts[1], 10);
           if (parts[1] === 'month') {
             roundViewMode = 'month';
-            if (/^(?:\d{4}-\d{2}|before|tbd)$/.test(parts[2] || '')) roundMonthKey = parts[2];
-          } else if (roundsData[key] || scheduledRounds[key]) {
-            if (currentRoundKey !== key) currentRoundHalf = null;
-            currentRoundKey = key;
+            roundMonthKey = /^(?:\d{4}-(?:0[1-9]|1[0-2])|before|tbd)$/.test(parts[2] || '') ? parts[2] : null;
+          } else {
+            currentRoundKey = roundsData[key] || scheduledRounds[key] ? key : defaultDisplayRoundKey();
+            const half = params.get('half');
+            currentRoundHalf = half === '1' || half === '2' ? Number(half) : null;
             roundViewMode = 'week';
           }
           showView('rounds');

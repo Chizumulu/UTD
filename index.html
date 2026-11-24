@@ -21,9 +21,9 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '009',
+    style: '014',
     data: '005',
-    app: '017',
+    app: '023',
     report: '002',
     archive: '200',
     predictWorker: '220',
@@ -280,6 +280,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span id="dateLabel" class="date-label-full">2026년 8월 12일</span>
         <span id="dateLabelShort" class="date-label-short">8.12</span>
       </div>
+      <button type="button" class="side-week-search" aria-haspopup="dialog" aria-label="팀·선수 검색"
+        title="팀·선수 검색" data-aria-ko="팀·선수 검색" data-aria-en="Search teams and players"
+        data-title-ko="팀·선수 검색" data-title-en="Search teams and players" onclick="openMoreSheet(this)">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 15.5 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
     </div>
     <button type="button" class="side-cup-btn" id="cupToggleSide" onclick="toggleCupView()" aria-pressed="false">
       <svg class="side-cup-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v4.5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 6H4.5v1.2A3 3 0 0 0 7.5 10.2M17 6h2.5v1.2a3 3 0 0 1-3 3M12 13.5V17M8.5 20h7M10 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -766,6 +771,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </div>
+  <div class="club-search-entry">
+    <button type="button" class="mobile-search-entry round-mode-chip lbl" aria-haspopup="dialog"
+      data-ko="팀·선수 검색" data-en="Search teams and players" onclick="openMoreSheet(this)">팀·선수 검색</button>
+  </div>
 
   <div id="myTeamInfoView">
   <div class="squad-header team-info-header">
@@ -904,13 +913,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <summary><span class="lbl" data-ko="일정 도구" data-en="Tools">일정 도구</span></summary>
         <div class="round-tools-actions">
           <button type="button" class="lbl" id="roundCalendarButton" data-ko="캘린더" data-en="Calendar" aria-haspopup="dialog" onclick="openLeagueCalendarSubscription()">캘린더</button>
+          <button type="button" class="lbl" data-ko="현재 보기 링크 공유" data-en="Share this schedule view" onclick="shareScheduleView()">현재 보기 링크 공유</button>
           <button type="button" class="lbl" id="roundShareBtn" data-en="Share round results" data-ko="라운드 결과 공유" onclick="shareRoundResults()">라운드 결과 공유</button>
           <button type="button" class="lbl" data-en="View postponed matches" data-ko="연기된 경기 보기" aria-haspopup="dialog" onclick="openPostponedMatchesModal()">연기된 경기 보기</button>
         </div>
       </details>
     </div>
+    <div class="round-quick-actions">
+      <button type="button" id="roundCurrentBtn" class="round-mode-chip lbl"
+        data-ko="현재 주차로" data-en="Go to current week" onclick="goToCurrentSchedule()">현재 주차로</button>
+      <button type="button" class="mobile-search-entry round-mode-chip lbl" aria-haspopup="dialog"
+        data-ko="팀·선수 검색" data-en="Search teams and players" onclick="openMoreSheet(this)">팀·선수 검색</button>
+    </div>
     <button type="button" id="roundFavorBtn" class="round-favor-btn" aria-controls="roundFavorPanel" onclick="toggleRoundFavor()"></button>
-    <form class="round-search" role="search" aria-labelledby="roundSearchLabel" onsubmit="event.preventDefault(); updateRoundSearch(null, true)">
+    <form class="round-search" role="search" aria-labelledby="roundSearchLabel" onsubmit="event.preventDefault(); updateRoundSearch(true)">
       <label id="roundSearchLabel" for="roundSearchInput" class="lbl sr-only" data-ko="시즌 경기 검색" data-en="Search season fixtures">시즌 경기 검색</label>
       <div class="round-search-row">
         <details class="round-adv" id="roundAdv">
@@ -918,7 +934,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="round-search-field">
           <svg class="round-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
           <input id="roundSearchInput" type="search" maxlength="100" autocomplete="off" aria-controls="roundMatchList"
-            oninput="updateRoundSearch(event)" oncompositionend="updateRoundSearch(event)">
+            oninput="updateRoundSearch()" oncompositionend="updateRoundSearch(true)">
           <button type="button" id="roundSearchClear" class="round-mode-chip lbl" data-ko="지우기" data-en="Clear" onclick="clearRoundSearch(true)" hidden>지우기</button>
         </div>
         <div class="round-search-filters">
@@ -1745,20 +1761,32 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </nav>
 
 <!-- 더보기 바텀시트 -->
-<div id="moreSheetModal" class="modal-overlay" style="display:none;">
+<div id="moreSheetModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="moreSheetTitle" style="display:none;">
   <div class="modal-content more-sheet-content">
     <div class="modal-header">
-      <h2 class="lbl" data-en="More" data-ko="더보기">더보기</h2>
+      <h2 id="moreSheetTitle" class="lbl" data-en="More" data-ko="더보기">더보기</h2>
       <button class="close-btn" onclick="closeMoreSheet()" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body">
       <div class="more-search" role="search">
         <label for="moreSearchInput" class="lbl" data-ko="팀·선수 검색" data-en="Search teams and players">팀·선수 검색</label>
-        <input id="moreSearchInput" type="search" autocomplete="off" maxlength="100"
-          aria-controls="moreSearchResults" oninput="if (!event.isComposing) renderMoreSearch()"
-          oncompositionend="renderMoreSearch()">
+        <div class="more-search-field">
+          <input id="moreSearchInput" type="search" autocomplete="off" maxlength="100"
+            aria-controls="moreSearchHints moreSearchResults" oninput="renderMoreSearch()"
+            oncompositionend="renderMoreSearch()" onkeydown="handleMoreSearchKey(event)">
+          <button type="button" id="moreSearchClear" class="round-mode-chip lbl" onclick="setMoreSearchQuery('')"
+            data-ko="지우기" data-en="Clear" hidden>지우기</button>
+        </div>
+        <div id="moreSearchHints" role="group" aria-label="추천 검색어"
+          data-aria-ko="추천 검색어" data-aria-en="Suggested searches" hidden></div>
         <p id="moreSearchStatus" role="status" hidden></p>
-        <div id="moreSearchResults" hidden></div>
+        <div class="more-search-recent" id="moreSearchRecent" hidden>
+          <span class="lbl" data-ko="최근에 본 항목" data-en="Recently viewed">최근에 본 항목</span>
+          <button type="button" class="round-mode-chip lbl" onclick="clearMoreSearchRecent()"
+            data-ko="기록 지우기" data-en="Clear history">기록 지우기</button>
+        </div>
+        <div class="more-search-recent lbl" id="moreSearchRecommended" data-ko="추천 항목" data-en="Suggested places to start" hidden>추천 항목</div>
+        <div id="moreSearchResults" onkeydown="handleMoreSearchResultKey(event)" hidden></div>
       </div>
       <div class="more-sheet-list">
         <button type="button" class="more-sheet-item" data-view="predict" data-btn="viewPredictBtn" onclick="openViewFromMore('predict')">
