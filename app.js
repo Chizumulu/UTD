@@ -6605,7 +6605,26 @@
     if (!league) {
       const matches = collectMyTeamResults(teamOverviewCompetition);
       if (!matches.length) {
-        record.innerHTML = `<p class="club-comp-note">${isKorean ? '이 범위에 확정된 경기 결과가 없어요.' : 'No confirmed results in this scope.'}</p>`;
+        const cup = teamOverviewCompetition === 'cup';
+        const title = cup
+          ? (isKorean ? '컵 경기 결과 대기 중' : 'Awaiting cup results')
+          : (isKorean ? '경기 결과 대기 중' : 'Awaiting match results');
+        const description = isKorean
+          ? '경기 결과가 확정되면 구단 기록과 폼 가이드가 여기에 표시돼요.'
+          : 'Club records and form will appear here once a result is confirmed.';
+        record.innerHTML = `
+          <div class="club-overview-empty">
+            <span class="club-overview-empty-icon" aria-hidden="true">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <rect x="3" y="5" width="18" height="16" rx="3"/>
+                <path d="M7 3v4m10-4v4M3 10h18m-13 5h2m4 0h2"/>
+              </svg>
+            </span>
+            <div>
+              <p class="club-overview-empty-title">${title}</p>
+              <p class="club-overview-empty-description">${description}</p>
+            </div>
+          </div>`;
         el.replaceChildren();
         return;
       }

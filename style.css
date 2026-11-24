@@ -20121,6 +20121,37 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
 .team-results-filters .round-mode-chip, .club-comp-filter .round-mode-chip { min-width: 52px; }
 .club-comp-filter { margin-bottom: 10px; }
 .club-comp-note { margin: 0 0 10px; color: var(--color-text-muted); font-size: var(--fs-sm); }
+.club-overview-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px clamp(12px, 3vw, 20px);
+  border: 1px solid var(--color-border-chip);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+.club-overview-empty-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--color-bg-table-alt);
+  color: var(--color-brand-text);
+}
+.club-overview-empty-title {
+  margin: 0;
+  color: var(--color-text-darkest);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.club-overview-empty-description {
+  margin: 3px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
 
 /* 컵대회 대진표(가로 스크롤): 오른쪽에 더 있다는 힌트
    1) 위쪽 안내 줄(좁은 화면에서만)  2) 스크롤 가장자리 그림자: 가려진 쪽에만 보이고 끝까지 밀면 사라집니다 */
