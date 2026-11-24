@@ -602,8 +602,8 @@ const staffData = [
 //  - logo 는 이미지 주소(https://…) 또는 index.html과 같은 폴더에 둔 파일명 (예: "logo_kimboknam.png"). 비우거나 불러오지 못하면 이름 첫 글자가 표시됩니다.
 //  - descKo / descEn 을 적으면 카드에 한 줄 소개가 같이 나옵니다.
 const teamSponsors = [
-  { nameKo: "김복남맥주", nameEn: "Kimboknam Beer", roleKo: "메인 스폰서", roleEn: "Main Sponsor", tier: "main", logo: "https://i.namu.wiki/i/wQoxW3EqZrbRXMeljkJBj3pKNVvws3esMioxRywYiq3hMan8DO0tRbUZLDgvv5bUUnmUdhnC7_uWlNE4PMaSa2W8ZE7VxFz4GU-yxHc5ZkhD9sOjyRTEdVJVeAVj1yxBnvc2C0yKsGeGyEZr_Sa-ag.webp", url: "https://kimboknam.com/layout/res/home.php?go=main" },
-  { nameKo: "디에포", nameEn: "DeÉpo", roleKo: "용품 스폰서", roleEn: "Kit Sponsor", logo: "https://i.namu.wiki/i/EsxaECFyNeQN6QGIxOrlSvZMyKXyPjjySdcLLpYpf7-qZOWgoLdvly4RmtS9cGhmfKTDH7ceyYEt8nVAAb-EUgZxGJlA0W0-BwzB1B1dWYFM4j3xJlnjMfrdgSo9f_Z2BSlm4EigCI7OO8J66pFgTg.webp", url: "https://deepo.co.kr/" },
+  { nameKo: "김복남맥주", nameEn: "Kimboknam Beer", roleKo: "메인 스폰서", roleEn: "Main Sponsor", tier: "main", logo: "https://kimboknam.com/file/pds/186_2/%EA%B9%80%EB%B3%B5%EB%82%A8%EB%A7%A5%EC%A3%BC%20%EB%A1%9C%EA%B3%A0.png", url: "https://kimboknam.com/layout/res/home.php?go=main" },
+  { nameKo: "디에포", nameEn: "DeÉpo", roleKo: "용품 스폰서", roleEn: "Kit Sponsor", logo: "https://ecimg.cafe24img.com/pg1227b32037641073/deepo/web/upload/category/logo/v2_a13f0ec1c5ac0d75a65a02eba64aea54_9pE1PFzwEl_top.jpg", url: "https://deepo.co.kr/" },
   { nameKo: "엘초이스", nameEn: "El Choice", logoBg: "#111", logo: "https://ecimg.cafe24img.com/pg545b96614970059/elchoice20192/web/upload/appfiles/ZaReJam3QiELznoZeGGkMG/fab57a96045fbed8735a16154a0f64a6.png", url: "https://elchoice.co.kr/" },
   { nameKo: "옥산", nameEn: "Oksan", logoBg: "#111", logo: "https://oksanchair.com/web/upload/category/logo/v2_07be1fe127ba1764ec1805e52bc34277_YdvRFSKQg7_top.jpg", url: "https://oksanchair.com/" },
   { nameKo: "마이프로틴", nameEn: "Myprotein", logo: "https://upload.wikimedia.org/wikipedia/en/f/fd/Myprotein_logo_2023.png", url: "https://www.myprotein.co.kr/" },
