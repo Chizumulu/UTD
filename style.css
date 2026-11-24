@@ -19723,3 +19723,33 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
   .nmc:not([hidden]) .nmc-next { max-width: 100%; text-align: center; overflow-wrap: anywhere; text-wrap: balance; }
   .nmc:not([hidden]) .nmc-next { white-space: normal; }
 }
+
+/* 컵대회 > 치주물루 경기 일정: 리그 일정과 같은 날짜 카드(rmd-day/rmd-row) 디자인.
+   - 로고가 없는 상대 팀은 이름 첫 글자를 동그라미로 보여줍니다. */
+.cup-mymatch .rmd-logo.cup-logo-fb {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+  border-radius: 50%; background: var(--color-border-light); color: var(--color-text-faint);
+  font-weight: 700; font-size: var(--fs-lg);
+}
+.cup-mymatch .cup-mymatch-list { margin-top: 0; }
+
+/* 컵대회 대진표(가로 스크롤): 오른쪽에 더 있다는 힌트
+   1) 위쪽 안내 줄(좁은 화면에서만)  2) 스크롤 가장자리 그림자: 가려진 쪽에만 보이고 끝까지 밀면 사라집니다 */
+.cup-br-hint { display: none; }
+.cup-br-scroll {
+  background:
+    linear-gradient(to right, var(--color-surface) 30%, rgba(255, 255, 255, 0)) left center / 36px 100% no-repeat local,
+    linear-gradient(to left, var(--color-surface) 30%, rgba(255, 255, 255, 0)) right center / 36px 100% no-repeat local,
+    linear-gradient(to right, rgba(var(--color-navy-rgb), .22), rgba(var(--color-navy-rgb), 0)) left center / 18px 100% no-repeat scroll,
+    linear-gradient(to left, rgba(var(--color-navy-rgb), .22), rgba(var(--color-navy-rgb), 0)) right center / 18px 100% no-repeat scroll,
+    var(--color-surface);
+}
+@media (max-width: 960px) {
+  .cup-br-hint {
+    display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+    margin: 0 4px 10px; font-size: var(--fs-md); font-weight: 800; color: var(--color-text-dark);
+  }
+  .cup-br-hint i { font-style: normal; font-size: 26px; line-height: 1; color: var(--color-brand-text); animation: cup-br-nudge 1.4s ease-in-out infinite; }
+}
+@keyframes cup-br-nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
+@media (prefers-reduced-motion: reduce) { .cup-br-hint i { animation: none; } }

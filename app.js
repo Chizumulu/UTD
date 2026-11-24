@@ -659,8 +659,10 @@
     const logo = t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '';
     return '<div class="cup-team' + (away ? ' is-away' : '') + '">' + logo + '<span>' + cupEsc(name) + '</span></div>';
   }
-  // 컵대회 소개 탭 맨 위: 치주물루가 낀 컵 경기 일정. 카드 모양은 메인의 "다음경기"(next-match-strip / nmh-*)를 그대로 씁니다.
-  // 날짜(date)·시간(time)이 아직 없으면 "일정 미정"으로 보여주고, 점수가 들어오면 날짜 자리에 스코어가 나와요.
+  // 컵대회 소개 탭 맨 위: 치주물루가 낀 컵 경기 일정.
+  // 카드 모양은 리그 일정/구단정보 경기결과의 "날짜 카드 + 경기 행"(rmd-day / rmd-row)을 그대로 씁니다.
+  //  - 날짜(date)·시간(time)이 없으면 "일정 미정", 점수가 들어오면 "스코어 · 종료"로 바뀌고 헤더 오른쪽에 승/무/패 리본이 붙어요.
+  //  - 버튼은 내용이 있을 때만 생겨요: 득점(scorersHome/scorersAway) · 하이라이트(highlight: 'URL').
   function cupMyMatchesHtml(c) {
     const ko = isKorean;
     const mine = [];
@@ -674,50 +676,104 @@
     if (!mine.length) {
       return '<section class="cup-mymatch">' + title + '<p class="cup-br-note">' + (ko ? '치주물루의 컵 경기 대진이 나오면 이곳에 표시돼요.' : 'Chizumulu\'s cup fixtures will appear here once the draw is out.') + '</p></section>';
     }
-    const nmName = function (full) { const f = String(full); return '<span class="nm-short">' + cupEsc(f.split(' ')[0]) + '</span><span class="nm-full">' + cupEsc(f) + '</span>'; };
-    const team = function (en, koName, isMine) {
+    const pad2 = function (n) { return String(n).padStart(2, '0'); };
+    const noFc = function (s) { return String(s == null ? '' : s).replace(/\s*FC\s*$/i, '').trim(); };
+    const dateLabel = function (dateStr) {
+      const p = String(dateStr).split('-').map(Number);
+      if (p.length < 3 || p.some(isNaN)) return cupEsc(dateStr);
+      const dow = new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay();
+      if (ko) return p[1] + '월 ' + p[2] + '일 (' + ['일', '월', '화', '수', '목', '금', '토'][dow] + ')';
+      return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dow] + ', ' + p[2] + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][p[1] - 1];
+    };
+    const kstOf = function (m) { // 말라위(CAT, UTC+2) → KST(UTC+9)
+      if (!m.date || !m.time) return null;
+      const d = String(m.date).split('-').map(Number), t = String(m.time).split(':').map(Number);
+      if (d.length < 3 || t.length < 2 || d.concat(t).some(isNaN)) return null;
+      const k = new Date(d[0], d[1] - 1, d[2], t[0] + 7, t[1]);
+      return { time: pad2(k.getHours()) + ':' + pad2(k.getMinutes()), shifted: k.getDate() !== d[2] };
+    };
+    const logoOf = function (en, isMine, full) {
+      if (isMine) return '<img class="rmd-logo" src="./dd.svg" alt="Chizumulu United FC">';
       const t = leagueData.find(function (x) { return x.nameEn === en; });
-      const full = ko ? (koName || (t && t.nameKo) || en) : en;
-      let crest;
-      if (isMine) crest = '<img class="team-logo nmh-crest" src="./dd.svg" alt="Chizumulu United FC">';
-      else if (t && t.logoSrc) crest = '<img class="team-logo nmh-crest opp-logo" title="' + cupEsc(full) + '" src="' + cupEsc(t.logoSrc) + '" alt="' + cupEsc(en) + '">';
-      else crest = '<span class="team-logo nmh-crest opp-logo nmh-crest-fallback" title="' + cupEsc(full) + '">' + cupEsc(String(en || '?').trim().charAt(0).toUpperCase()) + '</span>';
-      return '<div class="nmh-team' + (isMine ? ' nmh-team-mine' : '') + '">' + crest + '<span title="' + cupEsc(full) + '">' + nmName(full) + '</span></div>';
+      if (t && t.logoSrc) return '<img class="rmd-logo" src="' + cupEsc(t.logoSrc) + '" alt="' + cupEsc(en) + '">';
+      return '<span class="rmd-logo cup-logo-fb" aria-hidden="true">' + cupEsc(String(full || en || '?').trim().charAt(0).toUpperCase()) + '</span>';
     };
     const cards = mine.map(function (x) {
       const m = x.m, r = x.r;
       const iAmHome = isMyTeamName(m.home, m.homeKo);
       const played = m.homeScore != null && m.awayScore != null;
       const roundLbl = ko ? (r.labelKo || r.labelEn) : (r.labelEn || r.labelKo);
-      let dday = '', meta = '';
-      if (played) {
-        meta = '<div class="cup-mymatch-big cup-mymatch-score">' + m.homeScore + ' : ' + m.awayScore + '</div>' + (m.pso ? '<div class="nmh-meta">PSO ' + cupEsc(m.pso) + '</div>' : '');
-      } else if (m.date) {
-        const ms = kickoffUTCMillis(m.date, m.time);
-        if (ms) {
-          const left = Math.max(0, Math.round((kstMidnightUTCMillis(ms) - kstMidnightUTCMillis(Date.now())) / 86400000));
-          dday = left === 0 ? 'D-DAY' : 'D-' + left;
-        }
-        const kt = formatKickoff({ kickoffDate: m.date, kickoffTime: m.time });
-        meta = (dday ? '<div class="nmh-dday">' + dday + '</div>' : '') + '<div class="nmh-meta-line"><div class="nmh-meta">' + (kt || cupEsc(m.date)) + '</div></div>';
-      } else {
-        meta = '<div class="cup-mymatch-big cup-mymatch-tbd">' + (ko ? '일정 미정' : 'TBD') + '</div>' +
-          '<div class="nmh-meta-line"><div class="nmh-meta">' + (ko ? '날짜·시간·장소 발표 대기' : 'Date, time and venue to be announced') + '</div></div>';
-      }
-      const venue = ko ? (m.venueKo || m.venueEn) : (m.venueEn || m.venueKo);
-      // 홈/원정은 포스터에 적혀 있지 않아요. 날짜나 장소가 발표되기 전(또는 data.js 경기에 haConfirmed: true 가 없을 때)에는 "미정"으로 둡니다.
+      const homeName = noFc(ko ? (m.homeKo || m.home) : m.home), awayName = noFc(ko ? (m.awayKo || m.away) : m.away);
+      const homeWin = played && (m.homeScore > m.awayScore || (m.homeScore === m.awayScore && /^\d+\s*:\s*\d+$/.test(m.pso || '') && +m.pso.split(':')[0] > +m.pso.split(':')[1]));
+      const awayWin = played && !homeWin && (m.awayScore > m.homeScore || (m.homeScore === m.awayScore && /^\d+\s*:\s*\d+$/.test(m.pso || '') && +m.pso.split(':')[1] > +m.pso.split(':')[0]));
+      // 홈/원정은 포스터에 적혀 있지 않아요. 날짜나 장소가 발표되기 전(또는 data.js 경기에 haConfirmed: true 가 없을 때)에는 칩을 감춥니다.
       const haKnown = !!(m.haConfirmed || m.venueKo || m.venueEn);
-      const ha = !haKnown ? 'ha-tbd' : (iAmHome ? 'ha-home' : 'ha-away');
-      const haText = !haKnown ? (ko ? '홈·원정 미정' : 'Home/away TBD') : (iAmHome ? (ko ? '홈' : 'HOME') : (ko ? '원정' : 'AWAY'));
-      return '<div class="next-match-strip cup-mymatch-card">' +
-        '<div class="nmh-eyebrow"><span>' + (ko ? '컵대회' : 'Cup') + ' · ' + cupEsc(roundLbl) + '</span>' + (dday ? '<span class="nmh-eyebrow-dday">' + dday + '</span>' : '') + '</div>' +
-        '<div class="nmh-top">' + team(m.home, m.homeKo, iAmHome) +
-        '<div class="nmh-center">' + meta + (venue ? '<div class="nmh-venue">' + svgIcon('stadium') + ' ' + cupEsc(venue) + '</div>' : '') + '</div>' +
-        team(m.away, m.awayKo, !iAmHome) + '</div>' +
-        '<div class="nmh-bottom"><span class="ha-badge ' + ha + ' nms-ha">' + haText + '</span></div></div>';
+      const venue = ko ? (m.venueKo || m.venueEn) : (m.venueEn || m.venueKo);
+      const kst = kstOf(m);
+      const seoul = (typeof IS_SEOUL_TZ !== 'undefined') && IS_SEOUL_TZ;
+
+      // 헤더: 라운드가 큰 제목, 날짜가 보조 글씨. 끝난 경기는 오른쪽 리본에 승/무/패
+      const sub = (ko ? '컵대회' : 'Cup') + (m.date ? ' · ' + dateLabel(m.date) : '');
+      let resCls = '', resHtml = '';
+      if (played && (homeWin || awayWin || m.homeScore === m.awayScore)) {
+        const myWin = (iAmHome && homeWin) || (!iAmHome && awayWin);
+        const res = (!homeWin && !awayWin) ? 'D' : (myWin ? 'W' : 'L');
+        resCls = ' rmd-res-' + res.toLowerCase();
+        resHtml = '<span class="rmd-day-res">' + (ko ? (res === 'W' ? '승' : (res === 'D' ? '무' : '패')) : res) + '</span>';
+      }
+
+      // 가운데: 종료는 "스코어 · 종료 · 스코어", 일정이 없으면 "일정 미정", 있으면 "예정"
+      let mid;
+      if (played) {
+        mid = '<span class="rmd-num rmd-num-home' + (homeWin ? ' is-win' : (awayWin ? ' is-lose' : '')) + '">' + m.homeScore + '</span>' +
+          '<span class="rmd-status">' + (ko ? '종료' : 'FT') + '</span>' +
+          '<span class="rmd-num rmd-num-away' + (awayWin ? ' is-win' : (homeWin ? ' is-lose' : '')) + '">' + m.awayScore + '</span>' +
+          (m.pso ? '<small class="rmd-result-note">PSO ' + cupEsc(m.pso) + '</small>' : '');
+      } else if (m.date) {
+        mid = '<span class="rmd-status is-upcoming">' + (ko ? '예정' : 'Upcoming') + '</span>';
+      } else {
+        mid = '<span class="rmd-status is-postponed">' + (ko ? '일정 미정' : 'TBD') + '</span>';
+      }
+
+      // 버튼은 내용이 있을 때만: 득점 · 하이라이트
+      const scorerHtml = function (txt) { return (!txt || txt === '없음') ? '' : '<span class="rmd-sub-ico" aria-hidden="true">' + svgIcon('ball') + '</span>' + renderScorerNamesHtml(txt, ko); };
+      const homeSc = played ? scorerHtml(m.scorersHome) : '', awaySc = played ? scorerHtml(m.scorersAway) : '';
+      const hasSc = !!(homeSc || awaySc);
+      const hlUrl = (m.highlight && /^https?:\/\//i.test(m.highlight)) ? m.highlight : '';
+      let btns = '';
+      if (hasSc) btns += '<button type="button" class="rmd-toggle" aria-expanded="false"><span>' + (ko ? '득점' : 'Goals') + '</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
+      if (hlUrl) btns += '<a class="rmd-act-btn rmd-act-hl" href="' + cupEsc(hlUrl) + '" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>' + (ko ? '하이라이트 보기' : 'Watch Highlights') + '</span></a>';
+
+      const timeHtml = m.time
+        ? '<b class="rmd-t-cat">' + cupEsc(m.time) + '</b>' + (kst ? '<small class="rmd-t-kst">KST ' + kst.time + (kst.shifted ? ' <i>+1</i>' : '') + '</small>' : '')
+        : '<b class="rmd-time-none">–</b>';
+      const venueTxt = venue ? cupEsc(venue) : (!m.date ? (ko ? '날짜·시간·장소 발표 대기' : 'Date, time and venue to be announced') : '');
+
+      return '<section class="rmd-day' + resCls + '">' +
+        '<div class="rmd-day-head"><span class="rmd-day-title">' + cupEsc(roundLbl) + '</span><span class="rmd-day-week">' + sub + '</span>' + resHtml + '</div>' +
+        '<div class="rmd-day-body"><div class="rmd-row' + (played ? '' : ' is-scheduled') + '">' +
+        '<div class="rmd-meta"><div class="rmd-time' + ((seoul && kst) ? ' rmd-kst-only' : '') + '">' + timeHtml + '</div>' +
+        '<div class="rmd-venue">' + (venueTxt ? '<span class="rmd-venue-name">' + venueTxt + '</span>' : '') + '</div></div>' +
+        '<div class="rmd-team rmd-home' + (homeWin ? ' is-winner' : '') + '"><div class="rmd-team-text"><div class="rmd-team-name"><span>' + cupEsc(homeName) + '</span>' +
+          (haKnown && iAmHome ? '<span class="rmd-home-chip">' + (ko ? '홈' : 'HOME') + '</span>' : '') + '</div></div>' + logoOf(m.home, iAmHome, homeName) + '</div>' +
+        '<div class="rmd-mid' + (played ? '' : ' is-single') + '">' + mid + '</div>' +
+        '<div class="rmd-team rmd-away' + (awayWin ? ' is-winner' : '') + '">' + logoOf(m.away, !iAmHome, awayName) + '<div class="rmd-team-text"><div class="rmd-team-name"><span>' + cupEsc(awayName) + '</span>' +
+          (haKnown && !iAmHome ? '<span class="rmd-home-chip">' + (ko ? '홈' : 'HOME') + '</span>' : '') + '</div></div></div>' +
+        (btns ? '<div class="rmd-end">' + btns + '</div>' : '') +
+        (hasSc ? '<div class="rmd-sc rmd-sc-home">' + homeSc + '</div><div class="rmd-sc rmd-sc-away">' + awaySc + '</div>' : '') +
+        '</div></div></section>';
     }).join('');
-    return '<section class="cup-mymatch">' + title + cards + '</section>';
+    return '<section class="cup-mymatch">' + title + '<div class="round-match-list rmd-list cup-mymatch-list">' + cards + '</div></section>';
   }
+  // 컵 경기 카드의 "득점" 펼침 버튼 (HTML 문자열로 그리기 때문에 문서 전체에서 한 번만 이벤트를 받아 처리합니다)
+  document.addEventListener('click', function (e) {
+    const tg = e.target.closest && e.target.closest('.cup-mymatch .rmd-toggle');
+    if (!tg) return;
+    const row = tg.closest('.rmd-row');
+    if (!row) return;
+    const open = row.classList.toggle('is-open');
+    tg.setAttribute('aria-expanded', String(open));
+  });
   // 지역 플레이오프 대진을 본선 대진표와 같은 모양으로 그립니다. (플레이오프 1 → 플레이오프 2라운드 → 지역 1라운드)
   // 칸 위치는 고정 픽셀로 계산해서 연결선까지 CSS만으로 그려요. (화면 크기를 재지 않아 숨겨진 탭에서도 안전)
   // 어느 승자가 어느 경기로 가는지는 이번 FAM 대진 기준: PO1 → PO2 3번째 경기 → 1라운드 5번째 경기, PO2 2번째·1번째 경기 → 1라운드 6번째 경기.
@@ -728,7 +784,6 @@
     if (!po1 || !po2 || !r1 || (po1.matches || []).length < 1 || (po2.matches || []).length < 3 || (r1.matches || []).length < 8) return '';
     const PW = 22, PG = 4, HEAD = 56, M = 72, S = 96; // 가로는 % (열 너비 22% + 간격 4%) → 화면 폭에 맞춰 늘고 줄어요. 세로는 px
     const yR1 = function (i) { return HEAD + S * (i + 0.5); };
-    const y5 = yR1(4);
     const winnerSide = function (m) {
       if (!m || m.homeScore == null || m.awayScore == null) return '';
       if (m.homeScore !== m.awayScore) return m.homeScore > m.awayScore ? 'h' : 'a';
@@ -761,23 +816,27 @@
     });
     // 지역 2라운드: 아직 발표 전이라 빈 칸만 만들어 둡니다. (1라운드 승자 8팀 → 4팀. 대진이 없어 연결선 없이 빈 칸만)
     out += '<div class="cup-br-head cup-rd-head" style="left:' + x4 + '%;width:' + PW + '%;height:' + HEAD + 'px"><b>' + (ko ? '지역 2라운드' : 'Regional Round 2') + '</b><small>' + (ko ? '대진 미정' : 'Draw TBD') + '</small></div>';
-    // 경기 칸
-    out += box(po1.matches[0], x1, y5);
-    out += box(po2.matches[2], x2, y5);
-    out += box(po2.matches[1], x2, y5 + 80);
-    out += box(po2.matches[0], x2, y5 + 160);
-    r1.matches.slice(0, 8).forEach(function (m, i) { out += box(m, x3, yR1(i)); });
+    // 경기 칸: 플레이오프 승자가 올라오는 지역 1라운드 5·6번째 경기를 맨 위로 올려서(표시 순서만 변경),
+    // 플레이오프 경기와 같은 높이에 나란히 놓습니다. 그래서 긴 연결선 없이 짧게 이어져요.
+    const ord = [4, 5, 0, 1, 2, 3, 6, 7];
+    const y0 = yR1(0), y1 = yR1(1);
+    out += box(po1.matches[0], x1, y0);
+    out += box(po2.matches[2], x2, y0);
+    out += box(po2.matches[1], x2, y0 + 80);
+    out += box(po2.matches[0], x2, y0 + 160);
+    ord.forEach(function (src, i) { out += box(r1.matches[src], x3, yR1(i)); });
     // 연결선
-    out += hl(x1 + PW, x2, y5);                 // PO1 → PO2(3번째)
-    out += hl(x2 + PW, x3, y5);                 // PO2(3번째) → 1라운드(5번째)
-    const xm = x2 + PW + PG / 2, y6 = yR1(5);
-    out += hl(x2 + PW, xm, y5 + 80) + hl(x2 + PW, xm, y5 + 160) + vl(xm, y5 + 80, y5 + 160) + hl(xm, x3, y6); // PO2(2·1번째) → 1라운드(6번째)
+    const xm = x2 + PW + PG / 2;
+    out += hl(x1 + PW, x2, y0);                                                              // PO1 → PO2(3번째)
+    out += hl(x2 + PW, x3, y0);                                                              // PO2(3번째) → 1라운드(첫 칸)
+    out += hl(x2 + PW, xm, y0 + 80) + hl(x2 + PW, xm, y0 + 160) + vl(xm, y0 + 80, y0 + 160) + hl(xm, x3, y1); // PO2(2·1번째) → 1라운드(둘째 칸)
     for (let k = 0; k < 4; k++) {
       const ym = (yR1(2 * k) + yR1(2 * k + 1)) / 2;
       out += '<div class="cup-br-match cup-rd-box is-empty" style="left:' + x4 + '%;top:' + (ym - M / 2) + 'px;width:' + PW + '%">' + row(null) + row(null) + '</div>';
     }
     const ch = HEAD + S * 8 + 8;
-    return '<section class="cup-bracket cup-rdraw"><div class="cup-br-scroll"><div class="cup-rd-canvas" style="height:' + ch + 'px">' + out + '</div></div>' +
+    return '<section class="cup-bracket cup-rdraw">' + '<div class="cup-br-hint" aria-hidden="true"><span>' + (ko ? '옆으로 밀어서 다음 라운드 보기' : 'Swipe sideways to see more rounds') + '</span><i>›</i></div>' +
+      '<div class="cup-br-scroll"><div class="cup-rd-canvas" style="height:' + ch + 'px">' + out + '</div></div>' +
       '<p class="cup-br-note">' + (ko ? '한 경기에서 지면 탈락하는 토너먼트예요. 지역 2라운드 칸은 자리만 만들어 둔 것이고, 실제 대진과 연결은 발표되면 채워 넣을게요. 날짜와 장소도 나오는 대로 업데이트돼요.' : 'This is a knockout: lose once and you are out. The Regional Round 2 slots are placeholders; the real fixtures and links will be added once announced, along with dates and venues.') + '</p></section>';
   }
   function setCupRegionalView(v) {
@@ -825,6 +884,7 @@
         '</b><small>' + cupEsc(ko ? def.dateKo : def.dateEn) + '</small></div><div class="cup-br-cells">' + cells + '</div></div>';
     });
     return '<section class="cup-bracket"><h3 class="cup-round-title">' + (ko ? '대진표' : 'Bracket') + '</h3>' +
+      '<div class="cup-br-hint" aria-hidden="true"><span>' + (ko ? '옆으로 밀어서 다음 라운드 보기' : 'Swipe sideways to see more rounds') + '</span><i>›</i></div>' +
       '<div class="cup-br-scroll"><div class="cup-br-grid">' + cols + '</div></div>' +
       '<p class="cup-br-note">' + (ko ? '1부 16개 팀은 32강 자동 진출 · 표시된 위치는 임시 배치이며, 대진은 추첨(지역 플레이오프 11/20, 전국 12/29) 후 확정돼요.' : 'The 16 top-flight teams enter the Round of 32 automatically. Their positions are provisional; the bracket is set after the draws (regional play-offs 20 Nov, national 29 Dec).') + '</p></section>';
   }
