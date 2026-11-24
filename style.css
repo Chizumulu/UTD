@@ -19982,20 +19982,65 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
   font-size: var(--fs-md);
 }
 .cup-progress ol, .squad-moves ul { margin: 0; padding: 0; list-style: none; }
-.cup-progress ol { display: flex; flex-wrap: wrap; gap: 8px; }
-.cup-progress li {
+.cup-progress .cup-progress-track {
+  display: flex;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+}
+.cup-progress-track li {
+  position: relative;
   display: grid;
-  flex: 1 1 145px;
-  gap: 3px;
-  min-width: 0;
+  justify-items: center;
+  align-content: start;
+  flex: 1 0 64px;
+  gap: 6px;
+  text-align: center;
+}
+.cup-progress-track li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--color-border-chip);
+}
+.cup-progress-track li:is([data-state="won"], [data-state="passed"])::after { background: var(--color-teal); }
+.cup-progress-dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--color-border-chip);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-darkest);
+  font-weight: 700;
+  line-height: 1;
+}
+.cup-progress-track [data-state="won"] .cup-progress-dot,
+.cup-progress-track [data-state="passed"] .cup-progress-dot { border-color: var(--color-teal); color: var(--color-teal-dark); }
+.cup-progress-track [aria-current="step"] .cup-progress-dot {
+  border-color: var(--color-brand-text);
+  background: var(--color-selected-bg);
+  color: var(--color-selected-fg);
+}
+.cup-progress-label { padding-inline: 4px; color: var(--color-text-muted); font-size: var(--fs-sm); }
+.cup-progress-track [aria-current="step"] .cup-progress-label { color: var(--color-brand-text); font-weight: 700; }
+.cup-progress-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 9px;
+  margin: 6px 0 0;
   padding: 8px 10px;
-  border-left: 2px solid var(--color-border-chip);
   border-radius: var(--radius-sm);
   background: var(--color-bg-stripe);
+  font-size: var(--fs-sm);
 }
-.cup-progress li[data-state="won"] { border-left-color: var(--color-teal); }
-.cup-progress li[data-state="next"] { border-left-color: var(--color-brand-text); }
-.cup-progress li span, .cup-progress li small { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.cup-progress-detail small { color: var(--color-text-muted); }
 .squad-moves li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
@@ -20018,7 +20063,8 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
   text-underline-offset: 3px;
 }
 @media (max-width: 720px) {
-  .cup-progress li { flex-basis: 100%; }
+  .cup-progress-track li { flex-basis: 44px; }
+  .cup-progress-label { font-size: var(--fs-xs); }
   .squad-moves li { grid-template-columns: minmax(0, 1fr) auto; }
   .squad-moves li > :nth-child(2) { grid-row: 2; grid-column: 1 / -1; }
   .squad-moves li > :last-child { grid-column: 2; grid-row: 1; }

@@ -954,7 +954,7 @@
     });
     const title = '<h3 class="cup-round-title cup-mymatch-title">' + (ko ? '치주물루 경기 일정' : 'Chizumulu fixtures') + '</h3>';
     if (!mine.length) {
-      return '<section class="cup-mymatch">' + title + '<p class="cup-br-note">' + (ko ? '치주물루의 컵 경기 대진이 나오면 이곳에 표시돼요.' : 'Chizumulu\'s cup fixtures will appear here once the draw is out.') + '</p></section>';
+      return cupProgressHtml(c, mine) + '<section class="cup-mymatch">' + title + '<p class="cup-br-note">' + (ko ? '치주물루의 컵 경기 대진이 나오면 이곳에 표시돼요.' : 'Chizumulu\'s cup fixtures will appear here once the draw is out.') + '</p></section>';
     }
     const pad2 = function (n) { return String(n).padStart(2, '0'); };
     const noFc = function (s) { return String(s == null ? '' : s).replace(/\s*FC\s*$/i, '').trim(); };
@@ -1043,38 +1043,69 @@
         (hasSc ? '<div class="rmd-sc rmd-sc-home">' + homeSc + '</div><div class="rmd-sc rmd-sc-away">' + awaySc + '</div>' : '') +
         '</div></div></section>';
     }).join('');
-    return cupProgressHtml(mine) +
+    return cupProgressHtml(c, mine) +
       '<section class="cup-mymatch">' + title + '<div class="round-match-list rmd-list cup-mymatch-list">' + cards + '</div></section>';
   }
 
-  function cupProgressHtml(matches) {
+  function cupProgressHtml(cup, matches) {
     const ko = isKorean;
-    const steps = matches.map(({ r, m }) => {
+    const planned = [...(cup.progressRegionalRounds || []), ...(cup.bracket || [])];
+    if (!planned.length && !matches.length) return '';
+    const steps = new Map();
+    const roundKey = round => round.labelKo || round.labelEn;
+    for (const { r } of matches) {
+      if (!planned.some(round => round.labelKo && round.labelKo === r.labelKo || round.labelEn && round.labelEn === r.labelEn)) {
+        steps.set(roundKey(r), { round: r });
+      }
+    }
+    for (const round of planned) steps.set(roundKey(round), { round });
+    for (const { r, m } of matches) {
       const home = isMyTeamName(m.home, m.homeKo);
       const name = home ? m.away : m.home;
       const team = leagueData.find(t => t.nameEn === name);
       const opponent = ko ? (home ? m.awayKo : m.homeKo) || team?.nameKo || name : name;
-      const label = (ko ? r.labelKo || r.labelEn : r.labelEn || r.labelKo) || '';
       const played = Number.isInteger(m.homeScore) && Number.isInteger(m.awayScore);
       const [homePens, awayPens] = /^\d+\s*:\s*\d+$/.test(m.pso || '') ? m.pso.split(':').map(Number) : [0, 0];
       const difference = played ? (m.homeScore - m.awayScore || homePens - awayPens) * (home ? 1 : -1) : 0;
       const state = !played ? 'next' : difference > 0 ? 'won' : difference < 0 ? 'lost' : 'played';
       const score = played ? (home ? `${m.homeScore}–${m.awayScore}` : `${m.awayScore}–${m.homeScore}`) : '';
-      return { label, opponent, state, score, penalties: difference && homePens !== awayPens && m.homeScore === m.awayScore };
-    });
+      const round = planned.find(item => item.labelKo && item.labelKo === r.labelKo || item.labelEn && item.labelEn === r.labelEn) || r;
+      Object.assign(steps.get(roundKey(round)), { opponent, state, score, penalties: difference && homePens !== awayPens && m.homeScore === m.awayScore });
+    }
+    const roadmap = [...steps.values()];
+    const lastKnown = roadmap.findLastIndex(step => step.state);
+    const active = roadmap.find(step => step.state === 'lost') || roadmap.find(step => step.state === 'next') ||
+      (roadmap[lastKnown]?.state === 'won' ? roadmap[lastKnown + 1] : null) || roadmap[lastKnown] || roadmap[0];
     const labels = {
       next: ko ? '경기 전' : 'Pre-match', won: ko ? '승리' : 'Won',
-      lost: ko ? '패배' : 'Lost', played: ko ? '경기 종료' : 'Played'
+      lost: ko ? '패배' : 'Lost', played: ko ? '경기 종료' : 'Played',
+      passed: ko ? '통과' : 'Through', future: ko ? '이후 단계' : 'Later round',
+      waiting: ko ? '대진 발표 대기' : 'Awaiting the draw'
     };
-    const last = steps[steps.length - 1];
-    const waiting = last.state === 'won' && nmcStageIdx(last.label) !== 5;
+    const fullLabel = ({ round }) => ko ? round.labelKo || round.labelEn : round.labelEn || round.labelKo;
+    const shortLabel = step => {
+      const regional = /^지역\s*(\d+)\s*라운드$/.exec(step.round.labelKo || '');
+      if (regional) return ko ? '지역 ' + regional[1] + 'R' : 'Regional ' + regional[1] + 'R';
+      if (ko && step.round.labelKo === '32강') return '본선 32강';
+      return fullLabel(step);
+    };
+    const status = step => labels[step.state] || labels.waiting;
+    const result = step => status(step) + (step.score ? ' · ' + step.score : '') +
+      (step.penalties ? (ko ? ' (승부차기)' : ' (pens)') : '');
     return `<section class="cup-progress">
       <h3>${ko ? '치주물루 진출 경로' : 'Chizumulu’s cup run'}</h3>
-      <ol>${steps.map(step => `<li data-state="${step.state}">
-        <b>${cupEsc(step.label)}</b><span>vs ${cupEsc(step.opponent)}</span>
-        <small>${labels[step.state]}${step.score ? ' · ' + step.score : ''}${step.penalties ? (ko ? ' (승부차기)' : ' (pens)') : ''}</small>
-      </li>`).join('')}${waiting ? `<li data-state="next"><b>${ko ? '다음 라운드' : 'Next round'}</b>
-        <span>${ko ? '대진 발표 대기' : 'Awaiting the draw'}</span></li>` : ''}</ol>
+      <ol class="cup-progress-track">${roadmap.map((step, index) => {
+        const state = step.state || (step === active ? 'waiting' : index < lastKnown ? 'passed' : 'future');
+        const label = shortLabel(step);
+        const marker = state === 'won' || state === 'passed' ? '✓' : state === 'lost' ? '×' : '';
+        return `<li data-state="${state}"${step === active ? ' aria-current="step"' : ''} title="${cupEsc(fullLabel(step) + ' · ' + (step.state ? result(step) : labels[state]))}">
+          <span class="cup-progress-dot" aria-hidden="true">${marker}</span>
+          <span class="cup-progress-label">${cupEsc(label)}</span>
+          <span class="sr-only"> · ${cupEsc(step.state ? result(step) : labels[state])}</span></li>`;
+      }).join('')}</ol>
+      <p class="cup-progress-detail"><b>${cupEsc(fullLabel(active))}</b>
+        ${active.opponent ? `<span>vs ${cupEsc(active.opponent)}</span>` : ''}
+        <small>${cupEsc(result(active))}</small></p>
     </section>`;
   }
   // 컵 경기 카드의 "득점" 펼침 버튼 (HTML 문자열로 그리기 때문에 문서 전체에서 한 번만 이벤트를 받아 처리합니다)

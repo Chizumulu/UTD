@@ -6215,6 +6215,11 @@ const cupTournaments = [
       ['6–7 Mar', 'Semi-finals', { end: '2027-03-07' }],
       ['20 Mar', 'Final', { end: '2027-03-20', final: true }]
     ],
+    // 치주물루 예선 진출 경로: 본선 단계는 아래 bracket 라벨을 이어 씁니다.
+    progressRegionalRounds: [
+      { labelKo: '지역 1라운드', labelEn: 'First Round – Regional' },
+      { labelKo: '지역 2라운드', labelEn: 'Second Round – Regional' }
+    ],
     // 대진표(브라켓) 뼈대: count = 해당 라운드 경기 수. rounds 에 같은 라벨(labelKo/labelEn)로 경기를 넣으면 팀/점수가 자동으로 채워집니다.
     bracket: [
       { labelKo: '32강', labelEn: 'Round of 32', count: 16, dateKo: '1/10–11 · 1/24–25', dateEn: '10–11 · 24–25 Jan',
