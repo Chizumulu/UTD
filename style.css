@@ -20146,6 +20146,45 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
 .team-results-filters .round-mode-chip, .club-comp-filter .round-mode-chip { min-width: 52px; }
 .club-comp-filter { margin-bottom: 10px; }
 .club-comp-note { margin: 0 0 10px; color: var(--color-text-muted); font-size: var(--fs-sm); }
+.club-score-breakdown { margin: 12px 0; }
+.club-score-breakdown h3 {
+  margin: 0 0 10px;
+  font-size: var(--fs-md);
+  color: var(--color-text-darkest);
+}
+.club-score-breakdown p {
+  margin: 8px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--color-text-secondary);
+}
+.club-score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  align-items: start;
+  gap: 8px;
+}
+.club-score-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-stripe);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+.club-score-item > :is(span, strong, small),
+.club-score-item summary > :is(span, strong) { display: block; }
+.club-score-item > span, .club-score-item summary span { font-size: var(--fs-sm); }
+.club-score-item strong { color: var(--color-text-darkest); font-variant-numeric: tabular-nums; }
+.club-score-item summary { cursor: pointer; }
+.club-score-item summary > span { display: inline; }
+.club-score-item ul { margin: 8px 0 0; padding: 0; list-style: none; }
+.club-score-item li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  font-size: var(--fs-xs);
+}
+.club-score-item li strong { flex: none; }
 .club-overview-empty {
   display: flex;
   align-items: center;

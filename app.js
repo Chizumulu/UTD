@@ -6629,12 +6629,13 @@
         return;
       }
       const { team, split, guide } = summarizeClubOverview(matches);
-      record.innerHTML = buildRecordCardHtml(team, null, null, false, split);
+      record.innerHTML = buildRecordCardHtml(team, null, null, false, split) + renderClubScoreBreakdown(matches, 'scoring');
       el.innerHTML = buildFormGuideCardHtml(team, guide);
       return;
     }
     const t = info.team;
-    record.innerHTML = buildRecordCardHtml(t, info.rank, info.total) + buildPrevSeasonCardHtml(t, info.rank);
+    record.innerHTML = buildRecordCardHtml(t, info.rank, info.total)
+      + renderClubScoreBreakdown(collectMyTeamResults(), 'scoring') + buildPrevSeasonCardHtml(t, info.rank);
 
     const formGuideHtml = buildFormGuideCardHtml(t);
     const homeAwayHtml = renderHomeAwaySplitCard(t);
@@ -6793,6 +6794,59 @@
       });
     }
     return list.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  }
+
+  function renderClubScoreBreakdown(matches, mode) {
+    const tr = (ko, en) => isKorean ? ko : en;
+    const byMargin = mode === 'margin';
+    const groups = byMargin ? [
+      [tr('2골 차 이상 승', 'Won by 2+'), m => m.gf - m.ga >= 2],
+      [tr('1골 차 승', 'Won by 1'), m => m.gf - m.ga === 1],
+      [tr('무승부', 'Draw'), m => m.gf === m.ga],
+      [tr('1골 차 패', 'Lost by 1'), m => m.gf - m.ga === -1],
+      [tr('2골 차 이상 패', 'Lost by 2+'), m => m.ga - m.gf >= 2]
+    ] : [
+      [tr('득점만', 'Scored only'), m => m.gf > 0 && m.ga === 0],
+      [tr('양 팀 득점', 'Both teams scored'), m => m.gf > 0 && m.ga > 0],
+      [tr('실점만', 'Conceded only'), m => m.gf === 0 && m.ga > 0],
+      ['0–0', m => m.gf === 0 && m.ga === 0]
+    ];
+    const games = matches.filter(m => !m.forfeit);
+    const title = byMargin ? tr('점수 차별 성적', 'Results by score margin')
+      : tr('득점·실점 유형별 성적', 'Results by scoring pattern');
+    const count = n => tr(`${n}경기`, `${n} ${n === 1 ? 'match' : 'matches'}`);
+    const cards = groups.map(([label, predicate]) => {
+      const rows = games.filter(predicate);
+      if (byMargin && rows.length) {
+        const items = rows.map(m => {
+          const round = m.labels ? m.labels[isKorean ? 'ko' : 'en']
+            : tr(wkKo(m.wk), wkEn(m.wk));
+          return `<li><span>${escapeHtml(round || '')} · ${escapeHtml(tr(m.oppKo || m.oppEn, m.oppEn) || '')}</span><strong>${m.gf}–${m.ga}</strong></li>`;
+        }).join('');
+        return `<details class="club-score-item"><summary><span>${label}</span><strong>${count(rows.length)}</strong></summary><ul>${items}</ul></details>`;
+      }
+      const wins = rows.filter(m => m.gf > m.ga).length;
+      const draws = rows.filter(m => m.gf === m.ga).length;
+      const losses = rows.length - wins - draws;
+      const record = tr(`${wins}승 ${draws}무 ${losses}패`, `${wins}W ${draws}D ${losses}L`);
+      return `<div class="club-score-item"><span>${label}</span><strong>${count(rows.length)}</strong>${byMargin ? '' : `<small>${record}</small>`}</div>`;
+    }).join('');
+    const note = tr('최종 스코어 기준 · 몰수 경기와 승부차기 점수 제외', 'Final score · excludes forfeits and shootout scores');
+    const empty = tr('집계할 경기 결과가 없어요.', 'No match results to count yet.');
+    return `<section class="ti-card club-score-breakdown"><h3>${title}</h3>${games.length
+      ? `<div class="club-score-grid">${cards}</div><p>${note}</p>`
+      : `<p>${empty}</p>`}</section>`;
+  }
+
+  function countScoringAppearances(history) {
+    const appearances = new Set();
+    const contributed = new Set();
+    for (const match of history) {
+      const key = `${match._cup ? 'cup' : 'league'}:${match.roundKey}`;
+      appearances.add(key);
+      if (match.goals > 0 || match.assists > 0) contributed.add(key);
+    }
+    return { played: appearances.size, contributed: contributed.size };
   }
 
   // 조건을 만족하는 가장 긴 연속 구간을 찾습니다. 길이가 같으면 더 최근 구간을 씁니다.
@@ -10471,6 +10525,7 @@
       rankedTeams,
       opponents: [...opponents.values()],
       competitionScope: scope,
+      scoreMarginHtml: renderClubScoreBreakdown(collectMyTeamResults(scope), 'margin'),
       roundsData: scope === 'cup' ? {} : roundsData,
       scheduledRounds: scope === 'cup' ? {} : scheduledRounds,
       cupFixtures,
@@ -19634,6 +19689,9 @@
       animateCountUp(document.getElementById('squadPlayerModalApps'), stats.appearances);
       animateCountUp(document.getElementById('squadPlayerModalGoals'), stats.goals, { delay: 60 });
       animateCountUp(document.getElementById('squadPlayerModalAssists'), stats.assists || 0, { delay: 90 });
+      const involvement = countScoringAppearances(stats.history || []);
+      document.getElementById('squadPlayerModalScoringApps').textContent = involvement.played
+        ? `${involvement.contributed} / ${involvement.played}` : '–';
       document.getElementById('squadPlayerModalStarts').textContent = `${stats.starts} / ${stats.subApps}`;
       animateCountUp(document.getElementById('squadPlayerModalMotm'), stats.motmCount, { delay: 120 });
 
@@ -19651,7 +19709,7 @@
       }
       // 카드 수가 홀수(골키퍼가 아닐 때)면 마지막 카드를 한 줄 전체로 늘려 균형을 맞춥니다.
       if (csStatEl && csStatEl.parentElement) {
-        csStatEl.parentElement.classList.toggle('spm-stat-grid-odd', !(player.position === 'GK' && leagueOnly));
+        csStatEl.parentElement.classList.toggle('spm-stat-grid-odd', player.position === 'GK' && leagueOnly);
       }
 
       // 주장 선발 출전 횟수 + 이달의 선수/이달의 골/MOTM 수상 경력을 하나의 칩 목록으로 모아 보여줍니다.

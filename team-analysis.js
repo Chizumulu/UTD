@@ -1372,6 +1372,7 @@
     var x = ctx.extraSections || {};
     return renderSummary(ctx, data) +
       sectionTitle(T('상대 유형별 성적', 'Results by Opponent Level'), 'taSecTiers') + renderTiers(ctx, data) +
+      (ctx.scoreMarginHtml || '') +
       sectionTitle(T('득점 패턴', 'Scoring Patterns'), 'taSecScoring') + renderNetwork(ctx, data) + renderGoalTimes(ctx, data) + (x.scoring || '') +
       sectionTitle(T('상대별 한 장 리포트', 'Opponent Scouting Report'), 'taSecReport') + renderOpponentReport(ctx, data) +
       sectionTitle(T('선수 비교', 'Player Comparison'), 'taSecPlayers') + renderPlayerCompare(ctx, data) +
