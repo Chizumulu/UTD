@@ -14143,12 +14143,11 @@ body {
   min-height: 36px;
   white-space: nowrap;
 }
-.mobile-search-entry.round-mode-chip, .club-search-entry { display: none; }
+.mobile-search-entry.round-mode-chip { display: none; }
 #moreSheetModal.is-search-only .more-sheet-list,
 #moreSheetModal.is-search-only .more-sheet-settings { display: none; }
 @media (max-width: 720px) {
   .mobile-search-entry.round-mode-chip { display: inline-flex; min-height: 44px; }
-  .club-search-entry { display: flex; justify-content: flex-end; margin: 0 0 10px; }
   .round-quick-actions .round-mode-chip { min-height: 44px; }
   .round-quick-actions .mobile-search-entry { min-width: 40px; }
 }
