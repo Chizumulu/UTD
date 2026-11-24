@@ -20103,6 +20103,29 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
   .next-match-strip.nms-merged .nms-action-btn { width: 20px; height: 20px; }
 }
 
+@media (max-width: 720px) {
+  #nextMatchStrip .nms-action-group { gap: 0; }
+  #nextMatchStrip .nms-action-btn {
+    position: relative;
+    box-sizing: border-box;
+    width: 44px;
+    padding-inline: 10px;
+    background-clip: content-box;
+  }
+  #nextMatchStrip .nms-action-btn::after {
+    content: "";
+    position: absolute;
+    inset: -5px 0;
+  }
+  #nmCupPanel { position: relative; }
+  #nmCupPanel .nmc-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+}
+
 /* 컵 패널(오른쪽 세로 카드, ≥1200px): 영문처럼 단계명이 길면 잘리지 않고 줄바꿈되게 (기본 nowrap/overflow 해제) */
 @media (min-width: 1200px) {
   .nmc:not([hidden]) .nmc-body { width: 100%; white-space: normal; overflow: visible; text-align: center; }
