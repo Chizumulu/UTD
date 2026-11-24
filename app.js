@@ -1780,17 +1780,39 @@
 
   // ===== 리그 예측: 내 팀(치주물루) 요약 카드 =====
   // 표에서 우리 팀 행을 찾지 않아도 우승·상위 3위·강등권 확률과 예상 순위/승점을 맨 위에서 바로 보여줍니다.
-  function seasonProbabilityLabel(pct, simulation) {
-    if (simulation.remainingFixtureCount > 0) {
-      if (pct === 0) return isKorean ? '미관측' : 'Not observed';
-      if (pct === 100) return isKorean ? '매회 관측' : 'Every run';
-      if (pct < 0.1) return '&lt;0.1%';
-      if (pct > 99.9) return '&gt;99.9%';
-    }
-    return pct.toFixed(1) + '%';
+  function seasonRaceLimits(ranked, context) {
+    if (!context) return new Map();
+    const seasonFinished = ranked.every(team => team.played >= context.seasonGames);
+    const maxPoints = new Map(ranked.map(team => [team.nameEn, context.maxPoints(team)]));
+    return new Map(ranked.map((team, idx) => {
+      if (seasonFinished) {
+        return [team.nameEn, { promotionImpossible: idx >= context.promoteSlots, relegationImpossible: idx < context.safeSlots }];
+      }
+      const teamMax = maxPoints.get(team.nameEn);
+      const opponents = ranked.filter(other => other.nameEn !== team.nameEn);
+      // 승점 동률의 가능성을 남겨 두어 시즌 도중에는 순위가 확정됐다고 단정하지 않습니다.
+      const guaranteedAhead = opponents.filter(other => other.pts > teamMax).length;
+      const couldCatch = opponents.filter(other => maxPoints.get(other.nameEn) >= team.pts).length;
+      return [team.nameEn, {
+        promotionImpossible: guaranteedAhead >= context.promoteSlots,
+        relegationImpossible: couldCatch < context.safeSlots
+      }];
+    }));
   }
 
-  function renderPredictMySummary() {
+  function seasonProbabilityLabel(pct, impossibleLabel = '') {
+    return impossibleLabel || pct.toFixed(1) + '%';
+  }
+
+  function seasonRaceLabels(limits, teamEn) {
+    const status = limits?.get(teamEn);
+    return {
+      promotion: status?.promotionImpossible ? (isKorean ? '승격 불가' : 'Promotion impossible') : '',
+      relegation: status?.relegationImpossible ? (isKorean ? '강등 불가' : 'Relegation impossible') : ''
+    };
+  }
+
+  function renderPredictMySummary(raceLimits) {
     const host = document.getElementById('predictMySummary');
     if (!host) return;
     if (!predictionCache) {
@@ -1820,7 +1842,8 @@
     else chip = { cls: '', ko: '중위권 경쟁', en: 'Mid-table battle' };
 
     const relZoneLo = predictionCache.results.length - LEAGUE_RULES.relegate + 1; // 강등권 시작 순위
-    const pct = v => seasonProbabilityLabel(v, predictionCache);
+    const { promotion, relegation } = seasonRaceLabels(raceLimits, r.nameEn);
+    const sampledNoRelegation = !relegation && r.relegatePct === 0 && predictionCache.remainingFixtureCount > 0;
     const promoted = LEAGUE_RULES.promote;
     const hasRange = typeof r.ptsP10 === 'number' && typeof r.ptsP90 === 'number';
     const tile = (cls, ko, en, value, subKo, subEn) => `
@@ -1840,11 +1863,14 @@
         <span class="pms-chip ${chip.cls}">${isKorean ? chip.ko : chip.en}</span>
       </div>
       <div class="pms-tiles">
-        ${tile('pms-champ', promoted === 1 ? '우승·승격 확률' : '승격 확률', promoted === 1 ? 'Title / promotion' : 'Promotion chance', pct(r.promotePct), `상위 ${promoted}위 이내로 마칠 확률`, `Finish in the top ${promoted}`)}
-        ${tile('pms-top3', '상위 3위 확률', 'Top-3 chance', pct(r.top3Pct), '3위 이내로 마칠 확률', 'Finish in top 3')}
-        ${tile('pms-bot3', '강등 확률', 'Relegation chance', pct(r.relegatePct),
-          r.relegatePct === 0 && predictionCache.remainingFixtureCount > 0 ? `${predictionCache.iterations.toLocaleString()}회 중 강등 0회` : `${relZoneLo}~${predictionCache.results.length}위로 마칠 확률`,
-          r.relegatePct === 0 && predictionCache.remainingFixtureCount > 0 ? `0 of ${predictionCache.iterations.toLocaleString()} runs` : `Finish ${relZoneLo}th–${predictionCache.results.length}th`)}
+        ${tile('pms-champ', promoted === 1 ? '우승·승격 확률' : '승격 확률', promoted === 1 ? 'Title / promotion' : 'Promotion chance',
+          seasonProbabilityLabel(r.promotePct, promotion),
+          promotion ? '현재 순위와 남은 경기 기준' : `상위 ${promoted}위 이내로 마칠 확률`,
+          promotion ? 'Based on standings and remaining fixtures' : `Finish in the top ${promoted}`)}
+        ${tile('pms-top3', '상위 3위 확률', 'Top-3 chance', seasonProbabilityLabel(r.top3Pct), '3위 이내로 마칠 확률', 'Finish in top 3')}
+        ${tile('pms-bot3', '강등 확률', 'Relegation chance', seasonProbabilityLabel(r.relegatePct, relegation),
+          relegation ? '현재 순위와 남은 경기 기준' : sampledNoRelegation ? `${predictionCache.iterations.toLocaleString()}회 중 강등 0회` : `${relZoneLo}~${predictionCache.results.length}위로 마칠 확률`,
+          relegation ? 'Based on standings and remaining fixtures' : sampledNoRelegation ? `0 of ${predictionCache.iterations.toLocaleString()} runs` : `Finish ${relZoneLo}th–${predictionCache.results.length}th`)}
         ${tile('pms-rank', '예상 최종순위', 'Avg. final rank', r.avgFinalRank.toFixed(1) + (isKorean ? '위' : ''),
                hasRange ? `예상 승점 ${r.ptsP10}~${r.ptsP90}점` : '', hasRange ? `Proj. ${r.ptsP10}–${r.ptsP90} pts` : '')}
       </div>`;
@@ -1866,6 +1892,8 @@
     document.getElementById('predictMetaFixtures').textContent =
       (isKorean ? '남은 경기 수: ' : 'Remaining fixtures: ') + predictionCache.remainingFixtureCount;
 
+    const ranked = getRankedTeams('all');
+    const raceLimits = seasonRaceLimits(ranked, getMagicNumberContext(ranked));
     const projected = predictionCache.results.slice().sort((a, b) =>
       a.avgFinalRank - b.avgFinalRank || b.avgFinalPts - a.avgFinalPts || a.nameEn.localeCompare(b.nameEn));
     projected.forEach((r, idx) => {
@@ -1881,12 +1909,13 @@
       const name = isKorean ? r.nameKo : r.nameEn;
       const shortName = name.split(" ")[0];
 
-      function barCell(pct, cls) {
-        const width = Math.max(pct, pct > 0 ? 3 : 0);
+      function barCell(pct, cls, impossibleLabel) {
+        const width = impossibleLabel ? 0 : Math.max(pct, pct > 0 ? 3 : 0);
+        const title = impossibleLabel || `${Math.round(pct * predictionCache.iterations / 100).toLocaleString()} / ${predictionCache.iterations.toLocaleString()}`;
         return `
           <div class="pt-prob-bar-wrap">
             <div class="pt-prob-bar-fill ${cls}" style="width:${width}%;"></div>
-            <div class="pt-prob-bar-label" title="${Math.round(pct * predictionCache.iterations / 100).toLocaleString()} / ${predictionCache.iterations.toLocaleString()}">${seasonProbabilityLabel(pct, predictionCache)}</div>
+            <div class="pt-prob-bar-label" title="${title}">${seasonProbabilityLabel(pct, impossibleLabel)}</div>
           </div>
         `;
       }
@@ -1896,6 +1925,7 @@
       const lblTop3 = isKorean ? '상위 3위' : 'Top 3';
       const lblBot3 = isKorean ? '강등' : 'Relegation';
       const avgRankTxt = isKorean ? `예상 ${r.avgFinalRank.toFixed(1)}위` : `Avg. #${r.avgFinalRank.toFixed(1)}`;
+      const { promotion, relegation } = seasonRaceLabels(raceLimits, r.nameEn);
       tr.innerHTML = `
         <td class="rank-cell pt-c-rank">${rank}</td>
         <td class="pt-team pt-c-team">
@@ -1903,9 +1933,9 @@
           <span class="pt-team-name-full">${name}</span>
           <span class="pt-team-name-short">${shortName}</span>
         </td>
-        <td class="pt-prob-cell pt-c-champ" data-label="${lblChamp}">${barCell(r.promotePct, 'champ')}</td>
+        <td class="pt-prob-cell pt-c-champ" data-label="${lblChamp}">${barCell(r.promotePct, 'champ', promotion)}</td>
         <td class="pt-prob-cell pt-c-top3" data-label="${lblTop3}">${barCell(r.top3Pct, 'top3')}</td>
-        <td class="pt-prob-cell pt-c-bot3" data-label="${lblBot3}">${barCell(r.relegatePct, 'bottom3')}</td>
+        <td class="pt-prob-cell pt-c-bot3" data-label="${lblBot3}">${barCell(r.relegatePct, 'bottom3', relegation)}</td>
         <td class="pt-c-avgrank">${r.avgFinalRank.toFixed(1)}</td>
         <td class="pt-pts-cell pt-c-pts">${r.avgFinalPts.toFixed(1)}${(typeof r.ptsP10 === 'number' && typeof r.ptsP90 === 'number') ? `<small class="pt-pts-range" title="${isKorean ? '시뮬레이션 결과의 80% 구간 (하위 10% ~ 상위 10% 제외)' : 'Middle 80% of simulated outcomes'}">${r.ptsP10}~${r.ptsP90}</small>` : ''}<small class="pt-avgrank-inline">${avgRankTxt}</small></td>
       `;
@@ -1920,7 +1950,7 @@
       // 같은 결과를 다시 그릴 때는 막대 성장 애니메이션도 건너뛰어 숫자와 어긋나지 않게 합니다.
       tbody.querySelectorAll('.pt-prob-bar-fill').forEach(el => { el.style.animation = 'none'; });
     }
-    renderPredictMySummary();
+    renderPredictMySummary(raceLimits);
     renderRankProbMatrix();
     renderScenarioTable();
     renderRankLines();
