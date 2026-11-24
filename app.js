@@ -15126,9 +15126,7 @@
 
   // ===== Path Finder — 우승/잔류까지 가장 쉬운 경로 · 가장 안전한 경로 =====
   // 계산 로직은 전부 pathfinder-engine.js(전역 PathFinderEngine)에 있고, 이 파일은
-  // 그 결과를 HTML로 그리는 역할만 합니다. getMagicNumberContext()가 이미 계산해둔
-  // seasonGames/safeSlots를 그대로 넘겨서, 매직넘버와 같은 가정(상대 전승 = 안전
-  // 경로 기준)을 공유합니다.
+  // 그 결과를 HTML로 그리는 역할만 합니다. 시즌 경기 수와 목표 순위는 매직넘버 설정을 공유합니다.
   function pathFinderResultsLabel(resultsNeeded) {
     if (!resultsNeeded) return isKorean ? '이번 시즌 결과만으로는 확정 불가' : 'Not clinchable by results alone this season';
     const { wins, draws } = resultsNeeded;
@@ -15149,7 +15147,7 @@
       : '';
     return `
       <div class="pf-fixture-row">
-        <span class="pf-fixture-round">${isKorean ? `${fx.round}R` : `R${fx.round}`}</span>
+        <span class="pf-fixture-round">${pathFinderFixtureScheduleLabel(fx)}</span>
         <img class="team-logo team-logo-sm" src="${opp ? opp.logoSrc : ''}" alt="">
         <span class="pf-fixture-opp">${oppName}</span>
         <span class="pf-fixture-venue">${venueTxt}</span>
@@ -15158,30 +15156,46 @@
       </div>`;
   }
 
+  function pathFinderFixtureScheduleLabel(fx) {
+    if (fx.resultPending) return isKorean ? '결과 미정' : 'Result pending';
+    if (fx.schedulePending) return isKorean ? '일정 미정' : 'Date TBD';
+    return isKorean ? `${fx.round}R` : `R${fx.round}`;
+  }
+
   function pathFinderPlanHtml(plan, teamByEnMap, label, noteHtml) {
-    const resultsTxt = pathFinderResultsLabel(plan.resultsNeeded);
-    const fixturesHtml = plan.mustWinFixtures.length
-      ? plan.mustWinFixtures.map(fx => pathFinderFixtureRowHtml(fx, teamByEnMap)).join('')
-      : `<div class="pf-fixture-empty lbl" data-en="No confirmed fixtures for this path yet" data-ko="아직 편성된 경기가 없어요">${isKorean ? '아직 편성된 경기가 없어요' : 'No confirmed fixtures for this path yet'}</div>`;
+    const isExample = Array.isArray(plan.opponentOutcomes);
+    const resultsTxt = !plan.resultsNeeded
+      ? (plan.note === 'INCOMPLETE_SCHEDULE'
+        ? (isKorean ? '잔여 대진이 확인되면 계산해요' : 'Waiting for the remaining fixtures')
+        : (isKorean ? '확정할 수 있는 경로를 찾지 못했어요' : 'No qualifying path found'))
+      : isExample && !plan.pointsNeeded
+        ? (isKorean ? '상대 결과에 따라 추가 승점 없이 가능' : 'Possible without more points given these results')
+        : pathFinderResultsLabel(plan.resultsNeeded);
+    const fixturesHtml = plan.mustWinFixtures.map(fx => pathFinderFixtureRowHtml(fx, teamByEnMap)).join('');
     const shortfallNote = plan.note === 'NEEDS_FUTURE_UNSCHEDULED_RESULTS'
       ? `<p class="pf-note lbl" data-en="Plus ${plan.shortfall} more result(s) from rounds not yet scheduled" data-ko="여기에 아직 편성 안 된 라운드에서 ${plan.shortfall}경기 더 필요">${isKorean ? `여기에 아직 편성 안 된 라운드에서 ${plan.shortfall}경기 더 필요` : `Plus ${plan.shortfall} more result(s) from rounds not yet scheduled`}</p>`
       : '';
-    const statusTag = !plan.resultsNeeded
-      ? ''
-      : plan.isActuallyMandatory
-        ? `<span class="pf-mandatory-tag lbl" data-en="Must-win: no games to spare" data-ko="전부 필수 · 여유 없음">${isKorean ? '전부 필수 · 여유 없음' : 'Must-win: no games to spare'}</span>`
-        : `<span class="pf-example-tag lbl" data-en="One example scenario" data-ko="예시 시나리오 중 하나">${isKorean ? '예시 시나리오 중 하나' : 'One example scenario'}</span>`;
+    const opponentResults = isExample && plan.opponentOutcomes.length ? `
+      <details class="pf-rival-dep-details">
+        <summary>${isKorean ? '이 예시에 필요한 다른 팀 경기 결과' : 'Other results in this example'}</summary>
+        <div class="pf-fixture-list">${plan.opponentOutcomes.map(fx => {
+          const home = escapeHtml((isKorean ? fx.homeKo : fx.homeEn) || fx.homeEn);
+          const away = escapeHtml((isKorean ? fx.awayKo : fx.awayEn) || fx.awayEn);
+          const result = isKorean ? { H: '홈 승', D: '무승부', A: '원정 승' } : { H: 'Home win', D: 'Draw', A: 'Away win' };
+          return `<div class="pf-fixture-row"><span class="pf-fixture-opp">${home} vs ${away}</span><strong>${result[fx.result]}</strong></div>`;
+        }).join('')}</div>
+      </details>` : '';
     return `
       <div class="pf-plan">
         <div class="pf-plan-head">
           <span class="pf-plan-label">${label}</span>
-          <span class="pf-plan-points">${plan.pointsNeeded}${isKorean ? '점' : ' pts'}</span>
+          ${plan.pointsNeeded == null ? '' : `<span class="pf-plan-points">${plan.pointsNeeded}${isKorean ? '점' : ' pts'}</span>`}
         </div>
         <div class="pf-plan-results">${resultsTxt}</div>
-        ${statusTag}
         ${noteHtml || ''}
-        <div class="pf-fixture-list">${fixturesHtml}</div>
+        ${fixturesHtml ? `<div class="pf-fixture-list">${fixturesHtml}</div>` : ''}
         ${shortfallNote}
+        ${opponentResults}
       </div>`;
   }
 
@@ -15200,7 +15214,7 @@
         <div class="pf-fixture-list">
           ${depFixtures.map(fx => `
             <div class="pf-fixture-row">
-              <span class="pf-fixture-round">${isKorean ? `${fx.round}R` : `R${fx.round}`}</span>
+              <span class="pf-fixture-round">${pathFinderFixtureScheduleLabel(fx)}</span>
               <span class="pf-fixture-opp">vs ${isKorean ? fx.opponentKo : fx.opponentEn}</span>
               <span class="pf-fixture-req pf-req-draw">${isKorean ? '무승부·패배가 유리' : 'Draw/loss helps'}</span>
             </div>`).join('')}
@@ -15210,29 +15224,17 @@
 
   function pathFinderRaceCardHtml(result, teamByEnMap, labelKo, labelEn) {
     if (!result) return '';
-    // 안전 경로와 쉬운 경로는 기준 팀이 다를 수 있습니다.
-    //  - 안전 경로: 최대 도달 승점이 가장 높은 팀(result.rival)이 남은 경기를 전승한다고 가정
-    //  - 쉬운 경로: 현재 승점이 가장 높은 팀(result.easiest.rival)이 더 이상 승점을 못 딴다고 가정
     const safeRival = result.rival;
     const easyRival = (result.easiest && result.easiest.rival) || result.rival;
 
     const safestNote = pathFinderNoteHtml(
-      `${safeRival.nameKo}의 남은 경기 전승 기준`,
-      `Assumes ${safeRival.nameEn} wins all remaining games`
+      '표에 나온 경기 결과를 충족하면, 상대의 다른 잔여 경기를 최대 승점으로 계산해도 목표 순위에 들어요.',
+      'With the listed results, you finish in the target places even at rivals’ remaining points ceilings.'
     );
     const easiestNote = pathFinderNoteHtml(
-      `${easyRival.nameKo}의 현재 승점 기준 · 상대가 더 이상 승점을 못 얻는 최선의 경우`,
-      `Based on ${easyRival.nameEn}'s current points · best case where rivals gain no more points`
+      '우리 팀과 다른 팀의 잔여 경기 결과를 함께 계산한 예시예요. 표에 없는 우리 팀 경기는 패배로 가정해요.',
+      'An example combining both sets of results. Unlisted matches for our team are treated as losses.'
     );
-    // 라이벌과 직접 맞대결이 남아 있으면 '라이벌 전승' 가정이 성립하지 않으므로 안내
-    const h2h = result.headToHeadRemaining || 0;
-    const h2hNote = h2h > 0
-      ? pathFinderNoteHtml(
-          `${safeRival.nameKo} 상대 직접 맞대결이 ${h2h}경기 남아 있어 실제 필요치는 이보다 낮을 수 있어요`,
-          `${h2h} head-to-head game(s) vs ${safeRival.nameEn} remain, so the real requirement may be lower`
-        )
-      : '';
-
     const depHtml = pathFinderRivalDepHtml(safeRival, result.rivalDependencyFixtures)
       + (easyRival.nameEn !== safeRival.nameEn
           ? pathFinderRivalDepHtml(easyRival, result.easiest && result.easiest.rivalDependencyFixtures)
@@ -15244,8 +15246,8 @@
           <h3 class="lbl" data-en="${labelEn}" data-ko="${labelKo}">${isKorean ? labelKo : labelEn}</h3>
         </div>
         <div class="pf-plan-grid">
-          ${pathFinderPlanHtml(result.easiest, teamByEnMap, isKorean ? '가장 쉬운 경로' : 'Easiest path', easiestNote)}
-          ${pathFinderPlanHtml(result.safest, teamByEnMap, isKorean ? '가장 안전한 경로' : 'Safest path', safestNote + h2hNote)}
+          ${pathFinderPlanHtml(result.easiest, teamByEnMap, isKorean ? '상대 결과를 포함한 경로' : 'Path with other results', result.easiest.resultsNeeded ? easiestNote : '')}
+          ${pathFinderPlanHtml(result.safest, teamByEnMap, isKorean ? '안전 경로' : 'Safe path', result.safest.resultsNeeded ? safestNote : '')}
         </div>
         ${depHtml}
       </div>`;
@@ -15270,10 +15272,10 @@
     leagueData.forEach(t => { teamByEnMap[t.nameEn] = t; });
 
     const titleResult = PathFinderEngine.computePathFinder(
-      mine.team.nameEn, 'title', ranked, scheduledRounds, context.seasonGames, context.promoteSlots
+      mine.team.nameEn, 'title', ranked, scheduledRounds, context.seasonGames, context.promoteSlots, roundsData
     );
     const safetyResult = PathFinderEngine.computePathFinder(
-      mine.team.nameEn, 'safety', ranked, scheduledRounds, context.seasonGames, context.safeSlots
+      mine.team.nameEn, 'safety', ranked, scheduledRounds, context.seasonGames, context.safeSlots, roundsData
     );
 
     target.innerHTML = `
@@ -15285,7 +15287,7 @@
   }
 
   // ===== 경우의 수 탭: 질문 하나 + 큰 답 하나 =====
-  // 계산은 PathFinderEngine(안전 경로 = 매직넘버와 같은 가정)을 그대로 쓰고, 여기서는 "지금 가장 궁금한 한 가지"만 크게 보여줍니다.
+  // PathFinderEngine의 안전 경로와 조건부 예시를 한 질문에 맞춰 표시합니다.
   // 근거가 되는 카드들은 index.html의 "자세히 보기"(#raceMore) 안에 접혀 있습니다.
   let raceQuestion = null; // 'title' | 'safety' | null(null이면 현재 순위로 자동 선택)
 
@@ -15317,7 +15319,7 @@
     const mode = raceQuestion || (mine.rank >= context.safeSlots - 1 ? 'safety' : 'title');
     const result = PathFinderEngine.computePathFinder(
       mine.team.nameEn, mode, ranked, scheduledRounds, context.seasonGames,
-      mode === 'title' ? context.promoteSlots : context.safeSlots
+      mode === 'title' ? context.promoteSlots : context.safeSlots, roundsData
     );
     if (!result) { hide(); return; }
 
@@ -15347,33 +15349,33 @@
     };
     const maxGain = left * 3;
     let big, sub;
-    if (safest.pointsNeeded <= 0) {
+    if (safest.pointsNeeded === 0) {
       big = isKorean ? '이미 확정' : 'Clinched';
       sub = isKorean ? '남은 경기 결과와 상관없이 목표를 달성했어요.' : 'You have reached it regardless of the remaining results.';
     } else if (!safest.resultsNeeded) {
-      big = isKorean ? '혼자선 어려워요' : 'Not on your own';
+      big = isKorean ? '안전 경로 미확인' : 'No safe path verified';
       sub = isKorean
-        ? `라이벌이 남은 경기를 전부 이긴다면 ${left}경기를 전승해도(+${maxGain}점) 부족해요. 라이벌이 승점을 잃어야 해요.`
-        : `If the rival wins out, even winning all ${left} games (+${maxGain} pts) falls short. The rival has to drop points.`;
+        ? `맞대결을 반영한 뒤에도 상대별 최대 승점 기준으로는 남은 ${left}경기(+${maxGain}점)만으로 확정을 보장하기 어려워요.`
+        : `After head-to-head adjustments, rival points ceilings do not establish a guarantee from your remaining ${left} games (+${maxGain} pts).`;
     } else {
       big = isKorean ? `승점 ${safest.pointsNeeded}점` : `${safest.pointsNeeded} pts`;
       sub = isKorean
-        ? `남은 ${left}경기에서 ${shortResults(safest.resultsNeeded)}이면 충분해요.`
-        : `${shortResults(safest.resultsNeeded)} over your last ${left} games is enough.`;
+        ? `아래 경로에서 제시한 경기의 결과를 기준으로 ${shortResults(safest.resultsNeeded)}이면 충분해요.`
+        : `${shortResults(safest.resultsNeeded)} in the fixtures specified by the path is enough.`;
     }
     let best = '';
-    if (safest.pointsNeeded > 0 && easiest && easiest.pointsNeeded < safest.pointsNeeded) {
+    if (easiest?.resultsNeeded && (safest.pointsNeeded == null || easiest.pointsNeeded < safest.pointsNeeded)) {
       const bestTxt = easiest.pointsNeeded <= 0
-        ? (isKorean ? '라이벌이 더 이상 승점을 못 딴다면 이미 확정이에요.' : 'If rivals gain no more points, you have already clinched it.')
+        ? (isKorean ? '다른 팀 결과에 따라 추가 승점 없이도 가능해요.' : 'Some other results make this possible without any more points.')
         : (isKorean
-            ? `라이벌이 더 이상 승점을 못 딴다면 ${easiest.pointsNeeded}점${easiest.resultsNeeded ? `(${shortResults(easiest.resultsNeeded)})` : ''}이면 돼요.`
-            : `If rivals gain no more points, ${easiest.pointsNeeded} pts${easiest.resultsNeeded ? ` (${shortResults(easiest.resultsNeeded)})` : ''} is enough.`);
+            ? `아래 예시의 상대 결과라면 승점 ${easiest.pointsNeeded}점(${shortResults(easiest.resultsNeeded)})으로도 가능해요.`
+            : `With the other results in the example below, ${easiest.pointsNeeded} pts (${shortResults(easiest.resultsNeeded)}) can be enough.`);
       best = `<p class="race-answer-best">${bestTxt}</p>`;
     }
     const h2h = (result.headToHeadRemaining || 0) > 0
       ? `<p class="race-answer-note">${isKorean
-          ? `${result.rival.nameKo}와(과) 직접 맞대결이 ${result.headToHeadRemaining}경기 남아 있어 실제 필요 승점은 더 낮을 수 있어요.`
-          : `${result.headToHeadRemaining} head-to-head game(s) vs ${result.rival.nameEn} remain, so the real requirement may be lower.`}</p>`
+          ? `${result.rival.nameKo}와의 남은 맞대결 ${result.headToHeadRemaining}경기를 양 팀 승점에 함께 반영했어요.`
+          : `${result.headToHeadRemaining} remaining head-to-head game(s) against ${result.rival.nameEn} are accounted for on both sides.`}</p>`
       : '';
 
     body.innerHTML = `
