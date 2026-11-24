@@ -4567,6 +4567,15 @@ function getAutoCorrectionFactors(homeEn, awayEn, precomputedTrack, variantMode)
   };
 }
 
+function getFixtureCorrectionFactors(homeEn, awayEn, track, mode) {
+  if (!isSharedVenueMatch(homeEn, awayEn)) return getAutoCorrectionFactors(homeEn, awayEn, track, mode);
+  // 공유 구장에서는 명목상 홈·원정 순서에 따라 자동 보정이 바뀌지 않게 합니다.
+  const calibration = getAutoCorrectionFactors(null, null, track, mode);
+  const factor = (calibration.homeFactor + calibration.awayFactor) / 2;
+  const offset = (calibration.homeOffset + calibration.awayOffset) / 2;
+  return { ...calibration, homeFactor: factor, awayFactor: factor, homeOffset: offset, awayOffset: offset };
+}
+
 // ============================================================
 // Dixon-Coles 저득점 보정 (ρ, rho)
 // ------------------------------------------------------------
@@ -4791,7 +4800,8 @@ function isSharedVenueMatch(homeEn, awayEn) {
   const a = leagueData.find(t => t.nameEn === homeEn);
   const b = leagueData.find(t => t.nameEn === awayEn);
   if (!a || !b || !a.venue || !b.venue) return false;
-  return a.venue.lat === b.venue.lat && a.venue.lng === b.venue.lng;
+  return Number.isFinite(a.venue.lat) && Number.isFinite(a.venue.lng) &&
+    a.venue.lat === b.venue.lat && a.venue.lng === b.venue.lng;
 }
 
 function compareMatchKickoff(a, b) {
@@ -4800,25 +4810,41 @@ function compareMatchKickoff(a, b) {
 }
 
 function collectPlayedMatches() {
-  const roundKeysSorted = Object.keys(roundsData).sort((a, b) => {
-    return parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10);
-  });
-  const scheduledKeysSorted = Object.keys(scheduledRounds || {})
-    .filter(k => !roundsData[k])
-    .sort((a, b) => parseInt(a.replace('round', ''), 10) - parseInt(b.replace('round', ''), 10));
-  const allKeysSorted = [...roundKeysSorted, ...scheduledKeysSorted];
-
-  const matches = [];
-  allKeysSorted.forEach(roundKey => {
-    const roundMatches = roundsData[roundKey] || (scheduledRounds && scheduledRounds[roundKey]) || [];
-    roundMatches.forEach(m => {
-      if (m.byeKo || m.byeEn || m.postponed || m.movedToWeek) return;
-      if (!m.homeEn || !m.awayEn) return;
-      if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
-      matches.push({ ...m, roundKey });
+  const matches = new Map();
+  const fixtureIds = new Map();
+  const completed = [];
+  for (const source of [scheduledRounds, roundsData]) {
+    for (const [roundKey, fixtures] of Object.entries(source || {})) {
+      for (const match of fixtures) {
+        if (match.byeKo || match.byeEn || match.postponed || match.movedToWeek) continue;
+        if (!match.homeEn || !match.awayEn) continue;
+        if (![match.homeScore, match.awayScore].every(score => Number.isInteger(score) && score >= 0)) continue;
+        const pair = JSON.stringify([match.homeEn, match.awayEn]);
+        completed.push({ match, roundKey, pair });
+        if (match.fixtureId) {
+          if (!fixtureIds.has(pair)) fixtureIds.set(pair, new Set());
+          fixtureIds.get(pair).add(match.fixtureId);
+        }
+      }
+    }
+  }
+  for (const { match, roundKey, pair } of completed) {
+    const ids = fixtureIds.get(pair);
+    const id = match.fixtureId || (ids?.size === 1 ? ids.values().next().value : null);
+    const key = id ? 'id:' + id : 'pair:' + pair;
+    const previous = matches.get(key);
+    const sameRound = previous?.roundKey === roundKey ? previous : null;
+    const kickoffDate = match.kickoffDate || sameRound?.kickoffDate;
+    // 완료 라운드 기록이 먼저 입력된 예정표의 결과를 덮어씁니다.
+    matches.set(key, {
+      ...match,
+      roundKey,
+      fixtureId: id || match.fixtureId,
+      kickoffDate,
+      kickoffTime: match.kickoffTime || (sameRound?.kickoffDate === kickoffDate ? sameRound?.kickoffTime : undefined)
     });
-  });
-  return matches;
+  }
+  return Array.from(matches.values()).sort((a, b) => Number(a.roundKey.replace('round', '')) - Number(b.roundKey.replace('round', '')));
 }
 
 function collectPredictionMatches(officialMatches = collectPlayedMatches()) {
@@ -5144,12 +5170,13 @@ function rawFixtureExpectations({ teamHomeAway, homeBaseline, awayBaseline }, ho
   const awayHA = teamHomeAway[awayEn] || neutral;
   const homeAttack = applyRecentFormWeight(homeHA.homeAttack, homeHA.recentFormAttackFactor, homeWeight);
   const homeDefense = applyRecentFormWeight(homeHA.homeDefense, homeHA.recentFormDefenseFactor, homeWeight);
-  const awayAttack = applyRecentFormWeight(awayHA.awayAttack, awayHA.recentFormAttackFactor, awayWeight);
-  const awayDefense = applyRecentFormWeight(awayHA.awayDefense, awayHA.recentFormDefenseFactor, awayWeight);
+  const sharedVenue = isSharedVenueMatch(homeEn, awayEn);
+  const awayAttack = applyRecentFormWeight(sharedVenue ? awayHA.homeAttack : awayHA.awayAttack, awayHA.recentFormAttackFactor, awayWeight);
+  const awayDefense = applyRecentFormWeight(sharedVenue ? awayHA.homeDefense : awayHA.awayDefense, awayHA.recentFormDefenseFactor, awayWeight);
   return {
-    homeHA, awayHA, homeAttack, homeDefense, awayAttack, awayDefense,
+    homeHA, awayHA, homeAttack, homeDefense, awayAttack, awayDefense, sharedVenue,
     rawExpectedHomeGoals: homeBaseline * homeAttack * awayDefense,
-    rawExpectedAwayGoals: awayBaseline * awayAttack * homeDefense
+    rawExpectedAwayGoals: (sharedVenue ? homeBaseline : awayBaseline) * awayAttack * homeDefense
   };
 }
 
@@ -5423,7 +5450,7 @@ function runMonteCarloSimulation(iterations, overrides, seed, snapshot) {
     ? snapshot.correctionTrack ?? _computeAiPredictionTrackRecordUncached(training.filter(m => m.kickoffDate))
     : computeAiPredictionTrackRecord();
   function correctionForFixture(homeEn, awayEn) {
-    return getAutoCorrectionFactors(homeEn, awayEn, correctionTrack);
+    return getFixtureCorrectionFactors(homeEn, awayEn, correctionTrack);
   }
   const correction = correctionForFixture(); // 트랙레코드 요약용(하위호환) — 전역 계수(mode 포함)
   // Dixon-Coles 저득점 보정(ρ) — 활성화된 경우, 홈/원정 골을 독립적으로 뽑는
@@ -5671,11 +5698,18 @@ function runMonteCarloSimulation(iterations, overrides, seed, snapshot) {
 // 승/무/패 확률과 유력 스코어를 결정론적으로 산출합니다.
 // (같은 두 팀이면 새로고침해도 항상 같은 확률이 나옵니다.)
 // ============================================================
-function poissonPmf(k, lambda) {
-  // k! 를 직접 구하지 않고 누적곱으로 계산해 큰 수에서도 안전합니다.
-  let p = Math.exp(-lambda);
-  for (let i = 1; i <= k; i++) p *= lambda / i;
-  return p;
+function poissonProbabilities(lambda, maxGoals) {
+  const probabilities = [Math.exp(-lambda)];
+  let covered = probabilities[0];
+  // 높은 기대 득점에서도 꼬리 확률이 거의 남지 않을 때까지 계산합니다.
+  const limit = maxGoals ?? Math.max(8, Math.ceil(lambda + 12 * Math.sqrt(lambda) + 16));
+  for (let k = 1; k <= limit; k++) {
+    if (maxGoals == null && k > 8 && 1 - covered < 1e-9) break;
+    const p = probabilities[k - 1] * lambda / k;
+    probabilities.push(p);
+    covered += p;
+  }
+  return probabilities;
 }
 
 // 기대 득점(람다) 두 개를 넣으면 포아송 분포로 승/무/패 확률과 가장 유력한
@@ -5684,15 +5718,17 @@ function poissonPmf(k, lambda) {
 // rho(ρ)를 넘기면 Dixon-Coles 저득점 보정(τ)을 적용한 격자를 계산합니다.
 // rho가 없거나 0이면 기존과 완전히 동일한 순수 독립 포아송 격자입니다.
 function computePoissonGrid(expectedHomeGoals, expectedAwayGoals, maxGoals, rho) {
-  const MAX_GOALS = maxGoals || 8; // 8골 초과 스코어는 확률이 무시 가능한 수준이라 컷오프
-  const r = rho || 0;
+  const home = poissonProbabilities(expectedHomeGoals, maxGoals);
+  const away = poissonProbabilities(expectedAwayGoals, maxGoals);
+  // 네 저득점 셀의 보정 계수가 모두 음수가 되지 않는 범위로 ρ를 제한합니다.
+  const r = Math.min(1, 1 / (expectedHomeGoals * expectedAwayGoals),
+    Math.max(rho || 0, -1 / Math.max(expectedHomeGoals, expectedAwayGoals)));
   const grid = [];
   let homeWinP = 0, drawP = 0, awayWinP = 0;
   let bestP = -1, bestH = 0, bestA = 0;
-  for (let h = 0; h <= MAX_GOALS; h++) {
-    const ph = poissonPmf(h, expectedHomeGoals);
-    for (let a = 0; a <= MAX_GOALS; a++) {
-      let p = ph * poissonPmf(a, expectedAwayGoals);
+  for (let h = 0; h < home.length; h++) {
+    for (let a = 0; a < away.length; a++) {
+      let p = home[h] * away[a];
       if (r !== 0) {
         // 음수 확률 방지용 안전장치(clampCorrectionFactor와 같은 취지)
         p *= Math.max(0, tauDC(h, a, expectedHomeGoals, expectedAwayGoals, r));
@@ -5706,7 +5742,7 @@ function computePoissonGrid(expectedHomeGoals, expectedAwayGoals, maxGoals, rho)
   }
   const total = homeWinP + drawP + awayWinP || 1;
   return {
-    grid, total,
+    grid, total, rho: r,
     homeWinPct: (homeWinP / total) * 100,
     drawPct: (drawP / total) * 100,
     awayWinPct: (awayWinP / total) * 100,
@@ -5721,7 +5757,7 @@ function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
   // awayBaseline 안에 이미 반영되어 있으므로 별도로 다시 곱하지 않습니다.
   const strengths = computeTeamHomeAwayStrengths();
   const { leagueAvgGoals } = strengths;
-  const { homeHA, awayHA, homeAttack, homeDefense, awayAttack, awayDefense,
+  const { homeHA, awayHA, homeAttack, homeDefense, awayAttack, awayDefense, sharedVenue,
     rawExpectedHomeGoals, rawExpectedAwayGoals } = rawFixtureExpectations(strengths, homeEn, awayEn);
 
   // computeAiPredictionTrackRecord()는 라운드 전체를 처음부터 다시 훑는 비용이
@@ -5734,14 +5770,14 @@ function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
   // 기대 득점을 자동으로 보정합니다(표본이 부족하면 보정 계수는 1로 유지됩니다).
   // 홈팀의 "홈에서의" 결정력 보정 + 원정팀의 "원정에서의" 결정력 보정을 각각
   // 팀별로 적용합니다(표본이 적은 팀은 리그 전역 계수 쪽으로 축소추정됩니다).
-  const correction = getAutoCorrectionFactors(homeEn, awayEn, track);
+  const correction = getFixtureCorrectionFactors(homeEn, awayEn, track);
   const expectedHomeGoals = applyGoalCorrection(rawExpectedHomeGoals, correction.mode, correction.homeFactor, correction.homeOffset);
   const expectedAwayGoals = applyGoalCorrection(rawExpectedAwayGoals, correction.mode, correction.awayFactor, correction.awayOffset);
 
   // Dixon-Coles 저득점 보정(ρ) — 표본이 부족하면 rho=0이라 아래 호출은
   // 순수 독립 포아송 격자와 동일합니다.
   const dc = getDCRho(track);
-  const { grid, total, homeWinPct, drawPct, awayWinPct } = computePoissonGrid(expectedHomeGoals, expectedAwayGoals, undefined, dc.rho);
+  const { grid, total, rho, homeWinPct, drawPct, awayWinPct } = computePoissonGrid(expectedHomeGoals, expectedAwayGoals, undefined, dc.rho);
 
   const sortedGrid = grid.slice().sort((a, b) => b.p - a.p);
   const topScorelines = sortedGrid.slice(0, 3).map(g => ({
@@ -5751,14 +5787,14 @@ function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
   return {
     expectedHomeGoals, expectedAwayGoals,
     rawExpectedHomeGoals, rawExpectedAwayGoals,
-    homeWinPct, drawPct, awayWinPct,
+    homeWinPct, drawPct, awayWinPct, sharedVenue,
     topScorelines,
     predictedHomeGoals: topScorelines[0].home,
     predictedAwayGoals: topScorelines[0].away,
-    // 이 매치업 맥락(홈팀의 홈 성향 vs 원정팀의 원정 성향)에 해당하는 지수
+    // 이 매치업에서 양 팀이 실제로 적용받는 장소별 지수
     // (최근 폼까지 반영된 최종값 — 실제 기대 득점 계산에 쓰인 값과 동일)
     homeAttack, homeDefense, awayAttack, awayDefense,
-    homeSample: homeHA.homeSample, awaySample: awayHA.awaySample,
+    homeSample: homeHA.homeSample, awaySample: sharedVenue ? awayHA.homeSample : awayHA.awaySample,
     leagueAvgGoals,
     correctionApplied: correction.active,
     correctionMode: correction.mode,
@@ -5770,7 +5806,7 @@ function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
     homeCorrectionTeamSample: correction.homeTeamSample || 0,
     awayCorrectionTeamSample: correction.awayTeamSample || 0,
     dcApplied: dc.active,
-    dcRho: dc.rho,
+    dcRho: rho,
     dcSampleSize: dc.n,
     // 최근 5경기 폼이 이 매치업의 공격/수비 지수에 실제로 얼마나 반영됐는지
     // (1.0이면 최근 폼 영향 없음, RECENT_FORM_MAX_ADJUST 범위 내에서 가감됨)
@@ -5826,19 +5862,24 @@ function buildAiPredictionNarrative(params) {
   }
 
   // 공수 지수 비교
+  if (pred.sharedVenue) {
+    lines.push(isKorean
+      ? '두 팀이 같은 구장을 사용해 두 팀 모두 홈 경기 전력 지수를 적용했어요.'
+      : 'Both teams share this ground, so both use their home strength ratings.');
+  }
   const atkDiff = pred.homeAttack - pred.awayAttack;
   if (Math.abs(atkDiff) >= 0.15) {
     const strongerAtk = atkDiff > 0 ? homeName : awayName;
     lines.push(isKorean
-      ? `${strongerAtk}의 공격력 지수가 리그 평균 대비 더 높아 득점 기대치를 끌어올려요.`
-      : `${strongerAtk}'s attack rating sits well above league average, lifting its expected goals.`);
+      ? `${strongerAtk}의 공격 지수가 상대보다 높게 나왔어요.`
+      : `${strongerAtk} has the higher attack rating in this matchup.`);
   }
   const defDiff = pred.awayDefense - pred.homeDefense; // 값이 낮을수록(실점 적을수록) 수비가 좋음
   if (Math.abs(defDiff) >= 0.15) {
     const strongerDef = defDiff > 0 ? homeName : awayName;
     lines.push(isKorean
-      ? `${strongerDef}의 실점률이 낮은 편이라 상대 공격을 억제할 가능성이 있어요.`
-      : `${strongerDef} concedes at a below-average rate, which could keep the opposition quiet.`);
+      ? `${strongerDef}의 수비 지수가 상대보다 좋아 실점 기대치가 낮아지는 요인이에요.`
+      : `${strongerDef}'s stronger defensive rating lowers its expected goals conceded.`);
   }
 
   // 순위 비교
@@ -5847,8 +5888,8 @@ function buildAiPredictionNarrative(params) {
     const gap = Math.abs(homeRank - awayRank);
     if (gap >= 3) {
       lines.push(isKorean
-        ? `순위상으로도 ${higher}이(가) ${gap}계단 앞서 있어 이변이 없다면 순위대로 흐를 가능성이 있어요.`
-        : `${higher} also sits ${gap} places higher in the table, so the standings favor the same outcome.`);
+        ? `현재 순위에서는 ${higher}이(가) ${gap}계단 앞서 있어요.`
+        : `${higher} is ${gap} places higher in the current standings.`);
     }
   }
 
@@ -5868,7 +5909,7 @@ function buildAiPredictionNarrative(params) {
   }
 
   lines.push(isKorean
-    ? `예상 스코어는 ${homeName} ${pred.predictedHomeGoals} : ${pred.predictedAwayGoals} ${awayName}, 이렇게 봤어요.`
+    ? `개별 스코어 중 가장 확률이 높은 결과는 ${homeName} ${pred.predictedHomeGoals} : ${pred.predictedAwayGoals} ${awayName}이에요.`
     : `Most likely scoreline: ${homeName} ${pred.predictedHomeGoals} - ${pred.predictedAwayGoals} ${awayName}.`);
 
   return lines;
@@ -5994,8 +6035,8 @@ function _computeAiPredictionTrackRecordUncached(matches = collectPredictionMatc
     const strength = computeTeamHomeAwayStrengths(played);
     const dayRows = day.map(m => {
       const { rawExpectedHomeGoals: hg, rawExpectedAwayGoals: ag } = rawFixtureExpectations(strength, m.homeEn, m.awayEn);
-      const ratio = getAutoCorrectionFactors(m.homeEn, m.awayEn, model, 'ratio');
-      const additive = getAutoCorrectionFactors(m.homeEn, m.awayEn, model, 'additive');
+      const ratio = getFixtureCorrectionFactors(m.homeEn, m.awayEn, model, 'ratio');
+      const additive = getFixtureCorrectionFactors(m.homeEn, m.awayEn, model, 'additive');
       const ratioHome = applyGoalCorrection(hg, ratio.mode, ratio.homeFactor, ratio.homeOffset);
       const ratioAway = applyGoalCorrection(ag, ratio.mode, ratio.awayFactor, ratio.awayOffset);
       const forecasts = {
