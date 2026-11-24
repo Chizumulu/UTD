@@ -21,7 +21,7 @@
      data.js 버전까지 전부 이 객체 하나에서만 나옵니다 — 다른 곳은 고칠 필요 없습니다. -->
 <script>
   window.ASSET_VERSIONS = {
-    style: '023',
+    style: '024',
     data: '006',
     app: '029',
     report: '002',
@@ -1034,6 +1034,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div id="prevCompareBoards"></div>
     <div id="luckChangeCard"></div>
   </div>
+  <button type="button" class="analysis-share analysis-share-inline lbl" onclick="shareAnalysisView()"
+    data-ko="현재 탭 공유" data-en="Share this tab">현재 탭 공유</button>
 </div>
 <div class="content-row" id="scorersView" style="display:none;">
 <div class="scroll-fade-wrap" id="scorersTableFade">
@@ -1356,6 +1358,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </details>
   </section>
   </div>
+  <button type="button" class="analysis-share analysis-share-inline lbl" onclick="shareAnalysisView()"
+    data-ko="현재 탭 공유" data-en="Share this tab">현재 탭 공유</button>
 </div>
 
 <div id="venuesView" style="display:none;">
@@ -1745,7 +1749,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   aria-label="현재 탭 공유" data-aria-ko="현재 탭 공유" data-aria-en="Share this tab"
   title="현재 탭 공유" data-title-ko="현재 탭 공유" data-title-en="Share this tab">
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.6 13.5L15.4 17.5M15.4 6.5L8.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>
-  <span class="analysis-share-mobile-label lbl" data-ko="현재 탭 공유" data-en="Share this tab">현재 탭 공유</span>
 </button>
 
 <!-- 모바일 하단 탭바 (≤720px, 25/26 아카이브 화면에서는 숨김) -->

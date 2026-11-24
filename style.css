@@ -17701,45 +17701,20 @@ body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .analys
   .analysis-share-fab:hover { background: var(--color-selected-bg); filter: brightness(1.12); }
 }
 .analysis-share-fab:active { filter: brightness(0.92); }
-.analysis-share-mobile-label { display: none; }
+.analysis-share-inline { display: none; }
 @media (max-width: 720px) {
-  body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) {
-    --analysis-share-footer-height: 48px;
-  }
   body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .analysis-share-fab {
-    top: auto;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 910;
-    transform: none;
-    width: 100%;
-    height: calc(var(--analysis-share-footer-height) + env(safe-area-inset-bottom, 0px));
-    gap: 8px;
-    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
-    border-top: 1px solid var(--color-border-chip);
-    border-radius: 0;
-    background: var(--color-surface);
-    color: var(--color-brand-text);
-    box-shadow: none;
+    display: none;
+  }
+  .analysis-share-inline {
+    display: block;
+    min-height: 44px;
+    margin: 16px auto;
+    padding-inline: 18px;
     font-weight: 700;
   }
-  .analysis-share-mobile-label { display: inline; }
-  body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .m-tabbar {
-    bottom: calc(var(--analysis-share-footer-height) + env(safe-area-inset-bottom, 0px));
-    padding-bottom: 6px;
-  }
-  body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .app-shell {
-    padding-bottom: calc(68px + var(--analysis-share-footer-height) + env(safe-area-inset-bottom, 0px));
-  }
-  body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .coffee-fab-wrap {
-    bottom: calc(80px + var(--analysis-share-footer-height) + env(safe-area-inset-bottom, 0px));
-  }
-  body.tabbar-hidden:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .coffee-fab-wrap {
-    bottom: calc(16px + var(--analysis-share-footer-height) + env(safe-area-inset-bottom, 0px));
-  }
 }
-@media print { .analysis-share-fab { display: none !important; } }
+@media print { .analysis-share-fab, .analysis-share-inline { display: none !important; } }
 #leagueAttackDefense, #taSecPlayers { scroll-margin-top: 80px; }
 .ta-top-link { flex: none; padding: 3px 9px; border: 0; border-radius: 999px; background: transparent; color: var(--color-text-muted); font: inherit; font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
 .ta-top-link:focus-visible { background: var(--color-bg-btn-hover); color: var(--color-stat-value); }
