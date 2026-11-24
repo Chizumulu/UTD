@@ -15555,6 +15555,13 @@ body {
   .rmd-mid { min-width: 84px; grid-template-columns: 1fr 30px 1fr; }
 }
 
+@media (max-width: 720px) {
+  .rmd-mid:not(.is-single) {
+    grid-template-columns: 1fr max-content 1fr;
+    column-gap: 6px;
+  }
+}
+
 /* 주차별 보기의 휴식주 행 (월별과 같은 날짜 카드 디자인 안에서 사용) */
 .rmd-bye-row { display: flex; align-items: center; gap: 10px; padding: 12px 24px; border-top: 1px solid var(--color-border-light); }
 .rmd-day-body > .rmd-bye-row:first-child { border-top: 0; }
@@ -20428,20 +20435,9 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
 .predict-intro .predict-refresh-btn:focus-visible { outline-color: var(--color-white); }
 
 @media (min-width: 721px) {
-  .nmp-toggle-hint,
   .nmc-btn {
     border-radius: var(--page-action-radius);
     font-weight: 700;
-  }
-
-  .nmp-toggle-hint {
-    padding: 4px 7px;
-    border: 1px solid transparent;
-    background: var(--color-selected-bg);
-    color: var(--color-selected-fg);
-  }
-
-  .nmc-btn {
     border-color: transparent;
     background: var(--color-bg-btn-hover);
     color: var(--color-brand-text);
@@ -20453,7 +20449,6 @@ summary.club-margin-head:focus-visible { background: var(--color-bg-btn-hover); 
   }
 
   @media (hover: hover) {
-    .nmp-toggle:hover .nmp-toggle-hint { background: var(--color-navy-light); }
     .nmc-btn:hover { background: var(--color-bg-row-hover); }
   }
 }
