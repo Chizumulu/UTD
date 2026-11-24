@@ -1,0 +1,61 @@
+name: Validate fixture data
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - data.js
+      - scripts/validate-fixtures.mjs
+      - .github/workflows/validate-fixture-data.yml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fixture-validation-${{ github.sha }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Check changes and write summary
+        id: check
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.before }}
+        run: |
+          report="$RUNNER_TEMP/fixture-validation.md"
+          result=0
+          node scripts/validate-fixtures.mjs "$BASE_SHA" "$report" || result=$?
+          if test -f "$report"; then cat "$report" >> "$GITHUB_STEP_SUMMARY"; fi
+          exit "$result"
+      - name: Notify the repository owner
+        if: steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="[일정 검사] data.js 오류 (${SHA:0:12})"
+          existing=$(gh issue list --repo "$REPOSITORY" --state all --limit 100 --json title,number \
+            --jq ".[] | select(.title == \"$title\") | .number")
+          if test -z "$existing"; then
+            body="$RUNNER_TEMP/fixture-issue.md"
+            {
+              printf '@%s 경기 데이터 변경에서 확인이 필요한 오류가 발견됐습니다.\n\n' "$OWNER"
+              printf '[검사 실행 보기](%s)\n\n' "$RUN_URL"
+              report="$RUNNER_TEMP/fixture-validation.md"
+              if test -f "$report"; then cat "$report"; fi
+            } > "$body"
+            gh issue create --repo "$REPOSITORY" --title "$title" --body-file "$body"
+          fi
+          exit 1
