@@ -17686,25 +17686,58 @@ html.celebrate-lock { overflow: hidden; }
   display: none;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  min-height: 44px;
-  padding: 8px 13px;
-  border-radius: 999px;
-  box-shadow: 0 4px 16px rgba(var(--color-black-rgb), 0.14);
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 13px;
+  background: var(--color-selected-bg);
+  color: var(--color-selected-fg);
+  box-shadow: 0 3px 9px rgba(var(--color-black-rgb), 0.16);
 }
 body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .analysis-share-fab { display: inline-flex; }
-.analysis-share-fab svg { width: 18px; height: 18px; }
+.analysis-share-fab svg { width: 20px; height: 20px; }
+@media (hover: hover) {
+  .analysis-share-fab:hover { background: var(--color-selected-bg); filter: brightness(1.12); }
+}
+.analysis-share-fab:active { filter: brightness(0.92); }
+.analysis-share-mobile-label { display: none; }
 @media (max-width: 720px) {
-  .analysis-share-fab {
-    top: auto;
-    right: auto;
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-    left: 50%;
-    transform: translateX(-50%);
-    width: max-content;
-    max-width: calc(100vw - 32px);
+  body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) {
+    --analysis-share-footer-height: 48px;
   }
-  body.tabbar-hidden .analysis-share-fab { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .analysis-share-fab {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 910;
+    transform: none;
+    width: 100%;
+    height: calc(var(--analysis-share-footer-height) + env(safe-area-inset-bottom, 0px));
+    gap: 8px;
+    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    border-top: 1px solid var(--color-border-chip);
+    border-radius: 0;
+    background: var(--color-surface);
+    color: var(--color-brand-text);
+    box-shadow: none;
+    font-weight: 700;
+  }
+  .analysis-share-mobile-label { display: inline; }
+  body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .m-tabbar {
+    bottom: calc(var(--analysis-share-footer-height) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 6px;
+  }
+  body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .app-shell {
+    padding-bottom: calc(68px + var(--analysis-share-footer-height) + env(safe-area-inset-bottom, 0px));
+  }
+  body:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .coffee-fab-wrap {
+    bottom: calc(80px + var(--analysis-share-footer-height) + env(safe-area-inset-bottom, 0px));
+  }
+  body.tabbar-hidden:not(.season-archive):is([data-view="stats"], [data-view="predict"]) .coffee-fab-wrap {
+    bottom: calc(16px + var(--analysis-share-footer-height) + env(safe-area-inset-bottom, 0px));
+  }
 }
 @media print { .analysis-share-fab { display: none !important; } }
 #leagueAttackDefense, #taSecPlayers { scroll-margin-top: 80px; }
