@@ -77,6 +77,8 @@ export function resolveSlot(slot, squad) {
         votes.some(([read]) => oneEditApart(String(read), String(number)))) {
       return { number, method: 'exact-name-digit-correction' };
     }
+    // A unique exact name can be compared with the reference in this dry run.
+    if (exact.length) return { number, method: 'exact-name-number-conflict' };
     return { number: null, method: 'name-number-conflict' };
   }
   if (votes[0] && votes[0][1] >= 2 && votes[0][1] > (votes[1]?.[1] ?? 0) &&
