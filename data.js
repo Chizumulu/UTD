@@ -6219,7 +6219,7 @@ const cupTournaments = [
         { tag: '8강', name: '8강 탈락 4팀 (팀당)', meta: 'K20M' },
         { tag: '16강', name: '16강 탈락 8팀 (팀당)', meta: 'K12M' },
         { note: '※ 전국 대회 본선 상금 합계 K466M (M = 100만 콰차)' },
-        { note: '※ 원화 환산은 참고용이에요. 공식환율(약 1,734콰차/달러)과 비공식환율(실질, 약 4,500콰차/달러 추정) 기준을 함께 표시하며, 원/달러 1,335원(2026년 11월 중순)을 적용했어요. 환율은 수시로 바뀌어요.' }
+        { note: '※ 원화 환산은 참고용이에요. 공식환율(약 1,750콰차/달러)과 비공식환율(실질, 약 4,300콰차/달러 추정) 기준을 함께 표시하며, 원/달러 1,335원(2026년 11월 중순)을 적용했어요. 환율은 수시로 바뀌어요.' }
       ]],
       ['기타 상금 · 지원금', { folds: [
         { title: '예선 지원금 (팀당)', list: [
@@ -6265,7 +6265,7 @@ const cupTournaments = [
         { tag: 'QF', name: 'Quarter-final losers (each of 4)', meta: 'K20M' },
         { tag: 'R16', name: 'Round of 16 losers (each of 8)', meta: 'K12M' },
         { note: '* Total national-round prize money: K466M (M = million kwacha)' },
-        { note: '* KRW figures are indicative: official rate (about K1,734/USD) and an estimated unofficial rate (about K4,500/USD), at about ₩1,335/USD (mid-Nov 2026). Rates change often.' }
+        { note: '* KRW figures are indicative: official rate (about K1,750/USD) and an estimated unofficial rate (about K4,300/USD), at about ₩1,335/USD (mid-Nov 2026). Rates change often.' }
       ]],
       ['Other prizes & support', { folds: [
         { title: 'Qualifying support (per team)', list: [
