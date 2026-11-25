@@ -764,8 +764,38 @@
   let cupMode = false;
   // 컵이 여러 개일 때 지금 보고 있는 컵의 id. 비어 있으면 배열의 첫 컵을 보여줍니다.
   let cupSelectedId = null;
+  function cupWinnerSide(match) {
+    if (!match || match.postponed || !Number.isInteger(match.homeScore) || !Number.isInteger(match.awayScore)) return '';
+    const [homePenalties, awayPenalties] = /^\d+\s*:\s*\d+$/.test(match.pso || '') ? match.pso.split(':').map(Number) : [0, 0];
+    const difference = match.homeScore - match.awayScore || homePenalties - awayPenalties;
+    return difference > 0 ? 'home' : difference < 0 ? 'away' : '';
+  }
+
+  function resolveCupPlayoffWinners(cup) {
+    if (!cup.rounds?.some(round => round?.matches?.some(match => match?.awayWinnerOf))) return cup;
+    const winners = new Map();
+    const rounds = cup.rounds.map(round => !Array.isArray(round?.matches) ? round : ({
+      ...round,
+      matches: round.matches.map(match => {
+        if (!match) return match;
+        const qualifier = winners.get(match.awayWinnerOf);
+        const resolved = qualifier && (!match.away || match.away.includes(' / '))
+          ? { ...match, away: qualifier.en, awayKo: qualifier.ko }
+          : match;
+        const side = cupWinnerSide(resolved);
+        const team = resolved[side];
+        if (resolved.id && team && !team.includes(' / ')) {
+          winners.set(resolved.id, { en: team, ko: resolved[side + 'Ko'] || team });
+        }
+        return resolved;
+      })
+    }));
+    return { ...cup, rounds };
+  }
+
   function getCups() {
-    return (typeof cupTournaments !== 'undefined' && Array.isArray(cupTournaments)) ? cupTournaments.filter(Boolean) : [];
+    return (typeof cupTournaments !== 'undefined' && Array.isArray(cupTournaments))
+      ? cupTournaments.filter(Boolean).map(resolveCupPlayoffWinners) : [];
   }
   function getSelectedCup() {
     const cups = getCups();
@@ -1121,7 +1151,7 @@
   });
   // 지역 플레이오프 대진을 본선 대진표와 같은 모양으로 그립니다. (플레이오프 1 → 플레이오프 2라운드 → 지역 1라운드)
   // 칸 위치는 고정 픽셀로 계산해서 연결선까지 CSS만으로 그려요. (화면 크기를 재지 않아 숨겨진 탭에서도 안전)
-  // 어느 승자가 어느 경기로 가는지는 이번 FAM 대진 기준: PO1 → PO2 3번째 경기 → 1라운드 5번째 경기, PO2 2번째·1번째 경기 → 1라운드 6번째 경기.
+  // 이전 경기 승자와의 연결은 data.js의 awayWinnerOf를 따릅니다.
   function cupRegionalDrawHtml(c) {
     const ko = isKorean;
     const byLabel = function (labelKo) { return (c.rounds || []).find(function (r) { return r && r.labelKo === labelKo; }); };
@@ -1129,12 +1159,6 @@
     if (!po1 || !po2 || !r1 || (po1.matches || []).length < 1 || (po2.matches || []).length < 3 || (r1.matches || []).length < 8) return '';
     const PW = 22, PG = 4, HEAD = 56, M = 72, S = 96; // 가로는 % (열 너비 22% + 간격 4%) → 화면 폭에 맞춰 늘고 줄어요. 세로는 px
     const yR1 = function (i) { return HEAD + S * (i + 0.5); };
-    const winnerSide = function (m) {
-      if (!m || m.homeScore == null || m.awayScore == null) return '';
-      if (m.homeScore !== m.awayScore) return m.homeScore > m.awayScore ? 'h' : 'a';
-      if (m.pso && /^\d+\s*:\s*\d+$/.test(m.pso)) { const q = m.pso.split(':').map(Number); return q[0] > q[1] ? 'h' : (q[1] > q[0] ? 'a' : ''); }
-      return '';
-    };
     const row = function (nameEn, nameKo, score, isWin) {
       if (!nameEn) return '<div class="cup-br-team is-tbd"><span class="cup-br-name">' + (ko ? '미정' : 'TBD') + '</span><span class="cup-br-score"></span></div>';
       if (nameEn.indexOf(' / ') >= 0) {
@@ -1147,34 +1171,37 @@
       return '<div class="cup-br-team' + (isWin ? ' is-win' : '') + mine + '">' + logo + '<span class="cup-br-name">' + cupEsc(name) + '</span><span class="cup-br-score">' + (score != null ? score : '') + '</span></div>';
     };
     const box = function (m, x, yc) {
-      const w = winnerSide(m);
+      const w = cupWinnerSide(m);
       return '<div class="cup-br-match cup-rd-box" style="left:' + x + '%;top:' + (yc - M / 2) + 'px;width:' + PW + '%">' +
-        row(m.home, m.homeKo, m.homeScore, w === 'h') + row(m.away, m.awayKo, m.awayScore, w === 'a') + '</div>';
+        row(m.home, m.homeKo, m.homeScore, w === 'home') + row(m.away, m.awayKo, m.awayScore, w === 'away') + '</div>';
     };
     const hl = function (x1, x2, y) { return '<i class="cup-rd-l" style="left:' + x1 + '%;top:' + (y - 1) + 'px;width:' + (x2 - x1) + '%;height:2px"></i>'; };
-    const vl = function (x, y1, y2) { return '<i class="cup-rd-l" style="left:calc(' + x + '% - 1px);top:' + Math.min(y1, y2) + 'px;width:2px;height:' + Math.abs(y2 - y1) + 'px"></i>'; };
     const x1 = 0, x2 = PW + PG, x3 = 2 * (PW + PG), x4 = 3 * (PW + PG);
     let out = '';
     // 열 제목
-    [[x1, po1, 1], [x2, po2, 3], [x3, r1, 8]].forEach(function (h) {
-      out += '<div class="cup-br-head cup-rd-head" style="left:' + h[0] + '%;width:' + PW + '%;height:' + HEAD + 'px"><b>' + cupEsc(ko ? h[1].labelKo : h[1].labelEn) + '</b><small>' + h[2] + (ko ? '경기' : (h[2] === 1 ? ' match' : ' matches')) + '</small></div>';
+    [[x1, po1], [x2, po2], [x3, r1]].forEach(function ([left, round]) {
+      const count = round.matches.length;
+      out += '<div class="cup-br-head cup-rd-head" style="left:' + left + '%;width:' + PW + '%;height:' + HEAD + 'px"><b>' + cupEsc(ko ? round.labelKo : round.labelEn) + '</b><small>' + count + (ko ? '경기' : (count === 1 ? ' match' : ' matches')) + '</small></div>';
     });
     // 지역 2라운드: 아직 발표 전이라 빈 칸만 만들어 둡니다. (1라운드 승자 8팀 → 4팀. 대진이 없어 연결선 없이 빈 칸만)
     out += '<div class="cup-br-head cup-rd-head" style="left:' + x4 + '%;width:' + PW + '%;height:' + HEAD + 'px"><b>' + (ko ? '지역 2라운드' : 'Regional Round 2') + '</b><small>' + (ko ? '대진 미정' : 'Draw TBD') + '</small></div>';
-    // 경기 칸: 플레이오프 승자가 올라오는 지역 1라운드 5·6번째 경기를 맨 위로 올려서(표시 순서만 변경),
-    // 플레이오프 경기와 같은 높이에 나란히 놓습니다. 그래서 긴 연결선 없이 짧게 이어져요.
-    const ord = [4, 5, 0, 1, 2, 3, 6, 7];
-    const y0 = yR1(0), y1 = yR1(1);
-    out += box(po1.matches[0], x1, y0);
-    out += box(po2.matches[2], x2, y0);
-    out += box(po2.matches[1], x2, y0 + 80);
-    out += box(po2.matches[0], x2, y0 + 160);
-    ord.forEach(function (src, i) { out += box(r1.matches[src], x3, yR1(i)); });
-    // 연결선
-    const xm = x2 + PW + PG / 2;
-    out += hl(x1 + PW, x2, y0);                                                              // PO1 → PO2(3번째)
-    out += hl(x2 + PW, x3, y0);                                                              // PO2(3번째) → 1라운드(첫 칸)
-    out += hl(x2 + PW, xm, y0 + 80) + hl(x2 + PW, xm, y0 + 160) + vl(xm, y0 + 80, y0 + 160) + hl(xm, x3, y1); // PO2(2·1번째) → 1라운드(둘째 칸)
+    // 플레이오프 승자를 받는 경기를 위에 모으고, 각 연결 경기를 같은 높이에 배치합니다.
+    const regionalRows = [...r1.matches].sort((a, b) => Number(Boolean(b.awayWinnerOf)) - Number(Boolean(a.awayWinnerOf)));
+    const feederHeights = new Map();
+    regionalRows.forEach(function (match, i) {
+      const y = yR1(i);
+      if (match.awayWinnerOf) feederHeights.set(match.awayWinnerOf, y);
+      out += box(match, x3, y);
+    });
+    [[po2, x2, x3], [po1, x1, x2]].forEach(function ([round, left, nextLeft]) {
+      round.matches.forEach(function (match, i) {
+        const targetY = feederHeights.get(match.id);
+        const y = targetY ?? yR1(i);
+        if (match.awayWinnerOf) feederHeights.set(match.awayWinnerOf, y);
+        out += box(match, left, y);
+        if (targetY !== undefined) out += hl(left + PW, nextLeft, y);
+      });
+    });
     for (let k = 0; k < 4; k++) {
       const ym = (yR1(2 * k) + yR1(2 * k + 1)) / 2;
       out += '<div class="cup-br-match cup-rd-box is-empty" style="left:' + x4 + '%;top:' + (ym - M / 2) + 'px;width:' + PW + '%">' + row(null) + row(null) + '</div>';

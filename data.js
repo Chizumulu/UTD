@@ -6271,7 +6271,7 @@ const cupTournaments = [
           { en: 'Mafu Stars FC', ko: '마푸 스타즈 FC' }
         ] },
         { labelKo: '4부 · 지역 2부 리그 (리그 투)', labelEn: 'Regional League Two', teams: [
-          { en: 'Mzwawa FC', ko: '음즈와와 FC' },
+          { en: 'Mzwazwa FC', ko: '음즈와와 FC' },
           { en: 'Bwabwa FC', ko: '브와브와 FC' },
           { en: 'Chipelembe FC', ko: '치펠렘베 FC' },
           { en: 'Chikaya FC', ko: '치카야 FC' }
@@ -6288,25 +6288,25 @@ const cupTournaments = [
       ] }
     ],
     // 북부 지역 플레이오프 대진 (FAM 대진 포스터 기준). 날짜·시간·장소는 아직 발표 전이라 넣지 않았어요 — 나오면 date/time/venueKo 를 추가하세요.
-    // 'A / B' 로 적힌 칸은 앞 경기 승자가 들어갈 자리입니다. 지역 플레이오프는 토너먼트(패하면 탈락)이고 권역별 4팀만 32강에 진출해요.
+    // awayWinnerOf는 원정 칸에 들어갈 이전 경기의 id입니다. 홈·원정 순서는 포스터의 좌우를 따르며 실제 홈·원정 확인은 별도로 표시합니다.
     rounds: [
       { labelKo: '플레이오프 1라운드', labelEn: 'Play-off 1', matches: [
-        { home: 'Brazil Vuwa FC', homeKo: '브라질 부와 FC', away: 'Karonga Pirates FC', awayKo: '카롱가 파이리츠 FC' }
+        { id: 'north-playoff-1', home: 'Emazwini FC', homeKo: '에마즈위니 FC', away: 'Chandamale FC', awayKo: '찬다말레 FC' }
       ] },
       { labelKo: '플레이오프 2라운드', labelEn: 'Play-off Second Round', matches: [
-        { home: 'Likoma Stars FC', homeKo: '리코마 스타스 FC', away: 'Emazwini FC', awayKo: '에마즈위니 FC' },
-        { home: 'Santos FC', homeKo: '산투스 FC', away: 'Chandamale FC', awayKo: '찬다말레 FC' },
-        { home: 'Blue Spot FC', homeKo: '블루 스팟 FC', away: 'Brazil Vuwa / Karonga Pirates FC', awayKo: '브라질 부와 / 카롱가 파이리츠 FC 승자' }
+        { id: 'north-playoff-2-santos', home: 'Santos FC', homeKo: '산투스 FC', away: 'Likoma Stars FC', awayKo: '리코마 스타스 FC' },
+        { id: 'north-playoff-2-brazil', home: 'Brazil Vuwa FC', homeKo: '브라질 부와 FC', away: 'Blue Spot FC', awayKo: '블루 스팟 FC' },
+        { id: 'north-playoff-2-karonga', home: 'Karonga Pirates FC', homeKo: '카롱가 파이리츠 FC', away: 'Emazwini / Chandamale winner', awayKo: '에마즈위니 / 찬다말레 승자', awayWinnerOf: 'north-playoff-1' }
       ] },
       { labelKo: '지역 1라운드', labelEn: 'First Round – Regional', matches: [
-        { home: 'Mafu Stars FC', homeKo: '마푸 스타즈 FC', away: 'Embangweni United FC', awayKo: '엠방웨니 유나이티드 FC' },
-        { home: 'Jenda United FC', homeKo: '젠다 유나이티드 FC', away: 'Songwe Border United FC', awayKo: '송궤 보더 유나이티드 FC' },
-        { home: 'Raiply FC', homeKo: '라이플리 FC', away: 'Mzuzu City Hammers FC', awayKo: '음주주 시티 해머스 FC' },
-        { home: 'Chikaya FC', homeKo: '치카야 FC', away: 'Chilumba Barracks FC', awayKo: '칠룸바 배럭스 FC' },
-        { home: 'Blue Spot / Brazil Vuwa / Karonga Pirates FC', homeKo: '블루 스팟 / 브라질 부와 / 카롱가 파이리츠 승자', away: 'Bwabwa FC', awayKo: '브와브와 FC' },
-        { home: 'Santos / Chandamale', homeKo: '산투스 / 찬다말레 승자', away: 'Likoma Stars / Emazwini', awayKo: '리코마 스타스 / 에마즈위니 승자' },
-        { home: 'Chibavi Real Stars FC', homeKo: '치바비 리얼 스타즈 FC', away: 'Chipelembe FC', awayKo: '치펠렘베 FC' },
-        { home: 'Mzwawa FC', homeKo: '음즈와와 FC', away: 'Chizumulu United FC', awayKo: '치주물루 유나이티드 FC' }
+        { home: 'Mzwazwa FC', homeKo: '음즈와와 FC', away: 'Embangweni United FC', awayKo: '엠방웨니 유나이티드 FC' },
+        { home: 'Bwabwa FC', homeKo: '브와브와 FC', away: 'Mzuzu City Hammers FC', awayKo: '음주주 시티 해머스 FC' },
+        { home: 'Songwe Border United FC', homeKo: '송궤 보더 유나이티드 FC', away: 'Raiply FC', awayKo: '라이플리 FC' },
+        { home: 'Chizumulu United FC', homeKo: '치주물루 유나이티드 FC', away: 'Chilumba Barracks FC', awayKo: '칠룸바 배럭스 FC' },
+        { home: 'Chipelembe FC', homeKo: '치펠렘베 FC', away: 'Karonga Pirates / Emazwini / Chandamale winner', awayKo: '카롱가 파이리츠 / 에마즈위니 / 찬다말레 승자', awayWinnerOf: 'north-playoff-2-karonga' },
+        { home: 'Chibavi Real Stars FC', homeKo: '치바비 리얼 스타즈 FC', away: 'Santos / Likoma Stars winner', awayKo: '산투스 / 리코마 스타스 승자', awayWinnerOf: 'north-playoff-2-santos' },
+        { home: 'Mafu Stars FC', homeKo: '마푸 스타즈 FC', away: 'Jenda United FC', awayKo: '젠다 유나이티드 FC' },
+        { home: 'Chikaya FC', homeKo: '치카야 FC', away: 'Brazil Vuwa / Blue Spot winner', awayKo: '브라질 부와 / 블루 스팟 승자', awayWinnerOf: 'north-playoff-2-brazil' }
       ] }
     ]
   },
