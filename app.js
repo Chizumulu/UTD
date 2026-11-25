@@ -6047,6 +6047,7 @@
     const stageHtml = compactStage === stageLine ? esc(stageLine)
       : `<span class="nmc-stage-full">${esc(stageLine)}</span><abbr class="nmc-stage-compact" title="${esc(stageLine)}">${esc(compactStage)}</abbr>`;
     const opponent = nextMain.startsWith('vs ') ? nextMain.slice(3) : '';
+    const opponentHtml = esc(opponent).replace(/(\s+FC)$/i, '<span class="nmc-opp-suffix">$1</span>');
     const tournamentState = cup.status || 'upcoming';
     const cupState = tournamentState === 'live' || tournamentState === 'finished' ? tournamentState
       : next ? 'upcoming' : 'date-pending';
@@ -6064,7 +6065,7 @@
         <p class="nmc-stage">${stageHtml}</p>
         <span class="nmc-state nmc-state-mobile nmc-state-${esc(tournamentState)}">${esc(tournamentLabels[tournamentState] || tournamentLabels.upcoming)}</span>
         ${matchStatusBadge(cupState, 'nmc-state nmc-state-desktop', ko)}${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
-        <div class="nmc-next${opponent ? ' nmc-next-fixture' : ''}"><b>${opponent ? `<span class="nmc-vs">vs</span> <span class="nmc-opp">${esc(opponent)}</span>` : esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
+        <div class="nmc-next${opponent ? ' nmc-next-fixture' : ''}"><b>${opponent ? `<span class="nmc-vs">vs</span> <span class="nmc-opp">${opponentHtml}</span>` : esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
       </div>
       <button type="button" class="nmc-btn" onclick="toggleCupView()">${ko ? '자세히' : 'Details'}</button>`;
     try { nmsSyncPanelLive(); } catch (e) { /* 실황 소식은 부가 기능 */ }

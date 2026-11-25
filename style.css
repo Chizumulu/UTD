@@ -19254,6 +19254,7 @@ tr.my-team td.team::after,
   #nmCupPanel { position: relative; z-index: 2; }
   .nmc-stage-full { display: none; }
   .nmc-stage-compact { display: inline; }
+  .nmc-opp-suffix { display: none; }
 }
 .nmc-stage-sub, .nmc-next { display: none; }
 @media (max-width: 1199px) {
