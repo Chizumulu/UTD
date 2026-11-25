@@ -6038,7 +6038,10 @@
     }
     // 예선(지역 플레이오프)은 리그가 아니라 토너먼트라 승/무/패 대신 단계와 다음 경기만 보여줍니다.
     const stageSubLine = '';
-    const compactStage = ko ? stageLine.replace(/(\d+)\s*라운드/g, '$1R') : stageLine;
+    const compactStageTitle = ko && !eliminated && stage === 0 && region
+      ? stageTitle.replace(/\s*\(.*\)/, '')
+      : stageLine;
+    const compactStage = ko ? compactStageTitle.replace(/(\d+)\s*라운드/g, '$1R') : compactStageTitle;
     const stageHtml = compactStage === stageLine ? esc(stageLine)
       : `<span class="nmc-stage-full">${esc(stageLine)}</span><abbr class="nmc-stage-compact" title="${esc(stageLine)}">${esc(compactStage)}</abbr>`;
     const opponent = nextMain.startsWith('vs ') ? nextMain.slice(3) : '';
