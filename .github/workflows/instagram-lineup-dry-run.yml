@@ -2,12 +2,15 @@ name: Instagram lineup dry run
 
 on:
   workflow_dispatch:
+  push:
+    branches: [automation/chihame-ocr-trial]
+    paths: ['automation/instagram-lineup/read-card.py']
 
 permissions:
   contents: read
 
 jobs:
-  verify-luviri-lineup:
+  verify-chintheche-lineup:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -22,4 +25,4 @@ jobs:
       - name: Read and compare the official lineup
         env:
           UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
-        run: node automation/instagram-lineup/dry-run.mjs --live --luviri
+        run: node automation/instagram-lineup/dry-run.mjs --live --chintheche
