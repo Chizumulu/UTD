@@ -1,0 +1,69 @@
+"""Read jersey-number regions from the 2026-11-22 Raiply graphic."""
+
+import io
+import json
+import re
+import subprocess
+import sys
+from collections import Counter
+
+from PIL import Image, ImageOps
+
+
+# Coordinates are relative to the 691 × 861 reference image without Instagram UI.
+STARTERS = [
+    (299, 154, 326, 182),
+    (82, 260, 104, 288), (301, 316, 325, 343), (524, 260, 548, 288),
+    (191, 390, 216, 417), (402, 389, 425, 417),
+    (64, 507, 86, 534), (192, 548, 214, 576),
+    (406, 548, 430, 576), (532, 507, 559, 535),
+    (299, 643, 325, 670),
+]
+BENCH = [
+    (159, 766, 178, 786), (237, 766, 258, 786),
+    (347, 766, 368, 786), (458, 766, 482, 786),
+    (189, 785, 214, 803), (298, 785, 322, 803),
+    (405, 785, 430, 803),
+]
+
+
+def read_number(image, box, label):
+    scaled = [round(value * size / ref) for value, size, ref in zip(
+        box, (image.width, image.height) * 2, (691, 861) * 2
+    )]
+    crop = image.crop(scaled)
+    gray = ImageOps.autocontrast(ImageOps.grayscale(crop))
+    gray = gray.resize((gray.width * 6, gray.height * 6), Image.Resampling.LANCZOS)
+    variants = [gray, gray.point(lambda pixel: 255 if pixel > 160 else 0)]
+    votes = Counter()
+    for variant in variants:
+        prepared = ImageOps.expand(ImageOps.invert(variant), border=20, fill=255)
+        payload = io.BytesIO()
+        prepared.save(payload, format="PNG")
+        for mode in ("7", "8"):
+            result = subprocess.run(
+                ["tesseract", "stdin", "stdout", "--psm", mode,
+                 "-c", "tessedit_char_whitelist=0123456789"],
+                input=payload.getvalue(), capture_output=True, check=True, timeout=8,
+            ).stdout.decode().strip()
+            if re.fullmatch(r"[1-9][0-9]?", result):
+                votes[int(result)] += 1
+    ranked = votes.most_common()
+    if not ranked or (len(ranked) > 1 and ranked[0][1] == ranked[1][1]):
+        raise ValueError(f"OCR ambiguous at {label}: {dict(votes)}")
+    return {"number": ranked[0][0]}
+
+
+def main():
+    with Image.open(sys.stdin.buffer) as original:
+        image = ImageOps.exif_transpose(original)
+        if abs(image.width / image.height - 691 / 861) > 0.025:
+            raise ValueError("Unexpected aspect ratio for the Raiply reference card")
+        starters = [read_number(image, box, f"starter {i}") for i, box in enumerate(STARTERS, 1)]
+        bench = [read_number(image, box, f"bench {i}") for i, box in enumerate(BENCH, 1)]
+    # The reference graphic has no explicit captain mark.
+    print(json.dumps({"starters": starters, "bench": bench, "captain": None}))
+
+
+if __name__ == "__main__":
+    main()
