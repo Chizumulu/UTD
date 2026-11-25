@@ -12898,7 +12898,7 @@
           <span class="rmd-num rmd-num-home${homeWin ? ' is-win' : (awayWin ? ' is-lose' : '')}">${m.homeScore}</span>
           ${matchStatusBadge('finished', 'rmd-status')}
           <span class="rmd-num rmd-num-away${awayWin ? ' is-win' : (homeWin ? ' is-lose' : '')}">${m.awayScore}</span>
-          <small class="rmd-result-note">${recordedLeagueResultText()}</small>`;
+          `;
       } else if (pendingScore) {
         mid = `
           <span class="rmd-num rmd-num-home">${pendingScore.home}</span>
@@ -12913,6 +12913,25 @@
 
       const row = document.createElement('div');
       row.className = 'rmd-row' + (played ? '' : ' is-scheduled') + (mine ? ' rmd-mine' : '') + (teamOpts ? ' rmd-tv' : '') + (openRow ? ' rmd-fixture-row' : '');
+      // 모든 리그 경기 행(종료/예정/연기/팀 화면): 메인 카드의 유니폼 색을 은은하게 입힙니다.
+      if (typeof TEAM_COLORS !== 'undefined') {
+        const homeMine = isMyTeamName(m.homeEn, m.homeKo);
+        const awayMine = isMyTeamName(m.awayEn, m.awayKo);
+        const kit = homeMine || awayMine ? getMatchKitColors(homeMine ? m.awayEn : m.homeEn, homeMine ? 'H' : 'A') : null;
+        const hc = kit ? (homeMine ? kit.mine : kit.opp) : TEAM_COLORS[m.homeEn]?.main;
+        let ac = kit ? (awayMine ? kit.mine : kit.opp) : TEAM_COLORS[m.awayEn]?.main;
+        const sub = TEAM_COLORS[m.awayEn]?.sub;
+        if (!kit && hc && ac && sub && kitColorDistance(hc, ac) < KIT_SIMILAR_DISTANCE && kitColorDistance(hc, sub) > kitColorDistance(hc, ac)) ac = sub;
+        if (hc && ac) {
+          const ink = hex => {
+            const n = parseInt(hex.slice(1), 16);
+            const f = v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; };
+            return .2126*f(n>>16&255)+.7152*f(n>>8&255)+.0722*f(n&255) > .179 ? '#111827' : '#ffffff';
+          };
+          row.classList.add('rmd-kit-finished');
+          for (const [k,v] of Object.entries({'--rk-home':hc,'--rk-away':ac,'--rk-home-ink':ink(hc),'--rk-away-ink':ink(ac)})) row.style.setProperty(k,v);
+        }
+      }
       const infoLabel = isKorean ? `${homeName} 대 ${awayName} 경기 정보` : `Match info: ${homeName} vs ${awayName}`;
       const fixtureHref = '#/' + escapeHtml(fixturePath);
       row.innerHTML = `

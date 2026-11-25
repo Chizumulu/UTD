@@ -12000,8 +12000,6 @@
 .nmp-col-right { display: flex; flex-direction: column; gap: 18px; }
 .nmp-sec-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; font-size: var(--fs-sm); font-weight: 600; color: var(--color-text-darkest); }
 .nmp-sec-sub { font-size: var(--fs-xs); font-weight: 500; color: var(--color-text-faint); text-align: right; }
-.nmp-lineup-updated-badge { display: inline-flex; align-items: center; flex: 0 0 auto; padding: 2px 7px; border-radius: 999px; background: rgba(34, 160, 92, .13); color: #16834a; font-size: var(--fs-2xs); font-weight: 700; line-height: 1.35; }
-[data-theme="dark"] .nmp-lineup-updated-badge, .dark-mode .nmp-lineup-updated-badge { background: rgba(66, 190, 125, .18); color: #75d99d; }
 .nmp-note { margin-top: 8px; font-size: var(--fs-xs); line-height: 1.45; color: var(--color-text-faint); }
 .nmp-note:empty { display: none; }
 .nmp-empty { font-size: var(--fs-xs); color: var(--color-text-faint); padding: 6px 2px; }
@@ -15718,11 +15716,11 @@ body {
 }
 
 /* ===== 리그 일정: 치주물루 경기 행의 상세보기 버튼을 오른쪽 칸에서 2열로 정리 ===== */
-.rmd-end.rmd-end-detail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; justify-content: stretch; }
+.rmd-end.rmd-end-detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; justify-content: stretch; }
 .rmd-end-detail .rmd-toggle { order: 0; }
-.rmd-end-detail .rmd-btn { order: 1; }
-.rmd-end-detail .rmd-act-btn { order: 2; }
-.rmd-end-detail .rmd-act-wide { grid-column: 1 / -1; }
+.rmd-end-detail .rmd-btn { order: 2; }
+.rmd-end-detail .rmd-act-btn { order: 1; }
+.rmd-end-detail .rmd-act-wide { grid-column: auto; }
 .rmd-end-detail .rmd-toggle,
 .rmd-end-detail .rmd-btn,
 .rmd-end-detail .rmd-act-btn {
@@ -22100,38 +22098,309 @@ button.match-status:focus-visible {
   #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-title { line-height: 1.2; margin-block: 0; }
 }
 
-/* Mobile expanded preview: align surface with the full-bleed scoreboard. */
-@media (max-width: 720px) {
-  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-body {
-    margin-inline: -10px;
-    min-width: 0;
-    background-color: var(--color-surface);
-  }
-  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-body-inner > .nmp-grid {
+
+
+
+/* =====================================================
+   PC 다음 경기 하단 툴바 보정
+   - 홈/날씨는 왼쪽, 액션 버튼은 오른쪽에 둡니다.
+   - 미리보기 토글은 .nmp-card.nmp-merged가 별도 줄에서 중앙에 겹쳐 배치합니다.
+   - 하단 영역은 flex 구조를 유지해 숨김 상태의 nms-impact가 그리드 칸을 차지하지 않게 합니다.
+   ===================================================== */
+@media (min-width: 721px) {
+  #nextMatchStrip.nms-merged > .nmh-bottom {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
     box-sizing: border-box;
-    min-width: 0;
-    padding: 4px 8px 14px;
+    min-height: var(--nmh-row, 22px);
+    padding: 1px 10px 0;
+    margin-top: 6px;
   }
-  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-pitch {
-    width: 100%; max-width: none; margin-inline: 0;
+
+  #nextMatchStrip.nms-merged > .nmh-bottom > .nms-ha,
+  #nextMatchStrip.nms-merged > .nmh-bottom > .nms-weather.match-weather {
+    position: static;
+    align-self: center;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    margin: 0;
+  }
+
+  #nextMatchStrip.nms-merged > .nmh-bottom > .nms-weather.match-weather {
+    min-width: 0;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    gap: 4px;
+  }
+
+  #nextMatchStrip.nms-merged > .nmh-bottom > .nms-impact[hidden] {
+    display: none !important;
+  }
+
+  #nextMatchStrip.nms-merged > .nmh-bottom > .nms-action-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    gap: 4px;
+    margin: 0 0 0 auto;
+    padding-left: 10px;
+    white-space: nowrap;
+  }
+
+  #nextMatchStrip.nms-merged > .nmh-bottom .nms-action-btn {
+    box-sizing: border-box;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    padding: 0;
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  #nextMatchStrip.nms-merged > .nmp-card.nmp-merged {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    margin-top: calc(var(--nmh-row, 22px) * -1);
+    border-top: 0;
+    pointer-events: none;
+  }
+
+  #nextMatchStrip.nms-merged > .nmp-card.nmp-merged > .nmp-toggle {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: min(46%, 280px);
+    height: 18px;
+    margin: 2px auto;
+    padding: 0 8px;
+    line-height: 1;
   }
 }
 
-/* Responsive live commentary: keep the desktop cup panel unchanged. */
-.nms-mobile-feed, .nms-mobile-goals { display: none; }
-@media (max-width: 1199px) {
-  #nextMatchStrip.nms-live .nmh-team .nmh-live-goals { display: none; }
-  #nextMatchStrip.nms-live .nms-mobile-goals { display: flex; flex-direction: column; gap: 4px; width: 100%; color: #fff; font-size: 11px; }
-  #nextMatchStrip .nms-mobile-goals .nmh-live-goal { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 3px; color: #fff; overflow-wrap: anywhere; }
-  #nextMatchStrip .nms-mobile-goals .is-home .nmh-live-goal::before { content: '←'; color: #93c5fd; font-weight: 800; }
-  #nextMatchStrip .nms-mobile-goals .is-away .nmh-live-goal::after { content: '→'; color: #fde047; font-weight: 800; }
-  #nextMatchStrip .nms-mobile-feed { display: block; min-width: 0; background: var(--color-surface); color: var(--color-text); text-align: start; padding: 8px; border-top: 1px solid var(--nmh-footer-divider, #aab9ca); }
-  #nextMatchStrip .nms-mobile-feed-head { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; }
-  #nextMatchStrip .nms-mobile-feed-row { display: grid; grid-template-columns: auto 16px minmax(0,1fr); align-items: start; gap: 6px; padding: 7px 0; font-size: 12px; overflow-wrap: anywhere; }
-  #nextMatchStrip .nms-mobile-feed-icon svg { width: 14px; height: 14px; }
-  #nextMatchStrip .nms-mobile-feed-latest { background: var(--nmh-footer-bg, #e3eaf4); color: var(--nmh-footer-fg, #183b65); padding: 0 8px; margin: 6px 0; border-radius: 4px; }
-  #nextMatchStrip .nms-mobile-feed summary { cursor: pointer; font-size: 12px; font-weight: 700; padding: 6px 0; }
-  #nextMatchStrip .nms-mobile-feed-list { max-height: 280px; overflow-y: auto; }
-  #nextMatchStrip .nms-mobile-feed-list .nms-mobile-feed-row + .nms-mobile-feed-row { border-top: 1px solid var(--nmh-footer-divider, #aab9ca); }
-  #nextMatchStrip .nms-mobile-feed-empty { padding: 8px 0; font-size: 12px; }
+
+/* Full-bleed expanded preview surface; keep toolbar and score panel unchanged. */
+#nextMatchStrip:has(> .nmh-top) > #nextMatchPreviewCard.nmp-merged > .nmp-body {
+  margin-inline: calc(-1 * var(--nmh-preview-inset));
+  background: var(--color-surface);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  pointer-events: auto;
+}
+#nextMatchStrip:has(> .nmh-top) { --nmh-preview-inset: 20px; }
+#nextMatchStrip:has(> .nmh-top):has(> #nextMatchPreviewCard.is-open) { padding-bottom: 0; }
+#nextMatchStrip:has(> .nmh-top) > #nextMatchPreviewCard.nmp-merged .nmp-body-inner > .nmp-grid {
+  padding: 10px 16px 16px;
+  box-sizing: border-box;
+}
+@media (max-width: 720px) {
+  #nextMatchStrip:has(> .nmh-top) { --nmh-preview-inset: 10px; }
+  #nextMatchStrip:has(> .nmh-top) > #nextMatchPreviewCard.nmp-merged .nmp-body-inner > .nmp-grid { padding: 8px 8px 12px; }
+}
+
+/* Desktop footer: center all controls in the entire visible 32px band. */
+@media (min-width: 721px) {
+  #nextMatchStrip.nms-merged:has(> .nmh-top) { --nmh-row: 32px; }
+  #nextMatchStrip.nms-merged:has(> .nmh-top) > .nmh-bottom {
+    height: var(--nmh-row); min-height: var(--nmh-row);
+    margin-top: 0; padding-block: 0; align-items: center;
+  }
+  #nextMatchStrip.nms-merged:has(> .nmh-top) > .nmh-bottom > :is(.nms-ha,.match-weather,.nms-action-group) {
+    position: static; top: auto; align-self: center; margin-block: 0; transform: none;
+  }
+  #nextMatchStrip.nms-merged:has(> .nmh-top) > .nmp-card.nmp-merged > .nmp-toggle {
+    height: var(--nmh-row); margin-block: 0; padding-block: 0; align-items: center;
+  }
+}
+
+/* Desktop footer: align side controls with preview toggle. */
+@media (min-width: 721px) {
+  #nextMatchStrip.nms-merged:has(> .nmh-top)
+  > .nmh-bottom
+  > :is(.nms-ha, .match-weather, .nms-action-group) {
+    position: relative;
+    top: 7px;
+    align-self: center;
+  }
+}
+
+/* League schedule: identical action button dimensions across ordinary and detail rows. */
+.rmd-row:not(.rmd-tv) > .rmd-end,
+.rmd-row:not(.rmd-tv) > .rmd-end.rmd-end-detail {
+  display: flex; justify-content: flex-end; align-items: center; gap: 8px;
+}
+.rmd-row:not(.rmd-tv) > .rmd-end > :is(.rmd-toggle,.rmd-pvbtn,.rmd-btn,.rmd-act-btn) {
+  display: inline-flex; align-items: center; justify-content: center;
+  box-sizing: border-box; flex: 0 0 74px; width: 74px; min-width: 74px;
+  max-width: 74px; height: 38px; min-height: 38px; padding: 0 4px;
+  gap: 3px; font-size: var(--fs-sm); font-weight: 600; white-space: nowrap;
+}
+@container rmdlist (max-width: 959px) {
+  .rmd-row:not(.rmd-tv) > .rmd-end > :is(.rmd-toggle,.rmd-pvbtn,.rmd-btn,.rmd-act-btn) {
+    height: 34px; min-height: 34px;
+  }
+}
+
+
+/* =====================================================================
+   종료된 리그 경기 행: 팀 색은 "은은하게"
+   - JS(app.js)가 넘겨주는 --rk-home / --rk-away 를 그대로 쓰므로 JS 수정 없음
+   - 행 배경은 중립색, 팀 색은 양 끝에서 안쪽으로 옅게 번지는 워시로만 사용
+   - 글자 · 스코어 · 버튼은 팀 색과 무관하게 항상 같은 스타일
+   - 워시 진하기는 --rk-wash 한 값으로 조절 (라이트 20%, 다크 26%)
+   ===================================================================== */
+.rmd-row.rmd-kit-finished {
+  --rk-wash: 20%;
+  background-image:
+    linear-gradient(90deg,  color-mix(in srgb, var(--rk-home) var(--rk-wash), transparent) 0%, transparent 46%),
+    linear-gradient(270deg, color-mix(in srgb, var(--rk-away) var(--rk-wash), transparent) 0%, transparent 46%);
+}
+:root[data-theme="dark"] .rmd-row.rmd-kit-finished { --rk-wash: 26%; }
+.rmd-row.rmd-kit-finished.rmd-mine { background-color: transparent; } /* 왼쪽 청록 막대(내 팀 표시)는 그대로 */
+
+/* 스코어: 이긴 쪽은 진하게, 진 쪽은 연하게 (기본 규칙 그대로) + 상태 칩은 회색 */
+.rmd-kit-finished .rmd-mid .rmd-num { color: var(--color-text-darkest); }
+.rmd-kit-finished .rmd-mid .rmd-num.is-lose { color: var(--color-text-muted); opacity: .75; }
+.rmd-kit-finished .rmd-mid:not(.is-single) .rmd-status {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-table-alt);
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+/* 버튼: 행 색과 상관없이 모두 같은 중립 스타일 */
+.rmd-kit-finished .rmd-end :is(.rmd-toggle, .rmd-btn, .rmd-act-btn) {
+  background: var(--color-surface);
+  color: var(--color-text-dark);
+  border: 1px solid rgba(var(--color-tint-rgb), .16);
+}
+@media (hover: hover) {
+  .rmd-kit-finished .rmd-end :is(.rmd-toggle, .rmd-btn, .rmd-act-btn):hover {
+    background: var(--color-bg-table-alt);
+    color: var(--color-text-darkest);
+  }
+}
+
+
+/* =====================================================================
+   다음 경기 카드 · PC: 엠블럼 정리
+   - 흰 원 받침/패딩을 없애고 로고를 바로 올림 (은은한 그림자만)
+   - 두 팀 크기 통일: --nmh-crest 한 값 (기본 68px, 좁은 PC 62px)
+   - 로고 이미지가 없는 팀의 머리글자 원은 반투명 판 + 흰 글자
+   - 모바일(720px 이하)은 원래 받침이 없어서 그대로
+   - 되돌리고 싶으면 이 블록만 지우면 됩니다.
+   ===================================================================== */
+@media (min-width: 721px) {
+  .next-match-strip:has(> .nmh-top) { --nmh-crest: 68px; }
+
+  .next-match-strip:has(> .nmh-top) .nmh-top .nmh-team .nmh-crest.team-logo {
+    box-sizing: border-box;
+    width: var(--nmh-crest);
+    height: var(--nmh-crest);
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 7px rgba(0, 0, 0, .5));
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top .nmh-team .nmh-crest-fallback.team-logo {
+    width: var(--nmh-crest);
+    height: var(--nmh-crest);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+    filter: none;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top .nmh-team .skeleton-crest {
+    width: var(--nmh-crest);
+    height: var(--nmh-crest);
+  }
+}
+@media (min-width: 721px) and (max-width: 1100px) {
+  .next-match-strip:has(> .nmh-top) { --nmh-crest: 62px; }
+}
+
+
+/* =====================================================================
+   다음 경기 카드 · 팀명/순위 규칙 통일
+   - 팀명: 양쪽 모두 굵기 700 하나, 기울임 없음 (내 팀만 800이던 것을 통일)
+   - 순위: 칩(배경 알약)을 없애고 양쪽 모두 같은 작은 글씨 (12px, 90% 농도)
+   - 모바일에서 숨겨지던 내 팀 순위도 양쪽 다 보이게 함
+   - 되돌리고 싶으면 이 블록만 지우면 됩니다.
+   ===================================================================== */
+#nextMatchStrip .nmh-top > .nmh-team > span:not(.nms-opp-rank):not(.nmh-crest) {
+  font-weight: 700;
+  font-style: normal;
+}
+
+#nextMatchStrip .nmh-top > .nmh-team .nms-opp-rank {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-weight: 600;
+  font-style: normal;
+}
+#nextMatchStrip .nmh-top > .nmh-team-mine .nms-opp-rank { display: inline-flex; }
+
+@media (min-width: 721px) {
+  #nextMatchStrip .nmh-top > .nmh-team .nms-opp-rank { font-size: 12px; }
+  #nextMatchStrip .nmh-top > .nmh-team:first-child .nms-opp-rank,
+  #nextMatchStrip .nmh-top > .nmh-team.nmh-kit .nms-opp-rank { color: rgba(255, 255, 255, .9); }
+  #nextMatchStrip .nmh-top > .nmh-team:last-child:not(.nmh-kit) .nms-opp-rank { color: var(--color-text-muted); }
+  /* 밝은 팀 색(노랑·흰색) 패널은 어두운 글자 */
+  #nextMatchStrip .nmh-top > .nmh-team.nmh-kit-light .nms-opp-rank { color: rgba(17, 24, 39, .85); }
+}
+@media (max-width: 720px) {
+  #nextMatchStrip .nmh-top > .nmh-team .nms-opp-rank { font-size: 12px; }
+}
+
+
+/* =====================================================================
+   모바일: 다음경기 카드 아래 칸들(컵대회 줄 · 승격 레이스 줄)의 높이/간격 통일
+   - 가장 낮은 칸 기준으로 맞춤: 높이 --m-row-h (32px), 칸 사이 간격 --m-row-gap (6px)
+   - min-height 방식이라 글이 두 줄로 꺾이는 좁은 폰에서는 잘리지 않고 늘어납니다
+   - 되돌리고 싶으면 이 블록만 지우면 됩니다.
+   ===================================================================== */
+@media (max-width: 720px) {
+  .nm-hero, .container { --m-row-h: 32px; --m-row-gap: 6px; }
+
+  #nmCupPanel.nmc:not([hidden]),
+  #promoRaceStrip.promo-race-strip:not([hidden]) {
+    box-sizing: border-box;
+    min-height: var(--m-row-h);
+    margin-top: var(--m-row-gap);
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+
+/* =====================================================================
+   모바일: 최상단 헤더와 다음경기 카드 사이 간격 축소 (위 여백 6px → 0)
+   - 더 줄이려면 margin-top 을 음수(예: -4px)로, 되돌리려면 이 블록만 지우면 됩니다.
+   ===================================================================== */
+@media (max-width: 720px) {
+  .container #nextMatchStrip.next-match-strip,
+  .container .nm-hero .next-match-strip { margin-top: 0; }
+}
+
+
+/* =====================================================================
+   모바일: 다음경기 가운데 경계 색 쌓음(계단 띠) 간격 넓힘
+   - 띠 폭과 겹 사이 간격이 --nmh-step 에 비례합니다 (기존 5px → 최대 8px, 겹당 약 4.5px → 6.5px)
+   - 더 벌리려면 clamp 안의 8px 을 키우고(10px 넘기면 엠블럼과 겹칠 수 있음), 되돌리려면 이 블록만 지우세요.
+   ===================================================================== */
+@media (max-width: 720px) {
+  #nextMatchStrip:has(> .nmh-top) { --nmh-step: clamp(6px, 1.8vw, 8px); }
 }
