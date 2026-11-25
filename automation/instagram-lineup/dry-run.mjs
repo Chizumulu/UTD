@@ -22,13 +22,15 @@ async function readCard() {
   const token = process.env.UTD_INSTAGRAM_TOKEN;
   if (!token) throw new Error('Set UTD_INSTAGRAM_TOKEN in Actions secrets');
   const url = new URL('https://graph.facebook.com/v27.0/' + accountId);
-  const sample = process.argv.includes('--chintheche') ? 'chintheche' :
+  const sample = process.argv.includes('--chilumba') ? 'chilumba' :
+    process.argv.includes('--chintheche') ? 'chintheche' :
     process.argv.includes('--luviri') ? 'luviri' :
     process.argv.includes('--chihame') ? 'chihame' : 'raiply';
   const matches = entry => {
     const caption = entry.caption ?? '';
     if (sample === 'raiply') return entry.id === sampleId;
     if (!/#STARTING_XI\b/i.test(caption)) return false;
+    if (sample === 'chilumba') return /칠룸바/.test(caption) && /10월\s*0?2일/.test(caption);
     if (sample === 'chintheche') return /친테체/.test(caption) && /10월\s*11일/.test(caption);
     return sample === 'luviri' ? /루비리/.test(caption) && /10월\s*20일/.test(caption) :
       /치하메/.test(caption) && /11월\s*0?8일/.test(caption);
