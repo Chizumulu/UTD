@@ -200,7 +200,16 @@ def main():
                 strip = crop_gray(image, shift_up((105, 768, 564, 807), offset))
                 raw = read_korean(strip, "6")
                 print("Bench strip OCR: " + json.dumps(raw, ensure_ascii=False), file=sys.stderr)
-                for line in raw.splitlines():
+                lines = raw.splitlines()
+                if sample == "chintheche":
+                    for line in lines[1:]:
+                        second_row = re.match(r"\s*([1-9][0-9]?)\s*[.,:]\s*([가-힣]+\s+[가-힣]+)", line)
+                        if second_row:
+                            number, name = second_row.groups()
+                            bench[4]["votes"][int(number)] = bench[4]["votes"].get(int(number), 0) + 1
+                            bench[4]["names"].append(name)
+                            break
+                for line in lines:
                     if not re.search(r"SUBS", line, re.I):
                         continue
                     entries = re.findall(r"(?<![0-9])([1-9][0-9]?)\s*[.,:]\s*([가-힣]+(?:\s+[가-힣]+)*)", line)
