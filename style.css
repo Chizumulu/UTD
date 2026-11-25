@@ -19142,6 +19142,28 @@ tr.my-team td.team::after,
 .cup-br-match.is-final { background: rgba(200, 160, 60, .14); box-shadow: 0 0 0 2px rgba(200, 160, 60, .5); }
 .cup-br-team { height: 36px; padding: 0 12px; gap: 8px; font-size: 14px; font-weight: 700; }
 .cup-br-team img { width: 22px; height: 22px; }
+.cup-br-team:has(.cup-br-tier) { gap: 6px; padding-inline: 8px; }
+.cup-br-team:has(.cup-br-tier) .cup-br-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+.cup-br-tier {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(var(--color-tint-rgb), .09);
+  color: var(--color-brand-text);
+  font-size: var(--fs-2xs);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.cup-br-tier.is-district { color: var(--color-text-muted); }
+.cup-br-score { flex-shrink: 0; }
 .cup-br-dot { width: 10px; height: 10px; margin: 0 6px; }
 .cup-br-team + .cup-br-team { border-top-color: rgba(var(--color-navy-rgb), .07); }
 .cup-br-note { margin-top: 12px; font-size: 13px; line-height: 1.6; }

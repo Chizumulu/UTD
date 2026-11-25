@@ -783,6 +783,34 @@
     { en: 'Ndirande Stars FC', ko: '은디란데 스타스 FC' }, { en: 'Mighty Tigers FC', ko: '마이티 타이거스 FC' },
     { en: 'Bangwe All Stars FC', ko: '방궤 올 스타스 FC' }, { en: 'Changalume Barracks FC', ko: '창갈루메 배럭스 FC' }
   ];
+  function cupDivisionTwoTeams(c) {
+    return c.divisionTwo?.length ? c.divisionTwo : (c.id === 'faCup2627' ? CUP_FA_DIV2_FALLBACK : []);
+  }
+
+  function cupBracketTeamTiers(c) {
+    const tiers = new Map();
+    const add = (teams, tier, titleKo, titleEn) => {
+      const district = !tier;
+      const label = isKorean ? (district ? '지역컵' : `${tier}부`) : (district ? 'Dist.' : `T${tier}`);
+      const title = isKorean ? titleKo : titleEn;
+      for (const team of teams || []) {
+        if (team.en && (!tiers.has(team.en) || (tiers.get(team.en).district && !district))) {
+          tiers.set(team.en, { label, title, district });
+        }
+      }
+    };
+    add(c.bracket?.[0]?.entrants, 1, '슈퍼 리그 오브 말라위', 'Super League of Malawi');
+    add(cupDivisionTwoTeams(c), 2, '내셔널 디비전 리그', 'National Division League');
+    for (const region of c.regionalQualifiers || []) {
+      for (const group of region.groups || []) {
+        const tier = group.labelKo?.match(/^(\d+)부\s*·/)?.[1];
+        if (tier || group.labelKo?.startsWith('디스트릭트 컵')) {
+          add(group.teams, tier, group.labelKo, group.labelEn);
+        }
+      }
+    }
+    return tiers;
+  }
   function setCupTab(id) {
     cupTab = id;
     document.querySelectorAll('#cupTabsWrap .cup-tab-btn').forEach(function (b) {
@@ -1153,27 +1181,32 @@
     const result = homeScore != null && awayScore != null ? { homeScore: Number(homeScore), awayScore: Number(awayScore) } : undefined;
     openMatchCompareModal(home.nameEn, home.nameKo, away.nameEn, away.nameKo, null, result, options);
   });
-  // 지역 플레이오프 대진을 본선 대진표와 같은 모양으로 그립니다. (플레이오프 1 → 플레이오프 2라운드 → 지역 1라운드)
-  // 칸 위치는 고정 픽셀로 계산해서 연결선까지 CSS만으로 그려요. (화면 크기를 재지 않아 숨겨진 탭에서도 안전)
+  function cupBracketTeamHtml(tiers, nameEn, nameKo, score, isWin) {
+    const ko = isKorean;
+    if (!nameEn) return '<div class="cup-br-team is-tbd"><span class="cup-br-name">' + (ko ? '미정' : 'TBD') + '</span></div>';
+    if (nameEn.includes(' / ')) {
+      return '<div class="cup-br-team is-tbd" title="' + cupEsc(ko ? (nameKo || nameEn) : nameEn) + '"><i class="cup-br-dot"></i><span class="cup-br-name">' + (ko ? '앞 경기 승자' : 'Winner TBD') + '</span></div>';
+    }
+    const team = leagueData.find(t => t.nameEn === nameEn);
+    const name = cupEsc(ko ? (nameKo || team?.nameKo || nameEn) : nameEn);
+    const logo = team?.logoSrc ? '<img src="' + cupEsc(team.logoSrc) + '" alt="">' : '<i class="cup-br-dot"></i>';
+    const mine = isMyTeamName(nameEn, nameKo) ? ' is-mine' : '';
+    const tier = tiers.get(nameEn);
+    const badge = tier ? `<span class="cup-br-tier${tier.district ? ' is-district' : ''}" title="${cupEsc(tier.title || tier.label)}">${cupEsc(tier.label)}</span>` : '';
+    return '<div class="cup-br-team' + (isWin ? ' is-win' : '') + mine + '">' + logo +
+      '<span class="cup-br-name" title="' + name + '">' + name + '</span>' + badge +
+      (score != null ? '<span class="cup-br-score">' + cupEsc(score) + '</span>' : '') + '</div>';
+  }
+
   // 이전 경기 승자와의 연결은 data.js의 awayWinnerOf를 따릅니다.
-  function cupRegionalDrawHtml(c) {
+  function cupRegionalDrawHtml(c, tiers) {
     const ko = isKorean;
     const byLabel = function (labelKo) { return (c.rounds || []).find(function (r) { return r && r.labelKo === labelKo; }); };
     const po1 = byLabel('플레이오프 1라운드'), po2 = byLabel('플레이오프 2라운드'), r1 = byLabel('지역 1라운드');
     if (!po1 || !po2 || !r1 || (po1.matches || []).length < 1 || (po2.matches || []).length < 3 || (r1.matches || []).length < 8) return '';
     const PW = 22, PG = 4, HEAD = 56, M = 72, S = 96; // 가로는 % (열 너비 22% + 간격 4%) → 화면 폭에 맞춰 늘고 줄어요. 세로는 px
     const yR1 = function (i) { return HEAD + S * (i + 0.5); };
-    const row = function (nameEn, nameKo, score, isWin) {
-      if (!nameEn) return '<div class="cup-br-team is-tbd"><span class="cup-br-name">' + (ko ? '미정' : 'TBD') + '</span><span class="cup-br-score"></span></div>';
-      if (nameEn.indexOf(' / ') >= 0) {
-        return '<div class="cup-br-team is-tbd" title="' + cupEsc(ko ? (nameKo || nameEn) : nameEn) + '"><i class="cup-br-dot"></i><span class="cup-br-name">' + (ko ? '앞 경기 승자' : 'Winner TBD') + '</span><span class="cup-br-score"></span></div>';
-      }
-      const t = leagueData.find(function (x) { return x.nameEn === nameEn; });
-      const name = ko ? (nameKo || (t && t.nameKo) || nameEn) : nameEn;
-      const logo = t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '<i class="cup-br-dot"></i>';
-      const mine = isMyTeamName(nameEn, nameKo) ? ' is-mine' : '';
-      return '<div class="cup-br-team' + (isWin ? ' is-win' : '') + mine + '">' + logo + '<span class="cup-br-name">' + cupEsc(name) + '</span><span class="cup-br-score">' + (score != null ? score : '') + '</span></div>';
-    };
+    const row = (nameEn, nameKo, score, isWin) => cupBracketTeamHtml(tiers, nameEn, nameKo, score, isWin);
     const box = function (m, x, yc) {
       const w = cupWinnerSide(m);
       return '<div class="cup-br-match cup-rd-box" style="left:' + x + '%;top:' + (yc - M / 2) + 'px;width:' + PW + '%">' +
@@ -1225,7 +1258,7 @@
       p.hidden = p.getAttribute('data-rview') !== cupRegionalView;
     });
   }
-  function cupBracketHtml(c) {
+  function cupBracketHtml(c, tiers) {
     const defs = c.bracket;
     if (!Array.isArray(defs) || !defs.length) return '';
     const ko = isKorean;
@@ -1238,13 +1271,7 @@
       if (m.pso && /^\d+\s*:\s*\d+$/.test(m.pso)) { const p = m.pso.split(':').map(Number); return p[0] > p[1] ? 'h' : (p[1] > p[0] ? 'a' : ''); }
       return '';
     };
-    const row = function (nameEn, nameKo, score, isWin) {
-      if (!nameEn) return '<div class="cup-br-team is-tbd"><span class="cup-br-name">' + (ko ? '미정' : 'TBD') + '</span><span class="cup-br-score"></span></div>';
-      const t = leagueData.find(function (x) { return x.nameEn === nameEn; });
-      const name = ko ? (nameKo || (t && t.nameKo) || nameEn) : nameEn;
-      const logo = t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '<i class="cup-br-dot"></i>';
-      return '<div class="cup-br-team' + (isWin ? ' is-win' : '') + '">' + logo + '<span class="cup-br-name">' + cupEsc(name) + '</span><span class="cup-br-score">' + (score != null ? score : '') + '</span></div>';
-    };
+    const row = (nameEn, nameKo, score, isWin) => cupBracketTeamHtml(tiers, nameEn, nameKo, score, isWin);
     let cols = '';
     defs.forEach(function (def, di) {
       const r = found(def), ms = (r && r.matches) || [];
@@ -1388,7 +1415,7 @@
     // 1부: 대진표 뼈대 첫 라운드의 entrants / 2부: c.divisionTwo
     const firstRound = Array.isArray(c.bracket) && c.bracket[0];
     const topFlightHtml = teamListSection('1부 리그 · 슈퍼 리그 오브 말라위', 'Top flight · Super League of Malawi', firstRound && firstRound.entrants, '', '', '32강 자동 진출', 'Auto Round of 32') +
-      teamListSection('2부 리그 · 내셔널 디비전', 'Second tier · National Division', (Array.isArray(c.divisionTwo) && c.divisionTwo.length) ? c.divisionTwo : (c.id === 'faCup2627' ? CUP_FA_DIV2_FALLBACK : null));
+      teamListSection('2부 리그 · 내셔널 디비전', 'Second tier · National Division', cupDivisionTwoTeams(c));
     // 지역 플레이오프(예선) 권역별 참가 팀: 토스 스타일 큰 카드 → 그룹(2부·3부·4부·지역) → 큰 팀 타일
     const regionalHtml = (Array.isArray(c.regionalQualifiers) ? c.regionalQualifiers : []).map(function (rg) {
       const total = (rg.groups || []).reduce(function (n, g) { return n + (g.teams || []).length; }, 0);
@@ -1412,7 +1439,8 @@
       }).join('');
       return '<section class="cup-info cup-rq">' + head + body + '</section>';
     }).join('');
-    const bracketHtml = cupBracketHtml(c);
+    const bracketTiers = cupBracketTeamTiers(c);
+    const bracketHtml = cupBracketHtml(c, bracketTiers);
     const roundsList = (c.rounds || []).filter(function (r) { return r && r.matches && r.matches.length; });
     const panels = [
       { id: 'about', ko: '소개', en: 'About', html: heroHtml + cupMyMatchesHtml(c) + kvBlock(ko ? '대회 안내' : 'About', rowsAbout) },
@@ -1476,7 +1504,7 @@
         rhtml += '</div></section>';
       });
     }
-    const regionalDrawHtml = cupRegionalDrawHtml(c);
+    const regionalDrawHtml = cupRegionalDrawHtml(c, bracketTiers);
     if (regionalDrawHtml) {
       if (cupRegionalView !== 'table') cupRegionalView = 'bracket';
       const tgl = function (v, label) {
