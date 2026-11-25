@@ -1787,7 +1787,7 @@
       renderPredictMySummary(); // 결과가 오기 전에는 요약 카드를 '계산 중' 상태로 둡니다
       tbody.innerHTML = `<tr><td colspan="7" class="predict-loading"><span class="predict-loading-inner"><span class="predict-spinner"></span><span>${isKorean ? '시뮬레이션 실행 중...' : 'Running simulation...'}</span></span></td></tr>`;
       refreshBtn.disabled = true;
-      renderWhatIf(); // 기본 예측이 끝나기 전에는 '다시 계산' 버튼이 비활성 상태로 보입니다
+      renderWhatIf();
       runMonteCarloSimulationAsync(4000).then(result => {
         if (renderSeq !== predictionRenderSeq) return;
         predictionCache = result;
@@ -1836,6 +1836,7 @@
     const panel = document.querySelector('#predictView .predict-panel.active');
     if (panel) playViewEnterAnimation(panel);
     if (tab === 'race') renderRaceAnswer();
+    if (tab === 'outlook') renderWhatIfQuick();
   }
 
   // ===== 리그 예측: 내 팀(치주물루) 요약 카드 =====
@@ -2214,7 +2215,8 @@
   const WHATIF_FLAT_PCT = 1.0;  // 두 번의 몬테카를로 사이의 무작위 오차(약 ±1%p) 안쪽 변화는 '변화 없음'으로 표시
   const WHATIF_FLAT_PTS = 0.5;
   const whatIfState = { teamEn: WHATIF_MY_TEAM_EN, picks: {}, result: null, running: false, failed: false, wired: false };
-  let whatIfQuickState = { fixtureId: null, view: null, outcomes: new Map() };
+  const wiTitleScenarioViews = ['W', 'D', 'L'];
+  const wiTitleScenarioCache = new Map();
   const wiPendingOutcomes = new Map();
   let whatIfFixturesCache = null;
   // 경기별 '결과 → 우승확률 변화' 미리보기. 경기 ID(H/D/A 저장값 기준)로 캐시해서 팀을 바꿔도 겹치는 경기는 재사용합니다.
@@ -2497,6 +2499,40 @@
       && !pendingLeagueResultForFixture(fx));
   }
 
+  function wiTitleScenarioState(signature) {
+    if (!wiTitleScenarioCache.has(signature)) {
+      const model = prsState.model?.sig === signature ? prsState.model : prsLoadCache(signature);
+      const cached = model?.scen;
+      const outcomes = wiTitleScenarioViews.every(view => Number.isFinite(cached?.[view])) ? cached : null;
+      wiTitleScenarioCache.set(signature, { outcomes, pending: null, failed: false });
+    }
+    return wiTitleScenarioCache.get(signature);
+  }
+
+  function wiLoadTitleScenarios(fx, state) {
+    if (state.outcomes) return Promise.resolve(state.outcomes);
+    if (state.pending) return state.pending;
+    state.failed = false;
+    state.pending = (async () => {
+      const outcomes = {};
+      for (const view of wiTitleScenarioViews) {
+        const data = await wiSimulateFixture(fx.id, wiPickFromView(fx, WHATIF_MY_TEAM_EN, view));
+        const pct = prsChampPct(data, WHATIF_MY_TEAM_EN);
+        if (!Number.isFinite(pct) || data.whatIfFixedCount !== 1) throw new Error('The requested match result was not simulated');
+        outcomes[view] = pct;
+      }
+      state.outcomes = outcomes;
+      return outcomes;
+    })().catch(error => {
+      state.failed = true;
+      throw error;
+    }).finally(() => {
+      state.pending = null;
+      if (currentView === 'predict' && predictTab === 'outlook') renderWhatIfQuick();
+    });
+    return state.pending;
+  }
+
   function renderWhatIfQuick() {
     const host = document.getElementById('whatIfQuick');
     const resultHost = document.getElementById('whatIfQuickResult');
@@ -2510,85 +2546,52 @@
         : (isKorean ? '남은 리그 경기가 없어요.' : 'There are no league matches remaining.');
       return;
     }
-    if (whatIfQuickState.fixtureId !== fx.id) {
-      whatIfQuickState = { fixtureId: fx.id, view: null, outcomes: new Map() };
-    }
-    const state = whatIfQuickState;
     const base = prsChampPct(predictionCache, WHATIF_MY_TEAM_EN);
+    const hasBase = Number.isFinite(base);
+    const state = hasBase ? wiTitleScenarioState(prsSignature(getRankedTeams('all'), fx)) : null;
+    const load = () => wiLoadTitleScenarios(fx, state).catch(error => console.warn('Next-match scenarios failed:', error));
+    if (state && !state.outcomes && !state.pending && !state.failed && currentView === 'predict' && predictTab === 'outlook') load();
+
     const home = fx.homeEn === WHATIF_MY_TEAM_EN;
     const opponent = home ? fx.awayEn : fx.homeEn;
     const opponentLogo = home ? fx.awayLogo : fx.homeLogo;
     const date = formatKickoff(fx) || wiDateText(fx);
     const upcoming = isKorean ? (home ? '홈' : '원정') : (home ? 'Home' : 'Away');
     const options = isKorean ? { W: '승리', D: '무승부', L: '패배' } : { W: 'Win', D: 'Draw', L: 'Loss' };
-    const result = state.outcomes.get(state.view);
-    let headline;
-    if (!Number.isFinite(base)) {
-      headline = isKorean
-        ? (predictionRunning ? '기본 우승 확률을 계산하는 중이에요.' : '아래에서 기본 예측을 다시 계산해 주세요.')
-        : (predictionRunning ? 'Calculating the base title chance…' : 'Re-run the base forecast below to continue.');
-    } else if (result?.pending) {
-      headline = isKorean ? '이 결과를 반영해 계산 중이에요.' : 'Calculating the forecast for this result…';
-    } else if (result?.failed) {
-      headline = isKorean ? '계산에 실패했어요. 결과를 다시 선택해 주세요.' : 'Could not run the simulation. Select a result to retry.';
-    } else if (result) {
-      const baseText = seasonProbabilityLabel(base);
-      const resultText = seasonProbabilityLabel(result.pct);
-      const delta = parseFloat(resultText) - parseFloat(baseText);
-      const change = `${delta > 0 ? '+' : ''}${delta.toFixed(1)}`;
-      headline = `<span>${isKorean ? '우승 확률' : 'Title chance'} <span class="wi-quick-base">${baseText} →</span> <strong>${resultText}</strong></span>
-        <span class="wi-quick-change">${isKorean ? `기본 대비 ${change}%p` : `${change} pp vs base`}</span>`;
-    } else {
-      headline = isKorean ? `기본 우승 확률 <strong>${seasonProbabilityLabel(base)}</strong>` : `Base title chance <strong>${seasonProbabilityLabel(base)}</strong>`;
-    }
-    const focused = host.contains(document.activeElement) ? document.activeElement.dataset.wiQuickView : null;
+    const outcomes = state?.outcomes;
+    const baseText = hasBase ? seasonProbabilityLabel(base) : '';
+    const tiles = wiTitleScenarioViews.map(view => {
+      const value = outcomes ? seasonProbabilityLabel(outcomes[view]) : '–';
+      const delta = outcomes ? parseFloat(value) - parseFloat(baseText) : 0;
+      const change = `${delta > 0 ? '+' : ''}${delta.toFixed(1)}${isKorean ? '%p' : ' pp'}`;
+      return `<div class="pms-tile" data-wi-quick-outcome="${view}">
+        <div class="pms-tile-label">${options[view]}</div>
+        <div class="pms-tile-value">${value}</div>
+        ${outcomes ? `<div class="pms-tile-sub">${isKorean ? '기본 대비' : 'vs base'} ${change}</div>` : ''}
+      </div>`;
+    }).join('');
+    const baseHtml = hasBase ? `${isKorean ? '기본 우승 확률' : 'Base title chance'} <strong>${baseText}</strong>` : '';
+    const status = state?.failed
+      ? (isKorean ? '결과별 확률 계산에 실패했어요.' : 'Could not calculate the result scenarios.')
+      : !hasBase && !predictionRunning
+        ? (isKorean ? '아래에서 기본 예측을 다시 계산해 주세요.' : 'Re-run the base forecast below to continue.')
+        : !outcomes ? (isKorean ? '결과별 우승 확률을 계산하는 중이에요.' : 'Calculating the title chances…') : '';
+    const headline = `${baseHtml ? `<span>${baseHtml}</span>` : ''}${status ? `<span>${status}</span>` : ''}`;
     host.innerHTML = `
       <div class="wi-quick-fixture">
         ${opponentLogo ? `<img class="team-logo" src="${wiEsc(opponentLogo)}" alt="">` : ''}
         <div><strong>vs ${wiEsc(wiTeamName(opponent))}</strong><p class="wi-quick-note">${wiEsc(date)} · ${upcoming}</p></div>
       </div>
-      <div class="wi-quick-picks" role="group" aria-label="${isKorean ? '치주물루 경기 결과 가정' : 'Assumed result for Chizumulu'}">
-        ${Object.entries(options).map(([view, label]) => `<button type="button" class="wi-btn" data-wi-quick-view="${view}" aria-pressed="${state.view === view}" aria-controls="whatIfQuickResult"${Number.isFinite(base) ? '' : ' disabled'}>${label}</button>`).join('')}
-      </div>`;
+      <div class="pms-tiles wi-quick-outcomes" role="group" aria-label="${isKorean ? '다음 경기 결과별 우승 확률' : 'Title chances by next match result'}">
+        ${tiles}
+      </div>
+      ${state?.failed ? `<button type="button" class="wi-btn wi-quick-retry">${isKorean ? '다시 시도' : 'Retry'}</button>` : ''}`;
     if (resultHost.innerHTML !== headline) resultHost.innerHTML = headline;
-    if (focused) host.querySelector(`[data-wi-quick-view="${focused}"]`)?.focus({ preventScroll: true });
-    host.onclick = event => {
-      const button = event.target.closest('[data-wi-quick-view]');
-      if (button && !button.disabled) runWhatIfQuick(fx, button.dataset.wiQuickView);
+    const retry = host.querySelector('.wi-quick-retry');
+    if (retry) retry.onclick = () => {
+      if (wiNextScheduledFixture()?.id === fx.id) load();
+      renderWhatIfQuick();
     };
-  }
-
-  async function runWhatIfQuick(fx, view) {
-    const state = whatIfQuickState;
-    if (state.fixtureId !== fx.id || !predictionCache) return;
-    if (wiNextScheduledFixture()?.id !== fx.id) {
-      renderWhatIfQuick();
-      return;
-    }
-    state.view = view;
-    const existing = state.outcomes.get(view);
-    if (existing && !existing.failed) { renderWhatIfQuick(); return; }
-
-    const signature = prsSignature(getRankedTeams('all'), fx);
-    const model = prsState.model?.sig === signature ? prsState.model : prsLoadCache(signature);
-    const cached = model?.scen?.[view];
-    if (Number.isFinite(cached)) {
-      state.outcomes.set(view, { pct: cached });
-      renderWhatIfQuick();
-      return;
-    }
-    state.outcomes.set(view, { pending: true });
-    renderWhatIfQuick();
-    try {
-      const data = await wiSimulateFixture(fx.id, wiPickFromView(fx, WHATIF_MY_TEAM_EN, view));
-      const pct = prsChampPct(data, WHATIF_MY_TEAM_EN);
-      if (!Number.isFinite(pct) || data.whatIfFixedCount !== 1) throw new Error('The requested match result was not simulated');
-      state.outcomes.set(view, { pct });
-    } catch (error) {
-      console.warn('Next-match scenario failed:', error);
-      state.outcomes.set(view, { failed: true });
-    }
-    if (state === whatIfQuickState && state.view === view) renderWhatIfQuick();
   }
 
   function renderWhatIf() {
@@ -5051,15 +5054,7 @@
         }
 
         // 다음 경기 승/무/패별 우승 확률 (내 팀 기준 W/D/L → 홈/원정 H/D/A로 변환)
-        let scen = null;
-        if (fx) {
-          scen = {};
-          for (const view of ['W', 'D', 'L']) {
-            const data = await wiSimulateFixture(fx.id, wiPickFromView(fx, myEn, view));
-            const p = prsChampPct(data, myEn);
-            scen[view] = p === null ? 0 : p;
-          }
-        }
+        const scen = fx ? await wiLoadTitleScenarios(fx, wiTitleScenarioState(sig)) : null;
         prsState.model = { sig, base: basePct, delta, scen, spark };
         prsSaveCache(prsState.model);
       } catch (err) {
