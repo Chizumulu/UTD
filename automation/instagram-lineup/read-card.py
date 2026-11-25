@@ -52,7 +52,13 @@ def crop_gray(image, box):
 
 def read_slot(image, box, name_box):
     gray = crop_gray(image, box)
-    variants = [gray, gray.point(lambda pixel: 255 if pixel > 160 else 0)]
+    # Include a slightly wider crop to recover digits clipped at either edge.
+    left, top, right, bottom = box
+    wider = crop_gray(image, (left - 3, top - 2, right + 3, bottom + 2))
+    variants = [
+        gray, gray.point(lambda pixel: 255 if pixel > 160 else 0),
+        wider.point(lambda pixel: 255 if pixel > 200 else 0),
+    ]
     votes = Counter()
     for variant in variants:
         prepared = ImageOps.expand(ImageOps.invert(variant), border=20, fill=255)
