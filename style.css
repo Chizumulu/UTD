@@ -17958,7 +17958,7 @@ tr[data-a11y-btn]:focus-visible, td[data-a11y-btn]:focus-visible { outline-offse
 /* =====================================================================
    다음 경기 카드 모바일(≤600px): 날짜 · 날씨는 한 줄(왼쪽), 캘린더·공유 버튼은 같은 줄 오른쪽
    - 한글/영문 공통. PC·태블릿은 기존 배치 그대로입니다.
-   - 버튼 영역(약 100px)을 비워 두고 왼쪽에서 날짜와 날씨를 나란히 놓으며,
+   - 버튼 그룹 너비와 여백을 확보하고 왼쪽에서 날짜와 날씨를 나란히 놓으며,
      자리가 모자라면 날씨만 날짜 아래 줄로 내려갑니다.
    ===================================================================== */
 .nms-weather-inline.match-weather { display: none; }
@@ -20120,12 +20120,13 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
 }
 
 @media (max-width: 720px) {
+  #nextMatchStrip { --nms-action-width: 32px; }
   #nextMatchStrip .nms-action-group { gap: 0; }
   #nextMatchStrip .nms-action-btn {
     position: relative;
     box-sizing: border-box;
-    width: 44px;
-    padding-inline: 10px;
+    width: var(--nms-action-width);
+    padding-inline: 4px;
     background-clip: content-box;
   }
   #nextMatchStrip .nms-action-btn::after {
@@ -20139,6 +20140,13 @@ body:has(.share-toast.show) .coffee-fab-wrap.show,
     position: absolute;
     inset: 0;
     border-radius: inherit;
+  }
+}
+
+@media (max-width: 600px) {
+  #nextMatchStrip .nmh-meta-line {
+    /* 세 버튼, 그룹의 왼쪽 패딩·구분선, 날씨 오른쪽 여백 */
+    padding-right: calc(3 * var(--nms-action-width) + 17px);
   }
 }
 
