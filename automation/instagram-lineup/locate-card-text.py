@@ -6,6 +6,8 @@ import json
 import re
 import subprocess
 import sys
+
+# The trial compares recognized text with the club's roster in the caller.
 from collections import defaultdict
 
 from PIL import Image, ImageOps
