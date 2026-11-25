@@ -42,6 +42,21 @@ async function readCard() {
 
 const nameKey = value => String(value ?? '').normalize('NFKC').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
 
+export function resolveSlot(slot, squad) {
+  const votes = Object.entries(slot.votes).map(([number, count]) => [Number(number), count])
+    .sort((a, b) => b[1] - a[1]);
+  const names = new Set(slot.names.map(nameKey).filter(Boolean));
+  const named = [...new Set(squad.filter(player =>
+    [player.nameKo, ...(player.aliasesKo ?? [])].some(name => names.has(nameKey(name)))
+  ).map(player => player.number))];
+  if (named.length > 1) return null;
+  if (named.length === 1) {
+    return !votes.length || votes.some(([number]) => number === named[0]) ? named[0] : null;
+  }
+  return votes[0] && votes[0][1] >= 2 && votes[0][1] > (votes[1]?.[1] ?? 0) &&
+    squad.some(player => player.number === votes[0][0]) ? votes[0][0] : null;
+}
+
 export function compare(source, post, card) {
   const { roundsData, matchLineups, squadData } = runInNewContext(source + '\n;({ roundsData, matchLineups, squadData })', {}, { timeout: 1000 });
   const caption = post.caption ?? '';
@@ -60,7 +75,16 @@ export function compare(source, post, card) {
   const recorded = matchLineups[round];
   if (!recorded) throw new Error('The sample round has no saved lineup to compare');
 
-  const players = [...card.starters, ...card.bench];
+  const readings = [...card.starters, ...card.bench];
+  const players = readings.map(slot => ({ number: resolveSlot(slot, squadData) }));
+  const diagnostics = readings.map((slot, i) => ({
+    slot: i < card.starters.length ? 'starter ' + (i + 1) : 'bench ' + (i - card.starters.length + 1),
+    ...slot,
+    number: players[i].number
+  }));
+  console.log(JSON.stringify({ round, diagnostics }, null, 2));
+  const unresolved = diagnostics.filter(slot => slot.number === null);
+  if (unresolved.length) throw new Error('Unresolved OCR: ' + unresolved.map(slot => slot.slot).join(', '));
   if (card.starters.length !== 11 || new Set(players.map(player => player.number)).size !== players.length) {
     throw new Error('Expected 11 distinct starters and no repeated jersey numbers');
   }
@@ -71,8 +95,8 @@ export function compare(source, post, card) {
   });
 
   const numbers = players => players.map(player => player.number);
-  const starters = numbers(card.starters);
-  const bench = numbers(card.bench);
+  const starters = numbers(players.slice(0, card.starters.length));
+  const bench = numbers(players.slice(card.starters.length));
   const same = (a, b) => [...a].sort((x, y) => x - y).join() === [...b].sort((x, y) => x - y).join();
   if (!same(starters, numbers(recorded.starters)) || !same(bench, recorded.subsUnused ?? [])) {
     throw new Error('Detected lineup differs from the saved sample');
@@ -85,7 +109,7 @@ export function compare(source, post, card) {
     bench: lineup.slice(11).map(({ number, nameKo }) => ({ number, nameKo })),
     captain: lineup.find(player => player.number === captain)?.nameKo ?? null,
     captainSource: captain == null ? null : card.captain === null ? 'inferred' : 'official',
-    recognition: 'jersey numbers via Tesseract; names from UTD squad data',
+    recognition: 'jersey and Korean name OCR checked against the UTD squad',
     changes: 0
   };
 }

@@ -27,20 +27,38 @@ BENCH = [
 ]
 
 
-def read_number(image, box, label):
+STARTER_NAMES = [
+    (297, 250, 395, 269), (85, 356, 164, 375), (294, 411, 396, 431),
+    (523, 356, 618, 375), (192, 486, 283, 505), (406, 486, 500, 505),
+    (68, 603, 146, 623), (195, 643, 285, 663), (405, 643, 499, 663),
+    (539, 603, 614, 623), (288, 735, 407, 755),
+]
+BENCH_NAMES = [
+    (178, 767, 232, 785), (256, 767, 340, 785), (365, 767, 457, 785),
+    (480, 767, 550, 785), (213, 785, 291, 803), (321, 785, 400, 803),
+    (430, 785, 521, 803),
+]
+
+
+def crop_gray(image, box):
     scaled = [round(value * size / ref) for value, size, ref in zip(
         box, (image.width, image.height) * 2, (691, 861) * 2
     )]
     crop = image.crop(scaled)
     gray = ImageOps.autocontrast(ImageOps.grayscale(crop))
     gray = gray.resize((gray.width * 6, gray.height * 6), Image.Resampling.LANCZOS)
+    return gray
+
+
+def read_slot(image, box, name_box):
+    gray = crop_gray(image, box)
     variants = [gray, gray.point(lambda pixel: 255 if pixel > 160 else 0)]
     votes = Counter()
     for variant in variants:
         prepared = ImageOps.expand(ImageOps.invert(variant), border=20, fill=255)
         payload = io.BytesIO()
         prepared.save(payload, format="PNG")
-        for mode in ("7", "8"):
+        for mode in ("7", "8", "13"):
             result = subprocess.run(
                 ["tesseract", "stdin", "stdout", "--psm", mode,
                  "-c", "tessedit_char_whitelist=0123456789"],
@@ -48,10 +66,18 @@ def read_number(image, box, label):
             ).stdout.decode().strip()
             if re.fullmatch(r"[1-9][0-9]?", result):
                 votes[int(result)] += 1
-    ranked = votes.most_common()
-    if not ranked or (len(ranked) > 1 and ranked[0][1] == ranked[1][1]):
-        raise ValueError(f"OCR ambiguous at {label}: {dict(votes)}")
-    return {"number": ranked[0][0]}
+    name_image = crop_gray(image, name_box)
+    names = []
+    for variant in (name_image, name_image.point(lambda pixel: 255 if pixel > 145 else 0)):
+        payload = io.BytesIO()
+        ImageOps.expand(ImageOps.invert(variant), border=20, fill=255).save(payload, format="PNG")
+        result = subprocess.run(
+            ["tesseract", "stdin", "stdout", "-l", "kor", "--psm", "7"],
+            input=payload.getvalue(), capture_output=True, check=True, timeout=8,
+        ).stdout.decode().strip()
+        if result and result not in names:
+            names.append(result)
+    return {"votes": dict(votes), "names": names}
 
 
 def main():
@@ -59,8 +85,8 @@ def main():
         image = ImageOps.exif_transpose(original)
         if abs(image.width / image.height - 691 / 861) > 0.025:
             raise ValueError("Unexpected aspect ratio for the Raiply reference card")
-        starters = [read_number(image, box, f"starter {i}") for i, box in enumerate(STARTERS, 1)]
-        bench = [read_number(image, box, f"bench {i}") for i, box in enumerate(BENCH, 1)]
+        starters = [read_slot(image, box, name) for box, name in zip(STARTERS, STARTER_NAMES, strict=True)]
+        bench = [read_slot(image, box, name) for box, name in zip(BENCH, BENCH_NAMES, strict=True)]
     # The reference graphic has no explicit captain mark.
     print(json.dumps({"starters": starters, "bench": bench, "captain": None}))
 
