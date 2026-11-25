@@ -911,13 +911,13 @@
     applyCupKrw();
   }
   // ── 콰차(MWK) → 원화(KRW) 환산 (상금 표시용, 참고값) ─────────────────────────
-  // 기준: 2026-11 중순. 환율이 크게 바뀌면 아래 세 숫자만 고치면 됩니다.
-  //   공식: RBM 고시 중간값 약 1,734 MWK/USD / 비공식(실질): 현지 송금·거래 사례 약 4,000~5,000 중간값 / 원·달러 약 1,335원
+  // 콰차/달러는 참고 자료의 두 환율, 원/달러는 2026년 11월 중순 기준입니다.
+  //   공식 약 1,750 MWK/USD / 비공식 약 4,300 MWK/USD / 원·달러 1,335원
   const CUP_KRW_PER_USD = 1335;
-  const CUP_MWK_PER_USD_OFFICIAL = 1734;
-  const CUP_MWK_PER_USD_PARALLEL = 4500;
-  const CUP_KRW_PER_MWK_OFFICIAL = CUP_KRW_PER_USD / CUP_MWK_PER_USD_OFFICIAL;   // ≈ 0.77
-  const CUP_KRW_PER_MWK_PARALLEL = CUP_KRW_PER_USD / CUP_MWK_PER_USD_PARALLEL;   // ≈ 0.30
+  const CUP_MWK_PER_USD_OFFICIAL = 1750;
+  const CUP_MWK_PER_USD_PARALLEL = 4300;
+  const CUP_KRW_PER_MWK_OFFICIAL = CUP_KRW_PER_USD / CUP_MWK_PER_USD_OFFICIAL;   // ≈ 0.76
+  const CUP_KRW_PER_MWK_PARALLEL = CUP_KRW_PER_USD / CUP_MWK_PER_USD_PARALLEL;   // ≈ 0.31
   // 'K150M', 'K12.3M', 'K200K–300K' 같은 문자열 속 금액을 찾는 정규식 (뒤의 단위 M/K가 있어야 금액으로 봅니다)
   const CUP_MWK_RE = /K?(\d+(?:\.\d+)?)\s?([MK])(?![A-Za-z])/g;
   function cupMwkToNumber(num, unit) { return parseFloat(num) * (unit === 'M' ? 1e6 : 1e3); }
@@ -938,7 +938,7 @@
     if (n >= 1e3) return '₩' + String(Math.round(n / 100) / 10) + 'K';
     return '₩' + Math.round(n);
   }
-  // 'K200K–300K' 같은 범위는 '15.4만~23.1만원'처럼 앞뒤를 같이 환산합니다.
+  // 'K200K–300K' 같은 범위는 '15.3만~22.9만원'처럼 앞뒤를 같이 환산합니다.
   function cupKrwOf(text, rate) {
     const vals = [];
     String(text == null ? '' : text).replace(CUP_MWK_RE, function (m, num, unit) { vals.push(cupMwkToNumber(num, unit) * rate); return m; });
