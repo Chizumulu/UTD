@@ -102,6 +102,48 @@ CHINTHECHE = (
 )
 
 
+def chilumba_boxes(boxes):
+    return [(left - 6, round(top * 861 / 849), right - 6, round(bottom * 861 / 849))
+            for left, top, right, bottom in boxes]
+
+
+CHILUMBA = tuple(chilumba_boxes(boxes) for boxes in (
+    [(306, 145, 329, 169), (89, 252, 108, 274), (311, 306, 330, 331),
+     (533, 251, 551, 274), (200, 381, 222, 405), (416, 381, 437, 405),
+     (72, 498, 91, 522), (201, 537, 222, 563), (418, 539, 436, 562),
+     (549, 500, 572, 524), (306, 632, 330, 656)],
+    [(307, 238, 394, 260), (82, 344, 179, 366), (308, 401, 395, 424),
+     (530, 343, 619, 366), (207, 474, 281, 496), (422, 475, 498, 496),
+     (81, 591, 153, 612), (210, 630, 282, 652), (416, 631, 499, 652),
+     (561, 590, 626, 612), (295, 723, 410, 746)],
+    [(176, 754, 197, 774), (276, 754, 296, 774), (352, 754, 373, 774),
+     (465, 754, 490, 774), (98, 772, 125, 790), (185, 772, 211, 790),
+     (292, 772, 320, 790), (400, 772, 426, 790), (510, 772, 536, 790)],
+    [(195, 754, 270, 774), (294, 754, 349, 774), (371, 754, 457, 774),
+     (488, 754, 548, 774), (125, 772, 180, 790), (211, 772, 288, 790),
+     (320, 772, 396, 790), (426, 772, 506, 790), (536, 772, 625, 790)],
+))
+
+
+def read_chilumba_bench(image, boxes, names):
+    slots = [read_slot(image, box, name) for box, name in zip(boxes, names, strict=True)]
+    region = chilumba_boxes([(52, 751, 631, 793)])[0]
+    for offset in (0, 15, 25):
+        raw = read_korean(crop_gray(image, shift_up(region, offset)), "6")
+        print("Chilumba bench strip OCR: " + json.dumps(raw, ensure_ascii=False), file=sys.stderr)
+        lines = raw.splitlines()
+        header = next((i for i, line in enumerate(lines) if "SUBS" in line.upper()), None)
+        if header is None:
+            continue
+        for line, start, count in zip(lines[header:header + 2], (0, 4), (4, 5)):
+            entries = re.findall(r"(?<![0-9])([1-9][0-9]?)\s*[.,:]\s*([가-힣]+(?:\s+[가-힣]+)*)", line)
+            if len(entries) == count and len({number for number, _ in entries}) == count:
+                for slot, (number, name) in zip(slots[start:start + count], entries, strict=True):
+                    slot["votes"][int(number)] = slot["votes"].get(int(number), 0) + 2
+                    slot["names"].append(name)
+    return slots
+
+
 def crop_gray(image, box):
     scaled = [round(value * size / ref) for value, size, ref in zip(
         box, (image.width, image.height) * 2, (691, 861) * 2
@@ -188,13 +230,15 @@ def main():
             raise ValueError("Unexpected aspect ratio for the Raiply reference card")
         sample = sys.argv[1] if len(sys.argv) > 1 else "raiply"
         starter_boxes, starter_names, bench_boxes, bench_names = (
-            CHINTHECHE if sample == "chintheche" else LUVIRI if sample == "luviri" else CHIHAME if sample == "chihame" else (STARTERS, STARTER_NAMES, BENCH, BENCH_NAMES)
+            CHILUMBA if sample == "chilumba" else CHINTHECHE if sample == "chintheche" else LUVIRI if sample == "luviri" else CHIHAME if sample == "chihame" else (STARTERS, STARTER_NAMES, BENCH, BENCH_NAMES)
         )
         chihame = sys.argv[1:] == ["chihame"]
         starters = [read_slot(image, box, name, alternate=sample != "raiply")
                     for box, name in zip(starter_boxes, starter_names, strict=True)]
         bench = (read_chihame_bench(image, bench_boxes, bench_names) if chihame else
                  [read_slot(image, box, name) for box, name in zip(bench_boxes, bench_names, strict=True)])
+        if sample == "chilumba":
+            bench = read_chilumba_bench(image, bench_boxes, bench_names)
         if sample in ("luviri", "chintheche"):
             for offset in (0, 15, 25):
                 strip = crop_gray(image, shift_up((105, 768, 564, 807), offset))
