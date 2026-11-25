@@ -72,6 +72,24 @@ CHIHAME = (
 )
 
 
+LUVIRI = (
+    [(302, 159, 324, 183), (83, 266, 103, 290), (305, 325, 325, 348),
+     (526, 266, 546, 290), (195, 395, 218, 419), (411, 394, 433, 419),
+     (62, 515, 85, 539), (195, 553, 219, 578), (411, 555, 430, 579),
+     (532, 512, 554, 537), (301, 648, 324, 672)],
+    [(303, 252, 395, 275), (96, 360, 156, 381), (305, 418, 388, 442),
+     (527, 359, 610, 381), (203, 490, 277, 511), (420, 490, 481, 511),
+     (64, 605, 147, 628), (204, 646, 276, 669), (424, 647, 487, 669),
+     (540, 604, 614, 627), (290, 737, 408, 761)],
+    [(158, 772, 177, 791), (259, 772, 278, 791), (337, 772, 356, 791),
+     (447, 772, 467, 791), (151, 788, 176, 806), (239, 788, 265, 806),
+     (348, 788, 373, 806), (465, 788, 491, 806)],
+    [(177, 772, 253, 791), (278, 772, 333, 791), (356, 772, 443, 791),
+     (467, 772, 551, 791), (179, 788, 232, 806), (265, 788, 343, 806),
+     (373, 788, 460, 806), (491, 788, 559, 806)],
+)
+
+
 def crop_gray(image, box):
     scaled = [round(value * size / ref) for value, size, ref in zip(
         box, (image.width, image.height) * 2, (691, 861) * 2
@@ -156,14 +174,24 @@ def main():
         image = ImageOps.exif_transpose(original)
         if abs(image.width / image.height - 691 / 861) > 0.025:
             raise ValueError("Unexpected aspect ratio for the Raiply reference card")
+        sample = sys.argv[1] if len(sys.argv) > 1 else "raiply"
         starter_boxes, starter_names, bench_boxes, bench_names = (
-            CHIHAME if sys.argv[1:] == ["chihame"] else (STARTERS, STARTER_NAMES, BENCH, BENCH_NAMES)
+            LUVIRI if sample == "luviri" else CHIHAME if sample == "chihame" else (STARTERS, STARTER_NAMES, BENCH, BENCH_NAMES)
         )
         chihame = sys.argv[1:] == ["chihame"]
-        starters = [read_slot(image, box, name, alternate=chihame)
+        starters = [read_slot(image, box, name, alternate=sample != "raiply")
                     for box, name in zip(starter_boxes, starter_names, strict=True)]
         bench = (read_chihame_bench(image, bench_boxes, bench_names) if chihame else
                  [read_slot(image, box, name) for box, name in zip(bench_boxes, bench_names, strict=True)])
+        if sample == "luviri":
+            for offset in (0, 15, 25):
+                strip = crop_gray(image, shift_up((105, 768, 564, 807), offset))
+                raw = read_korean(strip, "6")
+                print("Luviri bench strip OCR: " + json.dumps(raw, ensure_ascii=False), file=sys.stderr)
+                entries = re.findall(r"(?<![0-9])([1-9][0-9]?)\s*[.,:]\s*([가-힣]+(?:\s+[가-힣]+)*)", raw)
+                if len(entries) == len(bench_boxes) and len({number for number, _ in entries}) == len(bench_boxes):
+                    bench = [{"votes": {int(number): 2}, "names": [name]} for number, name in entries]
+                    break
     # The reference graphic has no explicit captain mark.
     print(json.dumps({"starters": starters, "bench": bench, "captain": None}))
 
