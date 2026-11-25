@@ -123,17 +123,21 @@ export function classifyDynamic(card, squad) {
   const roster = squad.flatMap(player => [player.nameKo, ...(player.aliasesKo ?? [])]
     .map(name => ({ number: player.number, key: toHangul(name), name }))
     .filter(entry => entry.key.length >= 4));
-  function candidates(text) {
+  function candidates(text, allowClipped = false) {
     const haystack = toHangul(text);
     // The letters may be split across several OCR words on a card.
     const exact = roster.filter(player => haystack.includes(player.key));
     const near = exact.length ? exact : roster.filter(player => oneEditApart(haystack, player.key));
-    const numbers = [...new Set(near.map(player => player.number))];
-    return numbers.length === 1 ? near[0] : null;
+    // Allow one clipped edge syllable plus one OCR error for a long, unique name.
+    const matches = near.length || !allowClipped || haystack.length < 5 ? near :
+      roster.filter(player => player.key.length === haystack.length + 1 &&
+        [player.key.slice(1), player.key.slice(0, -1)].some(edge => oneEditApart(haystack, edge)));
+    const numbers = [...new Set(matches.map(player => player.number))];
+    return numbers.length === 1 ? matches[0] : null;
   }
   const starters = new Map();
   for (const line of card.starterText) {
-    const player = candidates(line);
+    const player = candidates(line, true);
     if (player) starters.set(player.number, { votes: {}, names: [player.name] });
   }
   const bench = new Map();
