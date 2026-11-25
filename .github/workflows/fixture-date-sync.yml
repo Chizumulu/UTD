@@ -1,0 +1,64 @@
+name: Sync league fixture dates
+
+on:
+  schedule:
+    - cron: '7,17,27,37,47,57 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview the fixture date changes without pushing
+        type: boolean
+        default: true
+
+concurrency:
+  group: approved-scorer-proposals-main
+  queue: max
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.SCORER_GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install source parser
+        run: npm install --no-save acorn@8
+      - name: Fetch league notices
+        run: curl --globoff --fail --silent --show-error --retry 2 --max-time 30 'https://api.chizumulu.net/v1/structured?limit=40' --output "$RUNNER_TEMP/utd-fixtures.json"
+      - name: Apply fixture date changes
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B main origin/main
+            node automation/fixture-sync/apply-notices.mjs "$RUNNER_TEMP/utd-fixtures.json"
+            if git diff --quiet -- data.js; then
+              echo "No fixture dates need updating."
+              exit 0
+            fi
+            node --check data.js
+            git diff -- data.js
+            if [ "$DRY_RUN" = "true" ]; then
+              exit 0
+            fi
+            git add data.js
+            git commit -m "Update league fixture dates from NRFA notices"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+          done
+
+          echo "::error::Could not push fixture dates to main after three attempts."
+          exit 1
