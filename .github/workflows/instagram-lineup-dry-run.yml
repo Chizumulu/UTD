@@ -22,4 +22,4 @@ jobs:
       - name: Read and compare the official lineup
         env:
           UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
-        run: node automation/instagram-lineup/dry-run.mjs --live
+        run: node automation/instagram-lineup/dry-run.mjs --live --chihame
