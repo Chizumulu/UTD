@@ -22,11 +22,31 @@ async function readCard() {
   const token = process.env.UTD_INSTAGRAM_TOKEN;
   if (!token) throw new Error('Set UTD_INSTAGRAM_TOKEN in Actions secrets');
   const url = new URL('https://graph.facebook.com/v27.0/' + accountId);
-  url.searchParams.set('fields', 'business_discovery.username(' + username + '){username,media.limit(50){id,caption,media_type,media_url,permalink}}');
-  const result = await request(url, { headers: { Authorization: 'Bearer ' + token } }, 'Meta API');
-  const { business_discovery: profile } = await result.json();
-  if (profile?.username !== username) throw new Error('Business Discovery did not return the official account');
-  const post = profile.media?.data?.find(entry => entry.id === sampleId);
+  const sample = process.argv.includes('--chilumba') ? 'chilumba' :
+    process.argv.includes('--chintheche') ? 'chintheche' :
+    process.argv.includes('--luviri') ? 'luviri' :
+    process.argv.includes('--chihame') ? 'chihame' : 'raiply';
+  const matches = entry => {
+    const caption = entry.caption ?? '';
+    if (sample === 'raiply') return entry.id === sampleId;
+    if (!/#STARTING_XI\b/i.test(caption)) return false;
+    if (sample === 'chilumba') return /칠룸바/.test(caption) && /10월\s*0?2일/.test(caption);
+    if (sample === 'chintheche') return /친테체/.test(caption) && /10월\s*11일/.test(caption);
+    return sample === 'luviri' ? /루비리/.test(caption) && /10월\s*20일/.test(caption) :
+      /치하메/.test(caption) && /11월\s*0?8일/.test(caption);
+  };
+  let post;
+  let cursor;
+  for (let page = 0; page < 5 && !post; page += 1) {
+    const after = cursor ? '.after(' + cursor + ')' : '';
+    url.searchParams.set('fields', 'business_discovery.username(' + username + '){username,media.limit(50)' + after + '{id,caption,media_type,media_url,permalink}}');
+    const result = await request(url, { headers: { Authorization: 'Bearer ' + token } }, 'Meta API');
+    const { business_discovery: profile } = await result.json();
+    if (profile?.username !== username) throw new Error('Business Discovery did not return the official account');
+    post = profile.media?.data?.find(matches);
+    cursor = profile.media?.paging?.next && profile.media?.paging?.cursors?.after;
+    if (!cursor) break;
+  }
   if (!post || post.media_type !== 'IMAGE' || !post.media_url) throw new Error('The sample lineup image was not found in the recent feed');
   const imageUrl = new URL(post.media_url);
   if (imageUrl.protocol !== 'https:' || !imageUrl.hostname.endsWith('.cdninstagram.com')) throw new Error('Unexpected Instagram image host');
@@ -36,7 +56,7 @@ async function readCard() {
   const bytes = Buffer.from(await image.arrayBuffer());
 
   const reader = fileURLToPath(new URL('./read-card.py', import.meta.url));
-  const output = execFileSync('/usr/bin/python3', [reader], { input: bytes, encoding: 'utf8' });
+  const output = execFileSync('/usr/bin/python3', [reader, sample], { input: bytes, encoding: 'utf8' });
   return { post, card: JSON.parse(output) };
 }
 
@@ -74,6 +94,13 @@ export function resolveSlot(slot, squad) {
         votes.some(([read]) => oneEditApart(String(read), String(number)))) {
       return { number, method: 'exact-name-digit-correction' };
     }
+    if (!exact.length && String(number).length === 2 &&
+        votes.some(([read]) => String(read).length === 1 && String(number).includes(String(read))) &&
+        votes.every(([, count]) => count === 1)) {
+      return { number, method: 'near-name-partial-number' };
+    }
+    // A unique exact name can be compared with the reference in this dry run.
+    if (exact.length) return { number, method: 'exact-name-number-conflict' };
     return { number: null, method: 'name-number-conflict' };
   }
   if (votes[0] && votes[0][1] >= 2 && votes[0][1] > (votes[1]?.[1] ?? 0) &&
@@ -124,7 +151,7 @@ export function compare(source, post, card) {
   const starters = numbers(players.slice(0, card.starters.length));
   const bench = numbers(players.slice(card.starters.length));
   const same = (a, b) => [...a].sort((x, y) => x - y).join() === [...b].sort((x, y) => x - y).join();
-  if (!same(starters, numbers(recorded.starters)) || !same(bench, recorded.subsUnused ?? [])) {
+  if (!same(starters, numbers(recorded.starters)) || !same(bench, [...(recorded.subsUnused ?? []), ...numbers(recorded.subsIn ?? [])])) {
     throw new Error('Detected lineup differs from the saved sample');
   }
   if (card.captain !== null && !starters.includes(card.captain)) throw new Error('Marked captain is outside the starting XI');
