@@ -22097,3 +22097,43 @@ button.match-status:focus-visible {
   #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-head { align-items: center; }
   #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-title { line-height: 1.2; margin-block: 0; }
 }
+
+
+/* Desktop toolbar fix: keep weather text clear of the action divider and compact the three controls. */
+@media (min-width: 721px) {
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    justify-content: stretch;
+    column-gap: 12px;
+    row-gap: 0;
+    flex-wrap: nowrap;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom > .nms-ha {
+    justify-self: start;
+    white-space: nowrap;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom > .nms-weather.match-weather {
+    justify-self: start;
+    min-width: max-content;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    white-space: nowrap;
+    gap: 4px;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom > .nms-action-group {
+    justify-self: end;
+    margin-left: 0;
+    padding-left: 10px;
+    gap: 3px;
+    white-space: nowrap;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom .nms-action-btn {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+  }
+}
