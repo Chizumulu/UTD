@@ -21230,7 +21230,7 @@ button.match-status:focus-visible {
     top: 0;
     bottom: 0;
     height: auto;
-    width: calc(var(--nmh-step) * 3 + var(--nmh-slant));
+    width: calc(var(--nmh-step) * 4.8 + var(--nmh-slant));
     transform: none;
     background-repeat: no-repeat;
     background-size: 100% 100%;
@@ -21242,12 +21242,12 @@ button.match-status:focus-visible {
   .next-match-strip .nmh-top > .nmh-team.nmh-team:last-child::before  { right: auto; left: 0; }
 
   /* 왼쪽 패널 ">" */
-  .next-match-strip .nmh-top > .nmh-team.nmh-team:first-child::before { background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 84%22 preserveAspectRatio=%22none%22%3E%3Cpath d=%22M0.00 0 L14.76 34.44 Q18.00 42.00 14.76 49.56 L0.00 84 L78 84 L78 0 Z%22 fill=%22white%22 fill-opacity=%220.0700%22/%3E%3Cpath d=%22M10.00 0 L24.76 34.44 Q28.00 42.00 24.76 49.56 L10.00 84 L78 84 L78 0 Z%22 fill=%22white%22 fill-opacity=%220.0753%22/%3E%3Cpath d=%22M20.00 0 L34.76 34.44 Q38.00 42.00 34.76 49.56 L20.00 84 L78 84 L78 0 Z%22 fill=%22white%22 fill-opacity=%220.1163%22/%3E%3C/svg%3E"); }
-  .next-match-strip .nmh-top > .nmh-team.nmh-team.nmh-kit-light:first-child::before { background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 84%22 preserveAspectRatio=%22none%22%3E%3Cpath d=%22M0.00 0 L14.76 34.44 Q18.00 42.00 14.76 49.56 L0.00 84 L78 84 L78 0 Z%22 fill=%22black%22 fill-opacity=%220.0800%22/%3E%3Cpath d=%22M10.00 0 L24.76 34.44 Q28.00 42.00 24.76 49.56 L10.00 84 L78 84 L78 0 Z%22 fill=%22black%22 fill-opacity=%220.0870%22/%3E%3Cpath d=%22M20.00 0 L34.76 34.44 Q38.00 42.00 34.76 49.56 L20.00 84 L78 84 L78 0 Z%22 fill=%22black%22 fill-opacity=%220.1190%22/%3E%3C/svg%3E"); }
+  .next-match-strip .nmh-top > .nmh-team.nmh-team:first-child::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2066%2084%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20d%3D%22M0%200%20L14.76%2034.44%20Q18%2042%2014.76%2049.56%20L0%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.04%22%2F%3E%3Cpath%20d%3D%22M9%200%20L23.76%2034.44%20Q27%2042%2023.76%2049.56%20L9%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.045%22%2F%3E%3Cpath%20d%3D%22M18%200%20L32.76%2034.44%20Q36%2042%2032.76%2049.56%20L18%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.05%22%2F%3E%3Cpath%20d%3D%22M27%200%20L41.76%2034.44%20Q45%2042%2041.76%2049.56%20L27%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.06%22%2F%3E%3Cpath%20d%3D%22M36%200%20L50.76%2034.44%20Q54%2042%2050.76%2049.56%20L36%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.075%22%2F%3E%3C%2Fsvg%3E"); }
+  .next-match-strip .nmh-top > .nmh-team.nmh-team.nmh-kit-light:first-child::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2066%2084%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20d%3D%22M0%200%20L14.76%2034.44%20Q18%2042%2014.76%2049.56%20L0%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.04%22%2F%3E%3Cpath%20d%3D%22M9%200%20L23.76%2034.44%20Q27%2042%2023.76%2049.56%20L9%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.045%22%2F%3E%3Cpath%20d%3D%22M18%200%20L32.76%2034.44%20Q36%2042%2032.76%2049.56%20L18%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.05%22%2F%3E%3Cpath%20d%3D%22M27%200%20L41.76%2034.44%20Q45%2042%2041.76%2049.56%20L27%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.06%22%2F%3E%3Cpath%20d%3D%22M36%200%20L50.76%2034.44%20Q54%2042%2050.76%2049.56%20L36%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.075%22%2F%3E%3C%2Fsvg%3E"); }
   /* 오른쪽 패널 "<" */
-  .next-match-strip .nmh-top > .nmh-team.nmh-team:last-child::before { background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 84%22 preserveAspectRatio=%22none%22%3E%3Cg transform=%22translate(48 0) scale(-1 1)%22%3E%3Cpath d=%22M0.00 0 L14.76 34.44 Q18.00 42.00 14.76 49.56 L0.00 84 L78 84 L78 0 Z%22 fill=%22white%22 fill-opacity=%220.3500%22/%3E%3Cpath d=%22M10.00 0 L24.76 34.44 Q28.00 42.00 24.76 49.56 L10.00 84 L78 84 L78 0 Z%22 fill=%22white%22 fill-opacity=%220.4615%22/%3E%3Cpath d=%22M20.00 0 L34.76 34.44 Q38.00 42.00 34.76 49.56 L20.00 84 L78 84 L78 0 Z%22 fill=%22white%22 fill-opacity=%220.8571%22/%3E%3C/g%3E%3C/svg%3E"); }
-  .next-match-strip .nmh-top > .nmh-team.nmh-team.nmh-kit:last-child::before { background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 84%22 preserveAspectRatio=%22none%22%3E%3Cg transform=%22translate(48 0) scale(-1 1)%22%3E%3Cpath d=%22M0.00 0 L14.76 34.44 Q18.00 42.00 14.76 49.56 L0.00 84 L78 84 L78 0 Z%22 fill=%22white%22 fill-opacity=%220.0700%22/%3E%3Cpath d=%22M10.00 0 L24.76 34.44 Q28.00 42.00 24.76 49.56 L10.00 84 L78 84 L78 0 Z%22 fill=%22white%22 fill-opacity=%220.0753%22/%3E%3Cpath d=%22M20.00 0 L34.76 34.44 Q38.00 42.00 34.76 49.56 L20.00 84 L78 84 L78 0 Z%22 fill=%22white%22 fill-opacity=%220.1163%22/%3E%3C/g%3E%3C/svg%3E"); }
-  .next-match-strip .nmh-top > .nmh-team.nmh-team.nmh-kit-light:last-child::before { background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 84%22 preserveAspectRatio=%22none%22%3E%3Cg transform=%22translate(48 0) scale(-1 1)%22%3E%3Cpath d=%22M0.00 0 L14.76 34.44 Q18.00 42.00 14.76 49.56 L0.00 84 L78 84 L78 0 Z%22 fill=%22black%22 fill-opacity=%220.0800%22/%3E%3Cpath d=%22M10.00 0 L24.76 34.44 Q28.00 42.00 24.76 49.56 L10.00 84 L78 84 L78 0 Z%22 fill=%22black%22 fill-opacity=%220.0870%22/%3E%3Cpath d=%22M20.00 0 L34.76 34.44 Q38.00 42.00 34.76 49.56 L20.00 84 L78 84 L78 0 Z%22 fill=%22black%22 fill-opacity=%220.1190%22/%3E%3C/g%3E%3C/svg%3E"); }
+  .next-match-strip .nmh-top > .nmh-team.nmh-team:last-child::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2066%2084%22%20preserveAspectRatio%3D%22none%22%3E%3Cg%20transform%3D%22translate%2866%200%29%20scale%28-1%201%29%22%3E%3Cpath%20d%3D%22M0%200%20L14.76%2034.44%20Q18%2042%2014.76%2049.56%20L0%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.12%22%2F%3E%3Cpath%20d%3D%22M9%200%20L23.76%2034.44%20Q27%2042%2023.76%2049.56%20L9%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.16%22%2F%3E%3Cpath%20d%3D%22M18%200%20L32.76%2034.44%20Q36%2042%2032.76%2049.56%20L18%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.21%22%2F%3E%3Cpath%20d%3D%22M27%200%20L41.76%2034.44%20Q45%2042%2041.76%2049.56%20L27%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.3%22%2F%3E%3Cpath%20d%3D%22M36%200%20L50.76%2034.44%20Q54%2042%2050.76%2049.56%20L36%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.45%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"); }
+  .next-match-strip .nmh-top > .nmh-team.nmh-team.nmh-kit:last-child::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2066%2084%22%20preserveAspectRatio%3D%22none%22%3E%3Cg%20transform%3D%22translate%2866%200%29%20scale%28-1%201%29%22%3E%3Cpath%20d%3D%22M0%200%20L14.76%2034.44%20Q18%2042%2014.76%2049.56%20L0%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.04%22%2F%3E%3Cpath%20d%3D%22M9%200%20L23.76%2034.44%20Q27%2042%2023.76%2049.56%20L9%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.045%22%2F%3E%3Cpath%20d%3D%22M18%200%20L32.76%2034.44%20Q36%2042%2032.76%2049.56%20L18%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.05%22%2F%3E%3Cpath%20d%3D%22M27%200%20L41.76%2034.44%20Q45%2042%2041.76%2049.56%20L27%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.06%22%2F%3E%3Cpath%20d%3D%22M36%200%20L50.76%2034.44%20Q54%2042%2050.76%2049.56%20L36%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.075%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"); }
+  .next-match-strip .nmh-top > .nmh-team.nmh-team.nmh-kit-light:last-child::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2066%2084%22%20preserveAspectRatio%3D%22none%22%3E%3Cg%20transform%3D%22translate%2866%200%29%20scale%28-1%201%29%22%3E%3Cpath%20d%3D%22M0%200%20L14.76%2034.44%20Q18%2042%2014.76%2049.56%20L0%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.04%22%2F%3E%3Cpath%20d%3D%22M9%200%20L23.76%2034.44%20Q27%2042%2023.76%2049.56%20L9%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.045%22%2F%3E%3Cpath%20d%3D%22M18%200%20L32.76%2034.44%20Q36%2042%2032.76%2049.56%20L18%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.05%22%2F%3E%3Cpath%20d%3D%22M27%200%20L41.76%2034.44%20Q45%2042%2041.76%2049.56%20L27%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.06%22%2F%3E%3Cpath%20d%3D%22M36%200%20L50.76%2034.44%20Q54%2042%2050.76%2049.56%20L36%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.075%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"); }
 }
 
 /* =====================================================================
@@ -21392,4 +21392,708 @@ button.match-status:focus-visible {
     from { -webkit-mask-position: left 0 top 0; mask-position: left 0 top 0; }
     to   { -webkit-mask-position: left 0 top 32px; mask-position: left 0 top 32px; }
   }
+}
+
+/* Mobile broadcast scoreboard: reuse desktop visual rules; mobile layout below. */
+@media (max-width: 720px) {
+
+  .next-match-strip:has(> .nmh-top) {
+    --nmh-slant: 18px;
+    --nmh-gap: 3px;
+    --nmh-bar-h: 88px;
+  }
+
+  /* 머리말: 가운데 정렬 대신 왼쪽 정렬 + 가는 선 */
+  .next-match-strip:has(> .nmh-top) .nmh-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    text-align: left;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--color-teal-dark);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-eyebrow::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border-light);
+  }
+
+  /* 바 본체 */
+  .next-match-strip:has(> .nmh-top) .nmh-top,
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0;
+    flex-wrap: nowrap;
+    min-height: var(--nmh-bar-h);
+  }
+
+  /* 팀 패널 공통: [엠블럼 | 이름 + 순위] 두 줄 구성 (경기 중에는 아래에 득점자 줄이 붙음) */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    align-content: center;
+    column-gap: 12px;
+    row-gap: 3px;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    justify-self: stretch;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    text-align: left;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team > .nmh-crest { grid-column: 1; grid-row: 1 / span 2; }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team > span:not(.nms-opp-rank):not(.nmh-crest) {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow: hidden;
+  }
+  /* 이름 안쪽(.nm-full / .nm-short)에 걸린 기존 글꼴·색 규칙을 바깥 이름 설정에 맞춤 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team > span:not(.nms-opp-rank):not(.nmh-crest) span {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team-mine > span:not(.nms-opp-rank):not(.nmh-crest) { font-weight: 800; }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team > .nms-opp-rank {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    justify-self: start;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team > .nmh-live-goals { grid-column: 1 / -1; grid-row: 3; }
+
+  /* 왼쪽(홈): 네이비 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child {
+    z-index: 1;
+    justify-content: flex-start;
+    padding-left: 18px;
+    padding-right: calc(var(--nmh-slant) + 10px);
+    background: var(--color-navy);
+    border-radius: 6px 0 0 6px;
+    clip-path: polygon(0 0, calc(100% - var(--nmh-slant)) 0, 100% 50%, calc(100% - var(--nmh-slant)) 100%, 0 100%);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child > span:not(.nms-opp-rank):not(.nmh-crest) { color: #fff; }
+
+  /* 오른쪽(원정): 밝은 패널, 엠블럼·이름이 바깥(오른쪽)부터 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child {
+    z-index: 1;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-right: 18px;
+    padding-left: calc(var(--nmh-slant) + 10px);
+    background: var(--color-bg-table-alt);
+    border-radius: 0 6px 6px 0;
+    clip-path: polygon(var(--nmh-slant) 0, 100% 0, 100% 100%, var(--nmh-slant) 100%, 0 50%);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child > .nmh-crest { grid-column: 2; }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child > span:not(.nms-opp-rank):not(.nmh-crest) {
+    grid-column: 1;
+    color: var(--color-text-dark);
+    text-align: right;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child > .nms-opp-rank { grid-column: 1; justify-self: end; }
+
+  /* 엠블럼: 흰 원형 받침 위에 올려 어두운 패널에서도 로고가 묻히지 않게 */
+  .next-match-strip:has(> .nmh-top) .nmh-top .nmh-crest.team-logo {
+    box-sizing: content-box;
+    width: 36px;
+    height: 36px;
+    margin: 0;
+    padding: 4px;
+    border-radius: 50%;
+    background: #fff;
+    object-fit: contain;
+    flex: none;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top .nmh-crest-fallback.team-logo {
+    box-sizing: border-box;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    color: var(--color-navy);
+    background: #fff;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top .nmh-team .skeleton-crest { width: 52px; height: 52px; }
+
+  /* 순위 칩 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team .nms-opp-rank {
+    flex: none;
+    padding: 1px 7px;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    border-radius: var(--radius-tag);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child .nms-opp-rank {
+    color: rgba(255, 255, 255, .92);
+    background: rgba(255, 255, 255, .16);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child .nms-opp-rank {
+    color: var(--color-text-muted);
+    background: rgba(var(--color-tint-rgb), .1);
+  }
+  /* 내 팀 순위 칩은 모바일에서만 숨기던 것 — PC에서는 그대로 보여줍니다 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team-mine .nms-opp-rank { display: inline-block; }
+
+  /* 가운데 블록 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-center,
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top > .nmh-center {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 190px;
+    margin: 0 calc(var(--nmh-slant) * -1 + var(--nmh-gap));
+    padding: 8px calc(var(--nmh-slant) + 10px) 9px;
+    color: #fff;
+    background: var(--color-navy-deep);
+    clip-path: polygon(0 0, 100% 0, calc(100% - var(--nmh-slant)) 50%, 100% 100%, 0 100%, var(--nmh-slant) 50%);
+  }
+
+  /* 경기 전: D-DAY를 스코어 숫자처럼 크게 */
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-dday {
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: .02em;
+    line-height: 1;
+    color: #fff;
+    transform: skewX(-7deg);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-dday:has(+ .nmh-dday-clock) { color: var(--color-gold); }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-dday-clock {
+    margin-top: 3px;
+    font-size: var(--fs-md);
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: rgba(255, 255, 255, .78);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-dday-clock.is-urgent { color: var(--color-gold-light); }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-dday-clock.is-live { color: #ff9a8d; }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-meta-line { display: block; }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-meta {
+    margin-top: 6px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, .88);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-venue,
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-center .nmh-venue {
+    margin-top: 3px;
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    color: rgba(255, 255, 255, .6);
+  }
+
+  /* 경기 중·종료: 스코어 숫자 + 상태 + 출처 */
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-center { padding-top: 10px; }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-live-score {
+    gap: 14px;
+    font-size: 40px;
+    font-weight: 900;
+    color: #fff;
+    transform: skewX(-7deg);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-live-sep {
+    width: 2px;
+    height: 26px;
+    font-size: 0;
+    background: var(--color-gold-strong);
+    transform: skewX(-14deg);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-live-status { margin-top: 7px; }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-live-pill {
+    padding: 1px 9px;
+    border-radius: var(--radius-tag);
+    color: #ff9a8d;
+    background: rgba(255, 255, 255, .1);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-live-pill.is-stale,
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-live-pill.is-ended {
+    color: rgba(255, 255, 255, .78);
+    background: rgba(255, 255, 255, .1);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-center .nmh-live-src { color: rgba(255, 255, 255, .5); opacity: 1; }
+
+  /* 경기 중: 득점자는 각 팀 패널 안에서 이름 아래 한 줄씩 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team .nmh-live-goals {
+    align-items: flex-start;
+    margin-top: 2px;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child .nmh-live-goals { align-items: flex-end; }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child .nmh-live-goals .nmh-live-goal,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child .nmh-live-goals .nmh-live-goal b { color: rgba(255, 255, 255, .88); }
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top > .nmh-team:first-child .nms-opp-rank { color: rgba(255, 255, 255, .7); background: none; }
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top > .nmh-team:first-child .nms-opp-rank .r-to { color: #fff; }
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top > .nmh-team:first-child .nms-opp-rank.is-up .r-to { color: var(--color-teal-light); }
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top > .nmh-team:first-child .nms-opp-rank.is-down .r-to { color: #ff9a8d; }
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top > .nmh-team:last-child .nms-opp-rank { background: none; }
+
+  /* 아래 줄(홈/원정·날씨·버튼) */
+  .next-match-strip:has(> .nmh-top) .nmh-bottom { margin-top: 12px; padding-top: 10px; }
+
+
+  .next-match-strip:has(> .nmh-top) { --nmh-skew: 19deg; --nmh-step: 10px; }
+
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child { isolation: isolate; }
+
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child::before,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child::after,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child::before,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child::after {
+    content: '';
+    position: absolute;
+    height: 50%;
+    width: calc(var(--nmh-step) * 3);
+    z-index: -1;
+    pointer-events: none;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child::before,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child::before { top: 0; }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child::after,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child::after { bottom: 0; }
+
+  /* 왼쪽 패널(블루): ">" 앞 — 안쪽 → 경계 순서로 점점 밝게 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child::before,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child::after {
+    right: calc(var(--nmh-slant) / 2);
+    background: linear-gradient(90deg,
+      rgba(255, 255, 255, .07) 0 33.33%,
+      rgba(255, 255, 255, .14) 33.33% 66.66%,
+      rgba(255, 255, 255, .24) 66.66% 100%);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child::before { transform: skewX(var(--nmh-skew)); }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child::after { transform: skewX(calc(var(--nmh-skew) * -1)); }
+
+  /* 오른쪽 패널(밝은 회색): "<" 앞 — 경계 → 안쪽 순서로 흰색이 옅어짐 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child::before,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child::after {
+    left: calc(var(--nmh-slant) / 2);
+    background: linear-gradient(90deg,
+      rgba(255, 255, 255, .95) 0 33.33%,
+      rgba(255, 255, 255, .65) 33.33% 66.66%,
+      rgba(255, 255, 255, .35) 66.66% 100%);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child::before { transform: skewX(calc(var(--nmh-skew) * -1)); }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child::after { transform: skewX(var(--nmh-skew)); }
+
+
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit {
+    background: var(--tc);
+    border-color: var(--tc);
+    box-shadow: none;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit-white {
+    border-color: #c3cad6;
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.04);
+  }
+
+  /* 경계 앞 계단 띠: 팀 색 위에서도 자연스럽게 (경계에 가까울수록 한 겹씩 밝게) */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit:last-child::before,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit:last-child::after {
+    background: linear-gradient(90deg,
+      rgba(255, 255, 255, .24) 0 33.33%,
+      rgba(255, 255, 255, .14) 33.33% 66.66%,
+      rgba(255, 255, 255, .07) 66.66% 100%);
+  }
+
+  /* 글자색: 어두운 팀 색 = 흰 글자 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit > span:not(.nms-opp-rank):not(.nmh-crest) { color: #fff; }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit .nms-opp-rank {
+    color: rgba(255, 255, 255, .92);
+    background: rgba(255, 255, 255, .18);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit .nmh-live-goals .nmh-live-goal,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit .nmh-live-goals .nmh-live-goal b { color: rgba(255, 255, 255, .92); }
+
+  /* 글자색: 밝은 팀 색(노랑·흰색 등) = 어두운 글자 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit-light > span:not(.nms-opp-rank):not(.nmh-crest) { color: #111827; }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit-light .nms-opp-rank {
+    color: rgba(17, 24, 39, .8);
+    background: rgba(0, 0, 0, .1);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit-light .nmh-live-goals .nmh-live-goal,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit-light .nmh-live-goals .nmh-live-goal b { color: #111827; }
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top > .nmh-team.nmh-kit-light .nms-opp-rank .r-to { color: inherit; }
+
+
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit-light:first-child::before,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit-light:first-child::after {
+    background: linear-gradient(90deg,
+      rgba(0, 0, 0, .08) 0 33.33%,
+      rgba(0, 0, 0, .16) 33.33% 66.66%,
+      rgba(0, 0, 0, .26) 66.66% 100%);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit-light:last-child::before,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-kit-light:last-child::after {
+    background: linear-gradient(90deg,
+      rgba(0, 0, 0, .26) 0 33.33%,
+      rgba(0, 0, 0, .16) 33.33% 66.66%,
+      rgba(0, 0, 0, .08) 66.66% 100%);
+  }
+
+
+  /* 왼쪽 패널 ">" 끝 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child {
+    clip-path: polygon(
+      0 0,
+      calc(100% - var(--nmh-slant)) 0,
+      calc(100% - var(--nmh-slant) * 0.18) 41%,
+      calc(100% - var(--nmh-slant) * 0.1125) 45.5%,
+      calc(100% - var(--nmh-slant) * 0.09) 50%,
+      calc(100% - var(--nmh-slant) * 0.1125) 54.5%,
+      calc(100% - var(--nmh-slant) * 0.18) 59%,
+      calc(100% - var(--nmh-slant)) 100%,
+      0 100%);
+  }
+  /* 오른쪽 패널 "<" 끝 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child {
+    clip-path: polygon(
+      var(--nmh-slant) 0,
+      100% 0,
+      100% 100%,
+      var(--nmh-slant) 100%,
+      calc(var(--nmh-slant) * 0.18) 59%,
+      calc(var(--nmh-slant) * 0.1125) 54.5%,
+      calc(var(--nmh-slant) * 0.09) 50%,
+      calc(var(--nmh-slant) * 0.1125) 45.5%,
+      calc(var(--nmh-slant) * 0.18) 41%);
+  }
+  /* 가운데 블록: 양쪽 홈(오목한 꺾임)도 같은 정도로 */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-center,
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top > .nmh-center {
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      calc(100% - var(--nmh-slant) * 0.82) 41%,
+      calc(100% - var(--nmh-slant) * 0.8875) 45.5%,
+      calc(100% - var(--nmh-slant) * 0.91) 50%,
+      calc(100% - var(--nmh-slant) * 0.8875) 54.5%,
+      calc(100% - var(--nmh-slant) * 0.82) 59%,
+      100% 100%,
+      0 100%,
+      calc(var(--nmh-slant) * 0.82) 59%,
+      calc(var(--nmh-slant) * 0.8875) 54.5%,
+      calc(var(--nmh-slant) * 0.91) 50%,
+      calc(var(--nmh-slant) * 0.8875) 45.5%,
+      calc(var(--nmh-slant) * 0.82) 41%);
+  }
+
+
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team:first-child::before,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team:last-child::before {
+    top: 0;
+    bottom: 0;
+    height: auto;
+    width: calc(var(--nmh-step) * 4.8 + var(--nmh-slant));
+    transform: none;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team:first-child::after,
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team:last-child::after { content: none; }
+
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team:first-child::before { left: auto; right: 0; }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team:last-child::before  { right: auto; left: 0; }
+
+  /* 왼쪽 패널 ">" */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team:first-child::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2066%2084%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20d%3D%22M0%200%20L14.76%2034.44%20Q18%2042%2014.76%2049.56%20L0%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.04%22%2F%3E%3Cpath%20d%3D%22M9%200%20L23.76%2034.44%20Q27%2042%2023.76%2049.56%20L9%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.045%22%2F%3E%3Cpath%20d%3D%22M18%200%20L32.76%2034.44%20Q36%2042%2032.76%2049.56%20L18%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.05%22%2F%3E%3Cpath%20d%3D%22M27%200%20L41.76%2034.44%20Q45%2042%2041.76%2049.56%20L27%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.06%22%2F%3E%3Cpath%20d%3D%22M36%200%20L50.76%2034.44%20Q54%2042%2050.76%2049.56%20L36%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.075%22%2F%3E%3C%2Fsvg%3E"); }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team.nmh-kit-light:first-child::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2066%2084%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20d%3D%22M0%200%20L14.76%2034.44%20Q18%2042%2014.76%2049.56%20L0%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.04%22%2F%3E%3Cpath%20d%3D%22M9%200%20L23.76%2034.44%20Q27%2042%2023.76%2049.56%20L9%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.045%22%2F%3E%3Cpath%20d%3D%22M18%200%20L32.76%2034.44%20Q36%2042%2032.76%2049.56%20L18%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.05%22%2F%3E%3Cpath%20d%3D%22M27%200%20L41.76%2034.44%20Q45%2042%2041.76%2049.56%20L27%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.06%22%2F%3E%3Cpath%20d%3D%22M36%200%20L50.76%2034.44%20Q54%2042%2050.76%2049.56%20L36%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.075%22%2F%3E%3C%2Fsvg%3E"); }
+  /* 오른쪽 패널 "<" */
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team:last-child::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2066%2084%22%20preserveAspectRatio%3D%22none%22%3E%3Cg%20transform%3D%22translate%2866%200%29%20scale%28-1%201%29%22%3E%3Cpath%20d%3D%22M0%200%20L14.76%2034.44%20Q18%2042%2014.76%2049.56%20L0%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.12%22%2F%3E%3Cpath%20d%3D%22M9%200%20L23.76%2034.44%20Q27%2042%2023.76%2049.56%20L9%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.16%22%2F%3E%3Cpath%20d%3D%22M18%200%20L32.76%2034.44%20Q36%2042%2032.76%2049.56%20L18%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.21%22%2F%3E%3Cpath%20d%3D%22M27%200%20L41.76%2034.44%20Q45%2042%2041.76%2049.56%20L27%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.3%22%2F%3E%3Cpath%20d%3D%22M36%200%20L50.76%2034.44%20Q54%2042%2050.76%2049.56%20L36%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.45%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"); }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team.nmh-kit:last-child::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2066%2084%22%20preserveAspectRatio%3D%22none%22%3E%3Cg%20transform%3D%22translate%2866%200%29%20scale%28-1%201%29%22%3E%3Cpath%20d%3D%22M0%200%20L14.76%2034.44%20Q18%2042%2014.76%2049.56%20L0%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.04%22%2F%3E%3Cpath%20d%3D%22M9%200%20L23.76%2034.44%20Q27%2042%2023.76%2049.56%20L9%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.045%22%2F%3E%3Cpath%20d%3D%22M18%200%20L32.76%2034.44%20Q36%2042%2032.76%2049.56%20L18%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.05%22%2F%3E%3Cpath%20d%3D%22M27%200%20L41.76%2034.44%20Q45%2042%2041.76%2049.56%20L27%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.06%22%2F%3E%3Cpath%20d%3D%22M36%200%20L50.76%2034.44%20Q54%2042%2050.76%2049.56%20L36%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22white%22%20fill-opacity%3D%220.075%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"); }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team.nmh-team.nmh-kit-light:last-child::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2066%2084%22%20preserveAspectRatio%3D%22none%22%3E%3Cg%20transform%3D%22translate%2866%200%29%20scale%28-1%201%29%22%3E%3Cpath%20d%3D%22M0%200%20L14.76%2034.44%20Q18%2042%2014.76%2049.56%20L0%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.04%22%2F%3E%3Cpath%20d%3D%22M9%200%20L23.76%2034.44%20Q27%2042%2023.76%2049.56%20L9%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.045%22%2F%3E%3Cpath%20d%3D%22M18%200%20L32.76%2034.44%20Q36%2042%2032.76%2049.56%20L18%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.05%22%2F%3E%3Cpath%20d%3D%22M27%200%20L41.76%2034.44%20Q45%2042%2041.76%2049.56%20L27%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.06%22%2F%3E%3Cpath%20d%3D%22M36%200%20L50.76%2034.44%20Q54%2042%2050.76%2049.56%20L36%2084%20L96%2084%20L96%200%20Z%22%20fill%3D%22black%22%20fill-opacity%3D%220.075%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"); }
+
+
+  .next-match-strip:has(> .nmh-top) { --nmh-fill: 16px; }
+  .next-match-strip:has(> .nmh-top) .nmh-top,
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top {
+    min-height: calc(var(--nmh-bar-h) + var(--nmh-fill));
+    margin-bottom: calc(var(--nmh-fill) * -1);
+  }
+
+
+  .next-match-strip:has(> .nmh-top).next-match-strip { --nmh-pad-x: 20px; --nmh-fill-top: 12px; padding-left: var(--nmh-pad-x); padding-right: var(--nmh-pad-x); }
+  .next-match-strip:has(> .nmh-top) .nmh-top,
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top {
+    margin-left: calc(var(--nmh-pad-x) * -1);
+    margin-right: calc(var(--nmh-pad-x) * -1);
+    margin-top: calc(var(--nmh-fill-top) * -1);
+    min-height: calc(var(--nmh-bar-h) + var(--nmh-fill) + var(--nmh-fill-top));
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child { padding-left: calc(18px + var(--nmh-pad-x)); border-top-left-radius: 0; border-bottom-left-radius: 0; }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child { padding-right: calc(18px + var(--nmh-pad-x)); border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+
+  .next-match-strip:has(> .nmh-top).next-match-strip {
+    --nmh-pad-top: 8px;
+    --nmh-eyebrow-h: 34px;
+    --nmh-card-r: 16px;
+    --nmh-lift: calc(var(--nmh-pad-top) + var(--nmh-eyebrow-h) + 8px + 8px);
+    padding-top: var(--nmh-pad-top);
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-eyebrow {
+    position: relative;
+    z-index: 5;
+    box-sizing: border-box;
+    width: fit-content;
+    height: var(--nmh-eyebrow-h);
+    margin: calc(var(--nmh-pad-top) * -1) auto 8px;
+    padding: var(--nmh-pad-top) 24px 0;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0 0 16px 16px;
+    background: var(--color-surface, #fff);
+    line-height: 1;
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-eyebrow::after { content: none; }
+  .next-match-strip:has(> .nmh-top) .nmh-top,
+  .next-match-strip:has(> .nmh-top).nms-live .nmh-top {
+    margin-top: calc(var(--nmh-lift) * -1 + 8px);
+    min-height: calc(var(--nmh-bar-h) + var(--nmh-fill) + var(--nmh-lift));
+  }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:first-child { border-top-left-radius: var(--nmh-card-r); }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team:last-child { border-top-right-radius: var(--nmh-card-r); }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-center { padding-top: calc(var(--nmh-eyebrow-h) + 12px); }
+
+
+  .next-match-strip:has(> .nmh-top) { --nmh-crest: 64px; }
+  .next-match-strip:has(> .nmh-top) .nmh-top .nmh-crest.team-logo { width: var(--nmh-crest); height: var(--nmh-crest); padding: 5px; }
+  .next-match-strip:has(> .nmh-top) .nmh-top .nmh-crest-fallback.team-logo,
+  .next-match-strip:has(> .nmh-top) .nmh-top .nmh-team .skeleton-crest { width: calc(var(--nmh-crest) + 10px); height: calc(var(--nmh-crest) + 10px); }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team { column-gap: 16px; }
+
+
+  .next-match-strip:has(> .nmh-top) { --nmh-name: 18px; }
+  .next-match-strip:has(> .nmh-top) .nmh-top > .nmh-team > span:not(.nms-opp-rank):not(.nmh-crest) { font-size: var(--nmh-name); line-height: 1.2; }
+
+}
+
+@media (max-width: 720px) {
+  #nextMatchStrip:has(> .nmh-top) {
+    --nmh-slant: 9px; --nmh-gap: 2px; --nmh-step: 5px;
+    --nmh-crest: clamp(32px, 10vw, 48px); --nmh-name: 13px;
+    display: flex; flex-direction: column; align-items: stretch;
+    box-sizing: border-box; min-width: 0; gap: 0; padding: 0 10px 8px;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-eyebrow {
+    height: auto; min-height: 28px; max-width: 92%; margin: 0 auto;
+    padding: 5px 12px; text-align: center; line-height: 1.25; flex-wrap: wrap;
+  }
+  #nextMatchStrip .nmh-eyebrow-dday { display: none; }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-top {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+    grid-template-areas: 'team1 meta team2'; align-items: stretch; gap: 0;
+    margin: -28px -10px 0; padding: 0; min-height: 150px; flex: none;
+  }
+  #nextMatchStrip .nmh-top > .nmh-team:first-child,
+  #nextMatchStrip .nmh-top > .nmh-team:last-child {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    justify-self: stretch; width: auto; min-width: 0; max-width: none;
+    gap: 5px; padding: 35px 10px 12px; border: 0; text-align: center;
+  }
+  #nextMatchStrip .nmh-top > .nmh-team:first-child { padding-right: 15px; }
+  #nextMatchStrip .nmh-top > .nmh-team:last-child { padding-left: 15px; }
+  #nextMatchStrip .nmh-top > .nmh-team > span:not(.nms-opp-rank):not(.nmh-crest) {
+    display: block; text-align: center; font-size: var(--nmh-name); overflow: visible;
+    white-space: normal; overflow-wrap: anywhere; align-self: center;
+  }
+  #nextMatchStrip .nmh-team .nm-short { display: inline; }
+  #nextMatchStrip .nmh-team .nm-full { display: none; }
+  #nextMatchStrip .nmh-top > .nmh-team .nms-opp-rank { display: inline-flex; align-self: center; font-size: 11px; white-space: normal; }
+  #nextMatchStrip .nmh-top > .nmh-center {
+    grid-area: meta; min-width: 0; padding: 36px 12px 12px; text-align: center;
+    overflow-wrap: anywhere; justify-self: stretch;
+  }
+  #nextMatchStrip .nmh-center .nmh-dday { display: block; font-size: clamp(20px, 6vw, 30px); }
+  #nextMatchStrip .nmh-center .nmh-dday-clock { display: block; font-size: 12px; letter-spacing: 0; }
+  #nextMatchStrip .nmh-center .nmh-meta-line { display: block; padding: 0; }
+  #nextMatchStrip .nmh-center .nmh-meta { white-space: normal; font-size: 12px; }
+  #nextMatchStrip .nmh-center .nmh-venue { display: block; font-size: 11px; color: rgba(255,255,255,.85); }
+  #nextMatchStrip .nmh-center .nmh-live-score { font-size: clamp(24px, 7vw, 36px); gap: 7px; }
+  #nextMatchStrip .nmh-center .nmh-live-status { flex-wrap: wrap; }
+  #nextMatchStrip .nmh-team .nmh-live-goals { align-items: center; max-width: 100%; }
+  #nextMatchStrip .nmh-team .nmh-live-goal { flex-wrap: wrap; justify-content: center; overflow-wrap: anywhere; font-size: 11px; }
+  #nextMatchStrip .nmh-team .nmh-live-goal b { overflow-wrap: anywhere; }
+  #nextMatchStrip .nmh-meta-line .nms-weather-inline.match-weather { display: none; }
+  #nextMatchStrip > .nmh-bottom {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start;
+    gap: 3px 8px; margin: 3px 0 0; padding: 2px 0 0; min-width: 0; border-top: 0;
+  }
+  #nextMatchStrip .nmh-bottom .nms-weather.match-weather { display: inline-flex; border: 0; padding: 0; min-width: 0; }
+  #nextMatchStrip .nmh-bottom .nms-action-group { display: inline-flex; gap: 5px; margin-left: auto; flex: 0 0 auto; }
+  #nextMatchStrip .nmh-bottom .nms-action-btn { width: 32px; height: 28px; flex: 0 0 32px; padding-inline: 2px; background-clip: border-box; }
+  #nextMatchStrip .nmh-also { overflow-wrap: anywhere; }
+}
+
+
+/* 메인 컵대회 로고: 다크모드에서 어두운 원본 로고의 대비 확보 */
+:root[data-theme="dark"] #nmCupPanel img.nmc-logo {
+  filter: brightness(0) saturate(100%) invert(83%) sepia(22%) saturate(530%) hue-rotate(356deg) brightness(103%) contrast(91%);
+}
+
+/* 다음 경기 노치 제목: 테마별 본문 대비 색상 적용 (PC·모바일 공통) */
+#nextMatchStrip:has(> .nmh-top) > .nmh-eyebrow > .lbl {
+  color: var(--color-text-darkest);
+}
+
+/* Dark mode: keep the existing chevron gaps bright without changing the notch. */
+:root[data-theme="dark"] #nextMatchStrip:has(> .nmh-top) > .nmh-top {
+  background-color: #f4f5fa;
+  border-radius: var(--nmh-card-r, 16px) var(--nmh-card-r, 16px) 0 0;
+}
+
+/* A refined: retain original chevrons and full-bleed team panels. */
+#nextMatchStrip:has(> .nmh-top) > .nmh-eyebrow { border-radius: 0 0 12px 12px; }
+#nextMatchStrip:has(> .nmh-top) > .nmh-top > .nmh-team,
+#nextMatchStrip:has(> .nmh-top) > .nmh-top > .nmh-center { border-top: 0; border-bottom: 0; }
+#nextMatchStrip:has(> .nmh-top) > .nmh-top { padding-top: 0; padding-bottom: 0; }
+
+/* 다음 경기 중앙 정보만 위로 이동: 배경과 노치, 실황 스코어 유지 */
+#nextMatchStrip:not(.nms-live) > .nmh-top > .nmh-center > :is(.nmh-dday, .nmh-dday-clock, .nmh-meta-line, .nmh-venue) {
+  position: relative;
+  top: -8px;
+}
+
+/* 노치 제목 수직 중앙 정렬: 기존 높이 및 외곽 유지 */
+#nextMatchStrip:has(> .nmh-top) > .nmh-eyebrow {
+  padding-block: 0;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 720px) {
+  #nextMatchStrip:has(> .nmh-top) > .nmh-eyebrow { padding-block: 5px; }
+}
+
+/* 다음 경기 하단: 홈/날씨/액션 버튼의 수직 중심을 미리보기와 맞춤 */
+@media (min-width: 721px) {
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom > :is(.nms-ha, .match-weather, .nms-action-group) {
+    position: relative;
+    top: 6px;
+    align-self: center;
+  }
+}
+@media (max-width: 720px) {
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom {
+    align-items: center;
+    margin-top: 0;
+    padding-block: 5px 0;
+  }
+}
+
+/* D안: 다음 경기 하단 뉴트럴 블루 (상단 및 레이아웃 유지) */
+#nextMatchStrip:has(> .nmh-top) {
+  --nmh-footer-bg: #e3eaf4;
+  --nmh-footer-fg: #164575;
+  --nmh-footer-icon: #536781;
+  --nmh-footer-button: #d1dceb;
+  --nmh-footer-divider: #b8c8dc;
+  background-color: var(--nmh-footer-bg);
+}
+:root[data-theme="dark"] #nextMatchStrip:has(> .nmh-top) {
+  --nmh-footer-bg: #27364d;
+  --nmh-footer-fg: #d1e3f8;
+  --nmh-footer-icon: #dbe7fa;
+  --nmh-footer-button: #3a4b65;
+  --nmh-footer-divider: #52647e;
+}
+#nextMatchStrip:has(> .nmh-top) > .nmh-bottom :is(.match-weather, .mw-temp, .mw-cond, .mw-precip, .mw-loading, .mw-unavailable),
+#nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-toggle :is(.nmp-title, .nmp-chevron, .nmp-toggle-hint) {
+  color: var(--nmh-footer-fg);
+}
+#nextMatchStrip:has(> .nmh-top) > .nmh-bottom .nms-action-group { border-color: var(--nmh-footer-divider); }
+#nextMatchStrip:has(> .nmh-top) > .nmh-bottom .nms-action-btn {
+  background-color: var(--nmh-footer-button);
+  color: var(--nmh-footer-icon);
+}
+@media (hover: hover) {
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom .nms-action-btn:hover {
+    background-color: var(--nmh-footer-fg);
+    color: var(--nmh-footer-bg);
+  }
+}
+#nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-body {
+  background-color: var(--color-surface);
+}
+
+/* Mobile: venue weather and single-row preview/actions toolbar. */
+@media (max-width: 720px) {
+  #nextMatchStrip:has(> .nmh-top) > .nmh-top > .nmh-center {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding-block: 29px 5px; gap: 2px;
+  }
+  #nextMatchStrip:not(.nms-live) > .nmh-top > .nmh-center > :is(.nmh-dday,.nmh-dday-clock,.nmh-meta-line,.nmh-venue) { top: 0; }
+  #nextMatchStrip .nmh-center .nmh-meta-line { display: contents; }
+  #nextMatchStrip .nmh-center .nmh-meta { margin: 0; }
+  #nextMatchStrip .nmh-center .nmh-venue { margin: 0; }
+  #nextMatchStrip .nmh-meta-line .nms-weather-inline.match-weather {
+    display: inline-flex; order: 10; align-items: center; justify-content: center;
+    margin: 0; padding: 0; border: 0; background: transparent; gap: 4px;
+    font-size: 11px; line-height: 1.2; color: #fff;
+  }
+  #nextMatchStrip .nmh-center .nms-weather-inline :is(.mw-temp,.mw-loading,.mw-unavailable) { color: #fff; }
+  #nextMatchStrip .nmh-center .nms-weather-inline :is(.mw-cond,.mw-precip) { display: none; }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom > :is(.nms-ha,.match-weather) { display: none; }
+  #nextMatchStrip:has(> .nmh-top) { --nmh-mobile-row: 34px; }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom {
+    box-sizing: border-box; height: var(--nmh-mobile-row); min-height: var(--nmh-mobile-row);
+    flex: none; flex-wrap: nowrap; justify-content: flex-end; align-items: center;
+    margin: 0; padding: 0; border: 0;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom .nms-action-group { margin: 0 0 0 auto; position: relative; z-index: 2; }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged {
+    position: relative; z-index: 1; margin: calc(-1 * var(--nmh-mobile-row)) 0 0;
+    padding: 0; border: 0; pointer-events: none; width: auto;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-toggle {
+    box-sizing: border-box; height: var(--nmh-mobile-row); min-height: 0;
+    width: calc(100% - 120px); max-width: none; margin: 0; padding: 0;
+    justify-content: flex-start; align-items: center; gap: 3px; pointer-events: auto;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-head { flex: 0 1 auto; flex-wrap: nowrap; }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-title { white-space: nowrap; font-size: 12px; }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged :is(.nmp-toggle-txt,.nmp-form) { display: none; }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-body { pointer-events: auto; }
+}
+
+/* Mobile toolbar: center within the full visible footer, icon-only actions. */
+@media (max-width: 720px) {
+  #nextMatchStrip:has(> .nmh-top) { padding-bottom: 0; --nmh-mobile-row: 32px; }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom { align-items: center; padding-block: 0; }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom .nms-action-group {
+    align-self: center; align-items: center; padding-block: 0; top: auto;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom .nms-action-btn,
+  #nextMatchStrip:has(> .nmh-top) > .nmh-bottom .nms-action-btn:hover {
+    background: transparent; border-radius: 0; box-shadow: none;
+    color: var(--nmh-footer-icon);
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-toggle {
+    align-items: center; padding-block: 0;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-head { align-items: center; }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-title { line-height: 1.2; margin-block: 0; }
 }
