@@ -2,12 +2,24 @@ name: Instagram lineup dry run
 
 on:
   workflow_dispatch:
+    inputs:
+      match:
+        description: Official lineup card to compare
+        type: choice
+        required: true
+        default: raiply
+        options:
+          - raiply
+          - chihame
+          - luviri
+          - chintheche
+          - chilumba
 
 permissions:
   contents: read
 
 jobs:
-  verify-chilumba-lineup:
+  verify-lineup:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -22,4 +34,5 @@ jobs:
       - name: Read and compare the official lineup
         env:
           UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
-        run: node automation/instagram-lineup/dry-run.mjs --live --chilumba
+          SAMPLE_MATCH: ${{ inputs.match }}
+        run: node automation/instagram-lineup/dry-run.mjs --live "--$SAMPLE_MATCH"
