@@ -26,7 +26,10 @@ async function readCard() {
   const result = await request(url, { headers: { Authorization: 'Bearer ' + token } }, 'Meta API');
   const { business_discovery: profile } = await result.json();
   if (profile?.username !== username) throw new Error('Business Discovery did not return the official account');
-  const post = profile.media?.data?.find(entry => entry.id === sampleId);
+  const sample = process.argv.includes('--chihame') ? 'chihame' : 'raiply';
+  const post = profile.media?.data?.find(entry => sample === 'raiply' ? entry.id === sampleId :
+    /#STARTING_XI\b/i.test(entry.caption ?? '') && /치하메/.test(entry.caption ?? '') &&
+    /11월\s*0?8일/.test(entry.caption ?? ''));
   if (!post || post.media_type !== 'IMAGE' || !post.media_url) throw new Error('The sample lineup image was not found in the recent feed');
   const imageUrl = new URL(post.media_url);
   if (imageUrl.protocol !== 'https:' || !imageUrl.hostname.endsWith('.cdninstagram.com')) throw new Error('Unexpected Instagram image host');
@@ -36,7 +39,7 @@ async function readCard() {
   const bytes = Buffer.from(await image.arrayBuffer());
 
   const reader = fileURLToPath(new URL('./read-card.py', import.meta.url));
-  const output = execFileSync('/usr/bin/python3', [reader], { input: bytes, encoding: 'utf8' });
+  const output = execFileSync('/usr/bin/python3', [reader, sample], { input: bytes, encoding: 'utf8' });
   return { post, card: JSON.parse(output) };
 }
 
