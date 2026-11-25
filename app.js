@@ -21724,12 +21724,21 @@
     const [mine, opponent] = isMyTeamName(homeEn, homeKo)
       ? [{ en: homeEn, ko: homeKo }, { en: awayEn, ko: awayKo }]
       : [{ en: awayEn, ko: awayKo }, { en: homeEn, ko: homeKo }];
-    const scenarios = cupVenue === 'unknown' ? ['home', 'away'] : [cupVenue];
+    const scenarios = cupVenue === 'unknown' ? ['home', 'away', 'neutral'] : [cupVenue, 'neutral'];
     const title = isKorean ? '정규시간 승무패 예측' : 'Win, draw or loss in regulation';
     const basis = cupVenue === 'unknown'
       ? (isKorean ? '리그 기록 기준 · 홈·원정 미정' : 'Based on league results · home team TBD')
       : (isKorean ? '리그 기록 기준' : 'Based on league results');
     const rows = scenarios.map(side => {
+      if (side === 'neutral') {
+        const pred = predictNeutralMatch(mine.en, opponent.en);
+        if (!pred) return '';
+        const label = isKorean ? '중립구장' : 'Neutral venue';
+        return `<div class="cup-prediction-scenario" data-cup-prediction-side="${side}">
+          <div class="cup-prediction-label">${label}</div>
+          ${mcAiProbBarHtml(pred, isKorean ? '승' : 'Win', isKorean ? '패' : 'Loss', true)}
+        </div>`;
+      }
       const isHome = side === 'home';
       const [host, visitor] = isHome ? [mine, opponent] : [opponent, mine];
       const pred = predictSingleMatch(host.en, host.ko, visitor.en, visitor.ko);
