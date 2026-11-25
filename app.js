@@ -1746,6 +1746,7 @@
         if (renderSeq !== predictionRenderSeq) return;
         predictionRunning = false;
         refreshBtn.disabled = false;
+        renderWhatIfQuick();
       });
     } else {
       drawPredictionTable();
@@ -2154,6 +2155,8 @@
   const WHATIF_FLAT_PCT = 1.0;  // 두 번의 몬테카를로 사이의 무작위 오차(약 ±1%p) 안쪽 변화는 '변화 없음'으로 표시
   const WHATIF_FLAT_PTS = 0.5;
   const whatIfState = { teamEn: WHATIF_MY_TEAM_EN, picks: {}, result: null, running: false, failed: false, wired: false };
+  let whatIfQuickState = { fixtureId: null, view: null, outcomes: new Map() };
+  const wiPendingOutcomes = new Map();
   let whatIfFixturesCache = null;
   // 경기별 '결과 → 우승확률 변화' 미리보기. 경기 ID(H/D/A 저장값 기준)로 캐시해서 팀을 바꿔도 겹치는 경기는 재사용합니다.
   // cache[fxId] = { H: {팀영문명: 우승%}, D: {...}, A: {...} } — 기준은 predictionCache(기본 예측)이고, 그것이 새로 계산되면 캐시를 버립니다.
@@ -2235,6 +2238,18 @@
   function wiViewFromPick(fx, teamEn, pick) {
     if (pick === 'D') return 'D';
     return ((pick === 'H') === (fx.homeEn === teamEn)) ? 'W' : 'L';
+  }
+
+  function wiSimulateFixture(fixtureId, pick) {
+    const key = fixtureId + '=' + pick;
+    const pending = wiPendingOutcomes.get(key);
+    if (pending) return pending;
+    const overrides = { [fixtureId]: pick };
+    const simulation = requestPredictWorker({ iterations: WHATIF_ITERATIONS, overrides },
+      () => runMonteCarloSimulation(WHATIF_ITERATIONS, overrides))
+      .finally(() => wiPendingOutcomes.delete(key));
+    wiPendingOutcomes.set(key, simulation);
+    return simulation;
   }
 
   function wiDateText(fx) {
@@ -2397,11 +2412,7 @@
         for (const fx of todo) {
           const entry = { rel: {} };
           for (const pick of ['H', 'D', 'A']) {
-            const picks = {}; picks[fx.id] = pick;
-            const data = await requestPredictWorker(
-              { iterations: WHATIF_ITERATIONS, overrides: picks },
-              () => runMonteCarloSimulation(WHATIF_ITERATIONS, picks)
-            );
+            const data = await wiSimulateFixture(fx.id, pick);
             entry[pick] = toMap(data, 'promotePct');
             entry.rel[pick] = toMap(data, 'relegatePct');
           }
@@ -2420,7 +2431,113 @@
     })();
   }
 
+  function wiNextScheduledFixture() {
+    const now = Date.now();
+    return wiFixtures().find(fx => (fx.homeEn === WHATIF_MY_TEAM_EN || fx.awayEn === WHATIF_MY_TEAM_EN)
+      && fx.kickoffDate && kickoffUTCMillis(fx.kickoffDate, fx.kickoffTime || '23:59') > now
+      && !pendingLeagueResultForFixture(fx));
+  }
+
+  function renderWhatIfQuick() {
+    const host = document.getElementById('whatIfQuick');
+    const resultHost = document.getElementById('whatIfQuickResult');
+    if (!host || !resultHost) return;
+    const fx = wiNextScheduledFixture();
+    if (!fx) {
+      host.replaceChildren();
+      const hasRemaining = wiTeamFixtures(WHATIF_MY_TEAM_EN).length > 0;
+      resultHost.textContent = hasRemaining
+        ? (isKorean ? '날짜가 정해진 다음 리그 경기가 아직 없어요.' : 'The next league fixture does not have a confirmed date yet.')
+        : (isKorean ? '남은 리그 경기가 없어요.' : 'There are no league matches remaining.');
+      return;
+    }
+    if (whatIfQuickState.fixtureId !== fx.id) {
+      whatIfQuickState = { fixtureId: fx.id, view: null, outcomes: new Map() };
+    }
+    const state = whatIfQuickState;
+    const base = prsChampPct(predictionCache, WHATIF_MY_TEAM_EN);
+    const home = fx.homeEn === WHATIF_MY_TEAM_EN;
+    const opponent = home ? fx.awayEn : fx.homeEn;
+    const opponentLogo = home ? fx.awayLogo : fx.homeLogo;
+    const date = formatKickoff(fx) || wiDateText(fx);
+    const upcoming = isKorean ? (home ? '홈' : '원정') : (home ? 'Home' : 'Away');
+    const options = isKorean ? { W: '승리', D: '무승부', L: '패배' } : { W: 'Win', D: 'Draw', L: 'Loss' };
+    const result = state.outcomes.get(state.view);
+    let headline;
+    if (!Number.isFinite(base)) {
+      headline = isKorean
+        ? (predictionRunning ? '기본 우승 확률을 계산하는 중이에요.' : '아래에서 기본 예측을 다시 계산해 주세요.')
+        : (predictionRunning ? 'Calculating the base title chance…' : 'Re-run the base forecast below to continue.');
+    } else if (result?.pending) {
+      headline = isKorean ? '이 결과를 반영해 계산 중이에요.' : 'Calculating the forecast for this result…';
+    } else if (result?.failed) {
+      headline = isKorean ? '계산에 실패했어요. 결과를 다시 선택해 주세요.' : 'Could not run the simulation. Select a result to retry.';
+    } else if (result) {
+      const baseText = seasonProbabilityLabel(base);
+      const resultText = seasonProbabilityLabel(result.pct);
+      const delta = parseFloat(resultText) - parseFloat(baseText);
+      const change = `${delta > 0 ? '+' : ''}${delta.toFixed(1)}`;
+      headline = `<span>${isKorean ? '우승 확률' : 'Title chance'} <span class="wi-quick-base">${baseText} →</span> <strong>${resultText}</strong></span>
+        <span class="wi-quick-change">${isKorean ? `기본 대비 ${change}%p` : `${change} pp vs base`}</span>`;
+    } else {
+      headline = isKorean ? `기본 우승 확률 <strong>${seasonProbabilityLabel(base)}</strong>` : `Base title chance <strong>${seasonProbabilityLabel(base)}</strong>`;
+    }
+    const focused = host.contains(document.activeElement) ? document.activeElement.dataset.wiQuickView : null;
+    host.innerHTML = `
+      <div class="wi-quick-fixture">
+        ${opponentLogo ? `<img class="team-logo" src="${wiEsc(opponentLogo)}" alt="">` : ''}
+        <div><strong>vs ${wiEsc(wiTeamName(opponent))}</strong><p class="wi-quick-note">${wiEsc(date)} · ${upcoming}</p></div>
+      </div>
+      <div class="wi-quick-picks" role="group" aria-label="${isKorean ? '치주물루 경기 결과 가정' : 'Assumed result for Chizumulu'}">
+        ${Object.entries(options).map(([view, label]) => `<button type="button" class="wi-btn" data-wi-quick-view="${view}" aria-pressed="${state.view === view}" aria-controls="whatIfQuickResult"${Number.isFinite(base) ? '' : ' disabled'}>${label}</button>`).join('')}
+      </div>`;
+    if (resultHost.innerHTML !== headline) resultHost.innerHTML = headline;
+    if (focused) host.querySelector(`[data-wi-quick-view="${focused}"]`)?.focus({ preventScroll: true });
+    host.onclick = event => {
+      const button = event.target.closest('[data-wi-quick-view]');
+      if (button && !button.disabled) runWhatIfQuick(fx, button.dataset.wiQuickView);
+    };
+  }
+
+  async function runWhatIfQuick(fx, view) {
+    const state = whatIfQuickState;
+    if (state.fixtureId !== fx.id || !predictionCache) return;
+    if (wiNextScheduledFixture()?.id !== fx.id) {
+      renderWhatIfQuick();
+      return;
+    }
+    state.view = view;
+    const existing = state.outcomes.get(view);
+    if (existing && !existing.failed) { renderWhatIfQuick(); return; }
+
+    const signature = prsSignature(getRankedTeams('all'), fx);
+    const model = prsState.model?.sig === signature ? prsState.model : prsLoadCache(signature);
+    const cached = model?.scen?.[view];
+    if (Number.isFinite(cached)) {
+      state.outcomes.set(view, { pct: cached });
+      renderWhatIfQuick();
+      return;
+    }
+    state.outcomes.set(view, { pending: true });
+    renderWhatIfQuick();
+    try {
+      const data = await wiSimulateFixture(fx.id, wiPickFromView(fx, WHATIF_MY_TEAM_EN, view));
+      const pct = prsChampPct(data, WHATIF_MY_TEAM_EN);
+      if (!Number.isFinite(pct) || data.whatIfFixedCount !== 1) throw new Error('The requested match result was not simulated');
+      state.outcomes.set(view, { pct });
+    } catch (error) {
+      console.warn('Next-match scenario failed:', error);
+      state.outcomes.set(view, { failed: true });
+    }
+    if (state === whatIfQuickState && state.view === view) renderWhatIfQuick();
+  }
+
   function renderWhatIf() {
+    renderWhatIfQuick();
+    const advanced = document.getElementById('whatIfAdvanced');
+    if (!advanced) return;
+    advanced.ontoggle = () => { if (advanced.open) renderWhatIf(); };
+    if (!advanced.open) return;
     const body = document.getElementById('whatIfBody');
     if (!body) return;
     wiWire(body);
@@ -4879,12 +4996,7 @@
         if (fx) {
           scen = {};
           for (const view of ['W', 'D', 'L']) {
-            const picks = {};
-            picks[fx.id] = wiPickFromView(fx, myEn, view);
-            const data = await requestPredictWorker(
-              { iterations: WHATIF_ITERATIONS, overrides: picks },
-              () => runMonteCarloSimulation(WHATIF_ITERATIONS, picks)
-            );
+            const data = await wiSimulateFixture(fx.id, wiPickFromView(fx, myEn, view));
             const p = prsChampPct(data, myEn);
             scen[view] = p === null ? 0 : p;
           }

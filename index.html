@@ -1077,6 +1077,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <div class="predict-panel active" data-predict-panel="outlook" role="tabpanel">
     <div class="predict-my-summary" id="predictMySummary"></div>
+    <section class="whatif-section" id="whatIfSection" aria-labelledby="whatIfQuickTitle">
+      <h2 class="lbl wi-quick-title" id="whatIfQuickTitle" data-en="What if we win the next match?" data-ko="다음 경기에서 이기면?">다음 경기에서 이기면?</h2>
+      <div id="whatIfQuick"></div>
+      <p class="wi-quick-result" id="whatIfQuickResult" role="status" aria-atomic="true"></p>
+      <details class="wi-advanced" id="whatIfAdvanced">
+        <summary class="lbl" data-en="Set results for multiple matches" data-ko="여러 경기 결과 설정">여러 경기 결과 설정</summary>
+        <div id="whatIfBody" aria-live="polite"></div>
+      </details>
+    </section>
     <div class="predict-intro">
       <div class="predict-intro-row">
         <span class="predict-intro-lead lbl" data-en="Every remaining fixture is simulated thousands of times to estimate title, top-3 and relegation odds." data-ko="남은 경기를 수천 번 시뮬레이션해서 우승·상위 3위·강등권 확률을 계산해요.">남은 경기를 수천 번 시뮬레이션해서 우승·상위 3위·강등권 확률을 계산해요.</span>
@@ -1119,16 +1128,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </div>
 
-  <section class="whatif-section" id="whatIfSection" aria-live="polite">
-    <div class="stats-title advanced">
-      <span class="lbl" data-en="What-If Simulator" data-ko="만약에 시뮬레이터">만약에 시뮬레이터</span>
-      <span class="info-icon-btn" onclick="toggleInfoTooltip(event, 'whatIfInfo')">ⓘ</span>
-      <div class="info-tooltip" id="whatIfInfo" onclick="event.stopPropagation()">
-        <span class="lbl" data-en="Fix the result of any remaining game (win / draw / loss) and re-run the season simulation to see how the title, top-3 and bottom-3 chances change. Second-half games have no dates yet, so they are listed by opponent; scheduled games show their kickoff." data-ko="남은 경기의 결과(승/무/패)를 직접 정하고 시즌 시뮬레이션을 다시 돌려서 우승·상위 3위·하위 3위 확률이 어떻게 달라지는지 확인해 보세요. 후반기 경기는 아직 날짜가 없어 상대 팀 기준으로 보여주고, 일정이 정해진 경기는 킥오프 날짜가 함께 표시돼요.">남은 경기의 결과(승/무/패)를 직접 정하고 시즌 시뮬레이션을 다시 돌려서 우승·상위 3위·하위 3위 확률이 어떻게 달라지는지 확인해 보세요. 후반기 경기는 아직 날짜가 없어 상대 팀 기준으로 보여주고, 일정이 정해진 경기는 킥오프 날짜가 함께 표시돼요.</span>
-      </div>
-    </div>
-    <div id="whatIfBody"></div>
-  </section>
   </div>
 
   <div class="predict-panel" data-predict-panel="trend" role="tabpanel">
