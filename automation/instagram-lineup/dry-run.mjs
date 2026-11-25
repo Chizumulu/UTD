@@ -36,7 +36,7 @@ async function readCard() {
   const bytes = Buffer.from(await image.arrayBuffer());
 
   const reader = fileURLToPath(new URL('./read-card.py', import.meta.url));
-  const output = execFileSync('python3', [reader], { input: bytes, encoding: 'utf8' });
+  const output = execFileSync('/usr/bin/python3', [reader], { input: bytes, encoding: 'utf8' });
   return { post, card: JSON.parse(output) };
 }
 
