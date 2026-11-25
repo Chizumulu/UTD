@@ -21614,7 +21614,7 @@
   //  - 이번 시즌 경기는 확정 스코어가 있는 roundsData/scheduledRounds 기록으로 만들고, 메모(26/27 ...)에 적힌 같은 경기는
   //    중복되므로 제외합니다. 같은 경기가 여러 라운드 메모에 적혀 있어도 한 번만 나오게 합니다.
   // 치주물루가 없는 매치업은 null → 아무것도 표시하지 않습니다.
-  function getPastSeasonMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey, { includeCurrentSeason = true } = {}) {
+  function getPastSeasonMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey) {
     const homeIsMine = isMyTeamName(homeEn, homeKo);
     const awayIsMine = isMyTeamName(awayEn, awayKo);
     if (!homeIsMine && !awayIsMine) return null;
@@ -21629,7 +21629,7 @@
     const oppShort = Object.keys(HIST_TEAM_EN).find(k => String(rec.nameKo || '').indexOf(k) === 0) || rec.nameKo;
 
     // 1) 이번 시즌에 이미 치른 맞대결 (최근 경기가 위로)
-    const thisSeason = includeCurrentSeason ? rec.matches
+    const thisSeason = rec.matches
       .filter(m => m.source === 'season' && (isNaN(curPos) || posOf(m.roundKey) < curPos))
       .sort((x, y) => posOf(y.roundKey) - posOf(x.roundKey))
       .map(m => {
@@ -21644,7 +21644,7 @@
         const result = m.result === 'W' ? `치주물루 승${forfeit}`
                      : (m.result === 'D' ? '무승부' : `${oppShort} 승${forfeit}`);
         return { comp: `26/27 시즌 ${wk}`, score: scoreText, result };
-      }) : [];
+      });
 
     // 2) 과거 시즌·컵대회 기록
     const seen = new Set();
@@ -22065,7 +22065,7 @@
             <div class="mc-form-title">${meetingsLabel[isKorean ? 0 : 1]}</div>
             ${h2hHtml}
           </div>
-          ${priorMeetingsSectionHtml(getPastSeasonMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey, { includeCurrentSeason: !leagueReference }))}
+          ${priorMeetingsSectionHtml(getPastSeasonMeetingsForMatch(homeEn, homeKo, awayEn, awayKo, roundKey))}
           ${matchRelatedHtml(homeEn, homeKo, awayEn, awayKo, roundKey)}
         </div>
       </div>
