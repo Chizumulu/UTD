@@ -1,0 +1,29 @@
+name: Find lineup text automatically
+on:
+  workflow_dispatch:
+  push:
+    branches: [automation/dynamic-lineup-ocr]
+    paths: ['automation/instagram-lineup/locate-card-text.py']
+permissions:
+  contents: read
+jobs:
+  compare:
+    strategy:
+      fail-fast: false
+      matrix:
+        sample: [raiply, unseen]
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-kor python3-pil
+      - name: Locate lineup text and compare
+        env:
+          UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
+          SAMPLE: ${{ matrix.sample }}
+        run: node automation/instagram-lineup/dry-run.mjs --live --dynamic "--$SAMPLE"
