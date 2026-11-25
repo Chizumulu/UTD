@@ -188,10 +188,16 @@ def main():
                 strip = crop_gray(image, shift_up((105, 768, 564, 807), offset))
                 raw = read_korean(strip, "6")
                 print("Luviri bench strip OCR: " + json.dumps(raw, ensure_ascii=False), file=sys.stderr)
-                entries = re.findall(r"(?<![0-9])([1-9][0-9]?)\s*[.,:]\s*([가-힣]+(?:\s+[가-힣]+)*)", raw)
-                if len(entries) == len(bench_boxes) and len({number for number, _ in entries}) == len(bench_boxes):
-                    bench = [{"votes": {int(number): 2}, "names": [name]} for number, name in entries]
-                    break
+                for line in raw.splitlines():
+                    if not re.search(r"SUBS", line, re.I):
+                        continue
+                    entries = re.findall(r"(?<![0-9])([1-9][0-9]?)\s*[.,:]\s*([가-힣]+(?:\s+[가-힣]+)*)", line)
+                    if len(entries) == 4 and len({number for number, _ in entries}) == 4:
+                        bench[:4] = [{"votes": {int(number): 2}, "names": [name]} for number, name in entries]
+                        break
+                else:
+                    continue
+                break
     # The reference graphic has no explicit captain mark.
     print(json.dumps({"starters": starters, "bench": bench, "captain": None}))
 
