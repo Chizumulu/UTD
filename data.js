@@ -6066,6 +6066,8 @@ function _computeAiPredictionTrackRecordUncached(matches = collectPredictionMatc
 //     리그 밖의 팀이면 이름만 표시됩니다. (한글명은 homeKo / awayKo 로 따로 줄 수 있습니다.)
 //   - 점수: homeScore / awayScore (미정이면 생략), 승부차기는 pso: '4:2' 처럼 문자열
 //   - date: 'YYYY-MM-DD', time: 'HH:MM', venueKo / venueEn 은 선택
+//   - 홈·원정이 확정되면 home / away에 실제 홈팀과 원정팀을 넣고 haConfirmed: true로 표시합니다.
+//   - haConfirmed를 생략하면 경기장이 등록된 대진은 홈·원정이 확정된 것으로 표시합니다.
 //   예) { labelKo: '16강', labelEn: 'Round of 16', matches: [
 //          { home: 'Chizumulu United FC', away: 'Jenda United FC', date: '2026-11-07', time: '14:00', venueKo: '치테코 커뮤니티 그라운드' } ] }
 // ============================================================================

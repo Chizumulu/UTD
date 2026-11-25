@@ -9291,6 +9291,49 @@
   }
   .mc-ai-prob-label-draw { text-align: center; flex: 1; }
   .mc-ai-prob-label-away { text-align: right; }
+  .cup-match-prediction {
+    padding: 12px;
+    background: var(--color-bg-stripe);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+  }
+  .rmc-preview .cup-match-prediction {
+    margin: 10px 0 0;
+    background: var(--color-white);
+  }
+  .cup-prediction-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 12px;
+    margin-bottom: 10px;
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+  }
+  .cup-prediction-head strong { color: var(--color-brand-text); }
+  .cup-prediction-scenarios {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: 8px;
+  }
+  .cup-prediction-scenario {
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    background: var(--color-white);
+  }
+  .cup-prediction-label {
+    margin-bottom: 6px;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    color: var(--color-text-dark);
+  }
+  .cup-prediction-scenario .mc-ai-prob-labels,
+  .rmc-preview .cup-prediction-scenario .mc-ai-prob-labels { margin-bottom: 0; }
+  .cup-prediction-scenario .mc-ai-prob-label b { font-variant-numeric: tabular-nums; }
   .mc-ai-xg {
     font-size: var(--fs-xs);
     font-weight: 600;

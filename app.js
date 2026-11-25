@@ -764,6 +764,10 @@
   let cupMode = false;
   // 컵이 여러 개일 때 지금 보고 있는 컵의 id. 비어 있으면 배열의 첫 컵을 보여줍니다.
   let cupSelectedId = null;
+  function cupHomeAwayKnown(match) {
+    return match.haConfirmed ?? !!(match.venueKo || match.venueEn);
+  }
+
   function cupWinnerSide(match) {
     if (!match || match.postponed || !Number.isInteger(match.homeScore) || !Number.isInteger(match.awayScore)) return '';
     const [homePenalties, awayPenalties] = /^\d+\s*:\s*\d+$/.test(match.pso || '') ? match.pso.split(':').map(Number) : [0, 0];
@@ -1021,8 +1025,9 @@
     const homeName = noFc(ko ? (m.homeKo || m.home) : m.home), awayName = noFc(ko ? (m.awayKo || m.away) : m.away);
     const homeWin = played && (m.homeScore > m.awayScore || (m.homeScore === m.awayScore && /^\d+\s*:\s*\d+$/.test(m.pso || '') && +m.pso.split(':')[0] > +m.pso.split(':')[1]));
     const awayWin = played && !homeWin && (m.awayScore > m.homeScore || (m.homeScore === m.awayScore && /^\d+\s*:\s*\d+$/.test(m.pso || '') && +m.pso.split(':')[1] > +m.pso.split(':')[0]));
-    // 홈/원정은 포스터에 적혀 있지 않아요. 날짜나 장소가 발표되기 전(또는 data.js 경기에 haConfirmed: true 가 없을 때)에는 칩을 감춥니다.
-    const haKnown = !!(m.haConfirmed || m.venueKo || m.venueEn);
+    // 포스터에서 가져온 팀 순서는 홈·원정이 확정되기 전까지 사용하지 않습니다.
+    const haKnown = cupHomeAwayKnown(m);
+    const cupVenue = haKnown ? (iAmHome ? 'home' : 'away') : 'unknown';
     const venue = ko ? (m.venueKo || m.venueEn) : (m.venueEn || m.venueKo);
     const kst = kstOf(m);
     const seoul = (typeof IS_SEOUL_TZ !== 'undefined') && IS_SEOUL_TZ;
@@ -1060,7 +1065,7 @@
     const canCompare = leagueHome && leagueAway && leagueHome !== leagueAway && (leagueHome.played > 0 || leagueAway.played > 0);
     const hasPreview = canCompare && !played;
     const leagueAttrs = canCompare
-      ? ` data-cup-league-home="${cupEsc(leagueHome.nameEn)}" data-cup-league-away="${cupEsc(leagueAway.nameEn)}"` : '';
+      ? ` data-cup-league-home="${cupEsc(leagueHome.nameEn)}" data-cup-league-away="${cupEsc(leagueAway.nameEn)}" data-cup-venue="${cupVenue}"` : '';
     let btns = '';
     if (hasPreview) btns += '<button type="button" class="rmd-pvbtn" data-cup-league-action="preview" aria-expanded="false"><span>' +
       (ko ? '프리뷰' : 'Preview') + '</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
@@ -1164,13 +1169,14 @@
     const home = leagueData.find(t => t.nameEn === row.dataset.cupLeagueHome);
     const away = leagueData.find(t => t.nameEn === row.dataset.cupLeagueAway);
     if (!home || !away) return;
+    const options = { cupVenue: row.dataset.cupVenue };
 
     if (action === 'preview') {
       const panel = row.querySelector('.rmd-pv');
       if (!panel.hasChildNodes()) {
         panel.innerHTML = matchPreviewHtml({
           homeEn: home.nameEn, homeKo: home.nameKo, awayEn: away.nameEn, awayKo: away.nameKo
-        }, { leagueReference: true });
+        }, options);
       }
       tg.setAttribute('aria-expanded', String(row.classList.toggle('is-pv-open')));
       return;
@@ -1178,7 +1184,7 @@
     const homeScore = row.querySelector('.rmd-num-home')?.textContent;
     const awayScore = row.querySelector('.rmd-num-away')?.textContent;
     const result = homeScore != null && awayScore != null ? { homeScore: Number(homeScore), awayScore: Number(awayScore) } : undefined;
-    openMatchCompareModal(home.nameEn, home.nameKo, away.nameEn, away.nameKo, null, result, { leagueReference: true });
+    openMatchCompareModal(home.nameEn, home.nameKo, away.nameEn, away.nameKo, null, result, options);
   });
   // 지역 플레이오프 대진을 본선 대진표와 같은 모양으로 그립니다. (플레이오프 1 → 플레이오프 2라운드 → 지역 1라운드)
   // 칸 위치는 고정 픽셀로 계산해서 연결선까지 CSS만으로 그려요. (화면 크기를 재지 않아 숨겨진 탭에서도 안전)
@@ -6948,7 +6954,7 @@
       const match = {
         homeEn: m.home, homeKo: m.homeKo || m.home, awayEn: m.away, awayKo: m.awayKo || m.away,
         homeScore: m.homeScore, awayScore: m.awayScore, pso: m.pso, forfeit: m.forfeit, postponed: m.postponed,
-        kickoffDate: m.date, kickoffTime: m.time, haKnown: Boolean(m.haConfirmed || m.venueKo || m.venueEn)
+        kickoffDate: m.date, kickoffTime: m.time, haKnown: cupHomeAwayKnown(m)
       };
       fixtures.push({ key, cupId: cup.id, labels, match });
     })));
@@ -13233,9 +13239,10 @@
       && leagueData.some(team => team.nameEn === match.awayEn);
   }
 
-  function matchPreviewHtml(m, { leagueReference = false } = {}) {
+  function matchPreviewHtml(m, { cupVenue } = {}) {
     // 다른 주차로 옮겨간 경기의 자리표시자는 실제 경기가 그 주차에 따로 있으니 건너뜁니다.
     if (!m || m.movedToWeek) return '';
+    const leagueReference = !!cupVenue;
     const d = matchPreviewData(m, leagueReference);
     if (!d || (!leagueReference && !d.pred)) return '';
 
@@ -13259,6 +13266,7 @@
         </div>
         ${d.pred ? mcAiProbBarHtml(d.pred, homeShort, awayShort) : ''}
         <div class="rmc-pv-h2h">${matchPreviewH2HText(m, d.meetings, homeShort, awayShort, leagueReference)}</div>
+        ${cupVenue ? cupMatchPredictionHtml(m, cupVenue) : ''}
       </div>`;
   }
 
@@ -21713,9 +21721,9 @@
   }
 
   // 승/무/패 확률 막대 (홈-무-원정 3분할, 각 구간 폭 = 확률%)
-  function mcAiProbBarHtml(pred, homeShort, awayShort) {
+  function mcAiProbBarHtml(pred, homeShort, awayShort, fixedDecimals = false) {
     const h = pred.homeWinPct, d = pred.drawPct, a = pred.awayWinPct;
-    const fmtPct = v => (v >= 10 ? Math.round(v) : v.toFixed(1)) + '%';
+    const fmtPct = v => (fixedDecimals || v < 10 ? v.toFixed(1) : Math.round(v)) + '%';
     return `
       <div class="mc-ai-probbar">
         <div class="mc-ai-prob-seg mc-ai-prob-home" style="flex:${Math.max(h, 0.001)}" title="${homeShort} ${fmtPct(h)}"></div>
@@ -21727,6 +21735,39 @@
         <span class="mc-ai-prob-label mc-ai-prob-label-draw"><b>${fmtPct(d)}</b> ${isKorean ? '무' : 'Draw'}</span>
         <span class="mc-ai-prob-label mc-ai-prob-label-away"><b>${fmtPct(a)}</b> ${awayShort}</span>
       </div>`;
+  }
+
+  function cupMatchPredictionHtml({ homeEn, homeKo, awayEn, awayKo }, cupVenue) {
+    if (typeof predictSingleMatch !== 'function') return '';
+    const [mine, opponent] = isMyTeamName(homeEn, homeKo)
+      ? [{ en: homeEn, ko: homeKo }, { en: awayEn, ko: awayKo }]
+      : [{ en: awayEn, ko: awayKo }, { en: homeEn, ko: homeKo }];
+    const scenarios = cupVenue === 'unknown' ? ['home', 'away'] : [cupVenue];
+    const title = isKorean ? '정규시간 승무패 예측' : 'Win, draw or loss in regulation';
+    const basis = cupVenue === 'unknown'
+      ? (isKorean ? '리그 기록 기준 · 홈·원정 미정' : 'Based on league results · home team TBD')
+      : (isKorean ? '리그 기록 기준' : 'Based on league results');
+    const rows = scenarios.map(side => {
+      const isHome = side === 'home';
+      const [host, visitor] = isHome ? [mine, opponent] : [opponent, mine];
+      const pred = predictSingleMatch(host.en, host.ko, visitor.en, visitor.ko);
+      const wdl = {
+        homeWinPct: isHome ? pred.homeWinPct : pred.awayWinPct,
+        drawPct: pred.drawPct,
+        awayWinPct: isHome ? pred.awayWinPct : pred.homeWinPct
+      };
+      const label = isKorean ? (isHome ? '치주물루 홈' : '치주물루 원정') : (isHome ? 'Chizumulu at home' : 'Chizumulu away');
+      return `<div class="cup-prediction-scenario" data-cup-prediction-side="${side}">
+        <div class="cup-prediction-label">${label}</div>
+        ${mcAiProbBarHtml(wdl, isKorean ? '승' : 'Win', isKorean ? '패' : 'Loss', true)}
+      </div>`;
+    }).join('');
+    return `<div class="cup-match-prediction" role="group" aria-label="${title}">
+      <div class="cup-prediction-head">
+        <strong>${title}</strong><span>${basis}</span>
+      </div>
+      <div class="cup-prediction-scenarios">${rows}</div>
+    </div>`;
   }
 
   // "AI 예측" 블록 전체(제목 배지 + 확률바 + 예상스코어 + 자동 코멘트).
@@ -21954,11 +21995,11 @@
   let matchCompareFromFixture = false;
   let mcRerendering = false;       // 언어 전환으로 다시 그리는 중에는 '열기' 이벤트를 세지 않기 위한 플래그
 
-  function openMatchCompareModal(homeEn, homeKo, awayEn, awayKo, roundKey, played, { leagueReference = false } = {}) {
+  function openMatchCompareModal(homeEn, homeKo, awayEn, awayKo, roundKey, played, { cupVenue } = {}) {
     const home = getTeamCompareSnapshot(homeEn, homeKo);
     const away = getTeamCompareSnapshot(awayEn, awayKo);
     if (!home.team || !away.team) return;
-    lastMatchCompareArgs = [homeEn, homeKo, awayEn, awayKo, roundKey, played, { leagueReference }];
+    lastMatchCompareArgs = [homeEn, homeKo, awayEn, awayKo, roundKey, played, { cupVenue }];
     if (!mcRerendering) {
       trackEvent('compare_open', {
         match_status: played ? 'played' : 'upcoming',
@@ -21974,6 +22015,7 @@
     const homeName = isKorean ? homeKo : homeEn;
     const awayName = isKorean ? awayKo : awayEn;
     const rankTxt = (r) => r ? (isKorean ? `${r}위` : `#${r}`) : '-';
+    const leagueReference = !!cupVenue;
     const showPrediction = !played && !leagueReference;
     const sixPointer = showPrediction ? sixPointerInfo(homeEn, awayEn) : null;
 
@@ -22036,6 +22078,7 @@
         </div>
       </div>
       ${sixPointer ? `<div class="mc-six-banner"><span class="six-tag">${isKorean ? '6점짜리 경기' : '6-pointer'}</span><span class="mc-six-text">${sixNoteText(sixPointer)}</span></div>` : ''}
+      ${cupVenue && !played ? cupMatchPredictionHtml({ homeEn, homeKo, awayEn, awayKo }, cupVenue) : ''}
       <div class="mc-compare-layout${showPrediction ? '' : ' mc-layout-played'}">
         ${showPrediction ? `<div class="mc-compare-right mc-col-ai">
           ${aiPredictionBlockHtml(homeEn, homeKo, awayEn, awayKo, home, away)}
