@@ -82,7 +82,21 @@ def crop_gray(image, box):
     return gray
 
 
-def read_slot(image, box, name_box):
+def shift_up(box, pixels):
+    left, top, right, bottom = box
+    return left, top - pixels, right, bottom - pixels
+
+
+def read_korean(gray, mode):
+    payload = io.BytesIO()
+    ImageOps.expand(ImageOps.invert(gray), border=20, fill=255).save(payload, format="PNG")
+    return subprocess.run(
+        ["tesseract", "stdin", "stdout", "-l", "kor+eng", "--psm", mode],
+        input=payload.getvalue(), capture_output=True, check=True, timeout=12,
+    ).stdout.decode().strip()
+
+
+def read_slot(image, box, name_box, alternate=False):
     gray = crop_gray(image, box)
     # Include a slightly wider crop to recover digits clipped at either edge.
     left, top, right, bottom = box
@@ -91,6 +105,9 @@ def read_slot(image, box, name_box):
         gray, gray.point(lambda pixel: 255 if pixel > 160 else 0),
         wider.point(lambda pixel: 255 if pixel > 200 else 0),
     ]
+    if alternate:
+        for offset in (12, 22):
+            variants.append(crop_gray(image, shift_up(box, offset)))
     votes = Counter()
     for variant in variants:
         prepared = ImageOps.expand(ImageOps.invert(variant), border=20, fill=255)
@@ -104,18 +121,32 @@ def read_slot(image, box, name_box):
             ).stdout.decode().strip()
             if re.fullmatch(r"[1-9][0-9]?", result):
                 votes[int(result)] += 1
-    name_image = crop_gray(image, name_box)
     names = []
-    for variant in (name_image, name_image.point(lambda pixel: 255 if pixel > 145 else 0)):
-        payload = io.BytesIO()
-        ImageOps.expand(ImageOps.invert(variant), border=20, fill=255).save(payload, format="PNG")
-        result = subprocess.run(
-            ["tesseract", "stdin", "stdout", "-l", "kor", "--psm", "7"],
-            input=payload.getvalue(), capture_output=True, check=True, timeout=8,
-        ).stdout.decode().strip()
-        if result and result not in names:
-            names.append(result)
+    name_regions = [name_box]
+    if alternate:
+        x1, y1, x2, y2 = name_box
+        name_regions += [shift_up((x1 - 8, y1, x2 + 8, y2), offset) for offset in (7, 16, 23, 30)]
+    for region in name_regions:
+        name_image = crop_gray(image, region)
+        for variant in (name_image, name_image.point(lambda pixel: 255 if pixel > 145 else 0)):
+            result = read_korean(variant, "7")
+            if result and result not in names:
+                names.append(result)
     return {"votes": dict(votes), "names": names}
+
+
+def read_chihame_bench(image, boxes, names):
+    # The Instagram export places the two lines higher than the supplied preview.
+    strip = crop_gray(image, chihame_boxes([(70, 727, 550, 771)])[0])
+    candidates = [read_korean(variant, "6") for variant in
+                  (strip, strip.point(lambda pixel: 255 if pixel > 150 else 0))]
+    print("Bench strip OCR: " + json.dumps(candidates, ensure_ascii=False), file=sys.stderr)
+    for candidate in candidates:
+        entries = re.findall(r"(?<![0-9])([1-9][0-9]?)\s*[.,:]\s*([가-힣]+(?:\s+[가-힣]+)*)", candidate)
+        if len(entries) == len(boxes) and len({number for number, _ in entries}) == len(boxes):
+            return [{"votes": {int(number): 2}, "names": [name]} for number, name in entries]
+    return [read_slot(image, shift_up(box, 17), shift_up(name, 17))
+            for box, name in zip(boxes, names, strict=True)]
 
 
 def main():
@@ -126,8 +157,11 @@ def main():
         starter_boxes, starter_names, bench_boxes, bench_names = (
             CHIHAME if sys.argv[1:] == ["chihame"] else (STARTERS, STARTER_NAMES, BENCH, BENCH_NAMES)
         )
-        starters = [read_slot(image, box, name) for box, name in zip(starter_boxes, starter_names, strict=True)]
-        bench = [read_slot(image, box, name) for box, name in zip(bench_boxes, bench_names, strict=True)]
+        chihame = sys.argv[1:] == ["chihame"]
+        starters = [read_slot(image, box, name, alternate=chihame)
+                    for box, name in zip(starter_boxes, starter_names, strict=True)]
+        bench = (read_chihame_bench(image, bench_boxes, bench_names) if chihame else
+                 [read_slot(image, box, name) for box, name in zip(bench_boxes, bench_names, strict=True)])
     # The reference graphic has no explicit captain mark.
     print(json.dumps({"starters": starters, "bench": bench, "captain": None}))
 
