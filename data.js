@@ -2417,6 +2417,57 @@ const leagueData = [
   }
 ];
 
+// ===== 팀 대표색 (다음 경기 카드의 팀 색상용) =====
+// 로고 이미지에서 뽑은 대표색(main)과 보조색(sub)입니다. 키는 leagueData의 nameEn과 같아야 합니다.
+// 치주물루는 여기 없이 아래 MY_TEAM_KIT(홈=파랑, 원정=흰색)을 씁니다.
+const TEAM_COLORS = {
+  "Chibavi Real Stars FC":  { main: "#101739", sub: "#DAAC40" },
+  "Jenda United FC":        { main: "#D8350B", sub: "#070503" },
+  "Chintheche United FC":   { main: "#BBD21C", sub: "#1F1F1D" },
+  "Chilumba Barracks FC":   { main: "#1D9B5A", sub: "#F8CA0D" },
+  "Mafu Stars FC":          { main: "#FDF305", sub: "#050504" },
+  "M'mbelwa Warriors FC":   { main: "#954D09", sub: "#FCFA9B" },
+  "Chipolopolo Boys FC":    { main: "#D27D3D", sub: "#CBC8C6" },
+  "Ekwendeni FC":           { main: "#1E1E20", sub: "#F2E0C0" },
+  "Lube Masters FC":        { main: "#DC2948", sub: "#22D663" },
+  "Chihame All Stars FC":   { main: "#DA7C6C", sub: "#0F2144" },
+  "Raiply FC":              { main: "#D92325", sub: "#010101" },
+  "Euthini Veterans FC":    { main: "#737D38", sub: "#C3D465" },
+  "Vision S Academy":       { main: "#1C2755", sub: "#E5B52E" },
+  "Luviri FC":              { main: "#05205C", sub: "#F00707" }
+};
+// 치주물루 유니폼 색: 홈 = 파랑, 원정 = 흰색
+const MY_TEAM_KIT = { home: "#03398F", away: "#FFFFFF" };
+// 두 색이 이 값보다 가까우면 "비슷하다"고 보고 상대팀이 보조색으로 바꿉니다 (CIE Lab 거리, 클수록 둔감).
+const KIT_SIMILAR_DISTANCE = 40;
+
+function _kitHexToLab(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  const r = lin((n >> 16) & 255), g = lin((n >> 8) & 255), b = lin(n & 255);
+  const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+  const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047);
+  const y = f(0.2126 * r + 0.7152 * g + 0.0722 * b);
+  const z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+}
+function kitColorDistance(a, b) {
+  const A = _kitHexToLab(a), B = _kitHexToLab(b);
+  return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]);
+}
+// 다음 경기의 두 팀 색을 정합니다. homeAway: 'H'(치주물루 홈) | 'A'(원정).
+// 상대 대표색이 우리 유니폼색과 비슷하면 상대가 보조색을 쓰되, 보조색이 오히려 더 가까우면 대표색을 유지합니다.
+// 상대 색 정보가 없으면(컵 대회 상대 등) null을 돌려줘서 기본 모양을 그대로 씁니다.
+function getMatchKitColors(oppEn, homeAway) {
+  const oc = TEAM_COLORS[oppEn];
+  if (!oc) return null;
+  const mine = homeAway === 'H' ? MY_TEAM_KIT.home : MY_TEAM_KIT.away;
+  let opp = oc.main;
+  const dMain = kitColorDistance(opp, mine);
+  if (dMain < KIT_SIMILAR_DISTANCE && kitColorDistance(oc.sub, mine) > dMain) opp = oc.sub;
+  return { mine, opp };
+}
+
 // ===== 외부 API(Chizumulu API, api.chizumulu.net) teamId ↔ leagueData 매핑 =====
 // 리그 전체 라이브 스코어 티커(app.js의 renderLeagueLiveTicker 관련 함수들)가
 // api.chizumulu.net/v1/live 응답의 homeTeam.id / awayTeam.id 값을 우리 leagueData의

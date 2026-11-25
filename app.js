@@ -4045,14 +4045,24 @@
     el.classList.toggle('nms-matchday', daysLeft === 0);
 
     // 홈이면 우리 팀이 왼쪽, 원정이면 우리 팀이 오른쪽에 오도록 팀 블록의 순서를 바꿉니다.
+    // 팀 색상: 치주물루는 홈=파랑/원정=흰색, 상대는 로고 대표색(우리와 비슷하면 보조색). 컵 상대 등 색 정보가 없으면 기본 모양.
+    const kit = (typeof getMatchKitColors === 'function') ? getMatchKitColors(nmx.oppEn, nmx.homeAway) : null;
+    const kitAttr = (hex) => hex ? ` style="--tc:${hex}"` : '';
+    // 팀 색으로 패널 전체를 칠하므로, 밝은 색(노랑·흰색 등)이면 글자를 어둡게 바꾸기 위한 nmh-kit-light 클래스를 붙입니다.
+    const kitIsLight = (hex) => {
+      const n = parseInt(hex.replace('#', ''), 16);
+      const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      return (0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255)) > 0.2;
+    };
+    const kitCls = (hex) => hex ? ` nmh-kit${hex.toUpperCase() === '#FFFFFF' ? ' nmh-kit-white' : ''}${kitIsLight(hex) ? ' nmh-kit-light' : ''}` : '';
     const myTeamHtml = `
-        <div class="nmh-team nmh-team-mine">
+        <div class="nmh-team nmh-team-mine${kitCls(kit && kit.mine)}"${kitAttr(kit && kit.mine)}>
           <img class="team-logo nmh-crest" src="./dd.svg" alt="Chizumulu United FC">
           <span class="lbl" data-en="${nmEscAttr(nmNameHtml(t.nameEn))}" data-ko="${nmEscAttr(nmNameHtml(t.nameKo))}" title="${myNameFull}">${nmNameHtml(myNameFull)}</span>
           ${myRankTxt ? `<span class="nms-opp-rank">${myRankTxt}</span>` : ''}
         </div>`;
     const oppTeamHtml = `
-        <div class="nmh-team">
+        <div class="nmh-team${kitCls(kit && kit.opp)}"${kitAttr(kit && kit.opp)}>
           ${nmx.oppLogo ? `<img class="team-logo nmh-crest opp-logo" data-en-name="${nmx.oppEn}" data-ko-name="${nmx.oppKo}" title="${oppNameFull}" src="${nmx.oppLogo}" alt="${nmx.oppEn}">` : `<span class="team-logo nmh-crest opp-logo nmh-crest-fallback" title="${oppNameFull}">${String(nmx.oppEn || '?').trim().charAt(0).toUpperCase()}</span>`}
           <span title="${oppNameFull}">${nmNameHtml(oppNameFull)}</span>
           ${oppRankTxt ? `<span class="nms-opp-rank">${oppRankTxt}</span>` : ''}
@@ -15113,8 +15123,9 @@
     // 올해 리그에도 있는 팀은 26/27 팀 페이지와 같은 팀 컬러 헤더를 씁니다.
     const cur = archiveCurrentTeam(archiveClubTeam);
     const headerEl = body.querySelector('.archive-club-header');
-    if (headerEl && cur && TEAM_ACCENT_COLORS[cur.nameEn]) {
-      headerEl.style.background = headerGradientFromColor(TEAM_ACCENT_COLORS[cur.nameEn]);
+    if (headerEl && cur) {
+      applyClubThemeToEl(headerEl, cur.nameEn);
+      applyClubThemeToEl(body.querySelector('.team-info-quickstats-bar'), cur.nameEn);
     }
     animateStatValues(body.querySelector('.team-info-quickstats-bar'));
     setupTeamInfoRevealObserver(body);
@@ -20257,49 +20268,107 @@
     hydrateWeatherWidgets();
   }
 
-  // ===== 타 팀 헤더 색상 (하드코딩) =====
-  // 로고에서 실시간으로 색을 뽑는 대신, 팀별로 고정된 색상을 지정합니다.
-  // (일괄 남색 대신 팀마다 다른 색으로 보이도록)
-  const TEAM_ACCENT_COLORS = {
-    "Chibavi Real Stars FC":  { r: 196, g: 45,  b: 58  }, // 레드
-    "Jenda United FC":        { r: 32,  g: 122, b: 77  }, // 그린
-    "Chintheche United FC":   { r: 106, g: 56,  b: 168 }, // 퍼플
-    "Chilumba Barracks FC":   { r: 200, g: 98,  b: 24  }, // 오렌지
-    "Mafu Stars FC":          { r: 16,  g: 137, b: 126 }, // 틸
-    "M'mbelwa Warriors FC":   { r: 145, g: 32,  b: 60  }, // 마룬
-    "Chipolopolo Boys FC":    { r: 176, g: 108, b: 30  }, // 카퍼/브론즈
-    "Ekwendeni FC":           { r: 51,  g: 92,  b: 158 }, // 슬레이트 블루
-    "Lube Masters FC":        { r: 98,  g: 110, b: 36  }, // 올리브
-    "Chihame All Stars FC":   { r: 190, g: 45,  b: 120 }, // 마젠타
-    "Raiply FC":              { r: 122, g: 78,  b: 44  }, // 브라운
-    "Euthini Veterans FC":    { r: 71,  g: 100, b: 112 }, // 스틸 블루그레이
-    "Vision S Academy":       { r: 68,  g: 60,  b: 168 }, // 인디고
-    "Luviri FC":              { r: 20,  g: 150, b: 108 }  // 에메랄드
-  };
+  // ===== 구단 헤더 색상 (구단 고유 색 기반) =====
+  // data.js의 TEAM_COLORS(로고에서 뽑은 대표색 main / 보조색 sub)로 구단 정보 상단 헤더를
+  // 그 구단의 색으로 칠합니다. 흰 글자 대비(WCAG AA 4.5:1)를 지키기 위해:
+  //  - 대표색이 충분히 어두우면 → 대표색을 바탕, 보조색을 강조색으로 사용
+  //  - 대표색이 너무 밝고 보조색이 아주 어두우면 → 보조색을 바탕, 대표색을 강조색으로 사용
+  //    (예: 마푸 스타스 = 검정 바탕 + 노랑 강조)
+  //  - 그 외 → 대표색을 흰 글자 대비가 나올 때까지 어둡게 눌러 바탕으로 사용
+  function clubHexToRgb(hex) {
+    const n = parseInt(String(hex).replace('#', ''), 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function clubLuminance({ r, g, b }) {
+    const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  }
+  function clubContrast(a, b) {
+    const la = clubLuminance(a), lb = clubLuminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+  function clubMix(a, b, t) {
+    return {
+      r: Math.round(a.r + (b.r - a.r) * t),
+      g: Math.round(a.g + (b.g - a.g) * t),
+      b: Math.round(a.b + (b.b - a.b) * t)
+    };
+  }
+  const CLUB_BLACK = { r: 0, g: 0, b: 0 };
+  const CLUB_WHITE = { r: 255, g: 255, b: 255 };
+  const clubCss = c => `rgb(${c.r}, ${c.g}, ${c.b})`;
+  const clubRgbList = c => `${c.r}, ${c.g}, ${c.b}`;
 
-  function headerGradientFromColor(rgb) {
-    const { r, g, b } = rgb;
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    // 밝은 색일수록 더 어둡게 눌러서 흰 글자와 대비를 확보합니다.
-    const darkFactor = luminance > 0.6 ? 0.42 : (luminance > 0.4 ? 0.6 : 0.8);
-    const lightFactor = Math.min(darkFactor + 0.32, 1.15);
-    const clamp = (v) => Math.max(0, Math.min(255, Math.round(v)));
-    const dark = `rgb(${clamp(r * darkFactor)}, ${clamp(g * darkFactor)}, ${clamp(b * darkFactor)})`;
-    const light = `rgb(${clamp(r * lightFactor)}, ${clamp(g * lightFactor)}, ${clamp(b * lightFactor)})`;
-    return `linear-gradient(135deg, ${dark} 0%, ${light} 100%)`;
+  function buildClubHeaderTheme(nameEn) {
+    const tc = (typeof TEAM_COLORS !== 'undefined') ? TEAM_COLORS[nameEn] : null;
+    if (!tc) return null;
+    const main = clubHexToRgb(tc.main);
+    const sub = clubHexToRgb(tc.sub);
+
+    let base = main;
+    let accent = sub;
+    if (clubContrast(main, CLUB_WHITE) < 4.5) {
+      if (clubContrast(sub, CLUB_WHITE) >= 7) {
+        base = sub;
+        accent = main;
+      } else {
+        let t = 0;
+        while (clubContrast(base, CLUB_WHITE) < 4.5 && t < 1) {
+          t += 0.04;
+          base = clubMix(main, CLUB_BLACK, t);
+        }
+      }
+    }
+
+    // 그라데이션: 왼쪽은 살짝 더 어둡게, 오른쪽(통계 숫자 쪽)은 바탕색 그대로.
+    // 바탕이 매우 어두운 팀(검정·짙은 남색)은 오른쪽 끝을 살짝 밝혀 입체감을 줍니다.
+    const start = clubMix(base, CLUB_BLACK, 0.25);
+    const end = clubContrast(base, CLUB_WHITE) > 8 ? clubMix(base, CLUB_WHITE, 0.16) : base;
+
+    // 글자(구단장·홈구장 라벨, 시즌 문구, 순위 숫자)에 쓰일 강조색.
+    // 바탕과 대비가 모자라면 대표색을 밝게 풀어 쓴 파스텔 톤으로 대체합니다.
+    let accentText = accent;
+    if (clubContrast(accentText, start) < 4.5 || clubContrast(accentText, end) < 4.5) {
+      accentText = clubMix(main, CLUB_WHITE, 0.8);
+    }
+
+    const glow = clubRgbList(accentText);
+    const background =
+      `radial-gradient(120% 160% at 12% -20%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 45%), ` +
+      `radial-gradient(90% 140% at 100% 120%, rgba(${glow}, 0.22) 0%, rgba(${glow}, 0) 50%), ` +
+      `linear-gradient(135deg, ${clubCss(start)} 0%, ${clubCss(end)} 100%)`;
+
+    return {
+      background,
+      base: clubCss(base),
+      accent: clubCss(accentText),
+      accentRgb: clubRgbList(accentText)
+    };
+  }
+
+  // 헤더(또는 퀵스탯 바)에 구단 색을 입힙니다. 내부에서 --color-gold 로 쓰이던 강조색도 함께 바꿔
+  // 라벨·시즌 문구·순위 숫자·엠블럼 글로우가 구단 색 톤으로 맞춰집니다.
+  function applyClubThemeToEl(el, nameEn) {
+    if (!el) return;
+    if (!otherTeamAccentCache[nameEn]) {
+      otherTeamAccentCache[nameEn] = buildClubHeaderTheme(nameEn);
+    }
+    const theme = otherTeamAccentCache[nameEn];
+    if (!theme) return;
+    el.style.background = theme.background;
+    el.style.setProperty('--color-gold', theme.accent);
+    el.style.setProperty('--color-gold-rgb', theme.accentRgb);
   }
 
   function applyOtherTeamHeaderAccent(nameEn) {
-    const headerEl = document.querySelector('.other-team-full-header');
-    if (!headerEl) return;
-
-    const rgb = TEAM_ACCENT_COLORS[nameEn];
-    if (!rgb) return;
-
-    if (!otherTeamAccentCache[nameEn]) {
-      otherTeamAccentCache[nameEn] = headerGradientFromColor(rgb);
+    applyClubThemeToEl(document.querySelector('.other-team-full-header'), nameEn);
+    // 다음 경기 카드의 좌우 물결 띠도 같은 구단 색으로 (밝은 모드 기준)
+    const theme = otherTeamAccentCache[nameEn];
+    const bodyEl = document.getElementById('otherTeamFullBody');
+    if (bodyEl) {
+      if (theme) bodyEl.style.setProperty('--next-wave-color', theme.base);
+      else bodyEl.style.removeProperty('--next-wave-color');
     }
-    headerEl.style.background = otherTeamAccentCache[nameEn];
   }
 
   // ===== 팀 바로가기 모달 (Jump to Team Modal) =====
