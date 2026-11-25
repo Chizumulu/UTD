@@ -26,8 +26,16 @@ async function readCard() {
     process.argv.includes('--chintheche') ? 'chintheche' :
     process.argv.includes('--luviri') ? 'luviri' :
     process.argv.includes('--chihame') ? 'chihame' : 'raiply';
+  const dynamic = process.argv.includes('--dynamic');
+  const latest = process.argv.includes('--unseen');
   const matches = entry => {
     const caption = entry.caption ?? '';
+    if (latest) return entry.media_type === 'IMAGE' && /#STARTING_XI\b/i.test(caption) &&
+      !(/(?:라이플리|라이플라이)/.test(caption) && /11월\s*22일/.test(caption)) &&
+      !(/치하메/.test(caption) && /11월\s*0?8일/.test(caption)) &&
+      !(/루비리/.test(caption) && /10월\s*20일/.test(caption)) &&
+      !(/친테체/.test(caption) && /10월\s*11일/.test(caption)) &&
+      !(/칠룸바/.test(caption) && /10월\s*0?2일/.test(caption));
     if (sample === 'raiply') return entry.id === sampleId;
     if (!/#STARTING_XI\b/i.test(caption)) return false;
     if (sample === 'chilumba') return /칠룸바/.test(caption) && /10월\s*0?2일/.test(caption);
@@ -55,7 +63,7 @@ async function readCard() {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) throw new Error('Unexpected image format');
   const bytes = Buffer.from(await image.arrayBuffer());
 
-  const reader = fileURLToPath(new URL('./read-card.py', import.meta.url));
+  const reader = fileURLToPath(new URL(dynamic ? './locate-card-text.py' : './read-card.py', import.meta.url));
   const output = execFileSync('/usr/bin/python3', [reader, sample], { input: bytes, encoding: 'utf8' });
   return { post, card: JSON.parse(output) };
 }
@@ -110,8 +118,44 @@ export function resolveSlot(slot, squad) {
   return { number: null, method: 'ambiguous-number' };
 }
 
+export function classifyDynamic(card, squad) {
+  const toHangul = value => String(value).replace(/[^가-힣]/g, '');
+  const roster = squad.flatMap(player => [player.nameKo, ...(player.aliasesKo ?? [])]
+    .map(name => ({ number: player.number, key: toHangul(name), name }))
+    .filter(entry => entry.key.length >= 4));
+  function candidates(text) {
+    const haystack = toHangul(text);
+    // The letters may be split across several OCR words on a card.
+    const exact = roster.filter(player => haystack.includes(player.key));
+    const near = exact.length ? exact : roster.filter(player => oneEditApart(haystack, player.key));
+    const numbers = [...new Set(near.map(player => player.number))];
+    return numbers.length === 1 ? near[0] : null;
+  }
+  const starters = new Map();
+  for (const line of card.starterText) {
+    const player = candidates(line);
+    if (player) starters.set(player.number, { votes: {}, names: [player.name] });
+  }
+  const bench = new Map();
+  for (const block of card.benchText) {
+    for (const match of block.matchAll(/(?<![0-9])([1-9][0-9]?)\s*[.,:]\s*([^\n0-9]+)/g)) {
+      const player = candidates(match[2]);
+      if (!player || player.number !== Number(match[1])) continue;
+      bench.set(player.number, { votes: { [player.number]: 2 }, names: [player.name] });
+    }
+  }
+  console.log(JSON.stringify({
+    dynamicOcr: card, starterNumbers: [...starters.keys()], benchNumbers: [...bench.keys()]
+  }, null, 2));
+  if (!bench.size || [...bench.keys()].some(number => starters.has(number))) {
+    throw new Error('Could not separate starters and bench without overlap');
+  }
+  return { starters: [...starters.values()], bench: [...bench.values()], captain: null };
+}
+
 export function compare(source, post, card) {
   const { roundsData, matchLineups, squadData } = runInNewContext(source + '\n;({ roundsData, matchLineups, squadData })', {}, { timeout: 1000 });
+  if (card.starterText) card = classifyDynamic(card, squadData);
   const caption = post.caption ?? '';
   const date = /(\d{1,2})월\s*(\d{1,2})일/.exec(caption);
   const year = /(20\d{2})-\d{2}.*NRFA League One/i.exec(caption);
