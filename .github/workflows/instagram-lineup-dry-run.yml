@@ -2,9 +2,6 @@ name: Instagram lineup dry run
 
 on:
   workflow_dispatch:
-  push:
-    branches: [automation/chihame-ocr-trial]
-    paths: ['automation/instagram-lineup/read-card.py']
 
 permissions:
   contents: read
