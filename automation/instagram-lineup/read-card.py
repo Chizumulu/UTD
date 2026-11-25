@@ -87,11 +87,11 @@ def shift_up(box, pixels):
     return left, top - pixels, right, bottom - pixels
 
 
-def read_korean(gray, mode):
+def read_korean(gray, mode, languages="kor+eng"):
     payload = io.BytesIO()
     ImageOps.expand(ImageOps.invert(gray), border=20, fill=255).save(payload, format="PNG")
     return subprocess.run(
-        ["tesseract", "stdin", "stdout", "-l", "kor+eng", "--psm", mode],
+        ["tesseract", "stdin", "stdout", "-l", languages, "--psm", mode],
         input=payload.getvalue(), capture_output=True, check=True, timeout=12,
     ).stdout.decode().strip()
 
@@ -126,12 +126,14 @@ def read_slot(image, box, name_box, alternate=False):
     if alternate:
         x1, y1, x2, y2 = name_box
         name_regions += [shift_up((x1 - 8, y1, x2 + 8, y2), offset) for offset in (7, 16, 23, 30)]
+        name_regions.append((x1 - 12, y1 - 4, x2 + 14, y2 + 3))
     for region in name_regions:
         name_image = crop_gray(image, region)
         for variant in (name_image, name_image.point(lambda pixel: 255 if pixel > 145 else 0)):
-            result = read_korean(variant, "7")
-            if result and result not in names:
-                names.append(result)
+            for languages in (("kor+eng", "kor") if alternate else ("kor",)):
+                result = read_korean(variant, "7", languages)
+                if result and result not in names:
+                    names.append(result)
     return {"votes": dict(votes), "names": names}
 
 
