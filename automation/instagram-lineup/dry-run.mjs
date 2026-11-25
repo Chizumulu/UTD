@@ -42,19 +42,45 @@ async function readCard() {
 
 const nameKey = value => String(value ?? '').normalize('NFKC').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
 
+function oneEditApart(a, b) {
+  if (Math.abs(a.length - b.length) > 1 || a === b) return false;
+  if (a.length > b.length) [a, b] = [b, a];
+  let index = 0;
+  while (index < a.length && a[index] === b[index]) index += 1;
+  return a.slice(index + (a.length === b.length ? 1 : 0)) === b.slice(index + 1);
+}
+
 export function resolveSlot(slot, squad) {
   const votes = Object.entries(slot.votes).map(([number, count]) => [Number(number), count])
     .sort((a, b) => b[1] - a[1]);
-  const names = new Set(slot.names.map(nameKey).filter(Boolean));
-  const named = [...new Set(squad.filter(player =>
-    [player.nameKo, ...(player.aliasesKo ?? [])].some(name => names.has(nameKey(name)))
+  const names = [...new Set(slot.names.map(nameKey).filter(Boolean))];
+  const rosterNumbers = predicate => [...new Set(squad.filter(player =>
+    [player.nameKo, ...(player.aliasesKo ?? [])].some(name => names.some(read => predicate(read, nameKey(name))))
   ).map(player => player.number))];
-  if (named.length > 1) return null;
-  if (named.length === 1) {
-    return !votes.length || votes.some(([number]) => number === named[0]) ? named[0] : null;
+  const exact = rosterNumbers((read, name) => read === name);
+  const fuzzy = exact.length ? [] : rosterNumbers((read, name) =>
+    read.length >= 4 && name.length >= 4 && oneEditApart(read, name));
+  const candidates = exact.length ? exact : fuzzy;
+  if (candidates.length > 1) return { number: null, method: 'ambiguous-name' };
+  if (candidates.length === 1) {
+    const [number] = candidates;
+    if (votes.some(([read]) => read === number)) {
+      return { number, method: exact.length ? 'name-and-number' : 'near-name-and-number' };
+    }
+    if (!votes.length) {
+      return { number, method: exact.length ? 'exact-name-only' : 'near-name-only' };
+    }
+    if (exact.length && String(number).length === 2 &&
+        votes.some(([read]) => oneEditApart(String(read), String(number)))) {
+      return { number, method: 'exact-name-digit-correction' };
+    }
+    return { number: null, method: 'name-number-conflict' };
   }
-  return votes[0] && votes[0][1] >= 2 && votes[0][1] > (votes[1]?.[1] ?? 0) &&
-    squad.some(player => player.number === votes[0][0]) ? votes[0][0] : null;
+  if (votes[0] && votes[0][1] >= 2 && votes[0][1] > (votes[1]?.[1] ?? 0) &&
+      squad.some(player => player.number === votes[0][0])) {
+    return { number: votes[0][0], method: 'number-only' };
+  }
+  return { number: null, method: 'ambiguous-number' };
 }
 
 export function compare(source, post, card) {
@@ -76,11 +102,11 @@ export function compare(source, post, card) {
   if (!recorded) throw new Error('The sample round has no saved lineup to compare');
 
   const readings = [...card.starters, ...card.bench];
-  const players = readings.map(slot => ({ number: resolveSlot(slot, squadData) }));
+  const players = readings.map(slot => resolveSlot(slot, squadData));
   const diagnostics = readings.map((slot, i) => ({
     slot: i < card.starters.length ? 'starter ' + (i + 1) : 'bench ' + (i - card.starters.length + 1),
     ...slot,
-    number: players[i].number
+    ...players[i]
   }));
   console.log(JSON.stringify({ round, diagnostics }, null, 2));
   const unresolved = diagnostics.filter(slot => slot.number === null);
