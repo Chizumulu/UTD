@@ -5747,6 +5747,26 @@ function computePoissonGrid(expectedHomeGoals, expectedAwayGoals, maxGoals, rho)
   };
 }
 
+// 중립구장은 양 팀에 같은 득점 기준을 적용하고 홈·원정 전력 지수를 기하평균합니다.
+function predictNeutralMatch(firstEn, secondEn) {
+  const { teamHomeAway, leagueAvgGoals } = computeTeamHomeAwayStrengths();
+  const first = teamHomeAway[firstEn];
+  const second = teamHomeAway[secondEn];
+  if (!first || !second) return null;
+
+  const attack = team => applyRecentFormWeight(
+    Math.sqrt(team.homeAttack * team.awayAttack), team.recentFormAttackFactor, 1
+  );
+  const defense = team => applyRecentFormWeight(
+    Math.sqrt(team.homeDefense * team.awayDefense), team.recentFormDefenseFactor, 1
+  );
+  const firstGoals = leagueAvgGoals * attack(first) * defense(second);
+  const secondGoals = leagueAvgGoals * attack(second) * defense(first);
+  // 홈·원정별 득점 오차 보정은 제외하고 리그의 저득점 보정은 적용합니다.
+  const { rho } = getDCRho();
+  return computePoissonGrid(firstGoals, secondGoals, undefined, rho);
+}
+
 function predictSingleMatch(homeEn, homeKo, awayEn, awayKo) {
   // 팀별 홈/원정 특화 공격·수비 지수(축소추정 적용)를 사용합니다.
   // 예: homeHA.homeAttack — 이 팀이 "홈에서" 리그 평균 홈팀 대비 얼마나
