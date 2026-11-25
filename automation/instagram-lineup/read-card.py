@@ -40,6 +40,38 @@ BENCH_NAMES = [
 ]
 
 
+# Convert the second card's measured regions to the shared reference grid.
+def chihame_boxes(boxes):
+    return [tuple(round(value * scale) for value, scale in
+                  zip(box, (691 / 661, 861 / 818) * 2)) for box in boxes]
+
+
+CHIHAME = (
+    chihame_boxes([
+        (278, 140, 298, 160), (54, 246, 75, 266), (279, 304, 299, 325),
+        (503, 245, 523, 266), (168, 376, 189, 397), (387, 376, 408, 397),
+        (38, 494, 60, 516), (172, 533, 192, 553), (385, 534, 404, 555),
+        (509, 494, 531, 516), (277, 627, 298, 647),
+    ]),
+    chihame_boxes([
+        (280, 233, 364, 252), (57, 338, 140, 358), (282, 397, 363, 417),
+        (501, 338, 587, 358), (180, 468, 250, 487), (395, 468, 461, 487),
+        (40, 585, 124, 605), (182, 625, 254, 646), (397, 625, 469, 646),
+        (514, 585, 590, 605), (269, 718, 373, 739),
+    ]),
+    chihame_boxes([
+        (129, 749, 149, 768), (228, 749, 247, 768), (339, 749, 359, 768),
+        (450, 749, 474, 768), (165, 766, 189, 784), (272, 766, 296, 784),
+        (382, 766, 406, 784),
+    ]),
+    chihame_boxes([
+        (148, 749, 224, 768), (247, 749, 332, 768), (359, 749, 445, 768),
+        (474, 749, 533, 768), (188, 766, 270, 784), (296, 766, 378, 784),
+        (406, 766, 494, 784),
+    ]),
+)
+
+
 def crop_gray(image, box):
     scaled = [round(value * size / ref) for value, size, ref in zip(
         box, (image.width, image.height) * 2, (691, 861) * 2
@@ -91,8 +123,11 @@ def main():
         image = ImageOps.exif_transpose(original)
         if abs(image.width / image.height - 691 / 861) > 0.025:
             raise ValueError("Unexpected aspect ratio for the Raiply reference card")
-        starters = [read_slot(image, box, name) for box, name in zip(STARTERS, STARTER_NAMES, strict=True)]
-        bench = [read_slot(image, box, name) for box, name in zip(BENCH, BENCH_NAMES, strict=True)]
+        starter_boxes, starter_names, bench_boxes, bench_names = (
+            CHIHAME if sys.argv[1:] == ["chihame"] else (STARTERS, STARTER_NAMES, BENCH, BENCH_NAMES)
+        )
+        starters = [read_slot(image, box, name) for box, name in zip(starter_boxes, starter_names, strict=True)]
+        bench = [read_slot(image, box, name) for box, name in zip(bench_boxes, bench_names, strict=True)]
     # The reference graphic has no explicit captain mark.
     print(json.dumps({"starters": starters, "bench": bench, "captain": None}))
 
