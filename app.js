@@ -768,39 +768,6 @@
     return match.haConfirmed ?? !!(match.venueKo || match.venueEn);
   }
 
-  function cupWinnerSide(match) {
-    if (!match || match.postponed || !Number.isInteger(match.homeScore) || !Number.isInteger(match.awayScore)) return '';
-    const [homePenalties, awayPenalties] = /^\d+\s*:\s*\d+$/.test(match.pso || '') ? match.pso.split(':').map(Number) : [0, 0];
-    const difference = match.homeScore - match.awayScore || homePenalties - awayPenalties;
-    return difference > 0 ? 'home' : difference < 0 ? 'away' : '';
-  }
-
-  function resolveCupPlayoffWinners(cup) {
-    if (!cup.rounds?.some(round => round?.matches?.some(match => match?.awayWinnerOf))) return cup;
-    const winners = new Map();
-    const rounds = cup.rounds.map(round => !Array.isArray(round?.matches) ? round : ({
-      ...round,
-      matches: round.matches.map(match => {
-        if (!match) return match;
-        const qualifier = winners.get(match.awayWinnerOf);
-        const resolved = qualifier && (!match.away || match.away.includes(' / '))
-          ? { ...match, away: qualifier.en, awayKo: qualifier.ko }
-          : match;
-        const side = cupWinnerSide(resolved);
-        const team = resolved[side];
-        if (resolved.id && team && !team.includes(' / ')) {
-          winners.set(resolved.id, { en: team, ko: resolved[side + 'Ko'] || team });
-        }
-        return resolved;
-      })
-    }));
-    return { ...cup, rounds };
-  }
-
-  function getCups() {
-    return (typeof cupTournaments !== 'undefined' && Array.isArray(cupTournaments))
-      ? cupTournaments.filter(Boolean).map(resolveCupPlayoffWinners) : [];
-  }
   function getSelectedCup() {
     const cups = getCups();
     return cups.find(function (x) { return x.id === cupSelectedId; }) || cups[0] || null;
@@ -7676,7 +7643,7 @@
     if (!el) return;
 
     const list = teamRecordCompetition === 'league'
-      ? (typeof computeH2HHistory === 'function' ? computeH2HHistory() : [])
+      ? (typeof computeH2HHistory === 'function' ? computeH2HHistory({ includeCupResults: false }) : [])
       : collectScopedClubH2H(teamRecordCompetition);
     if (!list.length) {
       el.innerHTML = teamRecordCompetition === 'league' ? '' :
@@ -21030,9 +20997,9 @@
     if (!list.length) return '';
     const rows = list.map(h => `
       <tr>
-        <td class="h2h-comp">${formatCompLabel(h.comp)}</td>
-        <td class="h2h-score">${translateHistScore(h.score)}</td>
-        <td class="h2h-result">${translateHistResult(h.result)}</td>
+        <td class="h2h-comp">${escapeHtml(!isKo && h.compEn ? h.compEn : formatCompLabel(h.comp))}</td>
+        <td class="h2h-score">${escapeHtml(!isKo && h.scoreEn ? h.scoreEn : translateHistScore(h.score))}</td>
+        <td class="h2h-result">${escapeHtml(translateHistResult(h.result))}</td>
       </tr>`).join('');
     return `
       <div class="lineup-history-section">
@@ -21617,7 +21584,7 @@
 
   // 전적 비교 창의 "상대전적(이전경기)" 목록 — 치주물루가 낀 경기에서만 만듭니다.
   // 주차 키(roundKey)별 메모를 찾는 대신 computeH2HHistory()(상대팀별 통산 기록)에서 이 상대를 찾아,
-  // 과거 시즌·컵대회 기록(source가 'season'이 아닌 것)과 이번 시즌(26/27)에 이미 치른 맞대결을 합산해서 보여줍니다.
+  // 확정된 컵 결과와 과거 시즌 기록, 이번 시즌에 이미 치른 리그 맞대결을 합산합니다.
   //  - 이번 시즌 경기는 지금 보고 있는 경기(roundKey)보다 앞선 주차만 넣습니다(보고 있는 경기 자신과 이후 경기는 제외).
   //  - 이번 시즌 경기는 확정 스코어가 있는 roundsData/scheduledRounds 기록으로 만들고, 메모(26/27 ...)에 적힌 같은 경기는
   //    중복되므로 제외합니다. 같은 경기가 여러 라운드 메모에 적혀 있어도 한 번만 나오게 합니다.
@@ -21654,19 +21621,7 @@
         return { comp: `26/27 시즌 ${wk}`, score: scoreText, result };
       });
 
-    // 2) 과거 시즌·컵대회 기록
-    const seen = new Set();
-    const list = thisSeason.slice();
-    rec.matches.forEach(m => {
-      if (m.source === 'season') return;                       // 이번 시즌 경기는 위에서 이미 처리
-      if (/^\s*26\/27/.test(m.comp || '')) return;             // 메모에 적힌 이번 시즌 경기도 제외(중복 방지)
-      const dupKey = (m.comp || '') + '|' + (m.scoreText || '');
-      if (seen.has(dupKey)) return;
-      seen.add(dupKey);
-      const result = m.resultText
-        || (m.result === 'W' ? '치주물루 승' : (m.result === 'D' ? '무승부' : '상대 승'));
-      list.push({ comp: m.comp, score: m.scoreText, result });
-    });
+    const list = thisSeason.concat(buildCupAndHistoricalH2HList(rec));
     return list.length ? { list, historySummary: '' } : null;
   }
 
@@ -21697,8 +21652,8 @@
         <div class="mc-prior-row mc-prior-row-${r.toLowerCase()}">
           <span class="mc-prior-badge mc-prior-badge-${r.toLowerCase()}">${wdlLabel[r]}</span>
           <div class="mc-prior-row-main">
-            <span class="mc-prior-comp">${formatCompLabel(h.comp) || ''}</span>
-            <span class="mc-prior-score">${translateHistScore(h.score || '')}${forfeitTag}</span>
+            <span class="mc-prior-comp">${escapeHtml(!isKorean && h.compEn ? h.compEn : formatCompLabel(h.comp))}</span>
+            <span class="mc-prior-score">${escapeHtml(!isKorean && h.scoreEn ? h.scoreEn : translateHistScore(h.score))}${forfeitTag}</span>
           </div>
         </div>`;
     }).join('');
@@ -22861,7 +22816,7 @@
           : `${oppShort} ${m.oppGoals} : ${m.myGoals} ${myShort}`;
         return { comp: `26/27 · ${wk}`, score, result };
       }
-      return { comp: m.comp, score: m.scoreText, result };
+      return { comp: m.comp, compEn: m.compEn, score: m.scoreText, scoreEn: m.scoreEn, result };
     });
 
     const gdTxt = tcSigned(rec.goalDiff);

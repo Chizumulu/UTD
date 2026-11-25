@@ -2567,9 +2567,7 @@ applyComputedLeagueStats();
 // ============================================================
 // 상대전적(H2H) 통산 기록 (h2hHistory) 계산
 // ------------------------------------------------------------
-// roundsData(이번 시즌에 치주물루 유나이티드가 실제로 치른 경기)와
-// matchLineups[].recentHistory(라운드 상세 화면에 함께 실리는, 과거 시즌
-// 상대전적 메모)를 합쳐서 상대팀별 통산 승/무/패와 득실차를 계산합니다.
+// 이번 시즌 리그·컵 결과와 상대전적 메모를 합쳐 통산 승/무/패와 득실차를 계산합니다.
 // - recentHistory 안의 상대팀 이름은 "치하메", "루베" 처럼 줄임말로 적혀
 //   있을 수 있어서, leagueData의 정식 팀명과 접두어가 일치하면 그 팀의
 //   정식 명칭/로고로 연결합니다. 지금 리그에 없는 과거 상대(예: 심보웨)는
@@ -2581,7 +2579,7 @@ applyComputedLeagueStats();
 // 반환값: 상대팀별 배열(경기 수가 많은 순으로 정렬), 각 항목:
 // { key, nameKo, nameEn, logoSrc, isCurrentLeagueTeam,
 //   played, won, drawn, lost, goalsFor, goalsAgainst, goalDiff,
-//   matches: [ { source: 'season'|'history', myGoals, oppGoals, result, ... } ] }
+//   matches: [ { source, myGoals, oppGoals, result, ... } ] }
 // ============================================================
 function isOurTeamLabel(label) {
   if (!label) return false;
@@ -2598,11 +2596,12 @@ const h2hOpponentAliases = {
 };
 
 // recentHistory에 적힌 상대팀 이름(줄임말 가능)을 leagueData의 정식 팀과 연결합니다.
-function resolveH2HOpponent(rawKo) {
-  const raw = (rawKo || '').trim();
+function resolveH2HOpponent(rawKo, rawEn) {
+  const raw = (rawKo || rawEn || '').trim();
   const aliased = h2hOpponentAliases[raw] || raw;
   const teams = (typeof leagueData !== 'undefined') ? leagueData : [];
-  const found = teams.find(t => t.nameKo && (t.nameKo === aliased || t.nameKo.indexOf(aliased) === 0));
+  const found = teams.find(t => t.nameEn === rawEn || t.nameEn === raw)
+    || (aliased && teams.find(t => t.nameKo && t.nameKo.startsWith(aliased)));
   if (found) {
     return {
       key: found.nameEn, nameKo: found.nameKo, nameEn: found.nameEn,
@@ -2610,11 +2609,17 @@ function resolveH2HOpponent(rawKo) {
     };
   }
   // 현재 리그 소속이 아닌(과거 시즌에만 있었던) 상대팀은 이름 그대로 사용
-  return { key: 'hist:' + aliased, nameKo: aliased, nameEn: aliased, logoSrc: null, isCurrentLeagueTeam: false };
+  return { key: 'hist:' + aliased, nameKo: aliased, nameEn: rawEn || aliased, logoSrc: null, isCurrentLeagueTeam: false };
 }
 
-function computeH2HHistory() {
+function computeH2HHistory({ includeCupResults = true } = {}) {
   const table = {};
+  const cupRecordKeys = new Set();
+  const cupRecordKey = (oppKey, comp, gf, ga) => {
+    const label = (comp || '').toLowerCase().replace(/시즌|\bseason\b/g, '').replace(/[\s·:()–—-]+/g, '');
+    return `${oppKey}|${label}|${gf}:${ga}`;
+  };
+  const isUs = (en, ko) => en === 'Chizumulu United FC' || ko === '치주물루 유나이티드 FC';
 
   function ensure(info) {
     if (!table[info.key]) {
@@ -2643,8 +2648,8 @@ function computeH2HHistory() {
   function scanMatchesForUs(matches, roundKey, weekNum, source) {
     (matches || []).forEach(m => {
       if (m.byeKo || m.byeEn) return;
-      const homeIsUs = m.homeKo === '치주물루 유나이티드 FC' || m.homeEn === 'Chizumulu United FC';
-      const awayIsUs = m.awayKo === '치주물루 유나이티드 FC' || m.awayEn === 'Chizumulu United FC';
+      const homeIsUs = isUs(m.homeEn, m.homeKo);
+      const awayIsUs = isUs(m.awayEn, m.awayKo);
       if (!homeIsUs && !awayIsUs) return;
       if (typeof m.homeScore !== 'number' || typeof m.awayScore !== 'number') return;
 
@@ -2683,6 +2688,41 @@ function computeH2HHistory() {
     });
   }
 
+  if (includeCupResults) {
+    for (const cup of getCups()) {
+      for (const round of (cup.rounds || []).slice().reverse()) {
+        for (const m of round?.matches || []) {
+          if (!m?.home || !m.away || m.postponed || m.home.includes(' / ') || m.away.includes(' / ')) continue;
+          if (!Number.isInteger(m.homeScore) || !Number.isInteger(m.awayScore) || m.homeScore < 0 || m.awayScore < 0) continue;
+          const homeIsUs = isUs(m.home, m.homeKo);
+          const awayIsUs = isUs(m.away, m.awayKo);
+          if (homeIsUs === awayIsUs) continue;
+
+          const info = resolveH2HOpponent(homeIsUs ? m.awayKo : m.homeKo, homeIsUs ? m.away : m.home);
+          const myGoals = homeIsUs ? m.homeScore : m.awayScore;
+          const oppGoals = homeIsUs ? m.awayScore : m.homeScore;
+          const oppKo = info.isCurrentLeagueTeam ? info.nameKo.split(' ')[0] : info.nameKo.replace(/\s+FC$/i, '');
+          const oppEn = info.nameEn.replace(/\s+FC$/i, '');
+          const comp = [cup.nameKo || cup.nameEn, round.labelKo || round.labelEn].filter(Boolean).join(' · ');
+          const compEn = [cup.nameEn || cup.nameKo, round.labelEn || round.labelKo].filter(Boolean).join(' · ');
+          const pso = /^\d+\s*:\s*\d+$/.test(m.pso || '') ? ` (PSO ${m.pso})` : '';
+          const score = (mine, opponent) => {
+            const [left, right] = homeIsUs ? [mine, opponent] : [opponent, mine];
+            return `${left} ${m.homeScore} : ${m.awayScore} ${right}${pso}`;
+          };
+          const forfeit = m.forfeit ? '(몰수승)' : '';
+          const resultText = myGoals === oppGoals ? '무승부' : `${myGoals > oppGoals ? '치주물루' : oppKo} 승${forfeit}`;
+          cupRecordKeys.add(cupRecordKey(info.key, comp, myGoals, oppGoals));
+          cupRecordKeys.add(cupRecordKey(info.key, compEn, myGoals, oppGoals));
+          applyResult(ensure(info), myGoals, oppGoals, {
+            source: 'cup', comp, compEn, scoreText: score('치주물루', oppKo),
+            scoreEn: score('Chizumulu', oppEn), resultText
+          });
+        }
+      }
+    }
+  }
+
   // recentHistory 배열 하나(h.score 형식: "A 2 : 1 B")를 파싱해서 H2H 테이블에 반영하는
   // 공용 헬퍼. matchLineups(치른 라운드)와 upcomingMatchHistory(예정 라운드)가 형식이
   // 같아서 이 함수 하나로 둘 다 처리합니다.
@@ -2707,6 +2747,7 @@ function computeH2HHistory() {
       }
 
       const info = resolveH2HOpponent(oppRaw);
+      if (cupRecordKeys.has(cupRecordKey(info.key, h.comp, myGoals, oppGoals))) return;
       const rec = ensure(info);
       applyResult(rec, myGoals, oppGoals, { source, roundKey, comp: h.comp, scoreText, resultText: h.result || '' });
     });
@@ -2740,6 +2781,24 @@ function computeH2HHistory() {
   });
 
   return list;
+}
+
+function buildCupAndHistoricalH2HList(record) {
+  if (!record) return [];
+  const seen = new Set();
+  return record.matches.flatMap(match => {
+    if (match.source === 'season') return [];
+    if (match.source !== 'cup') {
+      // 이번 시즌 리그 스코어는 경기 데이터에서 따로 가져옵니다.
+      if (/^\s*26\/27/.test(match.comp || '')) return [];
+      const key = (match.comp || '') + '|' + (match.scoreText || '');
+      if (seen.has(key)) return [];
+      seen.add(key);
+    }
+    const result = match.resultText
+      || (match.result === 'W' ? '치주물루 승' : (match.result === 'D' ? '무승부' : `${record.nameKo.split(' ')[0]} 승`));
+    return [{ comp: match.comp, compEn: match.compEn, score: match.scoreText, scoreEn: match.scoreEn, result }];
+  });
 }
 
 // ============================================================
@@ -5250,7 +5309,7 @@ function buildAutoMatchEntry(roundKey, weekNum, lineup) {
 // 상세보기에서 실제로 사용할 "상대 전적" 리스트 + 요약 문구를 반환합니다.
 // 이제 "최근 1경기"가 아니라 이 상대와의 모든 전적을 보여줍니다.
 //   1) 이번 시즌(26/27) 맞대결 전부 — 끝난 경기만, 최신 경기가 위
-//   2) 과거 시즌·컵대회 기록 — computeH2HHistory()가 모은 matchLineups/upcomingMatchHistory 메모 전부(중복 제거)
+//   2) 확정 컵 결과와 과거 상대전적 메모(중복 제거)
 // 전체 기록을 만들 수 없으면(상대 정보 없음 등) 예전 방식(수동 recentHistory 또는 이번 경기 + 사전 메모)으로 되돌아갑니다.
 function buildFullH2HListForOpponent(opponentKo) {
   if (!opponentKo || typeof computeH2HHistory !== 'function') return null;
@@ -5287,20 +5346,7 @@ function buildFullH2HListForOpponent(opponentKo) {
       });
   }
 
-  // 2) 과거 시즌·컵대회 기록 전부 (이번 시즌 경기는 위에서 이미 넣었으므로 제외)
-  if (rec) {
-    const seen = new Set();
-    rec.matches.forEach(m => {
-      if (m.source === 'season') return;
-      if (/^\s*26\/27/.test(m.comp || '')) return;
-      const dupKey = (m.comp || '') + '|' + (m.scoreText || '');
-      if (seen.has(dupKey)) return;
-      seen.add(dupKey);
-      const result = m.resultText
-        || (m.result === 'W' ? '치주물루 승' : (m.result === 'D' ? '무승부' : `${shortKo(rec.nameKo)} 승`));
-      list.push({ comp: m.comp, score: m.scoreText, result });
-    });
-  }
+  list.push(...buildCupAndHistoricalH2HList(rec));
   return list.length ? list : null;
 }
 
@@ -6078,6 +6124,40 @@ function _computeAiPredictionTrackRecordUncached(matches = collectPredictionMatc
 //   - infoKo / infoEn : 소개 표 [[항목, 내용], ...]   - scheduleKo / scheduleEn : 일정표 [[날짜, 내용], ...]
 //   - 날짜가 아직 안 나온 부분은 '추후 발표'로 두고, 확정되면 고쳐 주세요.
 // ----------------------------------------------------------------------------
+function cupWinnerSide(match) {
+  if (!match || match.postponed || !Number.isInteger(match.homeScore) || !Number.isInteger(match.awayScore)) return '';
+  const [homePenalties, awayPenalties] = /^\d+\s*:\s*\d+$/.test(match.pso || '') ? match.pso.split(':').map(Number) : [0, 0];
+  const difference = match.homeScore - match.awayScore || homePenalties - awayPenalties;
+  return difference > 0 ? 'home' : difference < 0 ? 'away' : '';
+}
+
+function resolveCupPlayoffWinners(cup) {
+  if (!cup.rounds?.some(round => round?.matches?.some(match => match?.awayWinnerOf))) return cup;
+  const winners = new Map();
+  const rounds = cup.rounds.map(round => !Array.isArray(round?.matches) ? round : ({
+    ...round,
+    matches: round.matches.map(match => {
+      if (!match) return match;
+      const qualifier = winners.get(match.awayWinnerOf);
+      const resolved = qualifier && (!match.away || match.away.includes(' / '))
+        ? { ...match, away: qualifier.en, awayKo: qualifier.ko }
+        : match;
+      const side = cupWinnerSide(resolved);
+      const team = resolved[side];
+      if (resolved.id && team && !team.includes(' / ')) {
+        winners.set(resolved.id, { en: team, ko: resolved[side + 'Ko'] || team });
+      }
+      return resolved;
+    })
+  }));
+  return { ...cup, rounds };
+}
+
+function getCups() {
+  return (typeof cupTournaments !== 'undefined' && Array.isArray(cupTournaments))
+    ? cupTournaments.filter(Boolean).map(resolveCupPlayoffWinners) : [];
+}
+
 const cupTournaments = [
   {
     id: 'faCup2627',
