@@ -21730,26 +21730,27 @@
       ? (isKorean ? '리그 기록 기준 · 홈·원정 미정' : 'Based on league results · home team TBD')
       : (isKorean ? '리그 기록 기준' : 'Based on league results');
     const rows = scenarios.map(side => {
-      if (side === 'neutral') {
-        const pred = predictNeutralMatch(mine.en, opponent.en);
-        if (!pred) return '';
-        const label = isKorean ? '중립구장' : 'Neutral venue';
-        return `<div class="cup-prediction-scenario" data-cup-prediction-side="${side}">
-          <div class="cup-prediction-label">${label}</div>
-          ${mcAiProbBarHtml(pred, isKorean ? '승' : 'Win', isKorean ? '패' : 'Loss', true)}
-        </div>`;
-      }
-      const isHome = side === 'home';
-      const [host, visitor] = isHome ? [mine, opponent] : [opponent, mine];
-      const pred = predictSingleMatch(host.en, host.ko, visitor.en, visitor.ko);
+      const isNeutral = side === 'neutral';
+      const mineFirst = side !== 'away';
+      const [first, second] = mineFirst ? [mine, opponent] : [opponent, mine];
+      const pred = isNeutral
+        ? predictNeutralMatch(first.en, second.en)
+        : predictSingleMatch(first.en, first.ko, second.en, second.ko);
+      if (!pred) return '';
+
       const wdl = {
-        homeWinPct: isHome ? pred.homeWinPct : pred.awayWinPct,
+        homeWinPct: mineFirst ? pred.homeWinPct : pred.awayWinPct,
         drawPct: pred.drawPct,
-        awayWinPct: isHome ? pred.awayWinPct : pred.homeWinPct
+        awayWinPct: mineFirst ? pred.awayWinPct : pred.homeWinPct
       };
-      const label = isKorean ? (isHome ? '치주물루 홈' : '치주물루 원정') : (isHome ? 'Chizumulu at home' : 'Chizumulu away');
+      const firstGoals = isNeutral ? pred.bestH : pred.predictedHomeGoals;
+      const secondGoals = isNeutral ? pred.bestA : pred.predictedAwayGoals;
+      const [mineGoals, opponentGoals] = mineFirst ? [firstGoals, secondGoals] : [secondGoals, firstGoals];
+      const label = isNeutral ? (isKorean ? '중립구장' : 'Neutral venue')
+        : mineFirst ? (isKorean ? '치주물루 홈' : 'Chizumulu at home')
+        : (isKorean ? '치주물루 원정' : 'Chizumulu away');
       return `<div class="cup-prediction-scenario" data-cup-prediction-side="${side}">
-        <div class="cup-prediction-label">${label}</div>
+        <div class="cup-prediction-label">${label} · ${isKorean ? '예상' : 'Predicted'} ${mineGoals}–${opponentGoals}</div>
         ${mcAiProbBarHtml(wdl, isKorean ? '승' : 'Win', isKorean ? '패' : 'Loss', true)}
       </div>`;
     }).join('');
