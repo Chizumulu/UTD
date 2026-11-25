@@ -4138,7 +4138,7 @@
 
   function findNextMatchStripLiveMatch() {
     const ctx = nmsStripLiveCtx;
-    if (!ctx || !nmsLiveIsPc()) return null;
+    if (!ctx) return null;
     const now = Date.now();
     if (now < ctx.kickoffMs || now > ctx.kickoffMs + LEAGUE_LIVE_FORCE_CLOSE_MS) return null;
     const list = Array.isArray(leagueLiveRenderedCache) ? leagueLiveRenderedCache : [];
@@ -4207,7 +4207,7 @@
   function nmsSyncPanelLive() {
     const panel = document.getElementById('nmCupPanel');
     if (!panel) return;
-    const m = findNextMatchStripLiveMatch();
+    const m = nmsLiveIsPc() ? findNextMatchStripLiveMatch() : null;
     const rows = m ? nmsLiveFeedRows(m) : [];
     // 진행 중이면 소식이 아직 없어도 자리를 잡아두고, 최근 소식/종료는 소식이 있을 때만 보여줍니다.
     const takeOver = !!m && (rows.length > 0 || (!m.ended && !m.stale));
@@ -4237,6 +4237,25 @@
     if (newList && keepScroll) newList.scrollTop = keepScroll;
   }
 
+  function nmsSyncMobileFeed(el, m) {
+    let feed = el.querySelector('.nms-mobile-feed');
+    if (!m || nmsLiveIsPc()) { if (feed) feed.remove(); return; }
+    const rows = nmsLiveFeedRows(m);
+    const rowHtml = r => `<div class="nms-mobile-feed-row"><span>${escapeHtml(r.t || '')}</span><span class="nms-mobile-feed-icon">${r.icon}</span><span>${escapeHtml(r.text || '')}</span></div>`;
+    const empty = `<div class="nms-mobile-feed-empty">${isKorean ? '경기 소식을 기다리는 중이에요' : 'Waiting for match updates'}</div>`;
+    const title = m.ended ? (isKorean ? '경기 기록' : 'Match events') : (isKorean ? '실시간 문자중계' : 'Live commentary');
+    const html = `<div class="nms-mobile-feed-head">${!m.ended && !m.stale && !leagueLiveRefreshFailed ? '<i class="nmh-live-dot" aria-hidden="true"></i>' : ''}${title}</div><div class="nms-mobile-feed-latest" aria-live="polite">${rows.length ? rowHtml(rows[0]) : empty}</div><details><summary>${isKorean ? '전체 문자중계' : 'All match events'} (${rows.length})</summary><div class="nms-mobile-feed-list">${rows.length ? rows.map(rowHtml).join('') : empty}</div></details>`;
+    if (!feed) { feed = document.createElement('section'); feed.className = 'nms-mobile-feed'; el.appendChild(feed); }
+    if (feed._html === html) return;
+    const old = feed.querySelector('details');
+    const opened = old && old.open;
+    const list = feed.querySelector('.nms-mobile-feed-list');
+    const scroll = list ? list.scrollTop : 0;
+    feed.innerHTML = html; feed._html = html;
+    feed.querySelector('details').open = !!opened;
+    feed.querySelector('.nms-mobile-feed-list').scrollTop = scroll;
+  }
+
   function applyNextMatchStripLive() {
     try { nmsSyncPanelLive(); } catch (e) { console.warn('cup panel live feed', e); }
     const el = document.getElementById('nextMatchStrip');
@@ -4247,6 +4266,7 @@
     const eyebrow = el.querySelector('.nmh-eyebrow');
     const teams = el.querySelectorAll('.nmh-top > .nmh-team');
     const clearLive = () => {
+      nmsSyncMobileFeed(el, null);
       if (!el.classList.contains('nms-live')) return;
       const orig = el._nmsLiveOrig;
       if (orig && center) center.innerHTML = orig.centerHtml;
@@ -4258,6 +4278,7 @@
         n.classList.remove('nmh-rank-live');
       });
       el.classList.remove('nms-live');
+      el.removeAttribute('data-live-state');
       el.style.minHeight = '';
       el._nmsLiveOrig = null;
       try { hydrateWeatherWidgets(); } catch (e) {}
@@ -4298,7 +4319,6 @@
           <div class="nmh-live-score"><span class="nmh-live-num">${hs}</span><span class="nmh-live-sep">:</span><span class="nmh-live-num">${as}</span></div>
           <div class="nmh-live-status">${pillHtml}</div>
           ${venueHtml}
-          <div class="nmh-live-src">${isKorean ? 'NRFA 실황 기반 · 비공식 집계' : 'Based on NRFA live posts · unofficial'}</div>
           <div class="nmh-live-src">${escapeHtml(leagueLiveRefreshText())}</div>`;
 
     // 득점자: 홈(왼쪽 팀) / 원정(오른쪽 팀) 아래에
@@ -4310,6 +4330,14 @@
       if (!box) { box = document.createElement('div'); box.className = 'nmh-live-goals'; teamEl.appendChild(box); }
       if (box.innerHTML !== html) box.innerHTML = html;
     });
+
+    // 모바일 득점자는 중앙에서 좌우 화살표로 구분합니다.
+    if (!nmsLiveIsPc()) {
+      const left = nmsLiveGoalsHtml(goals.filter(g => (swapped ? !g.isHome : !!g.isHome)));
+      const right = nmsLiveGoalsHtml(goals.filter(g => !(swapped ? !g.isHome : !!g.isHome)));
+      if (left || right) center.insertAdjacentHTML('beforeend', `<div class="nms-mobile-goals"><div class="is-home">${left}</div><div class="is-away">${right}</div></div>`);
+    }
+    nmsSyncMobileFeed(el, m);
 
     // 순위: 정적 "5위" → 현재 스코어 기준 "5위 → 4위"(티커와 같은 계산, 동시 경기 반영)
     try {
@@ -5665,20 +5693,39 @@
     return squadData.find(p => p.number === st.number) || null;
   }
 
-  function nmpLineupHtml() {
-    if (typeof matchLineups === 'undefined') return '';
-    const keys = Object.keys(matchLineups)
-      .filter(k => matchLineups[k] && Array.isArray(matchLineups[k].starters) && matchLineups[k].starters.length)
-      .sort((x, y) => parseInt(x.replace('round', ''), 10) - parseInt(y.replace('round', ''), 10));
-    if (!keys.length) return '';
+  function nmpLineupHtml(nm) {
+    const roundKey = nm && nm.roundKey;
+    const officialMap = (typeof upcomingMatchLineups !== 'undefined' && upcomingMatchLineups)
+      ? upcomingMatchLineups : {};
+    const officialCandidate = roundKey ? officialMap[roundKey] : null;
+    const normalizeOpponent = value => String(value || '').toLowerCase().replace(/\bfc\b/g, '').replace(/[^a-z0-9가-힣]/g, '');
+    const fixtureOpponent = normalizeOpponent((nm && (nm.oppKo || nm.oppEn)) || '');
+    const officialOpponent = normalizeOpponent(officialCandidate && (officialCandidate.opponentKo || officialCandidate.opponentEn));
+    // 실제 선발은 라운드 키와 상대팀이 모두 일치하고, 11명 전체가 들어온 경우에만 사용합니다.
+    const official = officialCandidate && officialOpponent && fixtureOpponent === officialOpponent &&
+      Array.isArray(officialCandidate.starters) && officialCandidate.starters.length === 11
+      ? officialCandidate : null;
 
-    const lastKey = keys[keys.length - 1];
-    const last = matchLineups[lastKey];
-    const recentKeys = keys.slice(-5);
+    let lastKey = null;
+    let last = null;
+    let recentKeys = [];
+    if (official) {
+      lastKey = roundKey;
+      last = official;
+    } else {
+      if (typeof matchLineups === 'undefined') return '';
+      const keys = Object.keys(matchLineups)
+        .filter(k => matchLineups[k] && Array.isArray(matchLineups[k].starters) && matchLineups[k].starters.length)
+        .sort((x, y) => parseInt(x.replace('round', ''), 10) - parseInt(y.replace('round', ''), 10));
+      if (!keys.length) return '';
+      lastKey = keys[keys.length - 1];
+      last = matchLineups[lastKey];
+      recentKeys = keys.slice(-5);
+    }
+
     const keyOf = s => s.statKey || s.number;
-    const weekNum = parseInt(lastKey.replace('round', ''), 10);
+    const weekNum = parseInt(String(lastKey).replace('round', ''), 10);
     const weekTxt = isKorean ? wkKo(weekNum) : wkEn(weekNum, 'WK', ' ');
-
     const positions = last.starters.map(s => s.pos);
     const canField = positions.every(p => PITCH_COORDS[p]) && new Set(positions).size === positions.length;
 
@@ -5686,7 +5733,7 @@
       ? (st.nameKo || (sq && sq.nameKo))
       : ((sq && sq.nameEn) || st.nameEn || st.nameKo));
     const startsOf = (st) => recentKeys.filter(k => matchLineups[k].starters.some(s => keyOf(s) === keyOf(st))).length;
-    const showCnt = recentKeys.length >= 2;
+    const showCnt = !official && recentKeys.length >= 2;
 
     let body;
     if (canField) {
@@ -5711,11 +5758,18 @@
     const note = isKorean
       ? `숫자는 최근 ${recentKeys.length}경기 중 선발 횟수예요. 부상·징계는 반영되지 않아요.`
       : `Numbers = starts in the last ${recentKeys.length} matches. Injuries and suspensions aren't factored in.`;
+    const updatedAt = official && (official.updatedAt || official.updatedAtLabel)
+      ? String(official.updatedAtLabel || official.updatedAt)
+      : '';
+    const officialSub = official
+      ? (updatedAt ? `${last.formation || ''} · ${updatedAt}` : (last.formation || (isKorean ? '공식 발표' : 'Official')))
+      : `${last.formation || ''} · ${weekTxt} ${isKorean ? '선발 기준' : 'starters'}`;
     return `
-      <div class="nmp-sec">
+      <div class="nmp-sec${official ? ' is-official-lineup' : ''}">
         <div class="nmp-sec-title">
-          <span>${isKorean ? '예상 라인업' : 'Predicted XI'}</span>
-          <span class="nmp-sec-sub">${last.formation || ''} · ${weekTxt} ${isKorean ? '선발 기준' : 'starters'}</span>
+          <span>${isKorean ? (official ? '선발 라인업' : '예상 라인업') : (official ? 'Starting XI' : 'Predicted XI')}</span>
+          ${official ? `<span class="nmp-lineup-updated-badge">${isKorean ? '업데이트' : 'Updated'}</span>` : ''}
+          <span class="nmp-sec-sub">${officialSub}</span>
         </div>
         ${body}
         <div class="nmp-note">${showCnt ? note : ''}</div>
@@ -6164,7 +6218,7 @@
           </div>`;
       }
 
-      const lineup = nm.isBye ? '' : nmpLineupHtml();
+      const lineup = nm.isBye ? '' : nmpLineupHtml(nm);
       const key = nm.isBye ? '' : nmpKeyPlayersHtml(nm);
       const fdr = nmpFdrHtml(t);
       if (!lineup && !key && !fdr) { el.innerHTML = ''; return; }

@@ -12000,6 +12000,8 @@
 .nmp-col-right { display: flex; flex-direction: column; gap: 18px; }
 .nmp-sec-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; font-size: var(--fs-sm); font-weight: 600; color: var(--color-text-darkest); }
 .nmp-sec-sub { font-size: var(--fs-xs); font-weight: 500; color: var(--color-text-faint); text-align: right; }
+.nmp-lineup-updated-badge { display: inline-flex; align-items: center; flex: 0 0 auto; padding: 2px 7px; border-radius: 999px; background: rgba(34, 160, 92, .13); color: #16834a; font-size: var(--fs-2xs); font-weight: 700; line-height: 1.35; }
+[data-theme="dark"] .nmp-lineup-updated-badge, .dark-mode .nmp-lineup-updated-badge { background: rgba(66, 190, 125, .18); color: #75d99d; }
 .nmp-note { margin-top: 8px; font-size: var(--fs-xs); line-height: 1.45; color: var(--color-text-faint); }
 .nmp-note:empty { display: none; }
 .nmp-empty { font-size: var(--fs-xs); color: var(--color-text-faint); padding: 6px 2px; }
@@ -22096,4 +22098,40 @@ button.match-status:focus-visible {
   }
   #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-head { align-items: center; }
   #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-title { line-height: 1.2; margin-block: 0; }
+}
+
+/* Mobile expanded preview: align surface with the full-bleed scoreboard. */
+@media (max-width: 720px) {
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-body {
+    margin-inline: -10px;
+    min-width: 0;
+    background-color: var(--color-surface);
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-body-inner > .nmp-grid {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 4px 8px 14px;
+  }
+  #nextMatchStrip:has(> .nmh-top) > .nmp-card.nmp-merged .nmp-pitch {
+    width: 100%; max-width: none; margin-inline: 0;
+  }
+}
+
+/* Responsive live commentary: keep the desktop cup panel unchanged. */
+.nms-mobile-feed, .nms-mobile-goals { display: none; }
+@media (max-width: 1199px) {
+  #nextMatchStrip.nms-live .nmh-team .nmh-live-goals { display: none; }
+  #nextMatchStrip.nms-live .nms-mobile-goals { display: flex; flex-direction: column; gap: 4px; width: 100%; color: #fff; font-size: 11px; }
+  #nextMatchStrip .nms-mobile-goals .nmh-live-goal { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 3px; color: #fff; overflow-wrap: anywhere; }
+  #nextMatchStrip .nms-mobile-goals .is-home .nmh-live-goal::before { content: '←'; color: #93c5fd; font-weight: 800; }
+  #nextMatchStrip .nms-mobile-goals .is-away .nmh-live-goal::after { content: '→'; color: #fde047; font-weight: 800; }
+  #nextMatchStrip .nms-mobile-feed { display: block; min-width: 0; background: var(--color-surface); color: var(--color-text); text-align: start; padding: 8px; border-top: 1px solid var(--nmh-footer-divider, #aab9ca); }
+  #nextMatchStrip .nms-mobile-feed-head { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; }
+  #nextMatchStrip .nms-mobile-feed-row { display: grid; grid-template-columns: auto 16px minmax(0,1fr); align-items: start; gap: 6px; padding: 7px 0; font-size: 12px; overflow-wrap: anywhere; }
+  #nextMatchStrip .nms-mobile-feed-icon svg { width: 14px; height: 14px; }
+  #nextMatchStrip .nms-mobile-feed-latest { background: var(--nmh-footer-bg, #e3eaf4); color: var(--nmh-footer-fg, #183b65); padding: 0 8px; margin: 6px 0; border-radius: 4px; }
+  #nextMatchStrip .nms-mobile-feed summary { cursor: pointer; font-size: 12px; font-weight: 700; padding: 6px 0; }
+  #nextMatchStrip .nms-mobile-feed-list { max-height: 280px; overflow-y: auto; }
+  #nextMatchStrip .nms-mobile-feed-list .nms-mobile-feed-row + .nms-mobile-feed-row { border-top: 1px solid var(--nmh-footer-divider, #aab9ca); }
+  #nextMatchStrip .nms-mobile-feed-empty { padding: 8px 0; font-size: 12px; }
 }

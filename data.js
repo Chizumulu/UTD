@@ -1723,6 +1723,25 @@ const seasonOpeningNotice = {
 };
 
 // fixtureId는 최초 등록 후 유지합니다. 재편성할 때는 원본과 새 주차 항목에 같은 ID를 둡니다.
+// ===== 다음 경기 공식 선발 라인업(선택 입력) =====
+// 실제 선발 명단이 확인되면 해당 라운드 키에 입력합니다.
+// 11명이 모두 등록되고 라운드 + 상대팀이 다음 경기와 일치할 때만
+// 메인 미리보기의 "예상 라인업"이 "선발 라인업 · 업데이트"로 자동 전환됩니다.
+// 포지션 키는 PITCH_COORDS에서 사용하는 ST/LW/CAM/RW/LCM/RCM/LB/LCB/RCB/RB/GK를 사용합니다.
+// 예시 형식:
+// const upcomingMatchLineups = {
+//   round19: {
+//     opponentKo: '마푸 스타즈 FC',
+//     formation: '4-2-3-1',
+//     updatedAt: '21:35 KST',
+//     starters: [
+//       { pos: 'ST', number: 22, nameKo: '선수 이름' },
+//       ... 나머지 선발 10명
+//     ]
+//   }
+// };
+const upcomingMatchLineups = {};
+
 const scheduledRounds = {
   // 15주차는 전체 라운드가 종료되어 roundsData.round15로 옮겨졌습니다.
   // 정규 16주차(round17)도 전체 라운드가 종료되어 roundsData.round17로 옮겨졌습니다. (에크웬데니 vs 칠룸바는 연기되어 roundsData.round17에 postponed로 남아 있음, 새 일정 미정)
