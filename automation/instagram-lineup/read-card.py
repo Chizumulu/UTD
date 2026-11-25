@@ -90,6 +90,18 @@ LUVIRI = (
 )
 
 
+CHINTHECHE = (
+    LUVIRI[0],
+    LUVIRI[1],
+    [(169, 771, 185, 790), (246, 771, 263, 790), (357, 771, 374, 790),
+     (468, 771, 490, 790), (199, 788, 221, 806), (296, 788, 318, 806),
+     (404, 788, 430, 806)],
+    [(185, 771, 242, 790), (263, 771, 351, 790), (374, 771, 465, 790),
+     (490, 771, 550, 790), (222, 788, 291, 806), (319, 788, 400, 806),
+     (430, 788, 523, 806)],
+)
+
+
 def crop_gray(image, box):
     scaled = [round(value * size / ref) for value, size, ref in zip(
         box, (image.width, image.height) * 2, (691, 861) * 2
@@ -176,18 +188,18 @@ def main():
             raise ValueError("Unexpected aspect ratio for the Raiply reference card")
         sample = sys.argv[1] if len(sys.argv) > 1 else "raiply"
         starter_boxes, starter_names, bench_boxes, bench_names = (
-            LUVIRI if sample == "luviri" else CHIHAME if sample == "chihame" else (STARTERS, STARTER_NAMES, BENCH, BENCH_NAMES)
+            CHINTHECHE if sample == "chintheche" else LUVIRI if sample == "luviri" else CHIHAME if sample == "chihame" else (STARTERS, STARTER_NAMES, BENCH, BENCH_NAMES)
         )
         chihame = sys.argv[1:] == ["chihame"]
         starters = [read_slot(image, box, name, alternate=sample != "raiply")
                     for box, name in zip(starter_boxes, starter_names, strict=True)]
         bench = (read_chihame_bench(image, bench_boxes, bench_names) if chihame else
                  [read_slot(image, box, name) for box, name in zip(bench_boxes, bench_names, strict=True)])
-        if sample == "luviri":
+        if sample in ("luviri", "chintheche"):
             for offset in (0, 15, 25):
                 strip = crop_gray(image, shift_up((105, 768, 564, 807), offset))
                 raw = read_korean(strip, "6")
-                print("Luviri bench strip OCR: " + json.dumps(raw, ensure_ascii=False), file=sys.stderr)
+                print("Bench strip OCR: " + json.dumps(raw, ensure_ascii=False), file=sys.stderr)
                 for line in raw.splitlines():
                     if not re.search(r"SUBS", line, re.I):
                         continue
