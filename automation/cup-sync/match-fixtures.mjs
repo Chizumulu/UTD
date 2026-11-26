@@ -70,10 +70,12 @@ export function matchCupItems(items, cup) {
       });
       if (candidates.length!==1) { skip(candidates.length?'ambiguous_match':'no_confirmed_fixture'); continue; }
       const f=candidates[0], reversed=normalizeTeam(f.m.home)!==h;
-      const signature=JSON.stringify([f.key,reversed,m.status,m.dateText,m.timeText,m.venue,m.homeScore,m.awayScore,m.events??[]]);
+      // Normalize score orientation to the existing bracket, not physical home/away.
+      const scores=reversed?[m.awayScore,m.homeScore]:[m.homeScore,m.awayScore];
+      const signature=JSON.stringify([f.key,m.status,m.dateText,m.timeText,m.venue,...scores]);
       if(seen.has(signature)) { skip('duplicate'); continue; }
       seen.add(signature);
-      matched.push({source,index,fixtureId:f.key,roundIndex:f.ri,matchIndex:f.mi,reversed,match:m});
+      matched.push({source,index,fixtureId:f.key,roundIndex:f.ri,matchIndex:f.mi,reversed,bracketScores:scores,match:m});
     }
   }
   return {matched,skipped};
