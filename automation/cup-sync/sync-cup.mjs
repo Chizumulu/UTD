@@ -27,7 +27,7 @@ function apply(source,proposals,allowed){
   for(const [k,v] of Object.entries(p.changes)){
    if(!allowed.includes(k))throw Error('Unexpected field '+k);
    const old=prop(n,k);
-   if(old){if(f[k]!=null&&f[k]!==''&&f[k]!==v)throw Error('Existing value conflict');edits.push({start:old.start,end:old.end,text:JSON.stringify(v)});}
+   if(old){if(f[k]!=null&&f[k]!==''&&f[k]!==v&&!(k==='date'&&p.authorizedDateChange===true&&p.previousDate===f.date))throw Error('Existing value conflict');edits.push({start:old.start,end:old.end,text:JSON.stringify(v)});}
    else additions.push(k+': '+JSON.stringify(v));
   }
   if(additions.length){const last=n.properties.at(-1);edits.push({start:last.end,end:last.end,text:', '+additions.join(', ')});}
