@@ -35,11 +35,28 @@ export function matchFixture(data,post){
 export function validateCandidates(ocr,squad){
  if(ocr?.status!=='candidates'||!Array.isArray(ocr.candidates))throw Error('OCR requires manual review');
  const valid=[];
+ const accepted=new Set(['name-and-number','jamo-and-number','name-supported-digit-correction','inline-number-and-name','name-supported-low-vote','dominant-number-and-name']);
  for(const c of ocr.candidates){
   if(!Array.isArray(c.starters)||c.starters.length!==11||!Array.isArray(c.bench)||!c.bench.length||c.bench.length>12)continue;
   const slots=[...c.starters,...c.bench];
-  const resolved=slots.map(slot=>resolveProductionSlot(slot,squad));
-  if(resolved.some(r=>!['name-and-number','jamo-and-number','name-supported-digit-correction'].includes(r.method)))continue;
+  const resolved=slots.map((slot,i)=>{
+   const own=resolveProductionSlot(slot,squad);
+   if(accepted.has(own.method)||i>=11||own.candidate==null)return own;
+   // Only combine evidence for the same formation slot and same name candidate.
+   // Use maximum vote counts, not sums of correlated image crops.
+   const merged={votes:{...slot.votes},names:[...slot.names]};
+   for(const alternate of ocr.candidates){
+    const peer=alternate.starters?.[i];
+    if(!peer||alternate.starters.length!==11)continue;
+    const match=resolveProductionSlot(peer,squad);
+    if((match.number??match.candidate)!==own.candidate)continue;
+    for(const [n,count] of Object.entries(peer.votes??{}))merged.votes[n]=Math.max(merged.votes[n]??0,count);
+    merged.names.push(...(peer.names??[]));
+   }
+   const combined=resolveProductionSlot(merged,squad);
+   return combined.number===own.candidate?combined:own;
+  });
+  if(resolved.some(r=>!accepted.has(r.method)))continue;
   if(new Set(resolved.map(r=>r.number)).size!==resolved.length)continue;
   const players=resolved.map(r=>squad.find(p=>p.number===r.number));
   if(players.some(p=>!p||!p.nameKo))continue;
