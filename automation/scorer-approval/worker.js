@@ -1,3 +1,4 @@
+import { scanInstagramLineups } from '../instagram-lineup/discover.mjs';
 import { planCupForfeits } from '../forfeit-approval/plan-cup-forfeits.mjs';
 import { scanYoutubeHighlights } from '../youtube-highlights/rss.mjs';
 import { detectForfeit } from '../forfeit-approval/detect-forfeit.mjs';
@@ -43,7 +44,7 @@ export default {
   },
 
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(Promise.allSettled([scanForCompletedMatches(env), scanCupApprovals(env), scanYoutubeHighlights(env)]));
+    ctx.waitUntil(Promise.allSettled([scanForCompletedMatches(env), scanCupApprovals(env), scanYoutubeHighlights(env), scanInstagramLineups(env)]));
   }
 };
 
