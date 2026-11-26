@@ -14,7 +14,7 @@ export function planResults(items,cup){
   const [a,b]=hit.bracketScores;
   if(!score(a)||!score(b)){hold('invalid_score');continue;}
   // Penalty schema is provisional until verified against a real FA Cup result.
-  const fields={homeScore:a,awayScore:b};
+  const fields={homeScore:a,awayScore:b,...(!f.date?{date}:{})};
   if(a===b){
    const p=typeof m.pso==='string'&&m.pso.match(/^(\d+)\s*:\s*(\d+)$/);
    if(!p){hold('draw_without_verified_shootout');continue;}
