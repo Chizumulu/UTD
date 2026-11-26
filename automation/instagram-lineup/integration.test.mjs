@@ -78,3 +78,12 @@ test('jamo OCR matching corrects small errors but rejects ambiguous or unsupport
  assert.equal(resolve({votes:{},names:['해리 바튼']},players).number,null);
  assert.equal(resolve({votes:{11:3},names:['해리 바튼']},[...players,{number:12,nameKo:'해리 바튼'}]).number,null);
 });
+
+test('additional OCR evidence handles weak digits without accepting unrelated names',async()=>{
+ const {resolveProductionSlot:resolve}=await import('./resolve-production.mjs');
+ const players=[{number:49,nameKo:'굽부카니 바냐'},{number:4,nameKo:'켈빈 반다'},{number:9,nameKo:'제임스 헤르메스'},{number:80,nameKo:'다니엘 스쿠카'}];
+ assert.equal(resolve({votes:{8:6,49:1},names:['굽부카니 바냐']},players).number,49);
+ assert.equal(resolve({votes:{},names:['| 4. 켈빈 반다']},players).number,4);
+ assert.equal(resolve({votes:{},names:['제임스 헤르메스']},players).number,null);
+ assert.equal(resolve({votes:{49:6},names:['무관한 이름']},players).number,null);
+});
