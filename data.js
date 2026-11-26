@@ -6388,43 +6388,45 @@ const cupTournaments = [
     bracket: [
       { labelKo: '32강', labelEn: 'Round of 32', count: 16, dateKo: '1/10–11 · 1/24–25', dateEn: '10–11 · 24–25 Jan',
       // 1부(슈퍼 리그 오브 말라위) 자동 진출 16팀. 전국 추첨(12/29) 전이라 대진 위치는 임시 배치이며, rounds 에 경기가 들어오면 그 경기가 우선합니다.
+      entrantsAsOf: '2026-11-26', // entrants 의 rank = 슈퍼 리그 순위 (이 날짜 기준, 경기가 진행되면 rank 숫자만 고치세요). 배열 순서는 대진표 임시 배치라 그대로 두세요
       entrants: [
-        { en: 'Nyasa Big Bullets FC', ko: '니아사 빅 불렛츠 FC' },
-        { en: 'Mighty Wanderers FC', ko: '마이티 원더러스 FC' },
-        { en: 'Silver Strikers FC', ko: '실버 스트라이커스 FC' },
-        { en: 'Blue Eagles FC', ko: '블루 이글스 FC' },
-        { en: 'Moyale Barracks FC', ko: '모얄레 배럭스 FC' },
-        { en: 'Mitundu Baptist FC', ko: '미툰두 뱁티스트 FC' },
-        { en: 'Chitipa United FC', ko: '치티파 유나이티드 FC' },
-        { en: 'Ekhaya FC', ko: '에크하야 FC' },
-        { en: 'Masters FC', ko: '마스터스 FC' },
-        { en: 'Red Lions FC', ko: '레드 라이언스 FC' },
-        { en: 'CIVO United FC', ko: '시보 유나이티드 FC' },
-        { en: 'Dedza Dynamos FC', ko: '데드자 다이너모스 FC' },
-        { en: 'Karonga United FC', ko: '카롱가 유나이티드 FC' },
-        { en: 'Kamuzu Barracks FC', ko: '카무주 배럭스 FC' },
-        { en: 'Creck SC', ko: '크렉 SC' },
-        { en: 'MAFCO FC', ko: '마프코 FC' }
+        { en: 'Nyasa Big Bullets FC', ko: '니아사 빅 불렛츠 FC', rank: 1 },
+        { en: 'Mighty Wanderers FC', ko: '마이티 원더러스 FC', rank: 2 },
+        { en: 'Silver Strikers FC', ko: '실버 스트라이커스 FC', rank: 3 },
+        { en: 'Blue Eagles FC', ko: '블루 이글스 FC', rank: 4 },
+        { en: 'Moyale Barracks FC', ko: '모얄레 배럭스 FC', rank: 10 },
+        { en: 'Mitundu Baptist FC', ko: '미툰두 뱁티스트 FC', rank: 5 },
+        { en: 'Chitipa United FC', ko: '치티파 유나이티드 FC', rank: 6 },
+        { en: 'Ekhaya FC', ko: '에크하야 FC', rank: 7 },
+        { en: 'Masters FC', ko: '마스터스 FC', rank: 8 },
+        { en: 'Red Lions FC', ko: '레드 라이언스 FC', rank: 9 },
+        { en: 'CIVO United FC', ko: '시보 유나이티드 FC', rank: 11 },
+        { en: 'Dedza Dynamos FC', ko: '데드자 다이너모스 FC', rank: 12 },
+        { en: 'Karonga United FC', ko: '카롱가 유나이티드 FC', rank: 14 },
+        { en: 'Kamuzu Barracks FC', ko: '카무주 배럭스 FC', rank: 15 },
+        { en: 'Creck SC', ko: '크렉 SC', rank: 16 },
+        { en: 'MAFCO FC', ko: '마프코 FC', rank: 13 }
       ] },
       { labelKo: '16강', labelEn: 'Round of 16', count: 8, dateKo: '2/12–13', dateEn: '12–13 Feb' },
       { labelKo: '8강', labelEn: 'Quarter-finals', count: 4, dateKo: '2/27–28', dateEn: '27–28 Feb' },
       { labelKo: '4강', labelEn: 'Semi-finals', count: 2, dateKo: '3/6–7', dateEn: '6–7 Mar' },
       { labelKo: '결승', labelEn: 'Final', count: 1, dateKo: '3/20', dateEn: '20 Mar' }
     ],
-    // 2부(내셔널 디비전 리그) 참가 12팀 — 참가팀 탭에 표시됩니다.
+    // 2부(내셔널 디비전 리그) 참가 12팀 — 참가팀 탭에 표시됩니다. rank = 리그 순위 (divisionTwoAsOf 날짜 기준, 경기가 진행되면 이 숫자만 고치세요)
+    divisionTwoAsOf: '2026-11-26',
     divisionTwo: [
-      { en: 'Songwe Border United FC', ko: '송궤 보더 유나이티드 FC' },
-      { en: 'Mzuzu City Hammers FC', ko: '음주주 시티 해머스 FC' },
-      { en: 'Extreme FC', ko: '익스트림 FC' },
-      { en: 'FOMO FC', ko: '포모 FC' },
-      { en: 'Embangweni United FC', ko: '엠방웨니 유나이티드 FC' },
-      { en: 'Ntaja United FC', ko: '은타자 유나이티드 FC' },
-      { en: 'Chilobwe United FC', ko: '칠롭웨 유나이티드 FC', logo: '칠롭웨.webp' },
-      { en: 'Namitete Zitha FC', ko: '나미테테 지타 FC' },
-      { en: 'Ndirande Stars FC', ko: '은디란데 스타스 FC' },
-      { en: 'Mighty Tigers FC', ko: '마이티 타이거스 FC' },
-      { en: 'Bangwe All Stars FC', ko: '방궤 올 스타스 FC' },
-      { en: 'Changalume Barracks FC', ko: '창갈루메 배럭스 FC' }
+      { en: 'Songwe Border United FC', ko: '송궤 보더 유나이티드 FC', rank: 1 },
+      { en: 'Extreme FC', ko: '익스트림 FC', rank: 2 },
+      { en: 'Mzuzu City Hammers FC', ko: '음주주 시티 해머스 FC', rank: 3 },
+      { en: 'FOMO FC', ko: '포모 FC', rank: 4 },
+      { en: 'Embangweni United FC', ko: '엠방웨니 유나이티드 FC', rank: 5 },
+      { en: 'Ntaja United FC', ko: '은타자 유나이티드 FC', rank: 6 },
+      { en: 'Chilobwe United FC', ko: '칠롭웨 유나이티드 FC', rank: 7, logo: '칠롭웨.webp' },
+      { en: 'Namitete Zitha FC', ko: '나미테테 지타 FC', rank: 8 },
+      { en: 'Ndirande Stars FC', ko: '은디란데 스타스 FC', rank: 9 },
+      { en: 'Mighty Tigers FC', ko: '마이티 타이거스 FC', rank: 10 },
+      { en: 'Bangwe All Stars FC', ko: '방궤 올 스타스 FC', rank: 11 },
+      { en: 'Changalume Barracks FC', ko: '창갈루메 배럭스 FC', rank: 12 }
     ],
     // 지역 플레이오프(예선) 권역별 참가 팀 — 참가팀 탭에 표시됩니다. advance = 본선(32강) 진출 팀 수
     regionalQualifiers: [
@@ -6434,25 +6436,25 @@ const cupTournaments = [
           { en: 'Mzuzu City Hammers FC', ko: '음주주 시티 해머스 FC' },
           { en: 'Songwe Border United FC', ko: '송궤 보더 유나이티드 FC' }
         ] },
-        { labelKo: '3부 · 지역 1부 리그 (리그 원)', labelEn: 'Regional League One', teams: [
-          { en: 'Chibavi Real Stars FC', ko: '치바비 리얼 스타즈 FC' },
-          { en: 'Jenda United FC', ko: '젠다 유나이티드 FC' },
-          { en: 'Chizumulu United FC', ko: '치주물루 유나이티드 FC' },
-          { en: 'Chilumba Barracks FC', ko: '칠룸바 배럭스 FC' },
-          { en: 'Raiply FC', ko: '라이플리 FC' },
-          { en: 'Mafu Stars FC', ko: '마푸 스타즈 FC' }
+        { labelKo: '3부 · 지역 1부 리그 (리그 원)', labelEn: 'Regional League One', rankAsOf: '2026-10-31', teams: [
+          { en: 'Chibavi Real Stars FC', ko: '치바비 리얼 스타즈 FC', rank: 1 },
+          { en: 'Jenda United FC', ko: '젠다 유나이티드 FC', rank: 2 },
+          { en: 'Chizumulu United FC', ko: '치주물루 유나이티드 FC', rank: 3 },
+          { en: 'Chilumba Barracks FC', ko: '칠룸바 배럭스 FC', rank: 4 },
+          { en: 'Raiply FC', ko: '라이플리 FC', rank: 5 },
+          { en: 'Mafu Stars FC', ko: '마푸 스타즈 FC', rank: 6 }
         ] },
-        { labelKo: '4부 · 지역 2부 리그 (리그 투)', labelEn: 'Regional League Two', teams: [
-          { en: 'Mzwazwa FC', ko: '음즈와와 FC' },
-          { en: 'Bwabwa FC', ko: '브와브와 FC' },
-          { en: 'Chipelembe FC', ko: '치펠렘베 FC' },
-          { en: 'Chikaya FC', ko: '치카야 FC' }
+        { labelKo: '4부 · 지역 2부 리그 (리그 투)', labelEn: 'Regional League Two', clusterAsOf: '2026-10-31', teams: [
+          { en: 'Mzwazwa FC', ko: '음즈와와 FC', cluster: 'A', clusterRank: 1 },
+          { en: 'Bwabwa FC', ko: '브와브와 FC', cluster: 'B', clusterRank: 1 },
+          { en: 'Chipelembe FC', ko: '치펠렘베 FC', cluster: 'C', clusterRank: 1 },
+          { en: 'Chikaya FC', ko: '치카야 FC', cluster: 'D', clusterRank: 1 }
         ] },
         { labelKo: '디스트릭트 컵 우승팀 (2025)', labelEn: 'District champions (2025)', teams: [
           { en: 'Likoma Stars FC', ko: '리코마 스타스 FC', subKo: '리코마', subEn: 'Likoma' },
           { en: 'Brazil Vuwa FC', ko: '브라질 부와 FC', subKo: '은카타 베이', subEn: 'Nkhata Bay' },
           { en: 'Emazwini FC', ko: '에마즈위니 FC', subKo: '음주바', subEn: 'Mzimba' },
-          { en: 'Blue Spot FC', ko: '블루 스팟 FC', subKo: '음주주', subEn: 'Mzuzu' },
+          { en: 'Blue Spot FC', ko: '블루 스팟 FC', subKo: '음주주', subEn: 'Mzuzu', cluster: 'C', clusterRank: 5 },
           { en: 'Karonga Pirates FC', ko: '카롱가 파이리츠 FC', subKo: '카롱가', subEn: 'Karonga' },
           { en: 'Chandamale FC', ko: '찬다말레 FC', subKo: '룸피', subEn: 'Rumphi' },
           { en: 'Santos FC', ko: '산투스 FC', subKo: '치티파', subEn: 'Chitipa' }

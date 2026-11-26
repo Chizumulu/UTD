@@ -783,6 +783,16 @@
     { en: 'Ndirande Stars FC', ko: '은디란데 스타스 FC' }, { en: 'Mighty Tigers FC', ko: '마이티 타이거스 FC' },
     { en: 'Bangwe All Stars FC', ko: '방궤 올 스타스 FC' }, { en: 'Changalume Barracks FC', ko: '창갈루메 배럭스 FC' }
   ];
+  // 2부(내셔널 디비전 리그) 순위: data.js divisionTwo 의 rank → { 팀 영문명: 순위 }
+  function cupDivTwoRanks(c) {
+    const map = new Map();
+    (c && c.divisionTwo || []).forEach(function (t) { if (t && t.en && Number.isInteger(t.rank)) map.set(t.en, t.rank); });
+    return map;
+  }
+  function cupRankBadge(rank, ko, leagueKo, leagueEn) {
+    if (!Number.isInteger(rank)) return '';
+    return '<span class="cup-rq-rank' + (rank <= 3 ? ' is-top' : '') + '" title="' + (ko ? (leagueKo || '리그') + ' ' + rank + '위' : (leagueEn || 'League') + ' #' + rank) + '">' + (ko ? rank + '위' : '#' + rank) + '</span>';
+  }
   function cupDivisionTwoTeams(c) {
     return c.divisionTwo?.length ? c.divisionTwo : (c.id === 'faCup2627' ? CUP_FA_DIV2_FALLBACK : []);
   }
@@ -964,7 +974,33 @@
   }
   // 올해 리그(leagueData)에 없는 컵대회 참가팀의 로고. 리그 팀은 leagueData의 logoSrc를 그대로 씁니다.
   const CUP_EXTRA_LOGO_SRC = {
-    'Embangweni United FC': './엠방웨니.jpg'
+    'Embangweni United FC': './엠방웨니.png',
+    'Changalume Barracks FC': './창갈루메.webp',
+    'Bangwe All Stars FC': './방궤.png',
+    'Mighty Tigers FC': './마이티타이거즈.png',
+    'Ndirande Stars FC': './은디란데.webp',
+    'Namitete Zitha FC': './나미테테.webp',
+    'Ntaja United FC': './은타자.webp',
+    'FOMO FC': './포모.webp',
+    'Extreme FC': './익스트림.webp',
+    'Songwe Border United FC': './송궤보더.webp',
+    'Mzuzu City Hammers FC': './음주주해머스.webp',
+    'Nyasa Big Bullets FC': './빅불렛츠.png',
+    'Mighty Wanderers FC': './마이티원더러스.png',
+    'Silver Strikers FC': './실버스트라이크즈.png',
+    'Blue Eagles FC': './불루이글지.png',
+    'Mitundu Baptist FC': './미툰두.png',
+    'Chitipa United FC': './치티파.png',
+    'Ekhaya FC': './에크하야.png',
+    'Masters FC': './마스터즈.png',
+    'Red Lions FC': './레드라이온즈.png',
+    'Moyale Barracks FC': './모얄레.png',
+    'CIVO United FC': './시보.png',
+    'Dedza Dynamos FC': './다이너모스.png',
+    'MAFCO FC': './마프코.png',
+    'Karonga United FC': './카롱가.png',
+    'Kamuzu Barracks FC': './카무주.png',
+    'Creck SC': './크렉.png'
   };
   function cupLogoSrc(nameEn) {
     const t = leagueData.find(function (x) { return x.nameEn === nameEn; });
@@ -1462,8 +1498,12 @@
     const rowsTeams = allInfo.filter(function (r) { return !PRIZE_RE.test(String(r[0])) && TEAM_RE.test(String(r[0])); });
     const rowsAbout = allInfo.filter(function (r) { return rowsPrize.indexOf(r) < 0 && rowsTeams.indexOf(r) < 0; });
     // 1부 리그(32강 자동 진출) 팀 목록: 대진표 뼈대의 첫 라운드 entrants 를 그대로 보여줍니다.
-    const teamListSection = function (titleKo, titleEn, list, tagKo, tagEn, badgeKo, badgeEn) {
+    const teamListSection = function (titleKo, titleEn, list, tagKo, tagEn, badgeKo, badgeEn, asOf, lgKo, lgEn) {
       if (!Array.isArray(list) || !list.length) return '';
+      // 순위(rank)가 있으면 순위순으로 보여줍니다. (원본 배열 순서는 대진표 임시 배치라 건드리지 않아요)
+      if (list.some(function (e) { return e && Number.isInteger(e.rank); })) {
+        list = list.slice().sort(function (x, y) { return (Number.isInteger(x.rank) ? x.rank : 999) - (Number.isInteger(y.rank) ? y.rank : 999); });
+      }
       const title = ko ? titleKo : titleEn;
       return '<section class="cup-info cup-rq"><div class="cup-rq-head"><div class="cup-rq-title">' + cupEsc(title) + '</div>' +
         '<div class="cup-rq-stats"><span class="cup-rq-stat"><b>' + list.length + '</b>' + (ko ? '팀 참가' : ' teams') + '</span>' +
@@ -1471,14 +1511,15 @@
         '<div class="cup-rq-grid">' + list.map(function (e) {
           const t = leagueData.find(function (x) { return x.nameEn === e.en; });
           const lg = e.logo || cupLogoSrc(e.en);
-          return '<div class="cup-rq-team">' + (lg ? '<img src="' + cupEsc(lg) + '" alt="">' : '<span class="cup-rq-ph" aria-hidden="true"></span>') +
+          return '<div class="cup-rq-team' + (Number.isInteger(e.rank) ? ' has-rank' : '') + '">' + cupRankBadge(e.rank, ko, lgKo, lgEn) + (lg ? '<img src="' + cupEsc(lg) + '" alt="">' : '<span class="cup-rq-ph" aria-hidden="true"></span>') +
             '<span class="cup-rq-tname">' + cupEsc(ko ? (e.ko || e.en) : e.en) + '</span></div>';
-        }).join('') + '</div></section>';
+        }).join('') + '</div>' +
+        (asOf ? '<p class="cup-rq-note">' + (ko ? '순위는 ' + cupEsc(lgKo || '리그') + ' 기준이에요 (' + cupEsc(asOf.replace(/-/g, '.')) + ' 현재).' : 'Ranks are from the ' + cupEsc(lgEn || 'league') + ' (as of ' + cupEsc(asOf) + ').') + '</p>' : '') + '</section>';
     };
     // 1부: 대진표 뼈대 첫 라운드의 entrants / 2부: c.divisionTwo
     const firstRound = Array.isArray(c.bracket) && c.bracket[0];
-    const topFlightHtml = teamListSection('1부 리그 · 슈퍼 리그 오브 말라위', 'Top flight · Super League of Malawi', firstRound && firstRound.entrants, '', '', '32강 자동 진출', 'Auto Round of 32') +
-      teamListSection('2부 리그 · 내셔널 디비전', 'Second tier · National Division', cupDivisionTwoTeams(c));
+    const topFlightHtml = teamListSection('1부 리그 · 슈퍼 리그 오브 말라위', 'Top flight · Super League of Malawi', firstRound && firstRound.entrants, '', '', '32강 자동 진출', 'Auto Round of 32', firstRound && firstRound.entrantsAsOf, '슈퍼 리그 오브 말라위 순위표', 'Super League of Malawi table') +
+      teamListSection('2부 리그 · 내셔널 디비전', 'Second tier · National Division', cupDivisionTwoTeams(c), '', '', '', '', c.divisionTwoAsOf, 'NBS Bank 내셔널 디비전 리그 26/27 순위표', 'NBS Bank National Division League 26/27 table');
     // 지역 플레이오프(예선) 권역별 참가 팀: 토스 스타일 큰 카드 → 그룹(2부·3부·4부·지역) → 큰 팀 타일
     const regionalHtml = (Array.isArray(c.regionalQualifiers) ? c.regionalQualifiers : []).map(function (rg) {
       const total = (rg.groups || []).reduce(function (n, g) { return n + (g.teams || []).length; }, 0);
@@ -1490,15 +1531,28 @@
         const m = lbl.match(/^(\d부)\s*·\s*(.+)$/);
         const tag = m ? m[1] : (ko ? '지역' : 'District');
         const name = m ? m[2] : lbl;
+        const divRanks = m && m[1] === '2부' ? cupDivTwoRanks(c) : null;
         return '<div class="cup-rq-group"><div class="cup-rq-label"><span class="cup-rq-tag">' + cupEsc(tag) + '</span><span class="cup-rq-name">' + cupEsc(name) + '</span>' +
           '<span class="cup-rq-count">' + (g.teams || []).length + (ko ? '팀' : '') + '</span></div>' +
-          '<div class="cup-rq-grid">' + (g.teams || []).map(function (e) {
+          '<div class="cup-rq-grid">' + (function () {
+            // 순위: 팀의 rank 값 → 없으면 2부 순위표. 순위가 있으면 순위순으로 보여줍니다.
+            const rankOf = function (e) { return Number.isInteger(e.rank) ? e.rank : (divRanks ? divRanks.get(e.en) : undefined); };
+            const teams = (g.teams || []).slice();
+            if (teams.some(function (e) { return Number.isInteger(rankOf(e)); })) {
+              teams.sort(function (x, y) { return (Number.isInteger(rankOf(x)) ? rankOf(x) : 999) - (Number.isInteger(rankOf(y)) ? rankOf(y) : 999); });
+            }
+            return teams;
+          })().map(function (e) {
             const t = leagueData.find(function (x) { return x.nameEn === e.en; });
             const lg = e.logo || cupLogoSrc(e.en);
             const sub = ko ? e.subKo : e.subEn;
-            return '<div class="cup-rq-team">' + (lg ? '<img src="' + cupEsc(lg) + '" alt="">' : '<span class="cup-rq-ph" aria-hidden="true"></span>') +
-              '<span class="cup-rq-tname">' + cupEsc(ko ? (e.ko || e.en) : e.en) + (sub ? '<small>' + cupEsc(sub) + '</small>' : '') + '</span></div>';
-          }).join('') + '</div></div>';
+            const rk = Number.isInteger(e.rank) ? e.rank : (divRanks ? divRanks.get(e.en) : undefined);
+            return '<div class="cup-rq-team' + (Number.isInteger(rk) ? ' has-rank' : '') + '">' + cupRankBadge(rk, ko, divRanks ? '내셔널 디비전' : name, divRanks ? 'National Division' : name) + (lg ? '<img src="' + cupEsc(lg) + '" alt="">' : '<span class="cup-rq-ph" aria-hidden="true"></span>') +
+              '<span class="cup-rq-tname">' + cupEsc(ko ? (e.ko || e.en) : e.en) + (sub ? '<small>' + cupEsc(sub) + '</small>' : '') +
+              (e.cluster ? '<small class="cup-rq-cluster">' + (ko ? '클러스터 ' : 'Cluster ') + cupEsc(e.cluster) + (Number.isInteger(e.clusterRank) ? ' · ' + (ko ? e.clusterRank + '위' : '#' + e.clusterRank) : '') + '</small>' : '') + '</span></div>';
+          }).join('') + '</div>' +
+          (g.rankAsOf ? '<p class="cup-rq-note">' + (ko ? '순위는 ' + cupEsc(name) + ' 순위표 기준이에요 (' + cupEsc(g.rankAsOf.replace(/-/g, '.')) + ' 현재).' : 'Ranks are from the ' + cupEsc(name) + ' table (as of ' + cupEsc(g.rankAsOf) + ').') + '</p>' : '') +
+          (g.clusterAsOf ? '<p class="cup-rq-note">' + (ko ? '클러스터 순위는 ' + cupEsc(g.clusterAsOf.replace(/-/g, '.')) + ' 현재 기준이에요.' : 'Cluster ranks as of ' + cupEsc(g.clusterAsOf) + '.') + '</p>' : '') + '</div>';
       }).join('');
       return '<section class="cup-info cup-rq">' + head + body + '</section>';
     }).join('');
@@ -14963,7 +15017,7 @@
   }
   // 올해 리그에 없어서 leagueData에서 로고를 못 찾는 25/26 팀의 로고 파일 (파일명 그대로 적습니다)
   const ARCHIVE_LOGO_SRC = {
-    'Embangweni United FC': './엠방웨니.jpg',
+    'Embangweni United FC': './엠방웨니.png',
     'Ekwendeni Hardnockers FC': './하드노커즈.png',
     'Ekwaiweni Tafika AS': './에크와이웨니.png',
     'Chirambo FC': './치람보.png',
