@@ -14,7 +14,7 @@ export function applyHighlight(source,video) {
   const title=video.title;
   if(!/하이라이트/.test(title)||!/치주물루|chizumulu\s+united/i.test(title)) throw Error('Not a club highlight');
   if(!/\b(?:2026|26)\s*[/–-]\s*(?:2027|27)\b/.test(title)) throw Error('Season not verified');
-  if(/FA\s*컵|FA\s*Cup/i.test(title)) throw Error('Cup UI mapping not verified');
+  if(/FA\s*컵|FA\s*Cup/i.test(title)) return applyCupHighlight(source,video);
   if(!/NRFA/i.test(title)||!/리그\s*(?:1|원)|league\s*(?:one|1)/i.test(title)) throw Error('League not verified');
   const round=title.match(/\b(\d+)\s*R\b/i);
   const pair=title.replace(/^.*\]/,'').replace(/^\s*\d+\s*R\s*(?:\([^)]*\))?\s*/i,'').replace(/\s*하이라이트.*$/,'').trim().split(/\s+vs\.?\s+/i);
@@ -50,6 +50,36 @@ export function applyHighlight(source,video) {
   parse(updated,{ecmaVersion:'latest',sourceType:'script'});
   return {source:updated,status:'updated',rk,id};
 }
+
+function applyCupHighlight(source,video){
+  const ast=parse(source,{ecmaVersion:'latest',sourceType:'script'});
+  const decl=new Map(ast.body.filter(n=>n.type==='VariableDeclaration').flatMap(n=>n.declarations).map(d=>[d.id.name,d.init]));
+  const cups=decl.get('cupTournaments');
+  const cup=cups?.elements?.find(n=>val(n,'id')==='faCup2627');
+  if(!cup)throw Error('Cup schema changed');
+  const pair=video.title.replace(/^.*\]/,'').replace(/^\s*(?:북부\s*)?(?:지역\s*)?(?:\d+\s*(?:R|라운드)|32강|16강|8강|4강|결승)\s*/i,'').replace(/\s*하이라이트.*$/,'').trim().split(/\s+vs\.?\s+/i);
+  if(pair.length!==2||club(pair[0])===club(pair[1]))throw Error('Cup teams not verified');
+  const hits=[];
+  for(const round of prop(cup,'rounds')?.value?.elements??[]){
+    for(const f of prop(round,'matches')?.value?.elements??[]){
+      if(val(f,'postponed')||val(f,'forfeit')||!Number.isInteger(val(f,'homeScore'))||!Number.isInteger(val(f,'awayScore')))continue;
+      if(!same(pair[0],val(f,'homeKo'),val(f,'home'))||!same(pair[1],val(f,'awayKo'),val(f,'away')))continue;
+      const date=val(f,'date');
+      if(!date||!Number.isFinite(Date.parse(date))||Date.parse(date)>Date.parse(video.published))continue;
+      hits.push({f,id:val(f,'id')??[val(round,'labelEn'),val(f,'home'),val(f,'away'),date].join('|')});
+    }
+  }
+  if(hits.length!==1)throw Error('No unique completed cup fixture: '+hits.length);
+  const {f,id}=hits[0];
+  const url='https://www.youtube.com/watch?v='+video.id;
+  if(source.includes('watch?v='+video.id)||source.includes('youtu.be/'+video.id))return {source,status:'duplicate',id,rk:'faCup2627'};
+  if(prop(f,'highlight'))throw Error('Existing cup highlight protected');
+  const first=f.properties[0];
+  const updated=source.slice(0,first.start)+'highlight: '+JSON.stringify(url)+', '+source.slice(first.start);
+  parse(updated,{ecmaVersion:'latest',sourceType:'script'});
+  return {source:updated,status:'updated',id,rk:'faCup2627'};
+}
+
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const video=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload.video;
   const source=fs.readFileSync('data.js','utf8');
