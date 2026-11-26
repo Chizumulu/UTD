@@ -18,7 +18,7 @@ async function request(url, options, label) {
   return response;
 }
 
-async function readCard() {
+export async function readCard({ raw = false } = {}) {
   const token = process.env.UTD_INSTAGRAM_TOKEN;
   if (!token) throw new Error('Set UTD_INSTAGRAM_TOKEN in Actions secrets');
   const url = new URL('https://graph.facebook.com/v27.0/' + accountId);
@@ -55,6 +55,7 @@ async function readCard() {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) throw new Error('Unexpected image format');
   const bytes = Buffer.from(await image.arrayBuffer());
 
+  if (raw) return { post, bytes };
   const reader = fileURLToPath(new URL('./read-card.py', import.meta.url));
   const output = execFileSync('/usr/bin/python3', [reader, sample], { input: bytes, encoding: 'utf8' });
   return { post, card: JSON.parse(output) };
