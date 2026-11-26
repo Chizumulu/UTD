@@ -1,4 +1,6 @@
+import { planCupForfeits } from '../forfeit-approval/plan-cup-forfeits.mjs';
 import { scanYoutubeHighlights } from '../youtube-highlights/rss.mjs';
+import { detectForfeit } from '../forfeit-approval/detect-forfeit.mjs';
 import { planCupScorers } from '../cup-sync/plan-scorers.mjs';
 const API_URL = "https://api.chizumulu.net/v1/structured?limit=40";
 const MAX_PROPOSAL_AGE_SECONDS = 60 * 60 * 24 * 14;
@@ -607,7 +609,14 @@ async function scanForCompletedMatches(env) {
           text: terminalKoreanTexts.join("\n\n")
         }
       };
-      const proposal = makeProposal(proposalItem, mergedMatch);
+      let proposal = makeProposal(proposalItem, mergedMatch);
+      if (env.FORFEIT_APPROVALS_ENABLED === "true" && proposal && !proposal.goals.length) {
+        const signal = detectForfeit(mergedMatch, proposal.sourceText);
+        if (signal && proposal.matchDate) {
+          proposal = { ...proposal, ...signal, kind: "forfeit", matchKey: "forfeit:" + [normalizeTeamIdentity(proposal.home), normalizeTeamIdentity(proposal.away)].sort().join("|") + "|" + proposal.matchDate,
+            reviewWarnings: [signal.explicit ? "몰수 관련 API 문구 감지" : "3:0 또는 0:3, 득점자 없음 — 공식 몰수 여부 확인 필요"] };
+        }
+      }
 
       if (summary.terminalSamples.length < 5) {
         summary.terminalSamples.push({
@@ -630,7 +639,7 @@ async function scanForCompletedMatches(env) {
         summary.unverifiableDateCount += 1;
         continue;
       }
-      if (isRecordedFixture(recordedFixtures, proposal.home, proposal.away, proposal.matchDate)) {
+      if (proposal.kind !== "forfeit" && isRecordedFixture(recordedFixtures, proposal.home, proposal.away, proposal.matchDate)) {
         summary.alreadyRecordedCount += 1;
         continue;
       }
@@ -1192,8 +1201,8 @@ async function sendApprovalMessage(proposal, env, { confirmation = false } = {})
       !env.WHATSAPP_ADMIN_WA_ID || !env.WHATSAPP_TEMPLATE_NAME) {
     throw new Error("WhatsApp settings are incomplete");
   }
-  const homeScorers = proposal.competition === "faCup2627" && !proposal.goals.some(g=>g.side==="home") ? "수집 대상 아님" : formatScorersForMessage(proposal.goals, "home");
-  const awayScorers = proposal.competition === "faCup2627" && !proposal.goals.some(g=>g.side==="away") ? "수집 대상 아님" : formatScorersForMessage(proposal.goals, "away");
+  const homeScorers = proposal.kind === "forfeit" ? (proposal.homeScore === 3 ? "몰수승 후보 (득점자 없음)" : "몰수패 후보 (득점자 없음)") : proposal.competition === "faCup2627" && !proposal.goals.some(g=>g.side==="home") ? "수집 대상 아님" : formatScorersForMessage(proposal.goals, "home");
+  const awayScorers = proposal.kind === "forfeit" ? (proposal.awayScore === 3 ? "몰수승 후보 (득점자 없음)" : "몰수패 후보 (득점자 없음)") : proposal.competition === "faCup2627" && !proposal.goals.some(g=>g.side==="away") ? "수집 대상 아님" : formatScorersForMessage(proposal.goals, "away");
   const actions = confirmation ? ["confirm", "hold", "reject"] : ["approve", "hold", "reject"];
   const buttons = await Promise.all(
     actions.map(async (action, index) => ({
@@ -1203,7 +1212,7 @@ async function sendApprovalMessage(proposal, env, { confirmation = false } = {})
       parameters: [{ type: "payload", payload: await signedPayload(proposal.id, action, env) }]
     }))
   );
-  const matchText = (proposal.competition === "faCup2627" ? "[FA컵] " : "") + proposal.home + " " + proposal.homeScore + "–" + proposal.awayScore + " " + proposal.away;
+  const matchText = (proposal.kind === "forfeit" ? "[몰수 판정 후보] " : "") + (proposal.competition === "faCup2627" ? "[FA컵] " : "") + proposal.home + " " + proposal.homeScore + "–" + proposal.awayScore + " " + proposal.away;
   const reviewText = proposal.needsReview
     ? "⚠️ 확인 필요: " + proposal.reviewWarnings.join(" / ") + "\n"
     : "";
@@ -1326,6 +1335,7 @@ async function handleAction(payload, env) {
     return;
   }
 
+  if (proposal.kind === "forfeit" && env.FORFEIT_APPROVALS_ENABLED !== "true") return;
   const [owner, repository] = String(env.GITHUB_REPOSITORY || "").split("/");
   if (!owner || !repository || !env.GITHUB_TOKEN) throw new Error("GitHub dispatch settings are incomplete");
 
@@ -1345,7 +1355,7 @@ async function handleAction(payload, env) {
         "user-agent": "utd-scorer-approval"
       },
       body: JSON.stringify({
-        event_type: proposal.competition === "faCup2627" ? "cup-scorer-proposal-approved" : "scorer-proposal-approved",
+        event_type: proposal.kind === "forfeit" ? "forfeit-proposal-approved" : proposal.competition === "faCup2627" ? "cup-scorer-proposal-approved" : "scorer-proposal-approved",
         client_payload: { proposal: approvedProposal }
       })
     });
@@ -1399,6 +1409,17 @@ async function scanCupApprovals(env) {
   const data=await api.json(),cup=await snapshot.json();
   if(cup.id!=="faCup2627"||!Array.isArray(cup.rounds)) throw Error("Invalid cup snapshot");
   const {proposals,held}=planCupScorers(data.items,cup);
+   if(env.FORFEIT_APPROVALS_ENABLED === "true"){
+    for(const p of planCupForfeits(data.items,cup)){
+     const key="match:"+p.matchKey;
+     if(await env.APPROVALS.get(key))continue;
+     const id=crypto.randomUUID();
+     const proposal={...p,id,createdAt:new Date().toISOString()};
+     await env.APPROVALS.put("proposal:"+id,JSON.stringify(proposal),{expirationTtl:MAX_PROPOSAL_AGE_SECONDS});
+     await env.APPROVALS.put(key,id,{expirationTtl:MAX_PROPOSAL_AGE_SECONDS});
+     try{await sendApprovalMessage(proposal,env);}catch(error){await env.APPROVALS.delete("proposal:"+id);await env.APPROVALS.delete(key);throw error;}
+    }
+   }
   let sent=0;
   for(const p of proposals){
    const fixture=cup.rounds.flatMap(r=>r.matches??[]).find((f)=>f.id===p.fixtureId)??cup.rounds[Number(p.fixtureId.match(/^round:(\d+):match:(\d+)$/)?.[1])]?.matches?.[Number(p.fixtureId.match(/^round:(\d+):match:(\d+)$/)?.[2])];
