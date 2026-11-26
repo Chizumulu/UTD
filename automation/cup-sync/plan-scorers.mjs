@@ -13,7 +13,7 @@ export function planCupScorers(items,cup){
    if(!side||!['full_time','finished','ended'].includes(m.status))continue;
    const hold=reason=>held.push({fixtureId:hit.fixtureId,source:hit.source,reason});
    const date=parseDate(m.dateText);
-   if(!date||!f.date||f.date!==date||f.homeScore!==hit.bracketScores[0]||f.awayScore!==hit.bracketScores[1]||m.forfeit||f.forfeit){hold('result_not_verified');continue;}
+   if(!date||!f.date||f.date!==date||f.homeScore!==hit.bracketScores[0]||f.awayScore!==hit.bracketScores[1]||m.forfeit||f.forfeit||[m.resultType,f.resultType].some(t=>/^(forfeit|walk[ _-]?over|awarded)$/i.test(String(t??'').trim()))){hold('result_not_verified');continue;}
    const expected=m[side+'Score'];
    if(!Number.isSafeInteger(expected)||expected<=0)continue;
    const goals=[],seen=new Set();let uncertain=false;
