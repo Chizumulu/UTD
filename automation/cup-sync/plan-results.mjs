@@ -1,8 +1,12 @@
+import {detectForfeit} from '../forfeit-approval/detect-forfeit.mjs';
 import {matchCupItems} from './match-fixtures.mjs';
 import {parseDate} from './plan-schedule.mjs';
 const score=n=>Number.isSafeInteger(n)&&n>=0;
 const finalStatus=new Set(['full_time','finished','ended']);
 export function planResults(items,cup){
+ // Keep scorer-bearing snapshots distinct from score-only reports.
+ const snapshots=(items??[]).flatMap(item=>matchCupItems([item],cup).matched);
+ const hasScorerEvidence=new Set(snapshots.filter(h=>finalStatus.has(h.match.status)&&!detectForfeit(h.match)&&!h.match.forfeit&&!/^(forfeit|walk[ _-]?over|awarded)$/i.test(h.match.resultType??'')).map(h=>JSON.stringify([h.fixtureId,parseDate(h.match.dateText),h.bracketScores])));
  const {matched,skipped}=matchCupItems(items,cup);
  const held=[...skipped],proposals=[],groups=new Map();
  for(const hit of matched){
@@ -13,6 +17,8 @@ export function planResults(items,cup){
   if(!date|| (f.date&&f.date!==date)){hold('missing_or_conflicting_result_date');continue;}
   const [a,b]=hit.bracketScores;
   if(!score(a)||!score(b)){hold('invalid_score');continue;}
+  const suspect=detectForfeit(m);
+  if(suspect&&(suspect.explicit||!hasScorerEvidence.has(JSON.stringify([hit.fixtureId,date,hit.bracketScores])))){hold('possible_forfeit_requires_approval');continue;}
   // Penalty schema is provisional until verified against a real FA Cup result.
   const fields={homeScore:a,awayScore:b,...(!f.date?{date}:{})};
   if(a===b){
