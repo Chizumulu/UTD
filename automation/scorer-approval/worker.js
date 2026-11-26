@@ -1,3 +1,4 @@
+import { validateReviewMatches, lineupMessageValues } from '../instagram-lineup/review-message.mjs';
 import { scanInstagramLineups } from '../instagram-lineup/discover.mjs';
 import { planCupForfeits } from '../forfeit-approval/plan-cup-forfeits.mjs';
 import { scanYoutubeHighlights } from '../youtube-highlights/rss.mjs';
@@ -1456,6 +1457,7 @@ async function receiveLineupProposal(request, env) {
     !Array.isArray(p.starters)||p.starters.length!==11||!Array.isArray(p.bench)||!p.bench.length||p.bench.length>12||
     ![...p.starters,...p.bench].every(validPlayer)||new Set([...p.starters,...p.bench].map(x=>x.number)).size!==p.starters.length+p.bench.length)
     return Response.json({ok:false,error:"Invalid lineup proposal"},{status:400});
+  if(!validateReviewMatches(p))return Response.json({ok:false,error:"Invalid lineup review metadata"},{status:400});
   const matchKey="lineup:"+p.postId;
   const key="match:"+matchKey;
   if(await env.APPROVALS.get(key))return Response.json({ok:true,duplicate:true});
@@ -1479,8 +1481,7 @@ async function sendLineupApproval(p,env,confirmation){
   if(!env.WHATSAPP_LINEUP_TEMPLATE_NAME)throw Error("Lineup template not configured");
   const actions=confirmation?["confirm","hold","reject"]:["approve","hold","reject"];
   const buttons=await Promise.all(actions.map(async(action,i)=>({type:"button",sub_type:"quick_reply",index:String(i),parameters:[{type:"payload",payload:await signedPayload(p.id,action,env)}]})));
-  const fmt=players=>players.map(x=>(x.pos?x.pos+" ":"")+x.number+" "+x.nameKo).join(", ");
-  const values=[(confirmation?"2차 확인 · ":"")+p.matchDate+" "+p.home+" vs "+p.away+" (포메이션 확인 필요)",fmt(p.starters),fmt(p.bench),p.id];
+  const values=lineupMessageValues(p,confirmation);
   const response=await fetch(String(env.WHATSAPP_GRAPH_URL||"").replace(/\/$/,"")+"/"+encodeURIComponent(env.WHATSAPP_PHONE_NUMBER_ID)+"/messages",{
    method:"POST",headers:{authorization:"Bearer "+env.WHATSAPP_ACCESS_TOKEN,"content-type":"application/json"},
    body:JSON.stringify({messaging_product:"whatsapp",to:env.WHATSAPP_ADMIN_WA_ID,type:"template",template:{name:env.WHATSAPP_LINEUP_TEMPLATE_NAME,language:{code:env.WHATSAPP_TEMPLATE_LANGUAGE||"ko"},components:[{type:"body",parameters:values.map(v=>({type:"text",text:sanitizeTemplateText(v)}))},...buttons]}})
