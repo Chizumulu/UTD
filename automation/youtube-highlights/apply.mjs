@@ -32,7 +32,7 @@ export function applyHighlight(source,video) {
       if(val(f,'postponed')||val(f,'forfeit')||!Number.isInteger(val(f,'homeScore'))||!Number.isInteger(val(f,'awayScore')))continue;
       if(!same(pair[0],val(f,'homeKo'),val(f,'homeEn'))||!same(pair[1],val(f,'awayKo'),val(f,'awayEn')))continue;
       const id=val(f,'fixtureId'), date=val(f,'kickoffDate');
-      if(id!=='utd-2026.'+slug(val(f,'homeEn'))+'.'+slug(val(f,'awayEn'))||!date||Date.parse(date)>Date.parse(video.published))continue;
+      if(id!=='utd-2026.'+slug(val(f,'homeEn'))+'.'+slug(val(f,'awayEn'))||!date||!Number.isFinite(Date.parse(date))||Date.parse(date)>Date.parse(video.published))continue;
       const n=Number(rk.slice(5)),regular=n-makeup.filter(k=>Number(k.slice(5))<=n).length;
       if(round&&![n,regular,val(f,'movedFromWeek')].includes(Number(round[1])))continue;
       hits.push({rk,id});
@@ -40,8 +40,7 @@ export function applyHighlight(source,video) {
   }
   if(hits.length!==1)throw Error('No unique completed fixture: '+hits.length);
   const {rk,id}=hits[0];
-  const videoId = url => {try{const u=new URL(url);return u.hostname==='youtu.be'?u.pathname.slice(1):u.searchParams.get('v')}catch{return null}};
-  if(highlights.properties.some(p=>videoId(p.value.value)===video.id))return {source,status:'duplicate',rk,id};
+  if(source.includes('watch?v='+video.id)||source.includes('youtu.be/'+video.id))return {source,status:'duplicate',rk,id};
   if(prop(highlights,rk))throw Error('Existing highlight protected: '+rk);
   const url='https://www.youtube.com/watch?v='+video.id;
   const first=highlights.properties[0];
