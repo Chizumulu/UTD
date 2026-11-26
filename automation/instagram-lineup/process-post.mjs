@@ -34,7 +34,7 @@ if(!image.ok||!['image/jpeg','image/png','image/webp'].includes(image.headers.ge
 const chunks=[];let size=0;
 for await(const chunk of image.body){size+=chunk.length;if(size>15*1024*1024)throw Error('Image exceeds limit');chunks.push(Buffer.from(chunk));}
 const reader=fileURLToPath(new URL('./read-new-card.py',import.meta.url));
-const ocr=JSON.parse(execFileSync('/usr/bin/python3',[reader],{input:Buffer.concat(chunks),encoding:'utf8',timeout:240000,maxBuffer:2*1024*1024}));
+const ocr=JSON.parse(execFileSync('/usr/bin/python3',[reader],{input:Buffer.concat(chunks),encoding:'utf8',timeout:900000,maxBuffer:2*1024*1024}));
 const proposal=planLineup(await readFile('data.js','utf8'),post,ocr);
 const response=await fetch('https://utd.likey00700.workers.dev/admin/lineup-proposal',{method:'POST',headers:{authorization:'Bearer '+ingest,'content-type':'application/json'},body:JSON.stringify(proposal),signal:AbortSignal.timeout(45000)});
 if(!response.ok)throw Error('Lineup ingest HTTP '+response.status);
