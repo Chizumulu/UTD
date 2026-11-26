@@ -48,6 +48,7 @@ jobs:
             git fetch origin main
             git checkout -B main origin/main
             node automation/cup-sync/apply-approved-scorers.mjs
+            node --input-type=module -e "import fs from 'node:fs'; import {locate} from './automation/cup-sync/sync-cup.mjs'; fs.writeFileSync('automation/cup-sync/cup-snapshot.json',JSON.stringify(locate(fs.readFileSync('data.js','utf8')).cup,null,2)+'\\n');"
             node --check data.js
 
             if git diff --quiet -- data.js; then
@@ -55,7 +56,7 @@ jobs:
               exit 0
             fi
 
-            git add data.js
+            git add data.js automation/cup-sync/cup-snapshot.json
             git commit -m "Update approved FA Cup scorers"
             if git push origin HEAD:main; then
               echo "Approved scorer data was committed to main."
@@ -71,6 +72,7 @@ jobs:
           git fetch origin main
           git checkout -B main origin/main
           node automation/cup-sync/apply-approved-scorers.mjs
+            node --input-type=module -e "import fs from 'node:fs'; import {locate} from './automation/cup-sync/sync-cup.mjs'; fs.writeFileSync('automation/cup-sync/cup-snapshot.json',JSON.stringify(locate(fs.readFileSync('data.js','utf8')).cup,null,2)+'\\n');"
             node --check data.js
           if git diff --quiet -- data.js; then
             echo "No data.js changes are needed after refreshing main."
