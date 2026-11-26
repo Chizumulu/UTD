@@ -1,5 +1,6 @@
 import {runInNewContext} from 'node:vm';
 import {readFile,writeFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
 const readData=source=>runInNewContext(source+'\n;({roundsData,scheduledRounds,squadData,matchLineups,cupTournaments,cupMatchLineups})',{}, {timeout:3000});
 const positions=['ST','LW','CAM','RW','LCM','RCM','LB','LCB','RCB','RB','GK'];
 export function applyApprovedLineup(source,p){
@@ -50,7 +51,7 @@ export function applyApprovedLineup(source,p){
  readData(next);
  return next;
 }
-if(process.argv[1]&&import.meta.url===new URL('file:'+process.argv[1]).href){
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const source=await readFile('data.js','utf8');
  const p=JSON.parse(await readFile(process.argv[2],'utf8'));
  const next=applyApprovedLineup(source,p);
