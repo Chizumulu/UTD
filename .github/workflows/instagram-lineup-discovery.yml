@@ -1,0 +1,28 @@
+name: Instagram lineup discovery
+on:
+  repository_dispatch:
+    types: [instagram-lineup-discovered]
+permissions:
+  contents: read
+concurrency:
+  group: instagram-lineup-${{ github.event.client_payload.postId }}
+  cancel-in-progress: false
+jobs:
+  recognize-lineup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install OCR dependencies
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-kor python3-pil
+      - name: Recognize and submit official lineup
+        env:
+          UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
+          LINEUP_INGEST_TOKEN: ${{ secrets.LINEUP_INGEST_TOKEN }}
+        run: node automation/instagram-lineup/process-post.mjs
