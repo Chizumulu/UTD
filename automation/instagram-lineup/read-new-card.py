@@ -38,17 +38,30 @@ def bench_entries(raw):
 
 def read_bench(image):
     votes = Counter()
-    for top, bottom in ((720, 810), (735, 815), (745, 825)):
-        gray = reader.crop_gray(image, (35, top, 655, bottom))
+    # Reuse the narrower strips that were successful on the historical
+    # designs, alongside wider crops. Keep both rows in every candidate.
+    regions = [(35, 720, 655, 810), (35, 735, 655, 815),
+               (35, 745, 655, 825), (105, 768, 564, 807),
+               (105, 753, 564, 792), (105, 743, 564, 782),
+               reader.chihame_boxes([(70, 727, 550, 771)])[0]]
+    chilumba_region = reader.chilumba_boxes([(52, 751, 631, 793)])[0]
+    regions.extend(reader.shift_up(chilumba_region, offset) for offset in (0, 15, 25))
+    for region in regions:
+        gray = reader.crop_gray(image, region)
         for variant in (gray, gray.point(lambda p: 255 if p > 150 else 0)):
             raw = reader.read_korean(variant, "6")
             pairs = bench_entries(raw)
+            print(json.dumps({"bench_region": region, "raw": raw, "parsed": pairs}, ensure_ascii=False), file=sys.stderr)
             if pairs:
                 votes[tuple(sorted(pairs))] += 1
     # Conflicting complete readings are unsafe, even if one has more votes.
-    if len(votes) != 1 or next(iter(votes.values()), 0) < 2:
+    # A shorter reading may simply be a clipped crop. Never accept it
+    # in preference to a longer complete reading. Reject competing sets
+    # that are not strict subsets of the unique maximal reading.
+    maximal = [pairs for pairs in votes if not any(set(pairs) < set(other) for other in votes)]
+    if len(maximal) != 1 or votes[maximal[0]] < 2:
         return None
-    pairs = next(iter(votes))
+    pairs = maximal[0]
     return [{"votes": {n: votes[pairs]}, "names": [name]} for n, name in pairs]
 
 def main():
