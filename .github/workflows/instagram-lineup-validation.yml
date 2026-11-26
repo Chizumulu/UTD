@@ -1,0 +1,35 @@
+name: Instagram new OCR validation
+on:
+  push:
+    branches: [automation/instagram-lineup-sync]
+    paths:
+      - 'automation/instagram-lineup/**'
+      - '.github/workflows/instagram-lineup-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        sample: [raiply, chihame, luviri, chintheche, chilumba]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Offline regression tests
+        run: node --test automation/instagram-lineup/integration.test.mjs
+      - name: Install OCR dependencies
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-kor python3-pil
+      - name: Validate real official image with new reader
+        env:
+          UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
+          SAMPLE: ${{ matrix.sample }}
+        run: node automation/instagram-lineup/test-new-reader.mjs "--$SAMPLE"
