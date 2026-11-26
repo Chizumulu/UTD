@@ -60,7 +60,7 @@ export function syncCup(source,items){
   results.held=pass.held;
   if(!pass.proposals.length)break;
   results.proposals.push(...pass.proposals);
-  source=apply(source,pass.proposals,['homeScore','awayScore','pso']);
+  source=apply(source,pass.proposals,['homeScore','awayScore','pso','date']);
  }
  const later=planSchedule(items,resolveCupParticipants(locate(source).cup));
  source=apply(source,later.proposals,['date','time','venueEn','venueType']);
