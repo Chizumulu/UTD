@@ -6463,7 +6463,7 @@ const cupTournaments = [
     // awayWinnerOf는 원정 칸에 들어갈 이전 경기의 id입니다. 홈·원정 순서는 포스터의 좌우를 따르며 실제 홈·원정 확인은 별도로 표시합니다.
     rounds: [
       { labelKo: '플레이오프 1라운드', labelEn: 'Play-off 1', matches: [
-        { id: 'north-playoff-1', home: 'Emazwini FC', homeKo: '에마즈위니 FC', away: 'Chandamale FC', awayKo: '찬다말레 FC' }
+        { id: 'north-playoff-1', home: 'Emazwini FC', homeKo: '에마즈위니 FC', away: 'Chandamale FC', awayKo: '찬다말레 FC', date: "2026-11-29", time: "15:00", venueEn: "Lupaso Ground" }
       ] },
       { labelKo: '플레이오프 2라운드', labelEn: 'Play-off Second Round', matches: [
         { id: 'north-playoff-2-santos', home: 'Santos FC', homeKo: '산투스 FC', away: 'Likoma Stars FC', awayKo: '리코마 스타스 FC' },
@@ -6767,3 +6767,120 @@ function computePredictionSurprise() {
 }
 
 try { validateSiteData(); } catch (e) { console.warn('데이터 검증 중 오류가 발생했습니다:', e); }
+
+
+function mergeApprovedFaCupGoals() {
+  const base = computeSquadPlayerStats(
+    cupMatchLineups, cupTeamAwards
+  );
+
+  for (const key of Object.keys(squadPlayerStatsCup)) {
+    delete squadPlayerStatsCup[key];
+  }
+
+  Object.assign(squadPlayerStatsCup, base);
+
+  const cup = cupTournaments.find(c => c.id === 'faCup2627');
+  if (!cup) return;
+
+  const normalize = v => String(v ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, '');
+
+  const roster = [
+    ...squadData.map(p => ({ player: p, key: p.number })),
+    ...(typeof formerSquadData !== 'undefined'
+      ? formerSquadData.map(p => ({
+          player: p, key: 'F' + p.number
+        })) : [])
+  ];
+
+  for (const round of cup.rounds || []) {
+    for (const m of round.matches || []) {
+      if (m.forfeit || m.postponed) continue;
+      if (!Number.isInteger(m.homeScore) ||
+          !Number.isInteger(m.awayScore)) continue;
+
+      const isChi = v => /^chizumuluunited(fc)?$/.test(normalize(v));
+      const home = isChi(m.home);
+      if (!home && !isChi(m.away)) continue;
+
+      const goals = m.chizumuluScorers;
+      if (!Array.isArray(goals) || !goals.length) continue;
+
+      const opponentEn = home ? m.away : m.home;
+      const opponentKo = home ? m.awayKo : m.homeKo;
+
+      const manual = Object.entries(cupMatchLineups)
+        .filter(([key, lu]) =>
+          (!lu.cupId || lu.cupId === cup.id) &&
+          (!lu.date || lu.date === m.date) &&
+          (normalize(lu.opponentEn) === normalize(opponentEn) ||
+           (opponentKo && normalize(lu.opponentKo) === normalize(opponentKo)))
+        );
+
+      if (manual.length > 1) continue;
+
+      const lineup = manual[0]?.[1];
+      const players = [
+        ...(lineup?.starters || []),
+        ...(lineup?.subsIn || [])
+      ];
+
+      if (players.some(p => (p.goals || []).length > 0)) continue;
+
+      if (home ? m.scorersHome?.length : m.scorersAway?.length) continue;
+
+      const expected = home ? m.homeScore : m.awayScore;
+
+      if (goals.some(g => !g ||
+          typeof g.name !== 'string' ||
+          !g.name.trim() ||
+          !Number.isSafeInteger(g.count) ||
+          g.count < 1)) continue;
+
+      if (goals.reduce((n, g) => n + g.count, 0) !== expected) continue;
+
+      for (const g of goals) {
+        const name = normalize(g.name);
+
+        const matches = roster.filter(({ player: p }) =>
+          [p.nameEn, p.nameKo,
+           ...(p.aliasesEn || []),
+           ...(p.aliasesKo || [])]
+            .some(n => normalize(n) === name)
+        );
+
+        if (matches.length !== 1) continue;
+
+        const key = matches[0].key;
+        if (matches[0].player.number == null) continue;
+
+        const st = squadPlayerStatsCup[key] ??= {
+          number: key,
+          appearances: 0,
+          starts: 0,
+          subApps: 0,
+          goals: 0,
+          assists: 0,
+          captainCount: 0,
+          motmCount: 0,
+          unusedCount: 0,
+          history: []
+        };
+
+        st.goals += g.count;
+
+        if (manual.length === 1) {
+          const h = st.history.find(
+            x => x.roundKey === manual[0][0]
+          );
+          if (h) h.goals += g.count;
+        }
+      }
+    }
+  }
+}
+
+mergeApprovedFaCupGoals();

@@ -22404,3 +22404,16 @@ button.match-status:focus-visible {
 @media (max-width: 720px) {
   #nextMatchStrip:has(> .nmh-top) { --nmh-step: clamp(6px, 1.8vw, 8px); }
 }
+
+/* 대진표로 보기: 경기 카드 하단 일정·구장 영역 */
+.cup-br-meta { display: flex; flex-direction: column; justify-content: center; gap: 5px; height: 46px; padding: 0 12px; border-top: 1px solid rgba(var(--color-navy-rgb), .07); font-size: 11px; line-height: 1.1; color: var(--color-text-secondary); background: rgba(var(--color-navy-rgb), .03); }
+.cup-br-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.cup-br-when { flex-shrink: 0; font-weight: 700; color: var(--color-text-darkest); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cup-br-kst { flex-shrink: 0; font-weight: 700; color: var(--color-brand-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cup-br-venue { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cup-br-meta .is-tbd, .cup-br-meta.is-tbd { font-weight: 500; font-style: italic; color: var(--color-text-secondary); }
+.cup-br-meta.is-tbd { align-items: center; }
+
+/* 표로 보기: 현지 시간 | KST */
+.cup-when-sep { opacity: .45; margin: 0 2px; }
+.cup-when-kst { color: var(--color-brand-text); white-space: nowrap; }

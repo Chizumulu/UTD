@@ -1021,8 +1021,13 @@
     const homeWin = played && (m.homeScore > m.awayScore || (m.homeScore === m.awayScore && /^\d+\s*:\s*\d+$/.test(m.pso || '') && +m.pso.split(':')[0] > +m.pso.split(':')[1]));
     const awayWin = played && !homeWin && (m.awayScore > m.homeScore || (m.homeScore === m.awayScore && /^\d+\s*:\s*\d+$/.test(m.pso || '') && +m.pso.split(':')[1] > +m.pso.split(':')[0]));
     // 포스터에서 가져온 팀 순서는 홈·원정이 확정되기 전까지 사용하지 않습니다.
-    const haKnown = cupHomeAwayKnown(m);
-    const cupVenue = haKnown ? (iAmHome ? 'home' : 'away') : 'unknown';
+    const isFaCup = getSelectedCup()?.id === 'faCup2627';
+    const isMine = iAmHome || isMyTeamName(m.away, m.awayKo);
+    const cupVenue = isFaCup
+      ? (isMine && ['home', 'away', 'neutral'].includes(m.venueType) ? m.venueType : 'unknown')
+      : (cupHomeAwayKnown(m) ? (iAmHome ? 'home' : 'away') : 'unknown');
+    const haKnown = cupVenue === 'home' || cupVenue === 'away';
+    const physicalHome = cupVenue === 'home' ? iAmHome : !iAmHome;
     const venue = ko ? (m.venueKo || m.venueEn) : (m.venueEn || m.venueKo);
     const kst = kstOf(m);
     const seoul = (typeof IS_SEOUL_TZ !== 'undefined') && IS_SEOUL_TZ;
@@ -1052,7 +1057,22 @@
 
     // 버튼은 내용이 있을 때만: 득점 · 하이라이트
     const scorerHtml = function (txt) { return (!txt || txt === '없음') ? '' : '<span class="rmd-sub-ico" aria-hidden="true">' + svgIcon('ball') + '</span>' + renderScorerNamesHtml(txt, ko); };
-    const homeSc = played ? scorerHtml(m.scorersHome) : '', awaySc = played ? scorerHtml(m.scorersAway) : '';
+    const autoGoals = Array.isArray(m.chizumuluScorers)
+      ? m.chizumuluScorers.filter(g =>
+          g && typeof g.name === 'string' &&
+          Number.isSafeInteger(g.count) && g.count > 0)
+      : [];
+    const autoSc = autoGoals.length
+      ? '<span class="rmd-sub-ico" aria-hidden="true">' +
+        svgIcon('ball') + '</span>' +
+        autoGoals.map(g => cupEsc(g.name) +
+          (g.count > 1 ? ' (' + g.count + ')' : '')).join(', ')
+      : '';
+    const homeSc = played
+      ? (scorerHtml(m.scorersHome) || (iAmHome ? autoSc : '')) : '';
+    const awaySc = played
+      ? (scorerHtml(m.scorersAway) ||
+         (isMyTeamName(m.away, m.awayKo) ? autoSc : '')) : '';
     const hasSc = !!(homeSc || awaySc);
     const hlUrl = (m.highlight && /^https?:\/\//i.test(m.highlight)) ? m.highlight : '';
     const leagueHome = leagueData.find(t => t.nameEn === m.home || (m.homeKo && t.nameKo === m.homeKo));
@@ -1079,10 +1099,10 @@
       '<div class="rmd-meta"><div class="rmd-time' + ((seoul && kst) ? ' rmd-kst-only' : '') + '">' + timeHtml + '</div>' +
       '<div class="rmd-venue">' + (venueTxt ? '<span class="rmd-venue-name">' + venueTxt + '</span>' : '') + '</div></div>' +
       '<div class="rmd-team rmd-home' + (homeWin ? ' is-winner' : '') + '"><div class="rmd-team-text"><div class="rmd-team-name"><span>' + cupEsc(homeName) + '</span>' +
-        (haKnown && iAmHome ? '<span class="rmd-home-chip">' + (ko ? '홈' : 'HOME') + '</span>' : '') + '</div></div>' + logoOf(m.home, iAmHome, homeName) + '</div>' +
+        (haKnown && physicalHome ? '<span class="rmd-home-chip">' + (ko ? '홈' : 'HOME') + '</span>' : '') + '</div></div>' + logoOf(m.home, iAmHome, homeName) + '</div>' +
       '<div class="rmd-mid' + (played ? '' : ' is-single') + '">' + mid + '</div>' +
       '<div class="rmd-team rmd-away' + (awayWin ? ' is-winner' : '') + '">' + logoOf(m.away, !iAmHome, awayName) + '<div class="rmd-team-text"><div class="rmd-team-name"><span>' + cupEsc(awayName) + '</span>' +
-        (haKnown && !iAmHome ? '<span class="rmd-home-chip">' + (ko ? '홈' : 'HOME') + '</span>' : '') + '</div></div></div>' +
+        (haKnown && !physicalHome ? '<span class="rmd-home-chip">' + (ko ? '홈' : 'HOME') + '</span>' : '') + '</div></div></div>' +
       (btns ? '<div class="rmd-end">' + btns + '</div>' : '') +
       (hasPreview ? '<div class="rmd-pv"></div>' : '') +
       (hasSc ? '<div class="rmd-sc rmd-sc-home">' + homeSc + '</div><div class="rmd-sc rmd-sc-away">' + awaySc + '</div>' : '') +
@@ -1181,6 +1201,14 @@
     const result = homeScore != null && awayScore != null ? { homeScore: Number(homeScore), awayScore: Number(awayScore) } : undefined;
     openMatchCompareModal(home.nameEn, home.nameKo, away.nameEn, away.nameKo, null, result, options);
   });
+  // 말라위(CAT, UTC+2) 현지 시간 → KST(UTC+9): +7시간. 자정을 넘기면 '다음날'/'+1d'를 붙입니다. 날짜·시간이 없으면 ''.
+  function cupKstLabel(m, ko) {
+    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(m && m.date || ''), t = /^(\d{1,2}):(\d{2})$/.exec(m && m.time || '');
+    if (!d || !t) return '';
+    const k = new Date(Date.UTC(+d[1], +d[2] - 1, +d[3], +t[1] + 7, +t[2]));
+    const hhmm = String(k.getUTCHours()).padStart(2, '0') + ':' + String(k.getUTCMinutes()).padStart(2, '0');
+    return (k.getUTCDate() !== +d[3] ? (ko ? '다음날 ' : '+1d ') : '') + hhmm + ' KST';
+  }
   function cupBracketTeamHtml(tiers, nameEn, nameKo, score, isWin) {
     const ko = isKorean;
     if (!nameEn) return '<div class="cup-br-team is-tbd"><span class="cup-br-name">' + (ko ? '미정' : 'TBD') + '</span></div>';
@@ -1204,13 +1232,37 @@
     const byLabel = function (labelKo) { return (c.rounds || []).find(function (r) { return r && r.labelKo === labelKo; }); };
     const po1 = byLabel('플레이오프 1라운드'), po2 = byLabel('플레이오프 2라운드'), r1 = byLabel('지역 1라운드');
     if (!po1 || !po2 || !r1 || (po1.matches || []).length < 1 || (po2.matches || []).length < 3 || (r1.matches || []).length < 8) return '';
-    const PW = 22, PG = 4, HEAD = 56, M = 72, S = 96; // 가로는 % (열 너비 22% + 간격 4%) → 화면 폭에 맞춰 늘고 줄어요. 세로는 px
+    const PW = 22, PG = 4, HEAD = 56, M = 72, META = 46, MH = M + META, S = 140; // 가로는 % (열 너비 22% + 간격 4%) → 화면 폭에 맞춰 늘고 줄어요. 세로는 px
     const yR1 = function (i) { return HEAD + S * (i + 0.5); };
     const row = (nameEn, nameKo, score, isWin) => cupBracketTeamHtml(tiers, nameEn, nameKo, score, isWin);
+    const MON_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const DOW_KO = ['일', '월', '화', '수', '목', '금', '토'], DOW_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dateLabel = function (m) {
+      const mt = /^(\d{4})-(\d{2})-(\d{2})$/.exec(m.date || '');
+      if (!mt) return m.date ? cupEsc(m.date) : '';
+      const dow = new Date(Date.UTC(+mt[1], +mt[2] - 1, +mt[3])).getUTCDay();
+      return ko ? (+mt[2]) + '/' + (+mt[3]) + '(' + DOW_KO[dow] + ')' : MON_EN[+mt[2] - 1] + ' ' + (+mt[3]) + ' (' + DOW_EN[dow] + ')';
+    };
+    const kstLabel = function (m) { return cupKstLabel(m, ko); };
+    // 일정·구장 영역. 첫 줄: 날짜·현지 시간(왼쪽) / KST 시간(오른쪽), 둘째 줄: 구장. 발표 전이면 '미정'으로 자리만 잡아 둡니다.
+    const metaHtml = function (m) {
+      const venue = ko ? (m.venueKo || m.venueEn) : (m.venueEn || m.venueKo);
+      const when = [dateLabel(m), m.time ? cupEsc(m.time) : ''].filter(Boolean).join(' ');
+      const kst = kstLabel(m);
+      if (!when && !venue) return '<div class="cup-br-meta is-tbd"><span>' + (ko ? '일정·장소 미정' : 'Date & venue TBD') + '</span></div>';
+      return '<div class="cup-br-meta">' +
+        '<div class="cup-br-meta-row">' +
+          (when ? '<span class="cup-br-when" title="' + (ko ? '현지(말라위) 시간' : 'Local time (Malawi)') + '">' + when + '</span>' : '<span class="cup-br-when is-tbd">' + (ko ? '일정 미정' : 'Date TBD') + '</span>') +
+          (kst ? '<span class="cup-br-kst" title="' + (ko ? '한국 시간' : 'Korea Standard Time') + '">' + cupEsc(kst) + '</span>' : '') +
+        '</div>' +
+        '<div class="cup-br-meta-row">' +
+          (venue ? '<span class="cup-br-venue" title="' + cupEsc(venue) + '">' + cupEsc(venue) + '</span>' : '<span class="cup-br-venue is-tbd">' + (ko ? '장소 미정' : 'Venue TBD') + '</span>') +
+        '</div></div>';
+    };
     const box = function (m, x, yc) {
       const w = cupWinnerSide(m);
-      return '<div class="cup-br-match cup-rd-box" style="left:' + x + '%;top:' + (yc - M / 2) + 'px;width:' + PW + '%">' +
-        row(m.home, m.homeKo, m.homeScore, w === 'home') + row(m.away, m.awayKo, m.awayScore, w === 'away') + '</div>';
+      return '<div class="cup-br-match cup-rd-box" style="left:' + x + '%;top:' + (yc - MH / 2) + 'px;width:' + PW + '%">' +
+        row(m.home, m.homeKo, m.homeScore, w === 'home') + row(m.away, m.awayKo, m.awayScore, w === 'away') + metaHtml(m) + '</div>';
     };
     const hl = function (x1, x2, y) { return '<i class="cup-rd-l" style="left:' + x1 + '%;top:' + (y - 1) + 'px;width:' + (x2 - x1) + '%;height:2px"></i>'; };
     const x1 = 0, x2 = PW + PG, x3 = 2 * (PW + PG), x4 = 3 * (PW + PG);
@@ -1246,7 +1298,7 @@
     const ch = HEAD + S * 8 + 8;
     return '<section class="cup-bracket cup-rdraw">' + '<div class="cup-br-hint" aria-hidden="true"><span>' + (ko ? '옆으로 밀어서 다음 라운드 보기' : 'Swipe sideways to see more rounds') + '</span><i>›</i></div>' +
       '<div class="cup-br-scroll"><div class="cup-rd-canvas" style="height:' + ch + 'px">' + out + '</div></div>' +
-      '<p class="cup-br-note">' + (ko ? '한 경기에서 지면 탈락하는 토너먼트예요. 지역 2라운드 칸은 자리만 만들어 둔 것이고, 실제 대진과 연결은 발표되면 채워 넣을게요. 날짜와 장소도 나오는 대로 업데이트돼요.' : 'This is a knockout: lose once and you are out. The Regional Round 2 slots are placeholders; the real fixtures and links will be added once announced, along with dates and venues.') + '</p></section>';
+      '<p class="cup-br-note">' + (ko ? '한 경기에서 지면 탈락하는 토너먼트예요. 지역 2라운드 칸은 자리만 만들어 둔 것이고, 실제 대진과 연결은 발표되면 채워 넣을게요. 각 경기 카드 아래에 날짜·시간·장소가 표시되고, 발표 전 경기는 ‘미정’으로 보여요.' : 'This is a knockout: lose once and you are out. The Regional Round 2 slots are placeholders; the real fixtures and links will be added once announced, Each match card shows its date, time and venue; fixtures not yet announced read “TBD”.') + '</p></section>';
   }
   function setCupRegionalView(v) {
     cupRegionalView = v === 'table' ? 'table' : 'bracket';
@@ -1496,10 +1548,43 @@
           const played = m.homeScore != null && m.awayScore != null;
           const mid = played
             ? '<div class="cup-score">' + m.homeScore + ' : ' + m.awayScore + (m.pso ? '<small>PSO ' + cupEsc(m.pso) + '</small>' : '') + '</div>'
-            : '<div class="cup-when">' + cupEsc(m.date || 'TBD') + (m.time ? '<br>' + cupEsc(m.time) : '') + '</div>';
+            : '<div class="cup-when">' + cupEsc(m.date || 'TBD') + (m.time ? '<br>' + cupEsc(m.time) + (cupKstLabel(m, ko) ? ' <span class="cup-when-sep">|</span> <span class="cup-when-kst">' + cupEsc(cupKstLabel(m, ko)) + '</span>' : '') : '') + '</div>';
           const venue = ko ? (m.venueKo || m.venueEn) : (m.venueEn || m.venueKo);
           rhtml += '<div class="cup-match">' + cupTeamHtml(m.home, m.homeKo, false) + '<div class="cup-match-mid">' + mid + '</div>' +
-            cupTeamHtml(m.away, m.awayKo, true) + (venue ? '<div class="cup-venue">' + cupEsc(venue) + '</div>' : '') + '</div>';
+            cupTeamHtml(m.away, m.awayKo, true) +
+            (venue ? '<div class="cup-venue">' + cupEsc(venue) +
+              (c.id === 'faCup2627' &&
+               (isMyTeamName(m.home, m.homeKo) ||
+                isMyTeamName(m.away, m.awayKo)) &&
+               ['home', 'away', 'neutral'].includes(m.venueType)
+                ? ' · ' + ({
+                    home: ko ? '홈' : 'Home',
+                    away: ko ? '원정' : 'Away',
+                    neutral: ko ? '중립' : 'Neutral'
+                  })[m.venueType]
+                : '') + '</div>' : '') +
+            (c.id === 'faCup2627' && played &&
+             !m.forfeit && !m.postponed &&
+             (isMyTeamName(m.home, m.homeKo) ||
+              isMyTeamName(m.away, m.awayKo))
+              ? (() => {
+                  const manual = isMyTeamName(m.home, m.homeKo)
+                    ? m.scorersHome : m.scorersAway;
+                  const goals = Array.isArray(m.chizumuluScorers)
+                    ? m.chizumuluScorers.filter(g =>
+                        g && typeof g.name === 'string' &&
+                        Number.isSafeInteger(g.count) && g.count > 0)
+                    : [];
+                  const names = manual && manual !== '없음'
+                    ? renderScorerNamesHtml(manual, ko)
+                    : goals.map(g => cupEsc(g.name) +
+                        (g.count > 1 ? ' (' + g.count + ')' : '')).join(', ');
+                  return names
+                    ? '<div class="cup-venue" style="color:var(--text-primary);font-size:12px">' +
+                      svgIcon('ball') + ' ' + names + '</div>'
+                    : '';
+                })()
+              : '') + '</div>';
         });
         rhtml += '</div></section>';
       });
@@ -7012,7 +7097,12 @@
       const match = {
         homeEn: m.home, homeKo: m.homeKo || m.home, awayEn: m.away, awayKo: m.awayKo || m.away,
         homeScore: m.homeScore, awayScore: m.awayScore, pso: m.pso, forfeit: m.forfeit, postponed: m.postponed,
-        kickoffDate: m.date, kickoffTime: m.time, haKnown: cupHomeAwayKnown(m)
+        kickoffDate: m.date, kickoffTime: m.time,
+        venueType: cup.id === 'faCup2627'
+          ? (m.venueType || 'unknown') : null,
+        haKnown: cup.id === 'faCup2627'
+          ? ['home', 'away'].includes(m.venueType)
+          : cupHomeAwayKnown(m)
       };
       fixtures.push({ key, cupId: cup.id, labels, match });
     })));
@@ -7073,7 +7163,11 @@
       if (!res) continue;
       list.push({
         cupId, labels, res, date: match.kickoffDate, forfeit: !!match.forfeit,
-        isHome: match.haKnown ? home : null,
+        isHome: cupId === 'faCup2627'
+          ? (match.venueType === 'home' ? true
+            : match.venueType === 'away' ? false : null)
+          : (match.haKnown ? home : null),
+        venueType: match.venueType,
         gf: home ? match.homeScore : match.awayScore, ga: home ? match.awayScore : match.homeScore,
         oppEn: home ? match.awayEn : match.homeEn, oppKo: home ? match.awayKo : match.homeKo
       });
@@ -10838,8 +10932,8 @@
     }
     try {
       ctx.scopeNote = scope === 'league' ? '' : `<p class="club-comp-note">${isKorean
-        ? '컵 경기 결과와 등록된 라인업을 반영해요. 상대 등급은 리그 순위를 참고하며, 경기당 승점은 승·무·패를 3·1·0으로 환산한 분석 지표예요.'
-        : 'Includes recorded cup results and lineups. Opponent tiers use league rank. Points per match is an analytical 3–1–0 conversion.'}</p>`;
+        ? '컵 경기 결과와 등록된 라인업을 반영해요. 상대 등급은 리그 순위를 참고해요.'
+        : 'Includes recorded cup results and lineups. Opponent tiers use league rank.'}</p>`;
       el.innerHTML = TeamAnalysis.render(ctx);
       TeamAnalysis.bind(el, ctx);
       teamAnalysisRendered = true;
@@ -21866,7 +21960,11 @@
     const [mine, opponent] = isMyTeamName(homeEn, homeKo)
       ? [{ en: homeEn, ko: homeKo }, { en: awayEn, ko: awayKo }]
       : [{ en: awayEn, ko: awayKo }, { en: homeEn, ko: homeKo }];
-    const scenarios = cupVenue === 'unknown' ? ['home', 'away', 'neutral'] : [cupVenue, 'neutral'];
+    const scenarios = cupVenue === 'neutral'
+      ? ['neutral']
+      : cupVenue === 'unknown'
+        ? ['home', 'away', 'neutral']
+        : [cupVenue, 'neutral'];
     const title = isKorean ? '정규시간 승무패 예측' : 'Win, draw or loss in regulation';
     const basis = cupVenue === 'unknown'
       ? (isKorean ? '리그 기록 기준 · 홈·원정 미정' : 'Based on league results · home team TBD')
