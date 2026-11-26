@@ -1,5 +1,5 @@
 import {runInNewContext} from 'node:vm';
-import {resolveProductionSlot} from './resolve-production.mjs';
+import {resolveProductionSlot,resolveFallbackSlot} from './resolve-production.mjs';
 const key=v=>String(v??'').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'').replace(/fc$/,'').replace('라이플라이','라이플리');
 const club=key('Chizumulu United FC');
 const positions=['ST','LW','CAM','RW','LCM','RCM','LB','LCB','RCB','RB','GK'];
@@ -32,14 +32,15 @@ export function matchFixture(data,post){
  if(hits.length!==1)throw Error('Expected one matching fixture, found '+hits.length);
  return hits[0];
 }
-export function validateCandidates(ocr,squad){
+export function validateCandidates(ocr,squad,{allowFallback=true}={}){
  if(ocr?.status!=='candidates'||!Array.isArray(ocr.candidates))throw Error('OCR requires manual review');
  const valid=[];
+ const fallbackValid=[];
  const accepted=new Set(['name-and-number','jamo-and-number','name-supported-digit-correction','inline-number-and-name','name-supported-low-vote','dominant-number-and-name']);
  for(const c of ocr.candidates){
   if(!Array.isArray(c.starters)||c.starters.length!==11||!Array.isArray(c.bench)||!c.bench.length||c.bench.length>12)continue;
   const slots=[...c.starters,...c.bench];
-  const resolved=slots.map((slot,i)=>{
+  let resolved=slots.map((slot,i)=>{
    const own=resolveProductionSlot(slot,squad);
    if(accepted.has(own.method)||i>=11||own.candidate==null)return own;
    // Only combine evidence for the same formation slot and same name candidate.
@@ -56,12 +57,22 @@ export function validateCandidates(ocr,squad){
    const combined=resolveProductionSlot(merged,squad);
    return combined.number===own.candidate?combined:own;
   });
-  if(resolved.some(r=>!accepted.has(r.method)))continue;
+  const primaryComplete=resolved.every(r=>accepted.has(r.method));
+  if(!primaryComplete){
+   if(!allowFallback)continue;
+   resolved=resolved.map((r,i)=>accepted.has(r.method)?r:resolveFallbackSlot(slots[i],squad));
+   if(resolved.some(r=>r.number==null))continue;
+  }
+  const reviewMatches=resolved.flatMap((r,i)=>r.review?[{slot:i,number:r.number,method:r.method,nameSimilarity:1-r.distance,score:r.score}]:[]);
   if(new Set(resolved.map(r=>r.number)).size!==resolved.length)continue;
   const players=resolved.map(r=>squad.find(p=>p.number===r.number));
   if(players.some(p=>!p||!p.nameKo))continue;
   if(c.captain!=null&&!players.slice(0,11).some(p=>p.number===c.captain))continue;
-  valid.push({formation:'4-2-3-1',starters:players.slice(0,11).map((p,i)=>({number:p.number,nameKo:p.nameKo,pos:positions[i],...(p.number===c.captain?{captain:true}:{})})),bench:players.slice(11).map(p=>({number:p.number,nameKo:p.nameKo})),layout:c.layout});
+  (primaryComplete?valid:fallbackValid).push({reviewMatches,formation:'4-2-3-1',starters:players.slice(0,11).map((p,i)=>({number:p.number,nameKo:p.nameKo,pos:positions[i],...(p.number===c.captain?{captain:true}:{})})),bench:players.slice(11).map(p=>({number:p.number,nameKo:p.nameKo})),layout:c.layout});
+ }
+ if(!valid.length&&fallbackValid.length){
+  const min=Math.min(...fallbackValid.map(v=>v.reviewMatches.length));
+  valid.push(...fallbackValid.filter(v=>v.reviewMatches.length===min));
  }
  if(!valid.length)throw Error('No fully corroborated OCR candidate');
  const signature=v=>JSON.stringify([v.starters,v.bench.map(p=>p.number).sort((a,b)=>a-b)]);
