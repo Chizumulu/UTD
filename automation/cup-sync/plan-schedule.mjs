@@ -26,7 +26,7 @@ export function classifyVenue(fixture,venue,registry={}){
  const v=venueKey(venue), opp=teams.find(t=>t!==chi);
  if(!v)return 'unknown';
  const own=(registry[chi]??['Chiteko Community Ground']).map(venueKey);
- const other=(registry[opp]??[]).map(venueKey);
+ const other=[...(registry[opp]??[]),...(opp==='chilumba barracks'?['Majaliro Ground','Chisumbu Ground']:[])].map(venueKey);
  if(own.includes(v)&&other.includes(v))return 'unknown';
  if(own.includes(v))return 'home';
  if(other.includes(v))return 'away';
