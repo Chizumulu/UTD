@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {pathToFileURL} from 'node:url';
 import {parse} from 'acorn';
 import {planSchedule} from './plan-schedule.mjs';
 import {planResults} from './plan-results.mjs';
@@ -9,7 +10,7 @@ function literal(n){
  if(n.type==='ObjectExpression')return Object.fromEntries(n.properties.map(p=>{if(p.type!=='Property'||p.computed||p.kind!=='init')throw Error('Unsupported property');return [p.key.name??p.key.value,literal(p.value)];}));
  throw Error('Unsupported cup expression: '+n.type);
 }
-function locate(source){
+export function locate(source){
  const ast=parse(source,{ecmaVersion:'latest'});
  const d=ast.body.flatMap(n=>n.declarations??[]).find(n=>n.id.name==='cupTournaments');
  const n=d?.init?.elements?.find(n=>prop(n,'id')?.value==='faCup2627');
@@ -42,6 +43,7 @@ export function syncCup(source,items){
  // Existing site resolver derives playoff winners from stored scores.
  return {source,cup:locate(source).cup,schedule,results};
 }
+if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
 const path=process.env.DATA_PATH||'data.js';
 const input=JSON.parse(fs.readFileSync(process.env.API_PATH||'work/cup-api.json','utf8'));
 if(!Array.isArray(input.items))throw Error('Invalid API response');
@@ -51,3 +53,4 @@ console.log(JSON.stringify({schedule:result.schedule,results:result.results},nul
 if(process.env.DRY_RUN!=='false')process.exit(0);
 fs.writeFileSync(path,result.source);
 fs.writeFileSync('automation/cup-sync/cup-snapshot.json',JSON.stringify(result.cup,null,2)+'\n');
+}
