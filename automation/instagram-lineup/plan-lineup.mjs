@@ -1,5 +1,5 @@
 import {runInNewContext} from 'node:vm';
-import {resolveSlot} from './dry-run.mjs';
+import {resolveProductionSlot} from './resolve-production.mjs';
 const key=v=>String(v??'').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'').replace(/fc$/,'').replace('라이플라이','라이플리');
 const club=key('Chizumulu United FC');
 const positions=['ST','LW','CAM','RW','LCM','RCM','LB','LCB','RCB','RB','GK'];
@@ -38,8 +38,8 @@ export function validateCandidates(ocr,squad){
  for(const c of ocr.candidates){
   if(!Array.isArray(c.starters)||c.starters.length!==11||!Array.isArray(c.bench)||!c.bench.length||c.bench.length>12)continue;
   const slots=[...c.starters,...c.bench];
-  const resolved=slots.map(slot=>resolveSlot(slot,squad));
-  if(resolved.some(r=>!['name-and-number','near-name-and-number'].includes(r.method)))continue;
+  const resolved=slots.map(slot=>resolveProductionSlot(slot,squad));
+  if(resolved.some(r=>!['name-and-number','jamo-and-number','name-supported-digit-correction'].includes(r.method)))continue;
   if(new Set(resolved.map(r=>r.number)).size!==resolved.length)continue;
   const players=resolved.map(r=>squad.find(p=>p.number===r.number));
   if(players.some(p=>!p||!p.nameKo))continue;
