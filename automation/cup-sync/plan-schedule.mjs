@@ -43,7 +43,8 @@ export function planSchedule(items,cup,registry={}){
   if(!date|| (m.timeText&&!time)){held.push({source:hit.source,reason:'invalid_schedule'});continue;}
   const fields={date,...(time?{time}:{}),...(venue?{venueEn:venue}:{})};
   const f=cup.rounds[hit.roundIndex].matches[hit.matchIndex];
-  const type=classifyVenue(f,venue,registry);
+  if(f.homeScore!=null||f.awayScore!=null||f.forfeit||/^(finished|full_time|ended|completed|ft|forfeit)$/i.test(f.status??'')){held.push({source:hit.source,reason:'fixture_already_completed'});continue;}
+  const type=venue?classifyVenue(f,venue,registry):null;
   if(type!==null)fields.venueType=type;
   const group=groups.get(hit.fixtureId)??[];
   group.push({hit,fields,f});groups.set(hit.fixtureId,group);
