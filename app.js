@@ -1093,6 +1093,74 @@
       mine.map(match => cupMatchCardHtml(match)).join('') + '</div></section>';
   }
 
+  function announcedBenchHtml(lineup) {
+    if (!lineup || !Array.isArray(lineup.bench) || !lineup.bench.length) return '';
+    return `<div class="nmp-sec">
+      <div class="nmp-sec-title">
+        <span>${isKorean ? '교체 대기 명단' : 'Substitutes'}</span>
+        <span class="nmp-sec-sub">${lineup.bench.length}${isKorean ? '명' : ' players'}</span>
+      </div>
+      <div class="nmp-chips">${lineup.bench.map(p => {
+        const sq = nmpLookupPlayer(p);
+        const name = isKorean
+          ? p.nameKo
+          : ((sq && sq.nameEn) || p.nameKo);
+        return `<button type="button" class="nmp-chip lineup-squad-link" data-player-number="${cupEsc(p.number)}">${cupEsc(p.number)} · ${cupEsc(name)}</button>`;
+      }).join('')}</div>
+    </div>`;
+  }
+
+  function cupAnnouncedLineupHtml(m) {
+    if (typeof announcedMatchLineups === 'undefined') return '';
+    if (!m.date || m.postponed || m.forfeit) return '';
+    if (m.homeScore != null && m.awayScore != null) return '';
+
+    const candidates = Object.values(announcedMatchLineups).filter(a =>
+      a.competition === 'faCup2627' &&
+      a.date === m.date &&
+      a.home === m.home &&
+      a.away === m.away &&
+      Array.isArray(a.starters) &&
+      a.starters.length === 11
+    );
+
+    if (candidates.length !== 1) return '';
+
+    const lineup = candidates[0];
+    const positions = lineup.starters.map(p => p.pos);
+    const canField = positions.every(p => PITCH_COORDS[p]) &&
+      new Set(positions).size === 11;
+
+    const players = lineup.starters.map(p => {
+      const sq = nmpLookupPlayer(p);
+      const name = cupEsc(isKorean
+        ? p.nameKo
+        : ((sq && sq.nameEn) || p.nameKo));
+
+      if (!canField) {
+        return `<span class="nmp-chip">${cupEsc(p.number)} · ${name}</span>`;
+      }
+
+      const [x, y] = PITCH_COORDS[p.pos];
+      return `<button type="button" class="nmp-slot lineup-squad-link"
+        data-player-number="${cupEsc(p.number)}"
+        style="left:${x}%;top:${y}%">
+        <span class="nmp-slot-dot">${cupEsc(p.number)}${p.captain ? '<i class="nmp-slot-cap">C</i>' : ''}</span>
+        <span class="nmp-slot-name">${name}</span>
+      </button>`;
+    }).join('');
+
+    return `<div class="nmp-sec is-official-lineup">
+      <div class="nmp-sec-title">
+        <span>${isKorean ? '선발 라인업' : 'Starting XI'}</span>
+        <span class="nmp-lineup-updated-badge">${isKorean ? '공식 발표' : 'Official'}</span>
+        <span class="nmp-sec-sub">${cupEsc(lineup.formation || '')}</span>
+      </div>
+      <div class="${canField ? 'nmp-pitch' : 'nmp-chips'}">${players}</div>
+      ${announcedBenchHtml(lineup)}
+    </div>`;
+  }
+
   function cupMatchCardHtml({ r, m }, competition) {
     const ko = isKorean;
     const pad2 = function (n) { return String(n).padStart(2, '0'); };
@@ -1206,6 +1274,7 @@
         (haKnown && !physicalHome ? '<span class="rmd-home-chip">' + (ko ? '홈' : 'HOME') + '</span>' : '') + '</div></div></div>' +
       (btns ? '<div class="rmd-end">' + btns + '</div>' : '') +
       (hasPreview ? '<div class="rmd-pv"></div>' : '') +
+      (isFaCup && isMine && !played ? cupAnnouncedLineupHtml(m) : '') +
       (hasSc ? '<div class="rmd-sc rmd-sc-home">' + homeSc + '</div><div class="rmd-sc rmd-sc-away">' + awaySc + '</div>' : '') +
       '</div></div></section>';
   }
@@ -5911,7 +5980,23 @@
     const roundKey = nm && nm.roundKey;
     const officialMap = (typeof upcomingMatchLineups !== 'undefined' && upcomingMatchLineups)
       ? upcomingMatchLineups : {};
-    const officialCandidate = roundKey ? officialMap[roundKey] : null;
+    const announced = typeof announcedMatchLineups !== 'undefined'
+      ? Object.values(announcedMatchLineups).find(a =>
+          a.competition === 'league' &&
+          a.round === roundKey &&
+          a.date === nm?.kickoffDate &&
+          (a.home === 'Chizumulu United FC'
+            ? a.away === nm?.oppEn
+            : a.home === nm?.oppEn)
+        )
+      : null;
+    const officialCandidate = (roundKey ? officialMap[roundKey] : null) ||
+      (announced ? {
+        ...announced,
+        opponentKo: nm.oppKo,
+        opponentEn: nm.oppEn,
+        updatedAt: announced.approvedAt?.slice(0, 10)
+      } : null);
     const normalizeOpponent = value => String(value || '').toLowerCase().replace(/\bfc\b/g, '').replace(/[^a-z0-9가-힣]/g, '');
     const fixtureOpponent = normalizeOpponent((nm && (nm.oppKo || nm.oppEn)) || '');
     const officialOpponent = normalizeOpponent(officialCandidate && (officialCandidate.opponentKo || officialCandidate.opponentEn));
@@ -5986,6 +6071,7 @@
           <span class="nmp-sec-sub">${officialSub}</span>
         </div>
         ${body}
+        ${official ? announcedBenchHtml(official) : ''}
         <div class="nmp-note">${showCnt ? note : ''}</div>
       </div>`;
   }
