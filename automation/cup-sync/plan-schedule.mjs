@@ -33,7 +33,7 @@ export function classifyVenue(fixture,venue,registry={}){
  if((registry.neutral??[]).map(venueKey).includes(v))return 'neutral';
  return 'unknown';
 }
-export function planSchedule(items,cup,registry={}){
+export function planSchedule(items,cup,registry={},now=Date.now()){
  const {matched,skipped}=matchCupItems(items,cup);
  const proposals=[], held=[...skipped], groups=new Map();
  for(const hit of matched){
@@ -47,7 +47,16 @@ export function planSchedule(items,cup,registry={}){
   const type=venue?classifyVenue(f,venue,registry):null;
   if(type!==null)fields.venueType=type;
   const group=groups.get(hit.fixtureId)??[];
-  group.push({hit,fields,f});groups.set(hit.fixtureId,group);
+  const item=items.find(i=>i.rawUpdateId===hit.source);
+  const published=Date.parse(item?.sourceTimestamp);
+  const raw=item?.latestObservation?.text??'';
+  const notice=(item?.structured?.facts??[]).filter(x=>x.type==='notice'&&x.data?.notice_type==='schedule_change').map(x=>x.data).filter(x=>{
+   const pair=String(x.subject??'').match(/^(.*?)\s+vs\.?\s+(.*?)(?:\s+fixture)?$/i);
+   return pair&&[normalizeTeam(pair[1]),normalizeTeam(pair[2])].sort().join('|')===[normalizeTeam(f.home),normalizeTeam(f.away)].sort().join('|');
+  });
+  const previous=notice.length===1?parseDate(notice[0].old_value):null;
+  const authorized=Number.isFinite(published)&&published<=now&&now-published<=172800000&&/fixture\s+(?:re\s*[-–]?\s*schedul\w*|change)/i.test(raw)&&previous===f.date&&previous!==date&&parseDate(notice[0]?.new_value)===date&&date>=new Date(now+7200000).toISOString().slice(0,10);
+  group.push({hit,fields,f,authorized});groups.set(hit.fixtureId,group);
  }
  for(const [fixtureId,group] of groups){
   const fields={};let conflict=false;
@@ -56,9 +65,10 @@ export function planSchedule(items,cup,registry={}){
    fields[k]=v;
   }
   const f=group[0].f;
-  if(conflict||Object.entries(fields).some(([k,v])=>f[k]!=null&&f[k]!==''&&f[k]!==v)){held.push({fixtureId,reason:'conflicting_schedule_requires_review'});continue;}
+  const authorized=!conflict&&group.every(g=>g.authorized);
+  if(conflict||Object.entries(fields).some(([k,v])=>f[k]!=null&&f[k]!==''&&f[k]!==v&&!(authorized&&k==='date'))){held.push({fixtureId,reason:'conflicting_schedule_requires_review'});continue;}
   const changes=Object.fromEntries(Object.entries(fields).filter(([k,v])=>f[k]!==v));
-  if(Object.keys(changes).length)proposals.push({fixtureId,roundIndex:group[0].hit.roundIndex,matchIndex:group[0].hit.matchIndex,changes,sources:group.map(g=>g.hit.source)});
+  if(Object.keys(changes).length)proposals.push({fixtureId,roundIndex:group[0].hit.roundIndex,matchIndex:group[0].hit.matchIndex,changes,authorizedDateChange:authorized,previousDate:f.date,sources:group.map(g=>g.hit.source)});
  }
  return {proposals,held};
 }
