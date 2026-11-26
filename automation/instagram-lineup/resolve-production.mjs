@@ -11,7 +11,8 @@ function distance(a,b){
  return row[b.length];
 }
 export function resolveProductionSlot(slot,squad){
- const names=[...new Set((slot.names??[]).map(normalize).filter(s=>s.length>=4))];
+ const rawNames=slot.names??[];
+ const names=[...new Set(rawNames.map(normalize).filter(s=>s.length>=4))];
  const votes=Object.entries(slot.votes??{}).map(([n,count])=>[Number(n),Number(count)]).filter(([n,c])=>Number.isInteger(n)&&n>0&&n<100&&c>0).sort((a,b)=>b[1]-a[1]);
  const candidates=squad.filter(p=>Number.isInteger(p.number)&&p.nameKo).map(p=>{
   let best=Infinity,exact=false;
@@ -28,6 +29,21 @@ export function resolveProductionSlot(slot,squad){
  const best=candidates[0],other=candidates.find(c=>c.number!==best?.number);
  if(!best||!Number.isFinite(best.best)||best.best>0.24||other&&other.best-best.best<0.075)return {number:null,method:'ambiguous-name'};
  const top=votes[0]?.[1]??0;
+ const margin=other?other.best-best.best:1;
+ // Bench text sometimes includes the printed number in the name crop.
+ const inline=rawNames.filter(raw=>{
+  const m=String(raw).match(/^\s*[|\[•·ㆍ]*\s*(\d{1,2})\s*[.,:]\s*/);
+  if(!m||Number(m[1])!==best.number)return false;
+  const name=normalize(String(raw).slice(m[0].length));
+  const ref=normalize(squad.find(p=>p.number===best.number)?.nameKo);
+  return name.length>=4&&distance(jamo(name),jamo(ref))/Math.max(jamo(name).length,jamo(ref).length)<=0.15;
+ });
+ if(inline.length&&margin>=0.12&&(best.exact||best.votes>=1||new Set(inline).size>=2))
+  return {number:best.number,method:'inline-number-and-name',distance:best.best};
+ if(best.votes>=1&&margin>=0.15&&(best.exact||best.best<=0.16&&String(best.number).length===2&&votes.some(([n])=>n!==best.number&&String(n).length===2&&distance(Array.from(String(n)),Array.from(String(best.number)))===1)))
+  return {number:best.number,method:'name-supported-low-vote',distance:best.best};
+ if(best.votes>=5&&best.votes===top&&best.best<=0.24&&margin>=0.12)
+  return {number:best.number,method:'dominant-number-and-name',distance:best.best};
  if(best.votes>=2&&best.votes>=top*0.45&&best.best<=0.20)return {number:best.number,method:best.exact?'name-and-number':'jamo-and-number',distance:best.best};
  // Only correct one missing or substituted digit if the name is unambiguous.
  const target=String(best.number);
