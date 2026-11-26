@@ -61,3 +61,31 @@ export async function discoverLineups(env,{now=Date.now(),fetcher=fetch}={}){
  }
  return {enabled:true,initialized:false,queued,checked:posts.length};
 }
+
+export async function scanInstagramLineups(env){
+ if(env.INSTAGRAM_LINEUP_ENABLED!=='true')return;
+ try{
+  const summary=await discoverLineups(env);
+  console.log(JSON.stringify({event:'instagram_lineup_scan',...summary}));
+  if(summary.initialized)return;
+  if(env.GITHUB_REPOSITORY!=='Chizumulu/UTD'||!env.GITHUB_TOKEN)throw Error('Missing GitHub dispatch configuration');
+  const kv=env.APPROVALS;
+  let cursor, count=0;
+  do{
+   const page=await kv.list({prefix:PREFIX+'pending:',cursor,limit:100});
+   for(const k of page.keys){
+    const p=await kv.get(k.name,'json');if(!p)continue;
+    if(await kv.get(PREFIX+'done:'+p.id)||await kv.get('match:lineup:'+p.id)){
+     await kv.put(PREFIX+'done:'+p.id,'1');await kv.delete(k.name);continue;
+    }
+    if(p.nextAttempt>Date.now())continue;
+    const res=await fetch('https://api.github.com/repos/Chizumulu/UTD/dispatches',{method:'POST',headers:{authorization:'Bearer '+env.GITHUB_TOKEN,accept:'application/vnd.github+json','content-type':'application/json','user-agent':'utd-instagram-lineup'},body:JSON.stringify({event_type:'instagram-lineup-discovered',client_payload:{postId:p.id,cutoff:Number(await kv.get(PREFIX+'cutoff'))}})});
+    p.nextAttempt=Date.now()+ (res.ok?60:10)*60000;
+    await kv.put(k.name,JSON.stringify(p));
+    console.log(JSON.stringify({event:'instagram_lineup_dispatch',postId:p.id,status:res.status}));
+    if(++count>=3)return;
+   }
+   cursor=page.list_complete?undefined:page.cursor;
+  }while(cursor);
+ }catch(e){console.error(JSON.stringify({event:'instagram_lineup_scan_failed',error:String(e)}));}
+}
