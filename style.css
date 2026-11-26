@@ -1003,6 +1003,7 @@
   }
   .ha-home { background: var(--color-teal); }
   .ha-away { background: var(--color-text-faint); }
+  .ha-neutral { background: #b8862b; }
   @media (max-width: 600px) {
     .next-opp-cell {
       font-size: var(--fs-xs);
@@ -10863,6 +10864,7 @@
 }
 .home-match-ha.home { background: rgba(var(--color-teal-rgb),.12); color: var(--color-teal-dark); }
 .home-match-ha.away { background: rgba(var(--color-navy-rgb),.1); color: var(--color-navy); }
+.home-match-ha.neutral { background: rgba(214,158,46,.16); color: #9a6a0c; }
 .home-match-badges {
   display: inline-flex;
   align-items: center;
@@ -22580,4 +22582,37 @@ button.match-status:focus-visible {
 }
 @media (prefers-reduced-motion: reduce) {
   .nmc-dual .nmc-sec, .nmc-dual .nmc-sec.is-active, .nmc-dual .nmc-sec.is-leaving { transform: none !important; transition: opacity .2s ease !important; }
+}
+
+/* 컵 패널(PC): 세로 줄과 글씨 사이 간격을 넓힘 (로고 46px + 왼쪽 여백 10px + 간격 절반 8px = 64px 지점에 줄) */
+@media (min-width: 1200px) {
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item { column-gap: 16px; }
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item::after { left: 64px; }
+}
+
+/* 컵 패널(PC): 간격 한 번 더 확대 (간격 22px → 줄은 10 + 46 + 11 = 67px 지점) */
+@media (min-width: 1200px) {
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item { column-gap: 22px; }
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item::after { left: 67px; }
+}
+
+/* 컵 패널(PC): 줄은 로고 쪽(로고에서 10px)에 두고, 줄에서 글씨까지를 16px로 확실히 띄움
+   (로고 46px + 왼쪽 여백 10px + 10px = 66px 지점에 줄 / 글씨 시작 = 66 + 1 + 16 = 83px → column-gap 27px) */
+@media (min-width: 1200px) {
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item { column-gap: 27px; padding-right: 6px; }
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item::after { left: 66px; }
+}
+
+/* 컵 패널(PC): 로고와 글씨 사이 간격(column-gap)을 16px로 좁힘. 세로 줄은 그 간격의 한가운데
+   (로고 46px + 왼쪽 여백 10px + 간격 절반 8px = 64px 지점). 글씨 칸이 넓어져 두 줄로 꺾이는 것도 줄어듭니다.
+   - 되돌리려면 이 블록만 지우면 됩니다. */
+@media (min-width: 1200px) {
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item { column-gap: 16px; padding-right: 4px; }
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item::after { left: 64px; }
+}
+/* 패널이 좁은 화면(1200~1399px): 로고 칸을 46px → 40px로 줄이고 줄도 같이 이동 (8 + 40 + 8 = 56px 지점) */
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item { grid-template-columns: 40px minmax(0, 1fr); padding-left: 8px; }
+  .nmc-pc-head .nmc-logo { width: 40px; height: 40px; }
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item::after { left: 56px; }
 }
