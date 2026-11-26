@@ -6252,6 +6252,7 @@ const cupTournaments = [
   {
     id: 'faCup2627',
     year: 2026,
+    updatedAt: '2026-11-26', // 마지막으로 내용을 고친 날(YYYY-MM-DD). 이 날부터 7일이 안 지났으면 컵 탭에 반짝이는 NEW 뱃지가 떠요. 컵을 업데이트할 때 이 날짜만 새로 고치세요.
     nameKo: '26/27 대통령배 FA컵',
     nameEn: '26/27 Presidential FA Cup',
     organizerKo: 'FAM', organizerEn: 'FAM',
@@ -6445,10 +6446,10 @@ const cupTournaments = [
           { en: 'Mafu Stars FC', ko: '마푸 스타즈 FC', rank: 6 }
         ] },
         { labelKo: '4부 · 지역 2부 리그 (리그 투)', labelEn: 'Regional League Two', clusterAsOf: '2026-10-31', teams: [
-          { en: 'Mzwazwa FC', ko: '음즈와와 FC', cluster: 'A', clusterRank: 1 },
+          { en: 'Mzwawa FC', ko: '음즈와와 FC', aliases: ['Mzwazwa FC'], cluster: 'A', clusterRank: 1 },
           { en: 'Bwabwa FC', ko: '브와브와 FC', cluster: 'B', clusterRank: 1 },
           { en: 'Chipelembe FC', ko: '치펠렘베 FC', cluster: 'C', clusterRank: 1 },
-          { en: 'Chikaya FC', ko: '치카야 FC', cluster: 'D', clusterRank: 1 }
+          { en: 'Chikaya Rangers FC', ko: '치카야 레인저스 FC', aliases: ['Chikaya FC'], cluster: 'D', clusterRank: 1 }
         ] },
         { labelKo: '디스트릭트 컵 우승팀 (2025)', labelEn: 'District champions (2025)', teams: [
           { en: 'Likoma Stars FC', ko: '리코마 스타스 FC', subKo: '리코마', subEn: 'Likoma' },
@@ -6473,28 +6474,115 @@ const cupTournaments = [
         { id: 'north-playoff-2-karonga', home: 'Karonga Pirates FC', homeKo: '카롱가 파이리츠 FC', away: 'Emazwini / Chandamale winner', awayKo: '에마즈위니 / 찬다말레 승자', awayWinnerOf: 'north-playoff-1' }
       ] },
       { labelKo: '지역 1라운드', labelEn: 'First Round – Regional', matches: [
-        { home: 'Mzwazwa FC', homeKo: '음즈와와 FC', away: 'Embangweni United FC', awayKo: '엠방웨니 유나이티드 FC' },
+        { home: 'Mzwawa FC', homeKo: '음즈와와 FC', away: 'Embangweni United FC', awayKo: '엠방웨니 유나이티드 FC' },
         { home: 'Bwabwa FC', homeKo: '브와브와 FC', away: 'Mzuzu City Hammers FC', awayKo: '음주주 시티 해머스 FC' },
         { home: 'Songwe Border United FC', homeKo: '송궤 보더 유나이티드 FC', away: 'Raiply FC', awayKo: '라이플리 FC' },
         { home: 'Chizumulu United FC', homeKo: '치주물루 유나이티드 FC', away: 'Chilumba Barracks FC', awayKo: '칠룸바 배럭스 FC' },
         { home: 'Chipelembe FC', homeKo: '치펠렘베 FC', away: 'Karonga Pirates / Emazwini / Chandamale winner', awayKo: '카롱가 파이리츠 / 에마즈위니 / 찬다말레 승자', awayWinnerOf: 'north-playoff-2-karonga' },
         { home: 'Chibavi Real Stars FC', homeKo: '치바비 리얼 스타즈 FC', away: 'Santos / Likoma Stars winner', awayKo: '산투스 / 리코마 스타스 승자', awayWinnerOf: 'north-playoff-2-santos' },
         { home: 'Mafu Stars FC', homeKo: '마푸 스타즈 FC', away: 'Jenda United FC', awayKo: '젠다 유나이티드 FC' },
-        { home: 'Chikaya FC', homeKo: '치카야 FC', away: 'Brazil Vuwa / Blue Spot winner', awayKo: '브라질 부와 / 블루 스팟 승자', awayWinnerOf: 'north-playoff-2-brazil' }
+        { home: 'Chikaya Rangers FC', homeKo: '치카야 레인저스 FC', away: 'Brazil Vuwa / Blue Spot winner', awayKo: '브라질 부와 / 블루 스팟 승자', awayWinnerOf: 'north-playoff-2-brazil' }
       ] }
     ]
   },
   {
     id: 'mmbelwaCup',
     year: 2026,
+    updatedAt: '2026-11-26',
     nameKo: 'NRFA 음벨와컵 2026',
     nameEn: "NRFA M'mbelwa Cup 2026",
     organizerKo: 'NRFA', organizerEn: 'NRFA',
     logoSrc: './ddds.webp',
     chipKo: '음벨와컵', chipEn: "M'mbelwa Cup",
     status: 'upcoming',
-    descKo: 'NRFA가 주최하는 컵대회예요. 대진과 일정이 발표되는 대로 이곳에 업데이트돼요.',
-    descEn: 'A cup competition organised by the NRFA. Draw and fixtures will appear here as soon as they are announced.',
+    descKo: 'NRFA(북부 지역 축구협회)가 주최하는 컵대회예요. 지역 1부 리그 15팀과 2부 리그 32팀이 참가 명단에 올랐어요. 대진과 일정이 발표되는 대로 이곳에 업데이트돼요.',
+    descEn: 'A cup competition organised by the Northern Region Football Association (NRFA). 15 Regional League One clubs and 32 Regional League Two clubs are on the entry list. Draw and fixtures will appear here as soon as they are announced.',
+    infoKo: [
+      ['주최', 'NRFA (북부 지역 축구협회)'],
+      ['참가 팀', [
+        { tag: '3부', name: '지역 1부 리그 (리그 원)', sub: 'Regional League One · NRFA 명단 표기: Division 1', meta: '15팀' },
+        { tag: '4부', name: '지역 2부 리그 (리그 투)', sub: 'Regional League Two · NRFA 명단 표기: Division 2', meta: '32팀' },
+        { note: '※ NRFA가 발표한 지역 팀 명단 기준이에요. 그 외 지역 리그 팀 명단은 발표되는 대로 추가돼요.' }
+      ]]
+    ],
+    infoEn: [
+      ['Host', 'NRFA (Northern Region Football Association)'],
+      ['Teams', [
+        { tag: 'T3', name: 'Regional League One', sub: 'Listed by the NRFA as Division 1', meta: '15 teams' },
+        { tag: 'T4', name: 'Regional League Two', sub: 'Listed by the NRFA as Division 2', meta: '32 teams' },
+        { note: '* Based on the regional teams list published by the NRFA. Other regional league teams will be added once announced.' }
+      ]]
+    ],
+    // 일정 형식: [날짜, 내용, { end: 'YYYY-MM-DD', tag: '추첨' 같은 작은 표시 }] — 대진·경기 일정이 나오면 아래에 이어서 추가하세요.
+    scheduleKo: [
+      ['11/28 (토) 09:00', "음벨와컵 추첨 (1부·2부 팀) · 루윙가 인클루시브 아카데미", { end: '2026-11-28', tag: '추첨' }]
+    ],
+    scheduleEn: [
+      ['Sat 28 Nov, 09:00', "M'mbelwa Cup draw (Division 1 & 2) · Luwinga Inclusive Academy", { end: '2026-11-28', tag: 'Draw' }]
+    ],
+    // 참가 팀 명단 (NRFA "MMBELWA CUP · REGIONAL TEAMS" 문서 기준). 1부 15팀은 리그 팀이라 leagueData 의 영문명을 그대로 씁니다(로고·한글 이름 자동 연결).
+    // 4부 32팀: en/ko 는 대표 표기, aliases 는 자료마다 다르게 적힌 같은 팀의 다른 표기예요(화면에는 안 나오고 참고용). 철자가 바뀌면 en/ko 만 고치세요. advance 가 없으면 '32강 진출' 문구는 표시되지 않습니다.
+    regionalQualifiers: [
+      { id: 'nrfa', nameKo: '북부 지역', nameEn: 'Northern Region',
+        titleKo: '음벨와컵 참가 팀', titleEn: "M'mbelwa Cup teams",
+        groups: [
+        { labelKo: '3부 · 지역 1부 리그 (리그 원)', labelEn: 'Regional League One', teams: [
+          { en: 'Chibavi Real Stars FC', ko: '치바비 리얼 스타즈 FC' },
+          { en: 'Chihame All Stars FC', ko: '치하메 올스타즈 FC' },
+          { en: 'Chipolopolo Boys FC', ko: '치폴로폴로 보이즈 FC' },
+          { en: 'Chintheche United FC', ko: '친테체 유나이티드 FC' },
+          { en: 'Chizumulu United FC', ko: '치주물루 유나이티드 FC' },
+          { en: 'Jenda United FC', ko: '젠다 유나이티드 FC' },
+          { en: 'Ekwendeni FC', ko: '에크웬데니 FC' },
+          { en: 'Chilumba Barracks FC', ko: '칠룸바 배럭스 FC' },
+          { en: 'Euthini Veterans FC', ko: '에우티니 베테랑스 FC' },
+          { en: 'Lube Masters FC', ko: '루베 마스터즈 FC' },
+          { en: "M'mbelwa Warriors FC", ko: '음벨와 워리어스 FC' },
+          { en: 'Luviri FC', ko: '루비리 FC' },
+          { en: 'Mafu Stars FC', ko: '마푸 스타즈 FC' },
+          { en: 'Raiply FC', ko: '라이플리 FC' },
+          { en: 'Vision S Academy', ko: '비전 S 아카데미' }
+        ] },
+        { labelKo: '4부 · 지역 2부 리그 (리그 투)', labelEn: 'Regional League Two', teams: [
+          { en: 'Mzwawa FC', ko: '음즈와와 FC', aliases: ['Mzwazwa FC'], cluster: 'A', clusterRank: 1, stats: { p: 9, w: 6, d: 2, l: 1, gf: 20, ga: 4, gd: 16, pts: 20 } },
+          { en: 'Wovwe Vision FC', ko: '워브웨 비전 FC', aliases: ['Wovwe FC', 'Wovwe Vision'], cluster: 'A', clusterRank: 2, stats: { p: 10, w: 6, d: 1, l: 3, gf: 21, ga: 13, gd: 8, pts: 19 } },
+          { en: 'Kapotolora FC', ko: '카포톨로라 FC', cluster: 'A', clusterRank: 3, stats: { p: 10, w: 4, d: 5, l: 1, gf: 13, ga: 7, gd: 6, pts: 17 } },
+          { en: 'Thumbi FC', ko: '툼비 FC', cluster: 'A', clusterRank: 4, stats: { p: 10, w: 5, d: 2, l: 3, gf: 15, ga: 15, gd: 0, pts: 17 } },
+          { en: 'Mhuju FC', ko: '음후주 FC', cluster: 'A', clusterRank: 5, stats: { p: 10, w: 4, d: 2, l: 4, gf: 10, ga: 12, gd: -2, pts: 14 } },
+          { en: 'Air Sport FC', ko: '에어 스포츠 FC', cluster: 'A', clusterRank: 6, stats: { p: 10, w: 3, d: 2, l: 5, gf: 10, ga: 15, gd: -5, pts: 11 } },
+          { en: 'Mphompha FC', ko: '음폼파 FC', cluster: 'A', clusterRank: 7, stats: { p: 10, w: 2, d: 2, l: 6, gf: 14, ga: 23, gd: -9, pts: 8 } },
+          { en: 'Nthalire United FC', ko: '은탈리레 유나이티드 FC', cluster: 'A', clusterRank: 8, stats: { p: 11, w: 1, d: 2, l: 8, gf: 9, ga: 23, gd: -14, pts: 5 } },
+          { en: 'Bwabwa United', ko: '브와브와 유나이티드', cluster: 'B', clusterRank: 1, stats: { p: 12, w: 8, d: 1, l: 3, gf: 26, ga: 16, gd: 10, pts: 25 } },
+          { en: 'NAD FC', ko: '나드 FC', cluster: 'B', clusterRank: 2, stats: { p: 11, w: 6, d: 4, l: 1, gf: 17, ga: 9, gd: 8, pts: 22 } },
+          { en: 'Madede FC', ko: '마데데 FC', cluster: 'B', clusterRank: 3, stats: { p: 11, w: 6, d: 2, l: 3, gf: 28, ga: 14, gd: 14, pts: 20 } },
+          { en: 'Euthini Arrows FC', ko: '에우티니 애로우즈 FC', cluster: 'B', clusterRank: 4, stats: { p: 11, w: 6, d: 1, l: 4, gf: 15, ga: 11, gd: 4, pts: 19 } },
+          { en: 'Chamaliwa FC', ko: '차말리와 FC', cluster: 'B', clusterRank: 5, stats: { p: 11, w: 5, d: 2, l: 4, gf: 19, ga: 16, gd: 3, pts: 17 } },
+          { en: 'Chipohlambo/Mpherembe', ko: '치폴람보/음페렘베', cluster: 'B', clusterRank: 6, stats: { p: 11, w: 4, d: 2, l: 5, gf: 16, ga: 13, gd: 3, pts: 14 } },
+          { en: 'Kamsolo FC', ko: '캄솔로 FC', cluster: 'B', clusterRank: 7, stats: { p: 11, w: 3, d: 3, l: 5, gf: 16, ga: 26, gd: -10, pts: 12 } },
+          { en: 'Malidade FC', ko: '말리다데 FC', cluster: 'B', clusterRank: 8, stats: { p: 10, w: 2, d: 2, l: 6, gf: 15, ga: 26, gd: -11, pts: 8 } },
+          { en: 'Chipelembe FC', ko: '치펠렘베 FC', cluster: 'C', clusterRank: 1, stats: { p: 9, w: 5, d: 3, l: 1, gf: 16, ga: 8, gd: 8, pts: 18 } },
+          { en: 'Moyale Reserve FC', ko: '모얄레 리저브 FC', cluster: 'C', clusterRank: 2, stats: { p: 10, w: 5, d: 2, l: 3, gf: 18, ga: 13, gd: 5, pts: 17 } },
+          { en: 'Sonda United FC', ko: '손다 유나이티드 FC', cluster: 'C', clusterRank: 3, stats: { p: 9, w: 5, d: 2, l: 2, gf: 15, ga: 10, gd: 5, pts: 17 } },
+          { en: 'Masamba Asiyana FC', ko: '마삼바 아시야나 FC', cluster: 'C', clusterRank: 4, stats: { p: 10, w: 4, d: 3, l: 3, gf: 14, ga: 11, gd: 3, pts: 15 } },
+          { en: 'Blue Spot FC', ko: '블루 스팟 FC', cluster: 'C', clusterRank: 5, stats: { p: 9, w: 4, d: 2, l: 3, gf: 12, ga: 10, gd: 2, pts: 14 } },
+          { en: 'Mzuzu Town Rangers FC', ko: '음주주 타운 레인저스 FC', cluster: 'C', clusterRank: 6, stats: { p: 10, w: 3, d: 3, l: 4, gf: 12, ga: 13, gd: -1, pts: 12 } },
+          { en: 'Likoma United FC', ko: '리코마 유나이티드 FC', aliases: ['Likoma FC', 'Likoma Utd FC', 'Likoma Utd'], cluster: 'C', clusterRank: 7, stats: { p: 8, w: 2, d: 2, l: 4, gf: 13, ga: 14, gd: -1, pts: 8 } },
+          { en: 'Tough Rangers FC', ko: '터프 레인저스 FC', cluster: 'C', clusterRank: 8, stats: { p: 9, w: 0, d: 1, l: 8, gf: 1, ga: 22, gd: -21, pts: 1 } },
+          { en: 'Chikaya Rangers FC', ko: '치카야 레인저스 FC', aliases: ['Chikaya FC'], cluster: 'D', clusterRank: 1, stats: { p: 10, w: 7, d: 1, l: 2, gf: 17, ga: 8, gd: 9, pts: 22 } },
+          { en: 'Danger Boys FC', ko: '데인저 보이즈 FC', cluster: 'D', clusterRank: 2, stats: { p: 11, w: 6, d: 3, l: 2, gf: 20, ga: 12, gd: 8, pts: 21 } },
+          { en: 'Esigohleni FC', ko: '에시고흘레니 FC', cluster: 'D', clusterRank: 3, stats: { p: 10, w: 5, d: 3, l: 2, gf: 21, ga: 12, gd: 9, pts: 18 } },
+          { en: 'Kazomba Hardknockers FC', ko: '카좀바 하드노커스 FC', cluster: 'D', clusterRank: 4, stats: { p: 10, w: 4, d: 1, l: 5, gf: 18, ga: 24, gd: -6, pts: 13 } },
+          { en: 'Luwerezi Pirates FC', ko: '루웨레지 파이리츠 FC', cluster: 'D', clusterRank: 5, stats: { p: 10, w: 3, d: 3, l: 4, gf: 12, ga: 15, gd: -3, pts: 12 } },
+          { en: 'Khosolo FC', ko: '코솔로 FC', cluster: 'D', clusterRank: 6, stats: { p: 10, w: 2, d: 3, l: 5, gf: 13, ga: 20, gd: -7, pts: 9 } },
+          { en: 'Solola FC', ko: '솔롤라 FC', aliases: ['Solora FC'], cluster: 'D', clusterRank: 7, stats: { p: 10, w: 1, d: 5, l: 4, gf: 9, ga: 12, gd: -3, pts: 8 } },
+          { en: 'Mzimba United FC', ko: '음주바 유나이티드 FC', cluster: 'D', clusterRank: 8, stats: { p: 9, w: 1, d: 3, l: 5, gf: 9, ga: 16, gd: -7, pts: 6 } }
+        ],
+        // 순위표에는 있지만 NRFA 참가 명단(32팀)에는 없는 팀 — 클러스터 순위표에만 흐리게 표시돼요.
+        clusterExtra: [
+          { en: 'Chitokoto FC', ko: '치토코토 FC', cluster: 'B', clusterRank: 9, stats: { p: 10, w: 0, d: 1, l: 9, gf: 7, ga: 28, gd: -21, pts: 1 } }
+        ] }
+      ] }
+    ],
     rounds: []
   }
 ];

@@ -14748,6 +14748,42 @@ body.season-archive .cup-toggle-mobile { display: none !important; }
 .cup-chip img { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
 .cup-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cup-chip.is-on { color: #1b2333; background: var(--color-gold); border-color: var(--color-gold); }
+/* 4부 클러스터 순위표 (접이식) */
+.cup-cl-folds { margin-top: 12px; }
+.cup-cl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.cup-cl-table { width: 100%; min-width: 440px; border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.cup-cl-table th, .cup-cl-table td { padding: 7px 5px; text-align: center; white-space: nowrap; border-top: 1px solid rgba(var(--color-navy-rgb), .08); }
+.cup-cl-table thead th { border-top: 0; font-size: var(--fs-xs, 12px); font-weight: 700; color: var(--color-text-secondary); }
+.cup-cl-table tbody th { text-align: left; font-weight: 700; color: var(--color-text-darkest); white-space: normal; min-width: 120px; }
+.cup-cl-table td:first-child { width: 36px; color: var(--color-text-secondary); font-weight: 700; }
+.cup-cl-table .cup-cl-pts { font-weight: 900; color: var(--color-text-darkest); }
+.cup-cl-table tr.is-extra { opacity: .5; }
+/* 최근 7일 안에 업데이트된 컵 탭의 NEW 뱃지: 빛이 훑고 지나가고, 테두리가 은은히 빛나고, 별빛이 깜빡여요 */
+.cup-chip .cup-new-badge {
+  position: relative; flex-shrink: 0; overflow: visible; text-overflow: clip;
+  padding: 2px 7px; font-size: 11px; font-weight: 900; line-height: 1.4; letter-spacing: .04em;
+  color: #fff; border-radius: 999px;
+  background: linear-gradient(110deg, #ff2e57 0%, #ff2e57 38%, #ffb3c0 50%, #ff2e57 62%, #ff2e57 100%);
+  background-size: 250% 100%;
+  animation: cupNewShimmer 1.8s linear infinite, cupNewGlow 1.8s ease-in-out infinite;
+}
+.cup-chip .cup-new-badge::before,
+.cup-chip .cup-new-badge::after {
+  content: '✦'; position: absolute; font-size: 10px; line-height: 1; color: #ffd84d; pointer-events: none;
+  opacity: 0; animation: cupNewTwinkle 1.6s ease-in-out infinite;
+}
+.cup-chip .cup-new-badge::before { top: -6px; right: -4px; }
+.cup-chip .cup-new-badge::after { bottom: -5px; left: -5px; animation-delay: .8s; }
+@keyframes cupNewShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@keyframes cupNewGlow { 0%, 100% { box-shadow: 0 0 0 rgba(255, 46, 87, 0); } 50% { box-shadow: 0 0 9px rgba(255, 46, 87, .75); } }
+@keyframes cupNewTwinkle {
+  0%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.15) rotate(45deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cup-chip .cup-new-badge, .cup-chip .cup-new-badge::before, .cup-chip .cup-new-badge::after { animation: none; }
+  .cup-chip .cup-new-badge::before, .cup-chip .cup-new-badge::after { opacity: 1; }
+}
 .cup-info { margin-bottom: 18px; }
 .cup-kv {
   margin: 0; padding: 4px 14px; background: var(--color-surface); border-radius: var(--radius-lg);
@@ -22430,3 +22466,118 @@ button.match-status:focus-visible {
 /* 참가팀: 4부 클러스터 표기 */
 .cup-rq-tname small.cup-rq-cluster { align-self: flex-start; margin-top: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: var(--color-teal-dark); background: rgba(var(--color-tint-rgb), .12); }
 @media (max-width: 600px) { .cup-rq-tname small.cup-rq-cluster { align-self: center; } }
+
+
+/* =====================================================================
+   메인 컵대회 패널(PC, 1200px↑): 위 = 대통령배 FA컵 / 아래 = 음벨와컵 두 칸
+   - 각 칸: [로고 | 컵이름] / 예선·본선 단계 / 상대팀 | D-day(날짜 미정이면 '미정' 알약)
+   - 칸 전체가 버튼이라 로고·글씨 어디를 눌러도 해당 컵 화면으로 이동합니다.
+   - 1199px 이하(모바일·태블릿)는 이 블록이 숨겨져 기존 슬림 바 그대로입니다.
+   - 되돌리려면 이 블록만 지우면 됩니다.
+   ===================================================================== */
+.nmc-sec { display: contents; }
+.nmc-pcwrap { display: none; }
+@media (min-width: 1200px) {
+  .nmc.nmc-dual:not([hidden]):not(.nmc-live-feed) {
+    align-items: stretch; justify-content: stretch; text-align: left; gap: 0; padding: 8px;
+  }
+  .nmc-dual:not(.nmc-live-feed) .nmc-sec-1 { display: none; }
+  .nmc-dual:not(.nmc-live-feed) .nmc-pcwrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
+  .nmc-pc-item {
+    flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px;
+    padding: 6px 8px; border-radius: 12px; cursor: pointer; text-align: left; min-width: 0;
+    transition: background .15s ease;
+  }
+  .nmc-pc-item + .nmc-pc-item { margin-top: 4px; position: relative; }
+  .nmc-pc-item + .nmc-pc-item::before {
+    content: ""; position: absolute; left: 8px; right: 8px; top: -3px; height: 1px; background: var(--color-border-chip);
+  }
+  @media (hover: hover) { .nmc-pc-item:hover { background: var(--color-bg-row-hover); } }
+  .nmc-pc-item:focus-visible { outline: 2px solid var(--color-brand-text); outline-offset: -2px; }
+  .nmc-pc-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .nmc-pc-head .nmc-logo { width: 24px; height: 24px; }
+  .nmc-pc-head .nmc-logo-ph { font-size: 18px; }
+  .nmc-pc-head b { font-size: var(--fs-sm); font-weight: 800; color: var(--color-text-darkest); line-height: 1.25; overflow-wrap: anywhere; }
+  .nmc-pc-item .nmc-sep { font-style: normal; color: var(--color-border-chip); font-weight: 400; }
+  .nmc-pc-stage { font-size: var(--fs-sm); font-weight: 700; color: var(--color-text-darkest); line-height: 1.3; overflow-wrap: anywhere; text-align: center; }
+  .nmc-pc-next { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: center; text-align: center; gap: 5px; font-size: var(--fs-sm); line-height: 1.3; min-width: 0; }
+  .nmc-pc-next > * { flex: none; }
+  .nmc-pc-next .nmc-opp { flex: 0 1 auto; min-width: 0; }
+  .nmc-pc-next .nmc-sep { display: none; } /* 구분선 없이 팀명 오른쪽에 알약만 붙임(칸이 좁아서) */
+  .nmc-pc-next .nmc-vs { font-size: var(--fs-xs); font-weight: 600; color: var(--color-text-muted); margin-right: 0; }
+  .nmc-pc-next .nmc-opp { font-size: var(--fs-sm); font-weight: 800; color: var(--color-brand-text); overflow-wrap: anywhere; }
+  .nmc-pc-next .nmc-main { font-weight: 700; color: var(--color-text-dark); }
+  .nmc-dday {
+    display: inline-block; padding: 2px 7px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 800; line-height: 1.2;
+    background: rgba(var(--color-gold-rgb), .22); color: var(--color-text-dark); white-space: nowrap;
+  }
+  .nmc-dday.is-tbd { background: var(--color-bg-btn-hover); color: var(--color-text-muted); font-weight: 700; }
+}
+/* 다크모드: 금빛 단색 필터는 FA컵 로고용이라 음벨와컵 로고에는 적용하지 않음 */
+:root[data-theme="dark"] #nmCupPanel img.nmc-logo.nmc-logo-alt { filter: none; }
+
+
+/* 메인 컵 패널(PC) 디자인 개선: 큰 로고를 왼쪽에 두고, 오른쪽에 컵 이름(작은 라벨) / 단계(굵게) / 상대팀+알약 순으로 쌓음.
+   - 구조(HTML)는 그대로이고 이 블록만 지우면 이전 모양으로 돌아갑니다. */
+@media (min-width: 1200px) {
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item {
+    display: grid; grid-template-columns: 46px minmax(0, 1fr); grid-template-rows: auto auto auto;
+    column-gap: 10px; row-gap: 3px; align-content: center; align-items: center;
+    padding: 10px 10px; text-align: left;
+  }
+  .nmc-pc-head { display: contents; }
+  .nmc-pc-head .nmc-sep { display: none; }
+  .nmc-pc-head .nmc-logo { grid-column: 1; grid-row: 1 / span 3; width: 46px; height: 46px; align-self: center; justify-self: center; }
+  .nmc-pc-head .nmc-logo-ph { font-size: 34px; display: grid; place-items: center; }
+  .nmc-pc-head b { grid-column: 2; grid-row: 1; font-size: 12px; font-weight: 700; color: var(--color-text-muted); line-height: 1.25; }
+  .nmc-pc-stage { grid-column: 2; grid-row: 2; text-align: left; font-size: var(--fs-sm); font-weight: 800; letter-spacing: -.01em; }
+  .nmc-pc-next { grid-column: 2; grid-row: 3; flex-wrap: wrap; justify-content: flex-start; text-align: left; gap: 3px 6px; }
+}
+
+/* 컵 패널(PC): 로고와 글씨 사이 얇은 세로 줄 (로고 46px + 왼쪽 여백 10px + 간격 절반 5px = 61px 지점) */
+@media (min-width: 1200px) {
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item { position: relative; }
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item::after {
+    content: ""; position: absolute; left: 61px; top: 14px; bottom: 14px; width: 1px;
+    background: var(--color-border-chip); pointer-events: none;
+  }
+}
+
+
+/* 컵 패널(PC) 영문 화면: 글자를 조금 줄여서 칸에 맞춤 */
+@media (min-width: 1200px) {
+  .nmc-dual:not(.nmc-live-feed) .nmc-pc-item.nmc-en { padding: 8px 10px; row-gap: 2px; }
+  .nmc-pc-item.nmc-en .nmc-pc-head b { font-size: 11px; }
+  .nmc-pc-item.nmc-en .nmc-pc-stage { font-size: 12.5px; letter-spacing: -.02em; }
+  .nmc-pc-item.nmc-en .nmc-pc-next .nmc-opp,
+  .nmc-pc-item.nmc-en .nmc-pc-next .nmc-main { font-size: 12.5px; }
+}
+
+
+/* =====================================================================
+   모바일·태블릿(1199px↓) 컵 바: 대통령배 FA컵 ↔ 음벨와컵 번갈아 표시 (뉴스 바와 같은 슬라이드 방식)
+   - 두 슬라이드를 같은 자리에 겹쳐 두고 .is-active 쪽만 보입니다(높이는 둘 중 큰 쪽).
+   - PC(1200px↑)에서는 아래 두 칸 레이아웃을 쓰므로 이 슬라이드는 숨깁니다.
+   ===================================================================== */
+@media (max-width: 1199px) {
+  .nmc.nmc-dual:not([hidden]):not(.nmc-live-feed) { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; overflow: hidden; }
+  .nmc-dual:not(.nmc-live-feed) .nmc-pcwrap { display: none; }
+  .nmc-dual:not(.nmc-live-feed) .nmc-sec {
+    grid-area: 1 / 1; display: flex; align-items: center; gap: 10px; min-width: 0;
+    opacity: 0; visibility: hidden; transform: translateY(10px); pointer-events: none;
+  }
+  .nmc-dual:not(.nmc-live-feed) .nmc-sec.is-active {
+    opacity: 1; visibility: visible; transform: none; pointer-events: auto;
+    transition: opacity .35s ease .08s, transform .42s cubic-bezier(.2, .8, .2, 1) .08s;
+  }
+  .nmc-dual:not(.nmc-live-feed) .nmc-sec.is-leaving {
+    opacity: 0; visibility: visible; transform: translateY(-10px);
+    transition: opacity .28s ease, transform .35s ease;
+  }
+}
+@media (min-width: 1200px) {
+  .nmc-dual .nmc-sec-2 { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nmc-dual .nmc-sec, .nmc-dual .nmc-sec.is-active, .nmc-dual .nmc-sec.is-leaving { transform: none !important; transition: opacity .2s ease !important; }
+}

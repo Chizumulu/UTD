@@ -1007,6 +1007,42 @@
     if (t && t.logoSrc) return t.logoSrc;
     return CUP_EXTRA_LOGO_SRC[nameEn] ? encodeURI(CUP_EXTRA_LOGO_SRC[nameEn]) : '';
   }
+  // 그룹(g.teams + g.clusterExtra)에 cluster · clusterRank · stats 가 있으면 클러스터별 순위표(접이식)를 만듭니다.
+  // stats = { p 경기, w 승, d 무, l 패, gf 득점, ga 실점, gd 득실차, pts 승점 }. clusterExtra 는 참가 명단엔 없지만 순위표엔 있는 팀(흐리게 표시).
+  function cupClusterTablesHtml(g, ko) {
+    const extraSet = new Set((g.clusterExtra || []).map(function (e) { return e.en; }));
+    const all = (g.teams || []).concat(g.clusterExtra || []).filter(function (e) { return e && e.cluster && e.stats; });
+    if (!all.length) return '';
+    const letters = Array.from(new Set(all.map(function (e) { return e.cluster; }))).sort();
+    const heads = ko ? ['순위', '팀', '경기', '승', '무', '패', '득점', '실점', '득실', '승점'] : ['#', 'Team', 'P', 'W', 'D', 'L', 'F', 'A', 'GD', 'Pts'];
+    const gdText = function (n) { return (n > 0 ? '+' : '') + n; };
+    const folds = letters.map(function (L) {
+      const rows = all.filter(function (e) { return e.cluster === L; }).sort(function (x, y) { return (x.clusterRank || 99) - (y.clusterRank || 99); });
+      const body = rows.map(function (e) {
+        const s = e.stats;
+        return '<tr' + (extraSet.has(e.en) ? ' class="is-extra"' : '') + '><td>' + (e.clusterRank || '') + '</td><th scope="row">' + cupEsc(ko ? (e.ko || e.en) : e.en) + '</th>' +
+          [s.p, s.w, s.d, s.l, s.gf, s.ga].map(function (v) { return '<td>' + v + '</td>'; }).join('') +
+          '<td>' + gdText(s.gd) + '</td><td class="cup-cl-pts">' + s.pts + '</td></tr>';
+      }).join('');
+      return '<details class="cup-fold"><summary><span class="cup-fold-title">' + (ko ? '클러스터 ' + L + ' 순위표' : 'Cluster ' + L + ' table') + '</span>' +
+        '<span class="cup-fold-meta">' + rows.length + (ko ? '팀' : ' teams') + '</span>' +
+        '<span class="cup-fold-toggle"><span class="is-closed">' + (ko ? '펼쳐보기' : 'Show') + '</span><span class="is-open">' + (ko ? '접기' : 'Hide') + '</span></span></summary>' +
+        '<div class="cup-fold-body"><div class="cup-cl-wrap"><table class="cup-cl-table"><thead><tr>' +
+        heads.map(function (h) { return '<th scope="col">' + h + '</th>'; }).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div></div></details>';
+    }).join('');
+    const hasExtra = all.some(function (e) { return extraSet.has(e.en); });
+    return '<div class="cup-folds cup-cl-folds">' + folds + '</div>' +
+      '<p class="cup-rq-note">' + (ko ? '클러스터 순위표는 NRFA 리그 기준이에요.' : 'Cluster tables follow the NRFA league standings.') +
+      (hasExtra ? (ko ? ' 흐리게 표시된 팀은 참가 명단에는 없는 팀이에요.' : ' Greyed-out teams are not on the entry list.') : '') + '</p>';
+  }
+  // 컵의 updatedAt(YYYY-MM-DD, 한국 날짜 기준)이 오늘로부터 7일이 안 됐으면 true → 컵 탭에 NEW 뱃지를 보여줍니다.
+  function cupIsNew(c) {
+    if (!c || !c.updatedAt) return false;
+    const t = Date.parse(c.updatedAt + 'T00:00:00Z');
+    const n = Date.parse(kstDateKey(Date.now()) + 'T00:00:00Z');
+    if (isNaN(t) || isNaN(n)) return false;
+    return (n - t) / 86400000 < 7;
+  }
   function cupTeamHtml(nameEn, nameKoOverride, away) {
     const t = leagueData.find(function (x) { return x.nameEn === nameEn; });
     const name = isKorean ? (nameKoOverride || (t && t.nameKo) || nameEn) : nameEn;
@@ -1408,7 +1444,8 @@
         html += '<button type="button" role="tab" class="cup-chip' + (on ? ' is-on' : '') + '" aria-selected="' + (on ? 'true' : 'false') + '"' +
           ' onclick="selectCup(\'' + cupEsc(x.id) + '\')">' +
           (x.logoSrc ? '<img src="' + cupEsc(x.logoSrc) + '" alt="">' : '') +
-          '<span>' + cupEsc(ko ? (x.chipKo || x.nameKo) : (x.chipEn || x.nameEn)) + '</span></button>';
+          '<span>' + cupEsc(ko ? (x.chipKo || x.nameKo) : (x.chipEn || x.nameEn)) + '</span>' +
+          (cupIsNew(x) ? '<span class="cup-new-badge" title="' + (ko ? '최근 업데이트' : 'Recently updated') + '">NEW</span>' : '') + '</button>';
       });
       html += '</div>';
     }
@@ -1523,7 +1560,7 @@
     // 지역 플레이오프(예선) 권역별 참가 팀: 토스 스타일 큰 카드 → 그룹(2부·3부·4부·지역) → 큰 팀 타일
     const regionalHtml = (Array.isArray(c.regionalQualifiers) ? c.regionalQualifiers : []).map(function (rg) {
       const total = (rg.groups || []).reduce(function (n, g) { return n + (g.teams || []).length; }, 0);
-      const head = '<div class="cup-rq-head"><div class="cup-rq-title">' + cupEsc(ko ? rg.nameKo + ' 예선' : rg.nameEn + ' qualifiers') + '</div>' +
+      const head = '<div class="cup-rq-head"><div class="cup-rq-title">' + cupEsc(ko ? (rg.titleKo || rg.nameKo + ' 예선') : (rg.titleEn || rg.nameEn + ' qualifiers')) + '</div>' +
         '<div class="cup-rq-stats"><span class="cup-rq-stat"><b>' + total + '</b>' + (ko ? '팀 참가' : ' teams') + '</span>' +
         (rg.advance ? '<span class="cup-rq-stat is-hl"><b>' + rg.advance + '</b>' + (ko ? '팀 32강 진출' : ' advance to R32') + '</span>' : '') + '</div></div>';
       const body = (rg.groups || []).map(function (g) {
@@ -1540,6 +1577,9 @@
             const teams = (g.teams || []).slice();
             if (teams.some(function (e) { return Number.isInteger(rankOf(e)); })) {
               teams.sort(function (x, y) { return (Number.isInteger(rankOf(x)) ? rankOf(x) : 999) - (Number.isInteger(rankOf(y)) ? rankOf(y) : 999); });
+            } else if (teams.length && teams.every(function (e) { return e.cluster && Number.isInteger(e.clusterRank); })) {
+              // 그룹의 모든 팀에 클러스터가 있으면 클러스터(A→D) · 클러스터 내 순위 순으로 보여줍니다.
+              teams.sort(function (x, y) { return String(x.cluster).localeCompare(String(y.cluster)) || (x.clusterRank - y.clusterRank); });
             }
             return teams;
           })().map(function (e) {
@@ -1552,7 +1592,7 @@
               (e.cluster ? '<small class="cup-rq-cluster">' + (ko ? '클러스터 ' : 'Cluster ') + cupEsc(e.cluster) + (Number.isInteger(e.clusterRank) ? ' · ' + (ko ? e.clusterRank + '위' : '#' + e.clusterRank) : '') + '</small>' : '') + '</span></div>';
           }).join('') + '</div>' +
           (g.rankAsOf ? '<p class="cup-rq-note">' + (ko ? '순위는 ' + cupEsc(name) + ' 순위표 기준이에요 (' + cupEsc(g.rankAsOf.replace(/-/g, '.')) + ' 현재).' : 'Ranks are from the ' + cupEsc(name) + ' table (as of ' + cupEsc(g.rankAsOf) + ').') + '</p>' : '') +
-          (g.clusterAsOf ? '<p class="cup-rq-note">' + (ko ? '클러스터 순위는 ' + cupEsc(g.clusterAsOf.replace(/-/g, '.')) + ' 현재 기준이에요.' : 'Cluster ranks as of ' + cupEsc(g.clusterAsOf) + '.') + '</p>' : '') + '</div>';
+          (g.clusterAsOf ? '<p class="cup-rq-note">' + (ko ? '클러스터 순위는 ' + cupEsc(g.clusterAsOf.replace(/-/g, '.')) + ' 현재 기준이에요.' : 'Cluster ranks as of ' + cupEsc(g.clusterAsOf) + '.') + '</p>' : '') + cupClusterTablesHtml(g, ko) + '</div>';
       }).join('');
       return '<section class="cup-info cup-rq">' + head + body + '</section>';
     }).join('');
@@ -1574,6 +1614,8 @@
 
     // 북부 지역 예선 대진: 대진 확정 전이라 "N팀 → M팀 진출" 구조만 먼저 보여줍니다. (경기가 정해지면 rounds 에 추가)
     const regionalBracketHtml = (Array.isArray(c.regionalQualifiers) ? c.regionalQualifiers : []).map(function (rg) {
+      // advance(본선 진출 팀 수)가 없는 대회(예: 음벨와컵)는 "N팀 → M팀 진출" 구조 카드를 만들지 않습니다.
+      if (!rg.advance) return '';
       const total = (rg.groups || []).reduce(function (n, g) { return n + (g.teams || []).length; }, 0);
       const adv = rg.advance || 0;
       const rn = ko ? rg.nameKo : rg.nameEn;
@@ -6154,15 +6196,139 @@
     out.sort(function (x, y) { return String(x.m.date || '').localeCompare(String(y.m.date || '')); });
     return out;
   }
+  // 메인 컵 패널의 "자세히" 버튼: 누른 컵의 상세 화면으로 바로 들어갑니다.
+  function nmcOpenCup(id) {
+    cupSelectedId = id;
+    if (cupMode) renderCupView(); else showCupView();
+    window.scrollTo(0, 0);
+  }
+  // PC 컵 패널(2분할)용 한 칸의 내용: 컵 이름 / 예선·본선 단계 / 상대(또는 다음 일정) + D-day(날짜 미정이면 '미정')
+  function nmcCupInfo(cup, elim) {
+    const ko = isKorean;
+    const nowK = nmcKst(Date.now());
+    const todayNum = nmcDayNum(nowK);
+    const todayStr = nowK.toISOString().slice(0, 10);
+    const info = { chip: ko ? (cup.chipKo || cup.nameKo) : String(cup.chipEn || cup.nameEn || '').replace(/^Presidential\s+/i, ''), stage: ko ? '대진 발표 전' : 'Fixtures TBA', opp: '', main: '', dday: '', tbd: false };
+    const stageText = function (rl) {
+      const label = ko ? (rl.ko || rl.en || '') : (rl.en || rl.ko || '');
+      const si = nmcStageIdx((rl.ko || '') + ' ' + (rl.en || ''));
+      const pre = si === 0 ? (ko ? '예선' : 'Qual.') : si >= 1 ? (ko ? '본선' : 'Knockout') : '';
+      let l = String(label).replace(/\s*\(.*\)/, '');
+      if (ko) l = l.replace(/(\d+)\s*라운드/g, '$1R'); // 지역 1라운드 → 지역 1R
+      else {
+        const ORD = { first: 1, second: 2, third: 3, fourth: 4 };
+        l = l.replace(/(First|Second|Third|Fourth)\s+Round\s*[–-]\s*Regional/i, function (_, o) { return 'Reg. R' + ORD[o.toLowerCase()]; })
+             .replace(/(First|Second|Third|Fourth)\s+Round/i, function (_, o) { return 'R' + ORD[o.toLowerCase()]; })
+             .replace(/Round of (\d+)/i, 'R$1').replace(/Quarter-?finals?/i, 'QF').replace(/Semi-?finals?/i, 'SF'); // First Round – Regional → Reg. R1
+      }
+      if (!l) return pre;
+      return !pre || l.indexOf(pre) >= 0 ? l : pre + ' · ' + l;
+    };
+    const dayDiff = function (ymd) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(ymd || ''));
+      return m ? Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000) - todayNum : null;
+    };
+    if (elim) { info.stage = ko ? '탈락' : 'Eliminated'; return info; }
+    const next = listMyCupFixtures(cup)[0] || null;
+    const undated = nmcMyMatches(cup).find(({ m }) => m.home && m.away && m.homeScore == null && m.awayScore == null && !m.date);
+    if (next) {
+      info.stage = stageText({ ko: next.roundLabelKo, en: next.roundLabelEn }) || info.stage;
+      info.opp = ko ? next.oppKo : next.oppEn;
+      const ms = kickoffUTCMillis(next.kickoffDate, next.kickoffTime);
+      if (ms != null) info.dday = nmcDdayLabel(nmcDayNum(nmcKst(ms)) - todayNum);
+      if (!info.dday) info.tbd = ms == null;
+    } else if (undated) {
+      const pm = undated.m, iAmHome = isMyTeamName(pm.home, pm.homeKo);
+      const oEn = iAmHome ? pm.away : pm.home, oKo = iAmHome ? pm.awayKo : pm.homeKo;
+      const oTeam = leagueData.find(function (x) { return x.nameEn === oEn; });
+      info.stage = stageText({ ko: undated.r.labelKo, en: undated.r.labelEn }) || info.stage;
+      info.opp = ko ? (oKo || (oTeam && oTeam.nameKo) || oEn) : oEn;
+      info.tbd = true;
+    } else {
+      const sched = (ko ? cup.scheduleKo : cup.scheduleEn) || [];
+      const item = sched.find(function (x) { return !(x[2] && x[2].end) || x[2].end >= todayStr; });
+      if (item) {
+        const tag = item[2] && item[2].tag;
+        info.main = tag ? (ko ? tag + ' 예정' : tag) : item[1];
+        const d = dayDiff(item[2] && item[2].end);
+        if (d == null) info.tbd = true; else info.dday = nmcDdayLabel(d);
+      } else {
+        info.main = ko ? '일정 대기 중' : 'Awaiting schedule';
+      }
+    }
+    info.opp = info.opp.replace(/\s+FC$/i, ''); // 좁은 칸이라 팀명 뒤 FC는 생략
+    if (!ko) info.opp = info.opp.split(/\s+/)[0]; // 영문은 첫 단어만 (Chilumba Barracks → Chilumba, Chibavi Real Stars → Chibavi)
+    return info;
+  }
+  function nmcPcCupBlock(cup, info, alt) {
+    const esc = cupEsc;
+    const logo = cup.logoSrc2 || cup.logoSrc;
+    const logoHtml = logo
+      ? `<img class="nmc-logo${alt ? ' nmc-logo-alt' : ''}" src="${esc(logo)}" alt="" onerror="this.outerHTML='<span class=&quot;nmc-logo nmc-logo-ph&quot;>🏆</span>'">`
+      : '<span class="nmc-logo nmc-logo-ph">🏆</span>';
+    const who = info.opp
+      ? `<span class="nmc-opp">${esc(info.opp)}</span>`
+      : `<span class="nmc-main">${esc(info.main)}</span>`;
+    const pill = info.dday ? `<i class="nmc-sep">|</i><span class="nmc-dday">${esc(info.dday)}</span>`
+      : info.tbd ? `<i class="nmc-sep">|</i><span class="nmc-dday is-tbd">${isKorean ? '미정' : 'TBD'}</span>` : '';
+    const id = esc(cup.id);
+    return `<div class="nmc-pc-item${isKorean ? '' : ' nmc-en'}" role="button" tabindex="0" title="${esc(isKorean ? cup.nameKo : cup.nameEn)}" onclick="nmcOpenCup('${id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();nmcOpenCup('${id}')}">
+        <div class="nmc-pc-head">${logoHtml}<i class="nmc-sep">|</i><b>${esc(info.chip)}</b></div>
+        <div class="nmc-pc-stage">${esc(info.stage)}</div>
+        <div class="nmc-pc-next">${who}${pill}</div>
+      </div>`;
+  }
+  // 모바일·태블릿(1199px↓) 컵 바: 대통령배 FA컵 ↔ 음벨와컵을 뉴스 바처럼 번갈아 보여줍니다(4초, 아래에서 올라오고 위로 사라짐).
+  let nmcActiveIdx = 0, nmcRotateTimer = null;
+  const NMC_ROTATE_MS = 4000;
+  function nmcMobileCupBlock(cup, info) {
+    const ko = isKorean, esc = cupEsc;
+    const logo = cup.logoSrc2 || cup.logoSrc;
+    const logoHtml = logo
+      ? `<img class="nmc-logo nmc-logo-alt" src="${esc(logo)}" alt="" onerror="this.outerHTML='<span class=&quot;nmc-logo nmc-logo-ph&quot;>🏆</span>'">`
+      : '<span class="nmc-logo nmc-logo-ph">🏆</span>';
+    const tournamentState = cup.status || 'upcoming';
+    const hasNext = !!listMyCupFixtures(cup)[0];
+    const cupState = tournamentState === 'live' || tournamentState === 'finished' ? tournamentState : hasNext ? 'upcoming' : 'date-pending';
+    const labels = { upcoming: ko ? '경기 전' : 'Pre-match', live: ko ? '진행 중' : 'Live', finished: ko ? '종료' : 'Finished' };
+    const nextInner = info.opp
+      ? `<span class="nmc-vs">vs</span> <span class="nmc-opp">${esc(info.opp)}</span>`
+      : esc(info.main);
+    return `
+      <div class="nmc-head" title="${esc(ko ? cup.nameKo : cup.nameEn)}">${logoHtml}<span class="nmc-tag">${ko ? '컵' : 'Cup'}</span></div>
+      <div class="nmc-body">
+        <p class="nmc-stage">${esc(info.stage)}</p>
+        <span class="nmc-state nmc-state-mobile nmc-state-${esc(tournamentState)}">${esc(labels[tournamentState] || labels.upcoming)}</span>
+        ${matchStatusBadge(cupState, 'nmc-state nmc-state-desktop', ko)}
+        <div class="nmc-next nmc-next-fixture"><b>${nextInner}</b></div>
+      </div>
+      <button type="button" class="nmc-btn" onclick="nmcOpenCup('${esc(cup.id)}')">${ko ? '자세히' : 'Details'}</button>`;
+  }
+  function nmcRotateTick() {
+    const el = document.getElementById('nmCupPanel');
+    if (!el || el.hidden || document.hidden || !el.classList.contains('nmc-dual') || el.classList.contains('nmc-live-feed')) return;
+    if (!(window.matchMedia && window.matchMedia('(max-width: 1199px)').matches)) return;
+    if (typeof prsReduceMotion === 'function' && prsReduceMotion()) return; // '동작 줄이기'면 뉴스 바처럼 자동 전환 안 함
+    const secs = el.querySelectorAll(':scope > .nmc-sec');
+    if (secs.length < 2) return;
+    const from = secs[nmcActiveIdx], to = secs[1 - nmcActiveIdx];
+    nmcActiveIdx = 1 - nmcActiveIdx;
+    from.classList.remove('is-active'); from.classList.add('is-leaving');
+    to.classList.remove('is-leaving'); to.classList.add('is-active');
+    setTimeout(function () { from.classList.remove('is-leaving'); }, 420);
+  }
   function renderCupHeroPanel() {
     const el = document.getElementById('nmCupPanel');
     if (!el) return;
-    el.classList.remove('nmc-live-feed');
+    el.classList.remove('nmc-live-feed', 'nmc-dual');
     el._nmsFeedHtml = null;
     const heroForReset = el.closest('.nm-hero');
     if (heroForReset) heroForReset.classList.remove('nm-hero-live');
-    const cup = getCups()[0] || null;
+    const cupsAll = getCups();
+    const cup = cupsAll.find(function (c) { return c.id === 'faCup2627'; }) || cupsAll[0] || null;
     if (!cup) { el.hidden = true; el.innerHTML = ''; return; }
+    // PC(1200px↑)에서는 패널을 위/아래로 나눠 아래 칸에 음벨와컵을 보여줍니다. 모바일·태블릿은 CSS가 아래 칸을 숨겨 지금 모습 그대로입니다.
+    const cup2 = cupsAll.find(function (c) { return c.id === 'mmbelwaCup' && c !== cup; }) || cupsAll.find(function (c) { return c !== cup; }) || null;
     const ko = isKorean;
     const esc = cupEsc;
     const nowK = nmcKst(Date.now());
@@ -6270,8 +6436,10 @@
     };
     el.hidden = false;
     el.setAttribute('role', 'group');
-    el.onclick = function (e) { if (window.matchMedia('(max-width: 1199px)').matches && !cupMode && !(e.target.closest && e.target.closest('.nmc-btn'))) toggleCupView(); }; // nmc-click: 모바일 슬림 바는 바 전체가 버튼
+    el.onclick = function (e) { if (window.matchMedia('(max-width: 1199px)').matches && !cupMode && !(e.target.closest && e.target.closest('.nmc-btn'))) { const act = el.querySelector(':scope > .nmc-sec.is-active'); if (act && act.dataset.cup) nmcOpenCup(act.dataset.cup); else toggleCupView(); } }; // nmc-click: 모바일 슬림 바는 바 전체가 버튼
+    el.classList.toggle('nmc-dual', !!cup2);
     el.innerHTML = `
+      <div class="nmc-sec nmc-sec-1${nmcActiveIdx === 0 || !cup2 ? ' is-active' : ''}" data-cup="${esc(cup.id)}">
       <div class="nmc-head" title="${esc(ko ? cup.nameKo : cup.nameEn)}">${logoHtml}<span class="nmc-tag">${ko ? '컵' : 'Cup'}</span></div>
       <div class="nmc-body">
         <p class="nmc-stage">${stageHtml}</p>
@@ -6279,7 +6447,11 @@
         ${matchStatusBadge(cupState, 'nmc-state nmc-state-desktop', ko)}${stageSubLine ? `<p class="nmc-stage-sub">${esc(stageSubLine)}</p>` : ''}
         <div class="nmc-next${opponent ? ' nmc-next-fixture' : ''}"><b>${opponent ? `<span class="nmc-vs">vs</span> <span class="nmc-opp">${opponentHtml}</span>` : esc(nextMain)}</b>${nextSub ? `<small>${esc(nextSub)}</small>` : ''}</div>
       </div>
-      <button type="button" class="nmc-btn" onclick="toggleCupView()">${ko ? '자세히' : 'Details'}</button>`;
+      <button type="button" class="nmc-btn" onclick="nmcOpenCup('${esc(cup.id)}')">${ko ? '자세히' : 'Details'}</button>
+      </div>${cup2 ? `
+      <div class="nmc-sec nmc-sec-2${nmcActiveIdx === 1 ? ' is-active' : ''}" data-cup="${esc(cup2.id)}">${nmcMobileCupBlock(cup2, nmcCupInfo(cup2, false))}</div>` : ''}${cup2 ? `
+      <div class="nmc-pcwrap">${nmcPcCupBlock(cup, nmcCupInfo(cup, eliminated), false)}${nmcPcCupBlock(cup2, nmcCupInfo(cup2, false), true)}</div>` : ''}`;
+    if (cup2 && !nmcRotateTimer) nmcRotateTimer = setInterval(nmcRotateTick, NMC_ROTATE_MS);
     try { nmsSyncPanelLive(); } catch (e) { /* 실황 소식은 부가 기능 */ }
   }
 
