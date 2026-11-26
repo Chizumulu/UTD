@@ -1,0 +1,51 @@
+name: FA Cup schedule and result sync
+on:
+  schedule:
+    - cron: '4,14,24,34,44,54 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview without writing
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: approved-scorer-proposals-main
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.SCORER_GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --package-lock=false acorn@8
+      - name: Fetch structured API
+        run: |
+          mkdir -p work
+          curl --fail --silent --show-error --retry 3 --max-time 60 'https://api.chizumulu.net/v1/structured?limit=40' -o work/cup-api.json
+      - name: Validate and sync
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            node automation/cup-sync/sync-cup.mjs
+            node --check data.js
+            if [ "$DRY_RUN" = true ]; then exit 0; fi
+            git add -- data.js automation/cup-sync/cup-snapshot.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m 'Sync Presidential FA Cup fixtures and results'
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main
+            git reset --hard origin/main
+          done
+          echo 'Failed to push after three attempts' >&2
+          exit 1
