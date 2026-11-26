@@ -15,6 +15,9 @@ export default {
     if (url.pathname === "/webhook" && request.method === "POST") {
       return receiveWebhook(request, env);
     }
+    if (url.pathname === "/admin/lineup-proposal" && request.method === "POST") {
+      return receiveLineupProposal(request, env);
+    }
     if (url.pathname === "/health") {
       return Response.json({ ok: true });
     }
@@ -1196,6 +1199,7 @@ function normalize(value) {
 }
 
 async function sendApprovalMessage(proposal, env, { confirmation = false } = {}) {
+  if (proposal.kind === "lineup") return sendLineupApproval(proposal, env, confirmation);
   const base = env.WHATSAPP_GRAPH_URL;
   if (!base || !env.WHATSAPP_PHONE_NUMBER_ID || !env.WHATSAPP_ACCESS_TOKEN ||
       !env.WHATSAPP_ADMIN_WA_ID || !env.WHATSAPP_TEMPLATE_NAME) {
@@ -1335,6 +1339,7 @@ async function handleAction(payload, env) {
     return;
   }
 
+  if (proposal.kind === "lineup" && env.INSTAGRAM_LINEUP_ENABLED !== "true") return;
   if (proposal.kind === "forfeit" && env.FORFEIT_APPROVALS_ENABLED !== "true") return;
   const [owner, repository] = String(env.GITHUB_REPOSITORY || "").split("/");
   if (!owner || !repository || !env.GITHUB_TOKEN) throw new Error("GitHub dispatch settings are incomplete");
@@ -1355,7 +1360,7 @@ async function handleAction(payload, env) {
         "user-agent": "utd-scorer-approval"
       },
       body: JSON.stringify({
-        event_type: proposal.kind === "forfeit" ? "forfeit-proposal-approved" : proposal.competition === "faCup2627" ? "cup-scorer-proposal-approved" : "scorer-proposal-approved",
+        event_type: proposal.kind === "lineup" ? "lineup-proposal-approved" : proposal.kind === "forfeit" ? "forfeit-proposal-approved" : proposal.competition === "faCup2627" ? "cup-scorer-proposal-approved" : "scorer-proposal-approved",
         client_payload: { proposal: approvedProposal }
       })
     });
@@ -1434,4 +1439,50 @@ async function scanCupApprovals(env) {
   }
   console.log(JSON.stringify({event:"cup_scorer_scan_summary",sent,held:held.length}));
  }catch(error){console.error(JSON.stringify({event:"cup_scorer_scan_failed",error:String(error)}));}
+}
+
+async function receiveLineupProposal(request, env) {
+  if (env.INSTAGRAM_LINEUP_ENABLED !== "true") return Response.json({ok:false}, {status:503});
+  const expected=String(env.LINEUP_INGEST_TOKEN||"");
+  const supplied=request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]||"";
+  if(expected.length<32||!constantTimeEqual(supplied,expected))return Response.json({ok:false},{status:401});
+  const raw=await request.text();
+  if(raw.length>16000)return Response.json({ok:false},{status:413});
+  let p;try{p=JSON.parse(raw);}catch{return Response.json({ok:false},{status:400});}
+  const validPlayer=x=>x&&Number.isInteger(x.number)&&x.number>0&&x.number<100&&typeof x.nameKo==="string"&&x.nameKo.trim().length>0&&x.nameKo.length<=80;
+  if(p?.kind!=="lineup"||!/^\d{5,30}$/.test(String(p.postId))||!["league","faCup2627"].includes(p.competition)||!/^\d{4}-\d{2}-\d{2}$/.test(p.matchDate||"")||
+    ![p.home,p.away].every(x=>typeof x==="string"&&x.length>0&&x.length<=120)||
+    !Array.isArray(p.starters)||p.starters.length!==11||!Array.isArray(p.bench)||!p.bench.length||p.bench.length>12||
+    ![...p.starters,...p.bench].every(validPlayer)||new Set([...p.starters,...p.bench].map(x=>x.number)).size!==p.starters.length+p.bench.length)
+    return Response.json({ok:false,error:"Invalid lineup proposal"},{status:400});
+  const matchKey="lineup:"+p.postId;
+  const key="match:"+matchKey;
+  if(await env.APPROVALS.get(key))return Response.json({ok:true,duplicate:true});
+  const id=crypto.randomUUID();
+  const proposal={...p,id,matchKey,state:"pending",needsReview:true,reviewWarnings:["공식 라인업 이미지와 선수 및 포지션을 대조하세요"],createdAt:new Date().toISOString()};
+  delete proposal.state;
+  await env.APPROVALS.put("proposal:"+id,JSON.stringify(proposal),{expirationTtl:MAX_PROPOSAL_AGE_SECONDS});
+  await env.APPROVALS.put(key,id,{expirationTtl:MAX_PROPOSAL_AGE_SECONDS});
+  try{
+    await sendLineupApproval(proposal,env,false);
+    console.log(JSON.stringify({event:"instagram_lineup_approval_sent",postId:p.postId,proposalId:id}));
+    return Response.json({ok:true,id});
+  }catch(error){
+    await env.APPROVALS.delete(key);await env.APPROVALS.delete("proposal:"+id);
+    console.error(JSON.stringify({event:"instagram_lineup_approval_failed",error:String(error)}));
+    return Response.json({ok:false,error:"Lineup notification failed"},{status:502});
+  }
+}
+
+async function sendLineupApproval(p,env,confirmation){
+  if(!env.WHATSAPP_LINEUP_TEMPLATE_NAME)throw Error("Lineup template not configured");
+  const actions=confirmation?["confirm","hold","reject"]:["approve","hold","reject"];
+  const buttons=await Promise.all(actions.map(async(action,i)=>({type:"button",sub_type:"quick_reply",index:String(i),parameters:[{type:"payload",payload:await signedPayload(p.id,action,env)}]})));
+  const fmt=players=>players.map(x=>(x.pos?x.pos+" ":"")+x.number+" "+x.nameKo).join(", ");
+  const values=[(confirmation?"2차 확인 · ":"")+p.matchDate+" "+p.home+" vs "+p.away+" (포메이션 확인 필요)",fmt(p.starters),fmt(p.bench),p.id];
+  const response=await fetch(String(env.WHATSAPP_GRAPH_URL||"").replace(/\/$/,"")+"/"+encodeURIComponent(env.WHATSAPP_PHONE_NUMBER_ID)+"/messages",{
+   method:"POST",headers:{authorization:"Bearer "+env.WHATSAPP_ACCESS_TOKEN,"content-type":"application/json"},
+   body:JSON.stringify({messaging_product:"whatsapp",to:env.WHATSAPP_ADMIN_WA_ID,type:"template",template:{name:env.WHATSAPP_LINEUP_TEMPLATE_NAME,language:{code:env.WHATSAPP_TEMPLATE_LANGUAGE||"ko"},components:[{type:"body",parameters:values.map(v=>({type:"text",text:sanitizeTemplateText(v)}))},...buttons]}})
+  });
+  if(!response.ok)throw Error("Lineup WhatsApp HTTP "+response.status);
 }
