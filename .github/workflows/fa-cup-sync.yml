@@ -4,12 +4,13 @@ on:
   pull_request:
     paths:
       - 'automation/cup-sync/**'
+      - 'automation/scorer-approval/worker.js'
       - '.github/workflows/fa-cup-sync.yml'
       - 'data.js'
 permissions:
   contents: read
 concurrency:
-  group: approved-scorer-proposals-main
+  group: fa-cup-validation-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   validate:
@@ -20,7 +21,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --no-save --package-lock=false acorn@8
-      - run: node --test automation/cup-sync/match-fixtures.test.mjs
+      - run: node --test automation/cup-sync/*.test.mjs
       - run: curl --fail --silent --show-error --retry 3 'https://api.chizumulu.net/v1/structured?limit=40' -o /tmp/cup-api.json
       - run: node automation/cup-sync/run.mjs /tmp/cup-api.json --apply
       - run: node --check data.js

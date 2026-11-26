@@ -1400,7 +1400,7 @@ async function scanCupApprovals(env) {
   const {proposals,held}=planCupScorers(data.items,cup);
   let sent=0;
   for(const p of proposals){
-   const fixture=cup.rounds.flatMap(r=>r.matches??[]).find((f)=>f.id===p.fixtureId)??cup.rounds[Number(p.fixtureId.match(/^round:(\\d+):match:(\\d+)$/)?.[1])]?.matches?.[Number(p.fixtureId.match(/^round:(\\d+):match:(\\d+)$/)?.[2])];
+   const fixture=cup.rounds.flatMap(r=>r.matches??[]).find((f)=>f.id===p.fixtureId)??cup.rounds[Number(p.fixtureId.match(/^round:(\d+):match:(\d+)$/)?.[1])]?.matches?.[Number(p.fixtureId.match(/^round:(\d+):match:(\d+)$/)?.[2])];
    if(!fixture||fixture.chizumuluScorers?.length)continue;
    const key="match:"+p.approvalKey;
    if(await env.APPROVALS.get(key))continue;

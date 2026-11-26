@@ -43,11 +43,11 @@ export function resolveCupParticipants(cup){
    const prior=winners.get(f[side+'WinnerOf']);
    if(prior&&(!f[side]||/\bwinner\b|\btbd\b|\//i.test(f[side])))f[side]=prior;
   }
-  if(!f.id||f.postponed||f.forfeit||/^(forfeit|walk[ _-]?over|awarded)$/i.test(f.resultType??''))continue;
+  if(!f.id||f.postponed)continue;
   const a=f.homeScore,b=f.awayScore;
   if(!Number.isSafeInteger(a)||!Number.isSafeInteger(b)||a<0||b<0)continue;
   let side=a>b?'home':b>a?'away':null;
-  if(!side){const p=String(f.pso??'').match(/^(\d+):(\d+)$/);if(p&&Number(p[1])!==Number(p[2]))side=Number(p[1])>Number(p[2])?'home':'away';}
+  if(!side&&!f.forfeit&&!/^(forfeit|walk[ _-]?over|awarded)$/i.test(f.resultType??'')){const p=String(f.pso??'').match(/^(\d+):(\d+)$/);if(p&&Number(p[1])!==Number(p[2]))side=Number(p[1])>Number(p[2])?'home':'away';}
   if(side&&f[side]&&!/\bwinner\b|\btbd\b|\//i.test(f[side]))winners.set(f.id,f[side]);
  }
  return resolved;
