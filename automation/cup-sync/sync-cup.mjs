@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import {parse} from 'acorn';
+import {normalizeTeam} from './match-fixtures.mjs';
 import {planSchedule} from './plan-schedule.mjs';
 import {planResults} from './plan-results.mjs';
 const prop=(n,k)=>n?.properties?.find(p=>!p.computed&&(p.key.name??p.key.value)===k)?.value;
@@ -51,8 +52,20 @@ export function resolveCupParticipants(cup){
  }
  return resolved;
 }
+export function venueRegistry(source){
+ const ast=parse(source,{ecmaVersion:'latest'});
+ const league=ast.body.flatMap(n=>n.declarations??[]).find(n=>n.id.name==='leagueData')?.init;
+ const registry=Object.create(null);
+ for(const entry of league?.elements??[]){
+  const team=normalizeTeam(prop(entry,'nameEn')?.value);
+  const venue=prop(prop(entry,'venue'),'nameEn')?.value;
+  if(team&&typeof venue==='string'&&venue.trim())(registry[team]??=[]).push(venue);
+ }
+ return registry;
+}
 export function syncCup(source,items){
- const schedule=planSchedule(items,resolveCupParticipants(locate(source).cup));
+ const registry=venueRegistry(source);
+ const schedule=planSchedule(items,resolveCupParticipants(locate(source).cup),registry);
  source=apply(source,schedule.proposals,['date','time','venueEn','venueType']);
  const results={proposals:[],held:[]};
  for(let i=0;i<locate(source).cup.rounds.length;i++){
@@ -62,7 +75,7 @@ export function syncCup(source,items){
   results.proposals.push(...pass.proposals);
   source=apply(source,pass.proposals,['homeScore','awayScore','pso','date']);
  }
- const later=planSchedule(items,resolveCupParticipants(locate(source).cup));
+ const later=planSchedule(items,resolveCupParticipants(locate(source).cup),registry);
  source=apply(source,later.proposals,['date','time','venueEn','venueType']);
  schedule.proposals.push(...later.proposals);
  // Existing site resolver derives playoff winners from stored scores.
