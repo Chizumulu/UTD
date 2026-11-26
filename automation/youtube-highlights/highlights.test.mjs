@@ -24,3 +24,17 @@ test('RSS channel and cutoff',()=>{
  const entries=parseFeed(xml); assert.equal(entries.length,1); assert.equal(eligible(entries[0],Date.parse('2026-10-02')),true); assert.equal(eligible(entries[0],Date.parse(v.published)),false);
  assert.equal(parseFeed(xml.replace(CHANNEL,'wrong')).length,0);
 });
+
+const cupVideo={...v,id:'CupVideo123',published:'2026-12-06T18:00:00Z',title:'[26/27 대통령배 FA컵] 지역 1R 치주물루 유나이티드 vs 칠룸바 배럭스 FC 하이라이트'};
+const cupFixture="const cupTournaments = [{id:'faCup2627',rounds:[{labelEn:'First Round – Regional',matches:[{id:'cup-test',home:'Chizumulu United FC',homeKo:'치주물루 유나이티드 FC',away:'Chilumba Barracks FC',awayKo:'칠룸바 배럭스 FC',date:'2026-12-06',homeScore:2,awayScore:1}]}]}];";
+test('cup link uses existing UI field, and repeat is idempotent',()=>{
+ const r=applyHighlight(cupFixture,cupVideo); assert.equal(r.rk,'faCup2627'); assert.equal(r.id,'cup-test'); assert.equal(r.status,'updated'); assert.match(r.source,/highlight: "https:\/\/www\.youtube\.com\/watch\?v=CupVideo123"/);
+ assert.equal(applyHighlight(r.source,cupVideo).source,r.source);
+ assert.throws(()=>applyHighlight(r.source,{...cupVideo,id:'CupVideo456'}),/Existing cup highlight protected/);
+});
+test('cup rejects unfinished, future and ambiguous fixtures',()=>{
+ assert.throws(()=>applyHighlight(cupFixture.replace('homeScore:2,awayScore:1','postponed:true'),cupVideo));
+ assert.throws(()=>applyHighlight(cupFixture,{...cupVideo,published:'2026-12-05T00:00:00Z'}));
+ const f=cupFixture.match(/\{id:'cup-test'.*?\}/)[0];
+ assert.throws(()=>applyHighlight(cupFixture.replace(f,f+','+f.replace('cup-test','cup-test2')),cupVideo));
+});
