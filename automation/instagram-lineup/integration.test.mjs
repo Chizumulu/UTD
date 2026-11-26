@@ -100,3 +100,23 @@ test('fallback handles exact names, near names and combined digit evidence witho
  assert.equal(resolveFallbackSlot({votes:{11:3},names:['해리 바튼']},[...players,{number:12,nameKo:'해리 바튼'}]).number,null);
  assert.deepEqual(validateCandidates(ocr,data.squadData).reviewMatches,[]);
 });
+
+test('WhatsApp lineup message marks fallback players in both approval stages and rejects inconsistent metadata',async()=>{
+ const {lineupMessageValues,validateReviewMatches}=await import('./review-message.mjs');
+ const starters=Array.from({length:11},(_,i)=>({number:i+1,nameKo:'선수'+(i+1),pos:'ST'}));
+ const bench=[{number:66,nameKo:'조던 칠와'}];
+ const p={id:'test',matchDate:'2026-11-27',home:'치주물루',away:'루비리',starters,bench,reviewMatches:[{slot:1,number:2,method:'fallback-near-name',nameSimilarity:0.89,score:0.67},{slot:11,number:66,method:'fallback-combined-evidence',nameSimilarity:0.5,score:0.615}]};
+ assert.equal(validateReviewMatches(p),true);
+ const first=lineupMessageValues(p,false),second=lineupMessageValues(p,true);
+ assert.equal(first.length,4);
+ assert.match(first[0],/추정\/보정 2명 확인/);
+ assert.match(first[1],/유사 이름 89%/);
+ assert.match(first[2],/이름·번호 추정 50%/);
+ assert.match(second[0],/^2차 확인/);
+ assert.equal(second[1],first[1]);
+ assert.equal(second[2],first[2]);
+ assert.equal(validateReviewMatches({...p,reviewMatches:[{...p.reviewMatches[0],number:99}]}),false);
+ assert.equal(validateReviewMatches({...p,reviewMatches:[p.reviewMatches[0],p.reviewMatches[0]]}),false);
+ assert.equal(validateReviewMatches({...p,reviewMatches:[]}),true);
+ assert.doesNotMatch(lineupMessageValues({...p,reviewMatches:[]})[1],/⚠/);
+});
