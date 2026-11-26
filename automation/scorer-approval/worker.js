@@ -1,3 +1,4 @@
+import { scanYoutubeHighlights } from '../youtube-highlights/rss.mjs';
 import { planCupScorers } from '../cup-sync/plan-scorers.mjs';
 const API_URL = "https://api.chizumulu.net/v1/structured?limit=40";
 const MAX_PROPOSAL_AGE_SECONDS = 60 * 60 * 24 * 14;
@@ -37,7 +38,7 @@ export default {
   },
 
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(Promise.allSettled([scanForCompletedMatches(env), scanCupApprovals(env)]));
+    ctx.waitUntil(Promise.allSettled([scanForCompletedMatches(env), scanCupApprovals(env), scanYoutubeHighlights(env)]));
   }
 };
 
