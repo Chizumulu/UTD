@@ -32,10 +32,11 @@ export function matchFixture(data,post){
  if(hits.length!==1)throw Error('Expected one matching fixture, found '+hits.length);
  return hits[0];
 }
-export function validateCandidates(ocr,squad,{allowFallback=true}={}){
+export function validateCandidates(ocr,squad,{allowFallback=true,allowPartial=false}={}){
  if(ocr?.status!=='candidates'||!Array.isArray(ocr.candidates))throw Error('OCR requires manual review');
  const valid=[];
  const fallbackValid=[];
+ const partial=[];
  const accepted=new Set(['name-and-number','jamo-and-number','name-supported-digit-correction','inline-number-and-name','name-supported-low-vote','dominant-number-and-name']);
  for(const c of ocr.candidates){
   if(!Array.isArray(c.starters)||c.starters.length!==11||!Array.isArray(c.bench)||!c.bench.length||c.bench.length>12)continue;
@@ -61,7 +62,15 @@ export function validateCandidates(ocr,squad,{allowFallback=true}={}){
   if(!primaryComplete){
    if(!allowFallback)continue;
    resolved=resolved.map((r,i)=>accepted.has(r.method)?r:resolveFallbackSlot(slots[i],squad));
-   if(resolved.some(r=>r.number==null))continue;
+
+  }
+  if(resolved.some(r=>r.number==null)){
+   if(!allowPartial)continue;
+   const known=resolved.filter(r=>r.number!=null);
+   if(known.length<resolved.length-3||known.length<11||new Set(known.map(r=>r.number)).size!==known.length)continue;
+   const players=resolved.map((r,i)=>{const p=squad.find(p=>p.number===r.number);return {...(p?{number:p.number,nameKo:p.nameKo}:{number:null,nameKo:'미확인',unresolved:true}),...(i<11?{pos:positions[i]}:{})};});
+   partial.push({formation:'4-2-3-1',layout:c.layout,starters:players.slice(0,11),bench:players.slice(11),reviewMatches:resolved.flatMap((r,i)=>r.review?[{slot:i,number:r.number,method:r.method,nameSimilarity:1-r.distance,score:r.score}]:[]),unresolvedSlots:resolved.flatMap((r,i)=>r.number==null?[{slot:i}]:[])});
+   continue;
   }
   const reviewMatches=resolved.flatMap((r,i)=>r.review?[{slot:i,number:r.number,method:r.method,nameSimilarity:1-r.distance,score:r.score}]:[]);
   if(new Set(resolved.map(r=>r.number)).size!==resolved.length)continue;
@@ -74,6 +83,13 @@ export function validateCandidates(ocr,squad,{allowFallback=true}={}){
   const min=Math.min(...fallbackValid.map(v=>v.reviewMatches.length));
   valid.push(...fallbackValid.filter(v=>v.reviewMatches.length===min));
  }
+ if(!valid.length&&allowPartial&&partial.length){
+  const min=Math.min(...partial.map(p=>p.unresolvedSlots.length));
+  const best=partial.filter(p=>p.unresolvedSlots.length===min);
+  const sig=p=>JSON.stringify([p.starters,p.bench,p.unresolvedSlots]);
+  if(best.every(p=>sig(p)===sig(best[0])))return best[0];
+  throw Error('Conflicting partial OCR layouts require manual lineup entry');
+ }
  if(!valid.length)throw Error('No fully corroborated OCR candidate');
  const signature=v=>JSON.stringify([v.starters,v.bench.map(p=>p.number).sort((a,b)=>a-b)]);
  if(valid.some(v=>signature(v)!==signature(valid[0])))throw Error('Conflicting OCR layouts');
@@ -84,6 +100,7 @@ export function planLineup(source,post,ocr){
  const data=runInNewContext(source+'\n;({roundsData,scheduledRounds,squadData,matchLineups,cupTournaments})',{}, {timeout:3000});
  const fixture=matchFixture(data,post);
  if(fixture.competition==='league'&&data.matchLineups[fixture.round]?.starters?.length)throw Error('Existing lineup requires manual review');
- const lineup=validateCandidates(ocr,data.squadData);
+ const lineup=validateCandidates(ocr,data.squadData,{allowPartial:true});
+ if(lineup.unresolvedSlots?.length)lineup.correctionRoster=data.squadData.filter(p=>Number.isInteger(p.number)&&p.number>0&&p.number<100&&typeof p.nameKo==='string').map(p=>({number:p.number,nameKo:p.nameKo}));
  return {...fixture,...lineup,kind:'lineup',postId:post.id,source:post.permalink,needsReview:true};
 }
