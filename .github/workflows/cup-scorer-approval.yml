@@ -1,0 +1,84 @@
+name: Approved FA Cup scorer proposal
+
+on:
+  repository_dispatch:
+    types: [cup-scorer-proposal-approved]
+
+concurrency:
+  group: approved-scorer-proposals-main
+  queue: max
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-data-update-pr:
+    if: github.event.client_payload.proposal.competition == 'faCup2627'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.SCORER_GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install source parser
+        run: npm install --no-save acorn@8
+      - name: Save approved proposal
+        env:
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: |
+          mkdir -p work
+          node -e "const e=require(process.env.GITHUB_EVENT_PATH); require('node:fs').writeFileSync('work/scorer-proposal.json', JSON.stringify(e.client_payload.proposal));"
+      - name: Publish the approved data change
+        env:
+          GH_TOKEN: ${{ secrets.SCORER_GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PROPOSAL_ID: ${{ github.event.client_payload.proposal.id }}
+          MATCH_LABEL: ${{ github.event.client_payload.proposal.home }} vs ${{ github.event.client_payload.proposal.away }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          attempt=1
+          while [ "$attempt" -le 3 ]; do
+            git fetch origin main
+            git checkout -B main origin/main
+            node automation/cup-sync/apply-approved-scorers.mjs
+            node --check data.js
+
+            if git diff --quiet -- data.js; then
+              echo "No data.js changes are needed."
+              exit 0
+            fi
+
+            git add data.js
+            git commit -m "Update approved FA Cup scorers"
+            if git push origin HEAD:main; then
+              echo "Approved scorer data was committed to main."
+              exit 0
+            fi
+
+            echo "main moved during the push; retrying from its latest version."
+            git reset --hard origin/main
+            attempt=$((attempt + 1))
+          done
+
+          echo "Direct push to main failed after three attempts; opening a recovery PR."
+          git fetch origin main
+          git checkout -B main origin/main
+          node automation/cup-sync/apply-approved-scorers.mjs
+            node --check data.js
+          if git diff --quiet -- data.js; then
+            echo "No data.js changes are needed after refreshing main."
+            exit 0
+          fi
+          git add data.js
+          git commit -m "Update approved FA Cup scorers"
+          branch="automation/cup-scorer-${PROPOSAL_ID:0:8}-${GITHUB_RUN_ID}"
+          git switch -c "$branch"
+          git push origin "$branch"
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" --title "Update scorers: $MATCH_LABEL" --body "This scorer update was approved in WhatsApp. Direct push to main failed after retries, so this PR is available for recovery."
