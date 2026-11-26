@@ -33,7 +33,10 @@ export function resolveProductionSlot(slot,squad){
  const target=String(best.number);
  const nearDigits=votes.filter(([n])=>distance(Array.from(String(n)),Array.from(target))===1);
  const nearVotes=nearDigits.reduce((sum,[,c])=>sum+c,0);
- if(target.length===2&&nearVotes>=2&&best.best<=0.09&&(!other||other.best-best.best>=0.15)&&!votes.some(([n,c])=>n!==best.number&&c>nearVotes))
+ // A repeated jersey digit can collapse into one character during OCR.
+ const repeatedDigit=target.length===2&&target[0]===target[1]&&votes.length===1&&String(votes[0][0])===target[0]&&votes[0][1]>=3;
+ const correctionLimit=repeatedDigit?0.15:0.09;
+ if(target.length===2&&nearVotes>=2&&best.best<=correctionLimit&&(!other||other.best-best.best>=0.15)&&!votes.some(([n,c])=>n!==best.number&&c>nearVotes))
   return {number:best.number,method:'name-supported-digit-correction',distance:best.best};
  return {number:null,method:'insufficient-cross-evidence',candidate:best.number,distance:best.best};
 }
