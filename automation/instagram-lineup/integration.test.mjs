@@ -66,3 +66,15 @@ test('approved announcement preserves historical data and is idempotent',()=>{
  assert.equal(Object.values(after.announcedMatchLineups)[0].starters.length,11);
  assert.equal(applyApprovedLineup(patched,approved),patched);
 });
+
+test('jamo OCR matching corrects small errors but rejects ambiguous or unsupported names',async()=>{
+ const {resolveProductionSlot:resolve}=await import('./resolve-production.mjs');
+ const players=[{number:11,nameKo:'해리 바튼'},{number:99,nameKo:'패트릭 지야'},{number:90,nameKo:'마야미코 치우시와'},{number:80,nameKo:'다니엘 스쿠카'}];
+ assert.equal(resolve({votes:{1:3},names:['애리 바튼']},players).number,11);
+ assert.equal(resolve({votes:{9:4},names:['패트릭 지야']},players).number,99);
+ assert.equal(resolve({votes:{30:2},names:['마야미코 치우시와']},players).number,90);
+ assert.equal(resolve({votes:{80:6},names:['80. 다니엘 스쿠카']},players).number,80);
+ assert.equal(resolve({votes:{80:6},names:['무관한 이름']},players).number,null);
+ assert.equal(resolve({votes:{},names:['해리 바튼']},players).number,null);
+ assert.equal(resolve({votes:{11:3},names:['해리 바튼']},[...players,{number:12,nameKo:'해리 바튼'}]).number,null);
+});
