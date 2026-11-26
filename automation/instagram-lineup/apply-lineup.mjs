@@ -5,6 +5,7 @@ const readData=source=>runInNewContext(source+'\n;({roundsData,scheduledRounds,s
 const positions=['ST','LW','CAM','RW','LCM','RCM','LB','LCB','RCB','RB','GK'];
 export function applyApprovedLineup(source,p){
  if(p?.kind!=='lineup'||p.state!=='approved'||!Number.isFinite(Date.parse(p.approvedAt))||!/^\d{5,30}$/.test(String(p.postId)))throw Error('Approved lineup required');
+ if((p.unresolvedSlots??[]).length||[...(p.starters??[]),...(p.bench??[])].some(x=>x?.unresolved||x?.number==null))throw Error('Unresolved lineup cannot be applied');
  const d=readData(source);
  const norm=s=>String(s??'').normalize('NFKC').trim().toLowerCase();
  const matches=(f,h,a,date)=>norm(h)===norm(p.home)&&norm(a)===norm(p.away)&&date===p.matchDate&&!f.postponed&&!f.cancelled&&!f.forfeit&&!['postponed','cancelled'].includes(f.status);
