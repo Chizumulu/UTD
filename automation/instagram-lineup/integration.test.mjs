@@ -87,3 +87,16 @@ test('additional OCR evidence handles weak digits without accepting unrelated na
  assert.equal(resolve({votes:{},names:['제임스 헤르메스']},players).number,null);
  assert.equal(resolve({votes:{49:6},names:['무관한 이름']},players).number,null);
 });
+
+test('fallback handles exact names, near names and combined digit evidence without changing primary matches',async()=>{
+ const {resolveProductionSlot,resolveFallbackSlot}=await import('./resolve-production.mjs');
+ const players=[{number:11,nameKo:'해리 바튼'},{number:99,nameKo:'패트릭 지야'},{number:90,nameKo:'마야미코 치우시와'},{number:66,nameKo:'조던 칠와'},{number:9,nameKo:'제임스 헤르메스'},{number:6,nameKo:'벤자민 니렌다'}];
+ assert.equal(resolveProductionSlot({votes:{3:2,8:1},names:['패트릭 지야']},players).number,null);
+ assert.equal(resolveFallbackSlot({votes:{3:2,8:1},names:['패트릭 지야']},players).number,99);
+ assert.equal(resolveFallbackSlot({votes:{1:2,4:1},names:['애리 바튼']},players).number,11);
+ assert.equal(resolveFallbackSlot({votes:{},names:['제임스 헤르메스']},players).number,9);
+ assert.equal(resolveFallbackSlot({votes:{66:5,6:2},names:['소년 원와','소년 열와']},players).number,66);
+ assert.equal(resolveFallbackSlot({votes:{66:5},names:['']},players).number,null);
+ assert.equal(resolveFallbackSlot({votes:{11:3},names:['해리 바튼']},[...players,{number:12,nameKo:'해리 바튼'}]).number,null);
+ assert.deepEqual(validateCandidates(ocr,data.squadData).reviewMatches,[]);
+});
