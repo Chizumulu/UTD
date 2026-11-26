@@ -72,7 +72,9 @@ export function matchCupItems(items, cup) {
       const f=candidates[0], reversed=normalizeTeam(f.m.home)!==h;
       // Normalize score orientation to the existing bracket, not physical home/away.
       const scores=reversed?[m.awayScore,m.homeScore]:[m.homeScore,m.awayScore];
-      const signature=JSON.stringify([f.key,m.status,m.dateText,m.timeText,m.venue,...scores]);
+      const penalty=typeof m.pso==='string'&&m.pso.match(/^(\d+)\s*:\s*(\d+)$/);
+      const pso=penalty?(reversed?[Number(penalty[2]),Number(penalty[1])]:[Number(penalty[1]),Number(penalty[2])]):m.pso??null;
+      const signature=JSON.stringify([f.key,m.status,m.dateText,m.timeText,m.venue,...scores,pso,m.forfeit??null,m.resultType??null]);
       if(seen.has(signature)) { skip('duplicate'); continue; }
       seen.add(signature);
       matched.push({source,index,fixtureId:f.key,roundIndex:f.ri,matchIndex:f.mi,reversed,bracketScores:scores,match:m});
