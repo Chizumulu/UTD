@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {pathToFileURL} from 'node:url';
 import {parse} from 'acorn';
 import {CHANNEL} from './rss.mjs';
 const key = p => p.key.name ?? p.key.value;
@@ -39,7 +40,6 @@ export function applyHighlight(source,video) {
   }
   if(hits.length!==1)throw Error('No unique completed fixture: '+hits.length);
   const {rk,id}=hits[0];
-  const existing=val(highlights,rk);
   const videoId = url => {try{const u=new URL(url);return u.hostname==='youtu.be'?u.pathname.slice(1):u.searchParams.get('v')}catch{return null}};
   if(highlights.properties.some(p=>videoId(p.value.value)===video.id))return {source,status:'duplicate',rk,id};
   if(prop(highlights,rk))throw Error('Existing highlight protected: '+rk);
@@ -50,7 +50,7 @@ export function applyHighlight(source,video) {
   parse(updated,{ecmaVersion:'latest',sourceType:'script'});
   return {source:updated,status:'updated',rk,id};
 }
-if(process.argv[1]&&import.meta.url===new URL('file://'+process.argv[1]).href){
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const video=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload.video;
   const source=fs.readFileSync('data.js','utf8');
   const result=applyHighlight(source,video);
