@@ -87,15 +87,38 @@
       : '';
   }
   // 상대 유형 중 가장 강한/고전한 유형 (경기 2 이상인 유형만 비교)
-  function tierExtremes(data) {
+  function tierExtremes(ctx, data) {
     var played = data.tiers.tiers.filter(function (x) { return x.agg.g >= 2; });
     if (played.length < 2) return null;
-    var best = played.slice().sort(function (a, b) { return b.agg.ppg - a.agg.ppg; })[0];
-    var worst = played.slice().sort(function (a, b) { return a.agg.ppg - b.agg.ppg; })[0];
-    if (best === worst || best.agg.ppg === worst.agg.ppg) return null;
+    var best = played.slice().sort(function (a, b) { return metric(ctx,b.agg) - metric(ctx,a.agg); })[0];
+    var worst = played.slice().sort(function (a, b) { return metric(ctx,a.agg) - metric(ctx,b.agg); })[0];
+    if (best === worst || metric(ctx,best.agg) === metric(ctx,worst.agg)) return null;
     return { best: best, worst: worst, small: Math.min(best.agg.g, worst.agg.g) < SMALL_SAMPLE };
   }
 
+
+  function winMode(ctx) {
+    return !!ctx.competitionScope && ctx.competitionScope !== 'league';
+  }
+  function metric(ctx,a) {
+    return winMode(ctx) ? a.w / (a.g || a.apps || 1) * 100 : a.ppg;
+  }
+  function metricText(ctx,a) {
+    return winMode(ctx) ? fmt1(metric(ctx,a)) + '%' : fmt2(a.ppg);
+  }
+  function metricLabel(ctx) {
+    return winMode(ctx)
+      ? lang(ctx)('승률','Win rate')
+      : lang(ctx)('점/경기','Pts/g');
+  }
+  function physicalHome(ctx,m,team,side) {
+    if (m.venueType != null) {
+      if (!['home','away'].includes(m.venueType) ||
+          ![m.homeEn,m.awayEn].includes(ctx.myEn)) return null;
+      return (m.venueType === 'home') === (team === ctx.myEn);
+    }
+    return m.haKnown ? side : null;
+  }
   function resOf(gf, ga) { return gf > ga ? 'W' : (gf < ga ? 'L' : 'D'); }
 
   function aggregate(list) {
@@ -147,7 +170,7 @@
     return out;
   }
 
-  function gameFromMatch(entry, teamEn) {
+  function gameFromMatch(entry, teamEn, ctx) {
     var m = entry.m;
     var home = m.homeEn === teamEn, away = m.awayEn === teamEn;
     if (!home && !away) return null;
@@ -155,7 +178,7 @@
     var ga = home ? m.awayScore : m.homeScore;
     var penalty = entry.cup && gf === ga && /^\d+\s*:\s*\d+$/.test(m.pso || '') ? m.pso.split(':').map(Number) : null;
     return {
-      roundKey: entry.roundKey, round: entry.round, home: entry.cup && !m.haKnown ? null : home,
+      roundKey: entry.roundKey, round: entry.round, home: entry.cup ? physicalHome(ctx,m,teamEn,home) : home,
       oppEn: home ? m.awayEn : m.homeEn,
       oppKo: home ? m.awayKo : m.homeKo,
       gf: gf, ga: ga, res: penalty ? resOf(penalty[home ? 0 : 1], penalty[home ? 1 : 0]) : resOf(gf, ga),
@@ -166,7 +189,7 @@
   function buildGames(ctx, teamEn, withLineups) {
     var games = [];
     collectPlayedMatches(ctx).forEach(function (e) {
-      var g = gameFromMatch(e, teamEn);
+      var g = gameFromMatch(e, teamEn, ctx);
       if (g) games.push(g);
     });
     if (withLineups) {
@@ -430,7 +453,7 @@
       var opp = home ? m.awayEn : m.homeEn;
       if (oppEn && opp !== oppEn) return;
       candidates.push({ roundKey: fixture.key, oppEn: opp, oppKo: home ? m.awayKo : m.homeKo,
-        meHome: m.haKnown ? home : null, date: m.kickoffDate || null, time: m.kickoffTime || null });
+        meHome: physicalHome(ctx,m,ctx.myEn,home), date: m.kickoffDate || null, time: m.kickoffTime || null });
     });
     if (ctx.competitionScope && ctx.competitionScope !== 'league') {
       candidates.sort(function (a, b) { return String(a.date || '9999').localeCompare(String(b.date || '9999')); });
@@ -612,7 +635,7 @@
       });
       return Object.keys(map).map(function (k) {
         return { nums: map[k].nums, agg: aggregate(map[k].list) };
-      }).sort(function (a, b) { return b.agg.g - a.agg.g || b.agg.ppg - a.agg.ppg; });
+      }).sort(function (a, b) { return b.agg.g - a.agg.g || metric(ctx,b.agg) - metric(ctx,a.agg); });
     }
 
     return {
@@ -704,23 +727,23 @@
       return '<div class="ta-tier-row">' +
         '<div class="ta-tier-head"><b>' + tierName[x.key] + '</b> <span class="ta-dim">' + range + '</span>' +
         '<span class="ta-tier-rec">' + T(a.g + '경기 · ', a.g + ' played · ') + record(ctx, a) + smallBadge(ctx, a.g) + '</span></div>' +
-        '<div class="ta-tier-bar">' + bar(a.eff, x.key === 'top' ? 'ta-fill-top' : '') +
-        '<span class="ta-tier-ppg">' + fmt2(a.ppg) + '<small> ' + T('점/경기', 'pts/g') + '</small></span></div>' +
+        '<div class="ta-tier-bar">' + bar(winMode(ctx) ? metric(ctx,a)/100 : a.eff, x.key === 'top' ? 'ta-fill-top' : '') +
+        '<span class="ta-tier-ppg">' + metricText(ctx,a) + '<small> ' + (winMode(ctx) ? '' : T('점/경기','pts/g')) + '</small></span></div>' +
         '<div class="ta-tier-goals">' + T('득점 ', 'GF ') + a.gf + ' (' + fmt1(a.gfpg) + ') · ' + T('실점 ', 'GA ') + a.ga + ' (' + fmt1(a.gapg) + ')</div>' +
         '<div class="ta-chips">' + x.list.map(function (g) { return resultChip(ctx, g, true); }).join('') + '</div>' +
         '</div>';
     }).join('');
 
     var insight = '';
-    var ex = tierExtremes(data);
+    var ex = tierExtremes(ctx, data);
     if (ex) {
       var bn = tierName[ex.best.key], wn = tierName[ex.worst.key];
-      var bp = fmt2(ex.best.agg.ppg), wp = fmt2(ex.worst.agg.ppg);
+      var bp = metricText(ctx,ex.best.agg), wp = metricText(ctx,ex.worst.agg);
       insight = '<div class="ta-insight">' + (ex.small
-        ? T('유형별 경기 수가 적어 참고용이에요. 지금까지는 ' + bn + ' 상대에게 가장 좋은 성적(' + bp + '점/경기), ' + wn + ' 상대에게 가장 부진한 성적(' + wp + '점/경기)을 냈어요.',
-            'Small samples, so indicative only: so far the best return is against ' + bn + ' teams (' + bp + ' pts/g) and the weakest against ' + wn + ' teams (' + wp + ' pts/g).')
-        : T('가장 강한 상대 유형은 ' + bn + '(' + bp + '점/경기), 가장 고전한 유형은 ' + wn + '(' + wp + '점/경기)예요.',
-            'Best against ' + bn + ' (' + bp + ' pts/g); toughest against ' + wn + ' (' + wp + ' pts/g).')) + '</div>';
+        ? T('유형별 경기 수가 적어 참고용이에요. 지금까지는 ' + bn + ' 상대에게 가장 좋은 성적(' + bp + (winMode(ctx) ? '' : '점/경기') + '), ' + wn + ' 상대에게 가장 부진한 성적(' + wp + (winMode(ctx) ? '' : '점/경기') + ')을 냈어요.',
+            'Small samples, so indicative only: so far the best return is against ' + bn + ' teams (' + bp + (winMode(ctx) ? '' : ' pts/g') + ') and the weakest against ' + wn + ' teams (' + wp + (winMode(ctx) ? '' : ' pts/g') + ').')
+        : T('가장 강한 상대 유형은 ' + bn + '(' + bp + (winMode(ctx) ? '' : '점/경기') + '), 가장 고전한 유형은 ' + wn + '(' + wp + (winMode(ctx) ? '' : '점/경기') + ')예요.',
+            'Best against ' + bn + ' (' + bp + (winMode(ctx) ? '' : ' pts/g') + '); toughest against ' + wn + ' (' + wp + (winMode(ctx) ? '' : ' pts/g') + ').')) + '</div>';
     }
 
     var note = T('상대 구분은 현재 리그 순위 기준이며, 우리 팀을 뺀 ' + t.rank.othersTotal + '팀을 3등분했어요.', 'Opponents are grouped by current league rank, splitting the ' + t.rank.othersTotal + ' other teams into thirds (our own team excluded).') +
@@ -876,13 +899,13 @@
     if (r.next && r.next.meHome != null) {
       var oppVenue = r.next.meHome ? r.away : r.home;
       var oppAt = r.next.meHome ? T('원정', 'away') : T('홈', 'home');
-      if (oppVenue.g >= 2) out.push(T('다음 경기에서 상대는 ' + oppAt + ' 경기 ' + record(ctx, oppVenue) + '(경기당 ' + fmt2(oppVenue.ppg) + '점)이에요.',
-        'In the next meeting they play ' + oppAt + ': ' + record(ctx, oppVenue) + ' (' + fmt2(oppVenue.ppg) + ' pts/g).'));
+      if (oppVenue.g >= 2) out.push(T('다음 경기에서 상대는 ' + oppAt + ' 경기 ' + record(ctx, oppVenue) + '(' + (winMode(ctx) ? '승률 ' + metricText(ctx,oppVenue) : '경기당 ' + fmt2(oppVenue.ppg) + '점') + ')이에요.',
+        'In the next meeting they play ' + oppAt + ': ' + record(ctx, oppVenue) + ' (' + metricText(ctx,oppVenue) + (winMode(ctx) ? '' : ' pts/g') + ').'));
     }
     if (r.myTierAgg.g >= 2) {
       var tn = { top: T('상위권', 'top-third'), mid: T('중위권', 'mid-table'), bottom: T('하위권', 'bottom-third') }[r.tierKey];
-      out.push(T('우리는 이번 시즌 ' + tn + ' 상대에게 ' + record(ctx, r.myTierAgg) + '(경기당 ' + fmt2(r.myTierAgg.ppg) + '점)이에요.',
-        'We are ' + record(ctx, r.myTierAgg) + ' (' + fmt2(r.myTierAgg.ppg) + ' pts/g) against ' + tn + ' opponents this season.'));
+      out.push(T('우리는 이번 시즌 ' + tn + ' 상대에게 ' + record(ctx, r.myTierAgg) + '(' + (winMode(ctx) ? '승률 ' + metricText(ctx,r.myTierAgg) : '경기당 ' + fmt2(r.myTierAgg.ppg) + '점') + ')이에요.',
+        'We are ' + record(ctx, r.myTierAgg) + ' (' + metricText(ctx,r.myTierAgg) + (winMode(ctx) ? '' : ' pts/g') + ') against ' + tn + ' opponents this season.'));
     }
     return out;
   }
@@ -926,7 +949,7 @@
 
     function venueRow(label, v, hi) {
       return '<div class="ta-venue-row' + (hi ? ' ta-venue-hi' : '') + '"><span>' + label + (hi ? ' <em>' + T('다음 경기', 'next') + '</em>' : '') + '</span><span>' +
-        (v.g ? record(ctx, v) + ' · ' + fmt2(v.ppg) + T('점/경기', ' pts/g') : '-') + '</span></div>';
+        (v.g ? record(ctx, v) + ' · ' + metricText(ctx,v) + (winMode(ctx) ? '' : T('점/경기', ' pts/g')) : '-') + '</span></div>';
     }
     var venue = '<div class="ta-subtitle">' + T('홈/원정 성적', 'Home / Away') + '</div>' +
       venueRow(T('홈', 'Home'), r.home, r.next && r.next.meHome === false) +
@@ -1087,7 +1110,7 @@
       { label: T('도움', 'Assists'), v: m.apa ? st.apa / m.apa : 0 },
       { label: T('출전', 'Apps'), v: st.availability },
       { label: T('선발', 'Starts'), v: st.startRate },
-      { label: T('팀 승점', 'Team pts'), v: st.ppg / 3 },
+      { label: (winMode(ctx) ? T('팀 승률','Team win rate') : T('팀 승점','Team pts')), v: winMode(ctx) ? metric(ctx,st)/100 : st.ppg/3 },
       { label: T('무실점', 'Clean sh.'), v: st.csRate }
     ];
   }
@@ -1151,7 +1174,7 @@
       row(T('공격포인트', 'G+A'), A.ga_, B.ga_, A.ga_, B.ga_, 1) +
       row(T('경기당 공격포인트', 'G+A per app'), fmt2(A.gapa), fmt2(B.gapa), Math.round(A.gapa * 100), Math.round(B.gapa * 100), 1) +
       row(T('뛴 경기 팀 전적', 'Team record'), rec(A), rec(B), 0, 0, 0) +
-      row(T('뛴 경기 팀 승점/경기', 'Team pts/game'), A.apps ? fmt2(A.ppg) : '-', B.apps ? fmt2(B.ppg) : '-', Math.round(A.ppg * 100), Math.round(B.ppg * 100), 1) +
+      row((winMode(ctx) ? T('뛴 경기 팀 승률','Team win rate') : T('뛴 경기 팀 승점/경기','Team pts/game')), A.apps ? metricText(ctx,A) : '-', B.apps ? metricText(ctx,B) : '-', (winMode(ctx) ? Math.round(metric(ctx,A)*10) : Math.round(A.ppg*100)), (winMode(ctx) ? Math.round(metric(ctx,B)*10) : Math.round(B.ppg*100)), 1) +
       row(T('뛴 경기 팀 득실', 'Team GF-GA'), A.gf + '-' + A.ga, B.gf + '-' + B.ga, 0, 0, 0) +
       row(T('무실점 경기', 'Clean sheets'), A.cs + '<small class="ta-dim">/' + A.apps + '</small>', B.cs + '<small class="ta-dim">/' + B.apps + '</small>', Math.round(A.csRate * 100), Math.round(B.csRate * 100), 1);
     var table = '<div class="ta-compare"><table class="ta-table"><caption class="sr-only">' + esc(T(nA + ' 선수와 ' + nB + ' 선수 비교표', 'Comparison of ' + nA + ' and ' + nB)) + '</caption>' +
@@ -1164,16 +1187,28 @@
     var tg = computeTogether(pdata, A.key, B.key);
     function tgRow(label, a) {
       if (!a.g) return '';
-      return '<tr><th scope="row">' + label + smallBadge(ctx, a.g) + '</th><td>' + a.g + '</td><td>' + record(ctx, a) + '</td><td>' + fmt2(a.ppg) + '</td><td>' + a.gf + '-' + a.ga + '</td></tr>';
+      return '<tr><th scope="row">' + label + smallBadge(ctx, a.g) + '</th><td>' + a.g + '</td><td>' + record(ctx, a) + '</td><td>' + metricText(ctx,a) + '</td><td>' + a.gf + '-' + a.ga + '</td></tr>';
     }
     var tgRows = tgRow(T('둘 다 출전', 'Both played'), tg.both) +
       tgRow(T(nA + '만 출전', 'Only ' + nA), tg.onlyA) + tgRow(T(nB + '만 출전', 'Only ' + nB), tg.onlyB) +
       tgRow(T('둘 다 결장', 'Neither played'), tg.neither);
     var together = '<div class="ta-subtitle">' + T('함께 뛴 경기 vs 따로 뛴 경기', 'Together vs. Apart') + '</div>' +
-      '<table class="ta-table"><thead><tr><th scope="col">' + T('구분', 'Case') + '</th><th scope="col">' + T('경기', 'P') + '</th><th scope="col">' + T('전적', 'Record') + '</th><th scope="col">' + T('점/경기', 'Pts/g') + '</th><th scope="col">' + T('득실', 'GF-GA') + '</th></tr></thead><tbody>' + tgRows + '</tbody></table>';
+      '<table class="ta-table"><thead><tr><th scope="col">' + T('구분', 'Case') + '</th><th scope="col">' + T('경기', 'P') + '</th><th scope="col">' + T('전적', 'Record') + '</th><th scope="col">' + metricLabel(ctx) + '</th><th scope="col">' + T('득실', 'GF-GA') + '</th></tr></thead><tbody>' + tgRows + '</tbody></table>';
     var insight = '';
     if (tg.both.g >= 2 && tg.all.g && tg.both.g < tg.all.g) {
-      var diff = tg.both.ppg - tg.all.ppg;
+      var diff = metric(ctx,tg.both) - metric(ctx,tg.all);
+   if (winMode(ctx)) {
+     insight = '<div class="ta-insight">' + T(
+       '두 선수가 함께 뛴 ' + tg.both.g + '경기의 승률은 ' +
+       metricText(ctx,tg.both) + '로, 전체 평균(' +
+       metricText(ctx,tg.all) + ') 대비 ' +
+       (diff > 0 ? '+' : '') + fmt1(diff) + '%p예요.',
+       'Win rate in the ' + tg.both.g + ' games played together: ' +
+       metricText(ctx,tg.both) + ' vs. ' +
+       metricText(ctx,tg.all) + ' overall (' +
+       (diff > 0 ? '+' : '') + fmt1(diff) + '%p).'
+     ) + '</div>';
+   } else
       insight = '<div class="ta-insight">' + T(
         '두 선수가 함께 뛴 <b>' + tg.both.g + '경기</b>의 승점은 경기당 <b>' + fmt2(tg.both.ppg) + '점</b>으로, 시즌 평균(' + fmt2(tg.all.ppg) + '점)보다 ' + (Math.abs(diff) < 0.05 ? '비슷해요.' : (diff > 0 ? fmt2(diff) + '점 높아요.' : fmt2(-diff) + '점 낮아요.')),
         'In the <b>' + tg.both.g + ' games</b> both played, the team averaged <b>' + fmt2(tg.both.ppg) + ' pts/game</b> vs. ' + fmt2(tg.all.ppg) + ' for the season' + (Math.abs(diff) < 0.05 ? ' — about the same.' : (diff > 0 ? ' (+' + fmt2(diff) + ').' : ' (−' + fmt2(-diff) + ').'))) + '</div>';
@@ -1233,10 +1268,10 @@
 
     var b = s.buckets;
     function bRow(label, a) {
-      return '<tr><td>' + label + (a.g ? smallBadge(ctx, a.g) : '') + '</td><td>' + a.g + '</td><td>' + (a.g ? record(ctx, a) : '-') + '</td><td>' + (a.g ? fmt2(a.ppg) : '-') + '</td><td>' + (a.g ? a.gf + '-' + a.ga : '-') + '</td></tr>';
+      return '<tr><td>' + label + (a.g ? smallBadge(ctx, a.g) : '') + '</td><td>' + a.g + '</td><td>' + (a.g ? record(ctx, a) : '-') + '</td><td>' + (a.g ? metricText(ctx,a) : '-') + '</td><td>' + (a.g ? a.gf + '-' + a.ga : '-') + '</td></tr>';
     }
     var bucketTable = '<div class="ta-subtitle">' + T('교체 인원별 성적', 'Results by Number of Subs') + '</div>' +
-      '<table class="ta-table"><thead><tr><th>' + T('교체 인원', 'Subs') + '</th><th>' + T('경기', 'P') + '</th><th>' + T('전적', 'Record') + '</th><th>' + T('점/경기', 'Pts/g') + '</th><th>' + T('득실', 'GF-GA') + '</th></tr></thead><tbody>' +
+      '<table class="ta-table"><thead><tr><th>' + T('교체 인원', 'Subs') + '</th><th>' + T('경기', 'P') + '</th><th>' + T('전적', 'Record') + '</th><th>' + metricLabel(ctx) + '</th><th>' + T('득실', 'GF-GA') + '</th></tr></thead><tbody>' +
       bRow(T('0명 (확정)', '0 (confirmed)'), b.none) + (b.unknown.g ? bRow(T('미입력', 'Not entered'), b.unknown) : '') + bRow(T('1~3명', '1-3'), b.few) + bRow(T('4명 이상', '4+'), b.many) + '</tbody></table>';
 
     var mins = s.inMin;
@@ -1263,15 +1298,15 @@
       // 한 가지뿐이면 표 대신 한 줄로 접고, 2종류 이상이 입력되면 아래 표가 펼쳐집니다.
       var f0 = L.formations[0], a0 = f0.agg;
       formTable = '<div class="ta-subtitle">' + T('포메이션', 'Formation') + '</div>' +
-        '<div class="ta-insight">' + T('기록된 ' + a0.g + '경기 모두 <b>' + esc(f0.formation) + '</b> — ' + record(ctx, a0) + ' · ' + fmt2(a0.ppg) + '점/경기 · 득실 ' + a0.gf + '-' + a0.ga + '. 다른 포메이션이 입력되면 비교표가 펼쳐져요.',
-          'All ' + a0.g + ' recorded matches used <b>' + esc(f0.formation) + '</b> — ' + record(ctx, a0) + ' · ' + fmt2(a0.ppg) + ' pts/g · GF-GA ' + a0.gf + '-' + a0.ga + '. A comparison table appears once other formations are entered.') + '</div>';
+        '<div class="ta-insight">' + T('기록된 ' + a0.g + '경기 모두 <b>' + esc(f0.formation) + '</b> — ' + record(ctx, a0) + ' · ' + metricText(ctx,a0) + (winMode(ctx) ? '' : '점/경기') + ' · 득실 ' + a0.gf + '-' + a0.ga + '. 다른 포메이션이 입력되면 비교표가 펼쳐져요.',
+          'All ' + a0.g + ' recorded matches used <b>' + esc(f0.formation) + '</b> — ' + record(ctx, a0) + ' · ' + metricText(ctx,a0) + (winMode(ctx) ? '' : ' pts/g') + ' · GF-GA ' + a0.gf + '-' + a0.ga + '. A comparison table appears once other formations are entered.') + '</div>';
     } else {
       var formRows = L.formations.map(function (f) {
         var a = f.agg;
-        return '<tr><td><b>' + esc(f.formation) + '</b></td><td>' + a.g + smallBadge(ctx, a.g) + '</td><td>' + record(ctx, a) + '</td><td>' + fmt2(a.ppg) + '</td><td>' + a.gf + '-' + a.ga + '</td></tr>';
+        return '<tr><td><b>' + esc(f.formation) + '</b></td><td>' + a.g + smallBadge(ctx, a.g) + '</td><td>' + record(ctx, a) + '</td><td>' + metricText(ctx,a) + '</td><td>' + a.gf + '-' + a.ga + '</td></tr>';
       }).join('');
       formTable = '<div class="ta-subtitle">' + T('포메이션별 성적', 'Results by Formation') + '</div>' +
-        '<table class="ta-table"><thead><tr><th>' + T('포메이션', 'Formation') + '</th><th>' + T('경기', 'P') + '</th><th>' + T('전적', 'Record') + '</th><th>' + T('점/경기', 'Pts/g') + '</th><th>' + T('득실', 'GF-GA') + '</th></tr></thead><tbody>' + formRows + '</tbody></table>';
+        '<table class="ta-table"><thead><tr><th>' + T('포메이션', 'Formation') + '</th><th>' + T('경기', 'P') + '</th><th>' + T('전적', 'Record') + '</th><th>' + metricLabel(ctx) + '</th><th>' + T('득실', 'GF-GA') + '</th></tr></thead><tbody>' + formRows + '</tbody></table>';
     }
 
     var slotRows = L.slots.map(function (s) {
@@ -1296,9 +1331,9 @@
         (last.outs.length ? T(' / 제외: ', ' / out: ') + esc(last.outs.map(function (n) { return name(n, true); }).join(', ')) : '') + '.</div>'
       : '';
     var stab = (L.stableAgg.g || L.shuffledAgg.g)
-      ? '<table class="ta-table"><thead><tr><th>' + T('직전 대비', 'vs previous') + '</th><th>' + T('경기', 'P') + '</th><th>' + T('전적', 'Record') + '</th><th>' + T('점/경기', 'Pts/g') + '</th></tr></thead><tbody>' +
-        '<tr><td>' + T('변경 0~2명 (안정)', '0-2 changes (stable)') + '</td><td>' + L.stableAgg.g + '</td><td>' + (L.stableAgg.g ? record(ctx, L.stableAgg) : '-') + '</td><td>' + (L.stableAgg.g ? fmt2(L.stableAgg.ppg) : '-') + '</td></tr>' +
-        '<tr><td>' + T('변경 3명 이상', '3+ changes') + '</td><td>' + L.shuffledAgg.g + '</td><td>' + (L.shuffledAgg.g ? record(ctx, L.shuffledAgg) : '-') + '</td><td>' + (L.shuffledAgg.g ? fmt2(L.shuffledAgg.ppg) : '-') + '</td></tr></tbody></table>'
+      ? '<table class="ta-table"><thead><tr><th>' + T('직전 대비', 'vs previous') + '</th><th>' + T('경기', 'P') + '</th><th>' + T('전적', 'Record') + '</th><th>' + metricLabel(ctx) + '</th></tr></thead><tbody>' +
+        '<tr><td>' + T('변경 0~2명 (안정)', '0-2 changes (stable)') + '</td><td>' + L.stableAgg.g + '</td><td>' + (L.stableAgg.g ? record(ctx, L.stableAgg) : '-') + '</td><td>' + (L.stableAgg.g ? metricText(ctx,L.stableAgg) : '-') + '</td></tr>' +
+        '<tr><td>' + T('변경 3명 이상', '3+ changes') + '</td><td>' + L.shuffledAgg.g + '</td><td>' + (L.shuffledAgg.g ? record(ctx, L.shuffledAgg) : '-') + '</td><td>' + (L.shuffledAgg.g ? metricText(ctx,L.shuffledAgg) : '-') + '</td></tr></tbody></table>'
       : '';
     var change = '<div class="ta-subtitle">' + T('라인업 변동', 'Lineup Rotation') + ' <span class="ta-dim">' + T('평균 ' + fmt1(L.avgChanges) + '명 변경', 'avg ' + fmt1(L.avgChanges) + ' changes') + '</span></div>' +
       '<div class="ta-chips ta-chips-sm">' + chips + '</div>' +
@@ -1337,7 +1372,15 @@
     var scope = ctx.competitionScope === 'cup' ? T('컵', 'Cup')
       : ctx.competitionScope === 'total' ? T('토탈', 'Total') : T('리그', 'League');
     var metrics = [
-      { id: 'ppg', label: T('경기당 승점', 'Points per game'), value: fmt2(totals.ppg), unit: T('점', ''),
+
+      winMode(ctx) ? {
+        id: 'ppg',
+        label: T('승률','Win rate'),
+        value: fmt1(metric(ctx,totals)),
+        unit: '%',
+        note: T('전체 경기 중 승리한 경기의 비율이에요. 승부차기 승리도 포함해요.',
+                'Share of matches won, including penalty shootouts.')
+      } : { id: 'ppg', label: T('경기당 승점', 'Points per game'), value: fmt2(totals.ppg), unit: T('점', ''),
         note: T('승리 3점, 무승부 1점, 패배 0점으로 계산한 경기당 평균이에요.', 'Average points per game using 3 for a win, 1 for a draw, and 0 for a loss.') },
       { id: 'gfpg', label: T('경기당 득점', 'Goals per game'), value: fmt2(totals.gfpg), unit: T('골', ''),
         note: T('치주물루가 넣은 골을 경기 수로 나눈 평균이에요.', 'The goals Chizumulu scored divided by the number of games.') },
@@ -1371,9 +1414,9 @@
       rows.push('<div class="ta-sum-row"><span class="ta-sum-label">' + label + '</span><span class="ta-sum-value">' + valueHtml + '</span></div>');
     }
     var tierName = { top: T('상위권', 'Top'), mid: T('중위권', 'Middle'), bottom: T('하위권', 'Bottom') };
-    var ex = tierExtremes(data);
+    var ex = tierExtremes(ctx, data);
     add(T('가장 강한 상대 유형', 'Best opponent level'), ex
-      ? '<b>' + tierName[ex.best.key] + '</b> <span class="ta-dim">' + fmt2(ex.best.agg.ppg) + T('점/경기 · ', ' pts/g · ') + ex.best.agg.g + T('경기', ' games') + '</span>' + smallBadge(ctx, ex.best.agg.g)
+      ? '<b>' + tierName[ex.best.key] + '</b> <span class="ta-dim">' + metricText(ctx,ex.best.agg) + (winMode(ctx) ? ' · ' : T('점/경기 · ', ' pts/g · ')) + ex.best.agg.g + T('경기', ' games') + '</span>' + smallBadge(ctx, ex.best.agg.g)
       : '<span class="ta-dim">' + T('비교할 경기가 아직 부족해요', 'Not enough games to compare yet') + '</span>');
 
     var e = data.network.edges[0];

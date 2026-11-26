@@ -1,0 +1,31 @@
+name: FA Cup sync (validation)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'automation/cup-sync/**'
+      - 'automation/scorer-approval/worker.js'
+      - '.github/workflows/fa-cup-sync.yml'
+      - 'data.js'
+permissions:
+  contents: read
+concurrency:
+  group: fa-cup-validation-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --package-lock=false acorn@8
+      - run: node --test automation/cup-sync/*.test.mjs
+      - run: curl --fail --silent --show-error --retry 3 'https://api.chizumulu.net/v1/structured?limit=40' -o /tmp/cup-api.json
+      - run: node automation/cup-sync/run.mjs /tmp/cup-api.json --apply
+      - run: node --check data.js
+      - run: git diff -- data.js
+      - run: cp data.js /tmp/first-pass.js
+      - run: node automation/cup-sync/run.mjs /tmp/cup-api.json --apply
+      - run: cmp data.js /tmp/first-pass.js
