@@ -1,0 +1,65 @@
+name: YouTube highlights
+on:
+  pull_request:
+    paths:
+      - 'automation/youtube-highlights/**'
+      - 'automation/scorer-approval/worker.js'
+      - 'data.js'
+      - '.github/workflows/youtube-highlights.yml'
+  repository_dispatch:
+    types: [youtube-highlight-discovered]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save acorn@8
+      - run: node --test automation/youtube-highlights/highlights.test.mjs
+  publish:
+    if: github.event_name == 'repository_dispatch'
+    needs: test
+    runs-on: ubuntu-latest
+    concurrency:
+      group: youtube-highlight-publish
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.SCORER_GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save acorn@8
+      - name: Apply and publish via PR
+        env:
+          GH_TOKEN: ${{ secrets.SCORER_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          id=$(node -e 'const v=require(process.env.GITHUB_EVENT_PATH).client_payload.video; if(!/^[A-Za-z0-9_-]{11}$/.test(v.id)) process.exit(1); console.log(v.id)')
+          branch="automation/youtube-video-$id"
+          git fetch origin main
+          git checkout -B main origin/main
+          node automation/youtube-highlights/apply.mjs
+          if git diff --quiet -- data.js; then exit 0; fi
+          existing=$(gh pr list --head "$branch" --base main --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh pr merge "$existing" --auto --squash
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add data.js
+          git commit -m "Register YouTube highlight $id"
+          git push origin "$branch"
+          pr=$(gh pr create --base main --head "$branch" --title "Register YouTube highlight $id" --body "Automatically discovered via the club channel RSS. No existing highlight overwritten.")
+          gh pr merge "$pr" --auto --squash
