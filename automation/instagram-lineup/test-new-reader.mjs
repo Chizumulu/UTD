@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {runInNewContext} from 'node:vm';
 import {readCard,compare} from './dry-run.mjs';
-import {resolveProductionSlot as resolveSlot} from './resolve-production.mjs';
+import {resolveProductionSlot as resolveSlot,resolveFallbackSlot} from './resolve-production.mjs';
 import {validateCandidates} from './plan-lineup.mjs';
 
 const {post,bytes}=await readCard({raw:true});
@@ -14,7 +14,9 @@ const source=await readFile('data.js','utf8');
 const squadData=runInNewContext(source+'\n;squadData',{}, {timeout:3000});
 console.log(JSON.stringify({status:ocr.status,reason:ocr.reason,layouts:ocr.candidates?.map(c=>({layout:c.layout,starters:c.starters.map(s=>({...s,...resolveSlot(s,squadData)})),bench:c.bench.map(s=>({...s,...resolveSlot(s,squadData)}))}))},null,2));
 // Use exactly the production validator, not a best-of result selected using historical answers.
+console.log(JSON.stringify({fallbackDiagnostics:ocr.candidates?.map(c=>({layout:c.layout,slots:[...c.starters,...c.bench].map((slot,i)=>({i,primary:resolveSlot(slot,squadData),fallback:resolveSlot(slot,squadData).number==null?resolveFallbackSlot(slot,squadData):null}))}))}));
 const chosen=validateCandidates(ocr,squadData);
+console.log(JSON.stringify({selectedLayout:chosen.layout,reviewMatches:chosen.reviewMatches},null,2));
 const candidate=ocr.candidates.find(c=>c.layout===chosen.layout);
 if(!candidate)throw Error('Selected OCR candidate missing');
 // Compare the actual production-selected players, not legacy OCR guesses.
