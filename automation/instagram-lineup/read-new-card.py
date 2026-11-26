@@ -71,19 +71,40 @@ def main():
         image = ImageOps.exif_transpose(original)
         if abs(image.width / image.height - 691 / 861) > 0.025:
             raise ValueError("Unsupported lineup card aspect ratio")
-        bench = read_bench(image)
-        if bench is None:
-            print(json.dumps({"status": "review_required", "reason": "ambiguous_bench", "candidates": []}))
-            return
         layouts = [
-            ("reference", reader.STARTERS, reader.STARTER_NAMES),
-            ("chihame", reader.CHIHAME[0], reader.CHIHAME[1]),
-            ("luviri", reader.LUVIRI[0], reader.LUVIRI[1]),
-            ("chilumba", reader.CHILUMBA[0], reader.CHILUMBA[1]),
+            ("reference", (reader.STARTERS, reader.STARTER_NAMES, reader.BENCH, reader.BENCH_NAMES)),
+            ("chihame", reader.CHIHAME),
+            ("luviri", reader.LUVIRI),
+            ("chintheche", reader.CHINTHECHE),
+            ("chilumba", reader.CHILUMBA),
         ]
         candidates = []
-        for label, boxes, names in layouts:
-            starters = [reader.read_slot(image, box, name) for box, name in zip(boxes, names, strict=True)]
+        for label, (boxes, names, bench_boxes, bench_names) in layouts:
+            # Fixed regions are layout hypotheses, not match-specific answers.
+            # Each candidate is independently checked against the roster.
+            bench = (reader.read_chihame_bench(image, bench_boxes, bench_names)
+                     if label == "chihame" else
+                     reader.read_chilumba_bench(image, bench_boxes, bench_names)
+                     if label == "chilumba" else
+                     [reader.read_slot(image, box, name) for box, name in zip(bench_boxes, bench_names, strict=True)])
+            # Reuse full strip readings as additional evidence, not replacements.
+            if label in ("luviri", "chintheche"):
+                for offset in (0, 15, 25):
+                    raw = reader.read_korean(reader.crop_gray(image, reader.shift_up((105, 768, 564, 807), offset)), "6")
+                    for line in raw.splitlines():
+                        if not re.search(r"SUBS", line, re.I):
+                            continue
+                        entries = re.findall(r"(?<![0-9])([1-9][0-9]?)\s*[.,:]\s*([가-힣]+(?:\s+[가-힣]+)*)", line)
+                        if len(entries) == 4 and len({n for n, _ in entries}) == 4:
+                            for slot, (n, name) in zip(bench[:4], entries, strict=True):
+                                slot["votes"][int(n)] = slot["votes"].get(int(n), 0) + 1
+                                slot["names"].append(name)
+            # Skip implausible bench geometry before spending time on starters.
+            print(json.dumps({"layout": label, "bench": bench}, ensure_ascii=False), file=sys.stderr)
+            if any(not slot["votes"] or not slot["names"] for slot in bench):
+                continue
+            starters = [reader.read_slot(image, box, name, alternate=False)
+                        for box, name in zip(boxes, names, strict=True)]
             candidates.append({"layout": label, "starters": starters, "bench": bench, "captain": None})
         print(json.dumps({"status": "candidates", "candidates": candidates}, ensure_ascii=False))
 
