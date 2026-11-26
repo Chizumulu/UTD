@@ -120,3 +120,29 @@ test('WhatsApp lineup message marks fallback players in both approval stages and
  assert.equal(validateReviewMatches({...p,reviewMatches:[]}),true);
  assert.doesNotMatch(lineupMessageValues({...p,reviewMatches:[]})[1],/⚠/);
 });
+
+test('partial OCR permits isolated unknown slots only in production opt-in mode',()=>{
+ const broken={...card,bench:[{votes:{},names:[]},...card.bench.slice(1)]};
+ const input={status:'candidates',candidates:[broken]};
+ assert.throws(()=>validateCandidates(input,data.squadData));
+ const partial=validateCandidates(input,data.squadData,{allowPartial:true});
+ assert.equal(partial.unresolvedSlots.length,1);
+ assert.equal(partial.bench[0].number,null);
+ assert.equal(partial.bench[0].unresolved,true);
+});
+test('manual lineup corrections only fill unknown slots with unique roster numbers',async()=>{
+ const {correctLineupSlot,validatePartialLineup,lineupMessageValues}=await import('./review-message.mjs');
+ const full=planLineup(source,post,ocr);
+ const p={...full,id:'test',bench:[{number:null,nameKo:'미확인',unresolved:true},...full.bench.slice(1)],unresolvedSlots:[{slot:11}],correctionRoster:roster.map(x=>({number:x.number,nameKo:x.nameKo}))};
+ assert.equal(validatePartialLineup(p),true);
+ assert.match(lineupMessageValues(p)[2],/미확인 \(슬롯 12\)/);
+ assert.throws(()=>correctLineupSlot(p,11,p.starters[0].number));
+ assert.throws(()=>correctLineupSlot(p,0,roster[11].number));
+ assert.throws(()=>applyApprovedLineup(source,{...p,state:'approved',approvedAt:new Date(now).toISOString()}));
+ const fixed=correctLineupSlot(p,11,roster[11].number);
+ assert.equal(fixed.unresolvedSlots.length,0);
+ assert.equal(fixed.bench[0].number,roster[11].number);
+ assert.equal(fixed.state,'held');
+ assert.doesNotMatch(lineupMessageValues(fixed)[2],/미확인/);
+ assert.ok(applyApprovedLineup(source,{...fixed,state:'approved',approvedAt:new Date(now).toISOString()}).includes('announcedMatchLineups'));
+});
