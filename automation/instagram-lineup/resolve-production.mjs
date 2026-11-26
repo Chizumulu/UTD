@@ -56,3 +56,29 @@ export function resolveProductionSlot(slot,squad){
   return {number:best.number,method:'name-supported-digit-correction',distance:best.best};
  return {number:null,method:'insufficient-cross-evidence',candidate:best.number,distance:best.best};
 }
+
+// Fallback only: never overrides an accepted primary match.
+export function resolveFallbackSlot(slot,squad){
+ const names=[...new Set((slot.names??[]).map(normalize).filter(n=>n.length>=4))];
+ const votes=Object.entries(slot.votes??{}).map(([n,c])=>[Number(n),Number(c)]).filter(([n,c])=>Number.isInteger(n)&&n>0&&n<100&&c>0);
+ const total=votes.reduce((s,[,c])=>s+c,0);
+ const candidates=squad.filter(p=>Number.isInteger(p.number)&&p.nameKo).map(p=>{
+  const ref=jamo(normalize(p.nameKo));
+  const similarity=Math.max(0,...names.map(n=>1-distance(jamo(n),ref)/Math.max(jamo(n).length,ref.length)));
+  const exact=votes.find(([n])=>n===p.number)?.[1]??0;
+  const near=votes.filter(([n])=>distance(Array.from(String(n)),Array.from(String(p.number)))===1).reduce((s,[,c])=>s+c,0);
+  const numberScore=total?(exact+0.4*near)/total:0;
+  return {number:p.number,similarity,exact,numberScore,score:0.65*similarity+0.35*numberScore};
+ });
+ const byName=[...candidates].sort((a,b)=>b.similarity-a.similarity);
+ const first=byName[0],second=byName[1];
+ const margin=first?first.similarity-(second?.similarity??0):0;
+ const result=(p,method)=>({number:p.number,method,distance:1-p.similarity,score:p.score,review:true});
+ if(first&&first.similarity===1&&margin>=0.10)return result(first,'fallback-exact-name');
+ if(first&&first.similarity>=0.85&&margin>=0.15)return result(first,'fallback-near-name');
+ const ranked=[...candidates].sort((a,b)=>b.score-a.score);
+ const p=ranked[0],next=ranked[1];
+ if(p&&p.similarity>=0.45&&p.exact>=3&&p.numberScore>=0.65&&p.score>=0.57&&p.score-(next?.score??0)>=0.10&&!byName.some(q=>q.number!==p.number&&q.similarity>=0.85))
+  return result(p,'fallback-combined-evidence');
+ return {number:null,method:'fallback-manual-review',candidate:p?.number??null,score:p?.score??0};
+}
