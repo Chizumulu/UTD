@@ -962,10 +962,20 @@
       return m + '<span class="cup-krw-inline">(≈' + cupFormatKrw(cupMwkToNumber(num, unit) * CUP_KRW_PER_MWK_OFFICIAL) + ')</span>';
     });
   }
+  // 올해 리그(leagueData)에 없는 컵대회 참가팀의 로고. 리그 팀은 leagueData의 logoSrc를 그대로 씁니다.
+  const CUP_EXTRA_LOGO_SRC = {
+    'Embangweni United FC': './엠방웨니.jpg'
+  };
+  function cupLogoSrc(nameEn) {
+    const t = leagueData.find(function (x) { return x.nameEn === nameEn; });
+    if (t && t.logoSrc) return t.logoSrc;
+    return CUP_EXTRA_LOGO_SRC[nameEn] ? encodeURI(CUP_EXTRA_LOGO_SRC[nameEn]) : '';
+  }
   function cupTeamHtml(nameEn, nameKoOverride, away) {
     const t = leagueData.find(function (x) { return x.nameEn === nameEn; });
     const name = isKorean ? (nameKoOverride || (t && t.nameKo) || nameEn) : nameEn;
-    const logo = t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '';
+    const lsrc = cupLogoSrc(nameEn);
+    const logo = lsrc ? '<img src="' + cupEsc(lsrc) + '" alt="">' : '';
     return '<div class="cup-team' + (away ? ' is-away' : '') + '">' + logo + '<span>' + cupEsc(name) + '</span></div>';
   }
   // 컵대회 소개 탭 맨 위: 치주물루가 낀 컵 경기 일정.
@@ -1010,8 +1020,8 @@
     };
     const logoOf = function (en, isMine, full) {
       if (isMine) return '<img class="rmd-logo" src="./dd.svg" alt="Chizumulu United FC">';
-      const t = leagueData.find(function (x) { return x.nameEn === en; });
-      if (t && t.logoSrc) return '<img class="rmd-logo" src="' + cupEsc(t.logoSrc) + '" alt="' + cupEsc(en) + '">';
+      const lsrc = cupLogoSrc(en);
+      if (lsrc) return '<img class="rmd-logo" src="' + cupEsc(lsrc) + '" alt="' + cupEsc(en) + '">';
       return '<span class="rmd-logo cup-logo-fb" aria-hidden="true">' + cupEsc(String(full || en || '?').trim().charAt(0).toUpperCase()) + '</span>';
     };
     const iAmHome = isMyTeamName(m.home, m.homeKo);
@@ -1217,7 +1227,8 @@
     }
     const team = leagueData.find(t => t.nameEn === nameEn);
     const name = cupEsc(ko ? (nameKo || team?.nameKo || nameEn) : nameEn);
-    const logo = team?.logoSrc ? '<img src="' + cupEsc(team.logoSrc) + '" alt="">' : '<i class="cup-br-dot"></i>';
+    const lsrc = cupLogoSrc(nameEn);
+    const logo = lsrc ? '<img src="' + cupEsc(lsrc) + '" alt="">' : '<i class="cup-br-dot"></i>';
     const mine = isMyTeamName(nameEn, nameKo) ? ' is-mine' : '';
     const tier = tiers.get(nameEn);
     const badge = tier ? `<span class="cup-br-tier${tier.district ? ' is-district' : ''}" title="${cupEsc(tier.title || tier.label)}">${cupEsc(tier.label)}</span>` : '';
@@ -1389,7 +1400,7 @@
         return '<div class="cup-team-chips">' + v.teams.map(function (en) {
           const t = leagueData.find(function (x) { return x.nameEn === en; });
           const nm = ko ? ((t && t.nameKo) || en) : en;
-          return '<span class="cup-team-chip">' + (t && t.logoSrc ? '<img src="' + cupEsc(t.logoSrc) + '" alt="">' : '') + '<span>' + cupEsc(nm) + '</span></span>';
+          return '<span class="cup-team-chip">' + (cupLogoSrc(en) ? '<img src="' + cupEsc(cupLogoSrc(en)) + '" alt="">' : '') + '<span>' + cupEsc(nm) + '</span></span>';
         }).join('') + '</div>';
       }
       if (Array.isArray(v) && v.some(function (x) { return x && typeof x === 'object'; })) {
@@ -1459,7 +1470,7 @@
         (badgeKo ? '<span class="cup-rq-stat is-hl">' + cupEsc(ko ? badgeKo : badgeEn) + '</span>' : '') + '</div></div>' +
         '<div class="cup-rq-grid">' + list.map(function (e) {
           const t = leagueData.find(function (x) { return x.nameEn === e.en; });
-          const lg = e.logo || (t && t.logoSrc);
+          const lg = e.logo || cupLogoSrc(e.en);
           return '<div class="cup-rq-team">' + (lg ? '<img src="' + cupEsc(lg) + '" alt="">' : '<span class="cup-rq-ph" aria-hidden="true"></span>') +
             '<span class="cup-rq-tname">' + cupEsc(ko ? (e.ko || e.en) : e.en) + '</span></div>';
         }).join('') + '</div></section>';
@@ -1483,7 +1494,7 @@
           '<span class="cup-rq-count">' + (g.teams || []).length + (ko ? '팀' : '') + '</span></div>' +
           '<div class="cup-rq-grid">' + (g.teams || []).map(function (e) {
             const t = leagueData.find(function (x) { return x.nameEn === e.en; });
-            const lg = e.logo || (t && t.logoSrc);
+            const lg = e.logo || cupLogoSrc(e.en);
             const sub = ko ? e.subKo : e.subEn;
             return '<div class="cup-rq-team">' + (lg ? '<img src="' + cupEsc(lg) + '" alt="">' : '<span class="cup-rq-ph" aria-hidden="true"></span>') +
               '<span class="cup-rq-tname">' + cupEsc(ko ? (e.ko || e.en) : e.en) + (sub ? '<small>' + cupEsc(sub) + '</small>' : '') + '</span></div>';
