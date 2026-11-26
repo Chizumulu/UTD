@@ -10,7 +10,7 @@ const reader=fileURLToPath(new URL('./read-new-card.py',import.meta.url));
 const raw=execFileSync('/usr/bin/python3',[reader],{input:bytes,encoding:'utf8',timeout:240000,maxBuffer:2*1024*1024});
 const ocr=JSON.parse(raw);
 const source=await readFile('data.js','utf8');
-const {squadData}=runInNewContext(source+'\n;squadData',{}, {timeout:3000});
+const squadData=runInNewContext(source+'\n;squadData',{}, {timeout:3000});
 console.log(JSON.stringify({status:ocr.status,reason:ocr.reason,layouts:ocr.candidates?.map(c=>({layout:c.layout,starters:c.starters.map(s=>({...s,...resolveSlot(s,squadData)})),bench:c.bench.map(s=>({...s,...resolveSlot(s,squadData)}))}))},null,2));
 // Use exactly the production validator, not a best-of result selected using historical answers.
 const chosen=validateCandidates(ocr,squadData);
