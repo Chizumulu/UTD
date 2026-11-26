@@ -1,4 +1,4 @@
-import { validateReviewMatches, lineupMessageValues } from '../instagram-lineup/review-message.mjs';
+import { validateReviewMatches, lineupMessageValues, validatePartialLineup, correctLineupSlot } from '../instagram-lineup/review-message.mjs';
 import { scanInstagramLineups } from '../instagram-lineup/discover.mjs';
 import { planCupForfeits } from '../forfeit-approval/plan-cup-forfeits.mjs';
 import { scanYoutubeHighlights } from '../youtube-highlights/rss.mjs';
@@ -355,6 +355,10 @@ async function receiveWebhook(request, env) {
     const sender = String(message.from || "");
     if (!constantTimeEqual(sender, env.WHATSAPP_ADMIN_WA_ID || "")) continue;
     const payload = message.button?.payload || message.interactive?.button_reply?.id || "";
+    if(message.type==="text" && /^수정\s/.test(String(message.text?.body||""))){
+      await handleLineupCorrection(String(message.text.body),env);
+      continue;
+    }
     await handleAction(payload, env);
   }
   return new Response("EVENT_RECEIVED", { status: 200 });
@@ -1314,6 +1318,10 @@ async function handleAction(payload, env) {
     return;
   }
 
+  if(proposal.kind==="lineup" && (proposal.unresolvedSlots??[]).length){
+    await sendLineupApproval(proposal,env,false);
+    return;
+  }
   if (selected === "confirm") {
     if (!proposal.needsReview || proposal.state !== "awaiting_confirmation") return;
   } else if (selected === "approve") {
@@ -1455,9 +1463,9 @@ async function receiveLineupProposal(request, env) {
   if(p?.kind!=="lineup"||!/^\d{5,30}$/.test(String(p.postId))||!["league","faCup2627"].includes(p.competition)||!/^\d{4}-\d{2}-\d{2}$/.test(p.matchDate||"")||
     ![p.home,p.away].every(x=>typeof x==="string"&&x.length>0&&x.length<=120)||
     !Array.isArray(p.starters)||p.starters.length!==11||!Array.isArray(p.bench)||!p.bench.length||p.bench.length>12||
-    ![...p.starters,...p.bench].every(validPlayer)||new Set([...p.starters,...p.bench].map(x=>x.number)).size!==p.starters.length+p.bench.length)
+    ![...p.starters,...p.bench].every(x=>x?.unresolved===true||validPlayer(x))||new Set([...p.starters,...p.bench].filter(x=>!x.unresolved).map(x=>x.number)).size!==[...p.starters,...p.bench].filter(x=>!x.unresolved).length)
     return Response.json({ok:false,error:"Invalid lineup proposal"},{status:400});
-  if(!validateReviewMatches(p))return Response.json({ok:false,error:"Invalid lineup review metadata"},{status:400});
+  if(!validatePartialLineup(p)||!validateReviewMatches(p))return Response.json({ok:false,error:"Invalid lineup review metadata"},{status:400});
   const matchKey="lineup:"+p.postId;
   const key="match:"+matchKey;
   if(await env.APPROVALS.get(key))return Response.json({ok:true,duplicate:true});
@@ -1487,4 +1495,21 @@ async function sendLineupApproval(p,env,confirmation){
    body:JSON.stringify({messaging_product:"whatsapp",to:env.WHATSAPP_ADMIN_WA_ID,type:"template",template:{name:env.WHATSAPP_LINEUP_TEMPLATE_NAME,language:{code:env.WHATSAPP_TEMPLATE_LANGUAGE||"ko"},components:[{type:"body",parameters:values.map(v=>({type:"text",text:sanitizeTemplateText(v)}))},...buttons]}})
   });
   if(!response.ok)throw Error("Lineup WhatsApp HTTP "+response.status);
+}
+
+async function handleLineupCorrection(text,env){
+ if(env.INSTAGRAM_LINEUP_ENABLED!=="true")return;
+ const m=text.trim().match(/^수정\s+([0-9a-f-]{36})\s+(\d{1,2})\s+(\d{1,2})$/i);
+ if(!m)return;
+ const key="proposal:"+m[1];
+ const raw=await env.APPROVALS.get(key);
+ if(!raw)return;
+ const p=JSON.parse(raw);
+ if(p.kind!=="lineup"||p.state&&!["pending","held"].includes(p.state))return;
+ let next;
+ try{next=correctLineupSlot(p,Number(m[2])-1,Number(m[3]));}
+ catch(error){console.warn(JSON.stringify({event:"lineup_correction_rejected",proposalId:p.id,error:String(error)}));return;}
+ await env.APPROVALS.put(key,JSON.stringify(next),{expirationTtl:MAX_PROPOSAL_AGE_SECONDS});
+ await sendLineupApproval(next,env,false);
+ console.log(JSON.stringify({event:"lineup_slot_corrected",proposalId:p.id,slot:Number(m[2]),remaining:next.unresolvedSlots.length}));
 }
