@@ -2,7 +2,8 @@ import {execFileSync} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {runInNewContext} from 'node:vm';
-import {readCard,compare,resolveSlot} from './dry-run.mjs';
+import {readCard,compare} from './dry-run.mjs';
+import {resolveProductionSlot as resolveSlot} from './resolve-production.mjs';
 import {validateCandidates} from './plan-lineup.mjs';
 
 const {post,bytes}=await readCard({raw:true});
@@ -16,5 +17,7 @@ console.log(JSON.stringify({status:ocr.status,reason:ocr.reason,layouts:ocr.cand
 const chosen=validateCandidates(ocr,squadData);
 const candidate=ocr.candidates.find(c=>c.layout===chosen.layout);
 if(!candidate)throw Error('Selected OCR candidate missing');
-const result=compare(source,post,candidate);
+// Compare the actual production-selected players, not legacy OCR guesses.
+const confirmedSlot=p=>({votes:{[p.number]:3},names:[p.nameKo]});
+const result=compare(source,post,{starters:chosen.starters.map(confirmedSlot),bench:chosen.bench.map(confirmedSlot),captain:candidate.captain??null});
 console.log(JSON.stringify({status:'passed',layout:chosen.layout,round:result.round,starters:result.starters,bench:result.bench,changes:0},null,2));
