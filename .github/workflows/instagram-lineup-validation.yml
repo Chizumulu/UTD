@@ -6,6 +6,9 @@ on:
       - 'automation/instagram-lineup/**'
       - '.github/workflows/instagram-lineup-validation.yml'
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
