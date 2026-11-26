@@ -23,7 +23,7 @@ export function planResults(items,cup){
    if(hit.reversed)[x,y]=[y,x];
    fields.pso=x+':'+y;
   }else if(m.pso!=null&&m.pso!==''){hold('unexpected_shootout');continue;}
-  if(f.postponed||f.forfeit||m.forfeit||m.resultType==='forfeit'){hold('special_result_requires_review');continue;}
+  if(f.postponed||f.forfeit||m.forfeit||/^(forfeit|walk[ _-]?over|awarded)$/i.test(m.resultType??'')){hold('special_result_requires_review');continue;}
   const winnerSide=a>b?'home':a<b?'away':Number(fields.pso.split(':')[0])>Number(fields.pso.split(':')[1])?'home':'away';
   const g=groups.get(hit.fixtureId)??[];
   g.push({hit,f,fields,winnerSide});groups.set(hit.fixtureId,g);
@@ -37,7 +37,10 @@ export function planResults(items,cup){
   if(!Object.keys(changes).length)continue;
   const winner=f[winnerSide],advance=[];
   if(f.id)for(const [ri,r] of cup.rounds.entries())for(const [mi,next] of (r.matches??[]).entries()){
-   if(next.awayWinnerOf===f.id)advance.push({roundIndex:ri,matchIndex:mi,side:'away',team:winner});
+   if(next.awayWinnerOf===f.id){
+    if(!next.away||/\bwinner\b|\btbd\b|\//i.test(next.away))advance.push({roundIndex:ri,matchIndex:mi,side:'away',team:winner});
+    else if(next.away!==winner)held.push({fixtureId,reason:'confirmed_qualifier_conflict',roundIndex:ri,matchIndex:mi});
+   }
   }
   proposals.push({fixtureId,roundIndex:hit.roundIndex,matchIndex:hit.matchIndex,changes,winner,regularOutcome:fields.homeScore===fields.awayScore?'draw':winnerSide,advance,sources:g.map(x=>x.hit.source)});
  }
