@@ -35,13 +35,38 @@ function apply(source,proposals,allowed){
  for(const e of edits.sort((a,b)=>b.start-a.start))source=source.slice(0,e.start)+e.text+source.slice(e.end);
  return source;
 }
+export function resolveCupParticipants(cup){
+ const resolved=JSON.parse(JSON.stringify(cup)), winners=new Map();
+ for(const round of resolved.rounds)for(const f of round.matches??[]){
+  for(const side of ['home','away']){
+   const prior=winners.get(f[side+'WinnerOf']);
+   if(prior&&(!f[side]||/\bwinner\b|\btbd\b|\//i.test(f[side])))f[side]=prior;
+  }
+  if(!f.id||f.postponed||f.forfeit||/^(forfeit|walk[ _-]?over|awarded)$/i.test(f.resultType??''))continue;
+  const a=f.homeScore,b=f.awayScore;
+  if(!Number.isSafeInteger(a)||!Number.isSafeInteger(b)||a<0||b<0)continue;
+  let side=a>b?'home':b>a?'away':null;
+  if(!side){const p=String(f.pso??'').match(/^(\d+):(\d+)$/);if(p&&Number(p[1])!==Number(p[2]))side=Number(p[1])>Number(p[2])?'home':'away';}
+  if(side&&f[side]&&!/\bwinner\b|\btbd\b|\//i.test(f[side]))winners.set(f.id,f[side]);
+ }
+ return resolved;
+}
 export function syncCup(source,items){
- const schedule=planSchedule(items,locate(source).cup);
+ const schedule=planSchedule(items,resolveCupParticipants(locate(source).cup));
  source=apply(source,schedule.proposals,['date','time','venueEn','venueType']);
- const results=planResults(items,locate(source).cup);
- source=apply(source,results.proposals,['homeScore','awayScore','pso']);
+ const results={proposals:[],held:[]};
+ for(let i=0;i<locate(source).cup.rounds.length;i++){
+  const pass=planResults(items,resolveCupParticipants(locate(source).cup));
+  results.held=pass.held;
+  if(!pass.proposals.length)break;
+  results.proposals.push(...pass.proposals);
+  source=apply(source,pass.proposals,['homeScore','awayScore','pso']);
+ }
+ const later=planSchedule(items,resolveCupParticipants(locate(source).cup));
+ source=apply(source,later.proposals,['date','time','venueEn','venueType']);
+ schedule.proposals.push(...later.proposals);
  // Existing site resolver derives playoff winners from stored scores.
- return {source,cup:locate(source).cup,schedule,results};
+ return {source,cup:resolveCupParticipants(locate(source).cup),schedule,results};
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
 const path=process.env.DATA_PATH||'data.js';
