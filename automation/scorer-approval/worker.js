@@ -1,3 +1,4 @@
+import { planCupForfeits } from '../forfeit-approval/plan-cup-forfeits.mjs';
 import { scanYoutubeHighlights } from '../youtube-highlights/rss.mjs';
 import { detectForfeit } from '../forfeit-approval/detect-forfeit.mjs';
 import { planCupScorers } from '../cup-sync/plan-scorers.mjs';
@@ -1408,6 +1409,17 @@ async function scanCupApprovals(env) {
   const data=await api.json(),cup=await snapshot.json();
   if(cup.id!=="faCup2627"||!Array.isArray(cup.rounds)) throw Error("Invalid cup snapshot");
   const {proposals,held}=planCupScorers(data.items,cup);
+   if(env.FORFEIT_APPROVALS_ENABLED === "true"){
+    for(const p of planCupForfeits(data.items,cup)){
+     const key="match:"+p.matchKey;
+     if(await env.APPROVALS.get(key))continue;
+     const id=crypto.randomUUID();
+     const proposal={...p,id,createdAt:new Date().toISOString()};
+     await env.APPROVALS.put("proposal:"+id,JSON.stringify(proposal),{expirationTtl:MAX_PROPOSAL_AGE_SECONDS});
+     await env.APPROVALS.put(key,id,{expirationTtl:MAX_PROPOSAL_AGE_SECONDS});
+     try{await sendApprovalMessage(proposal,env);}catch(error){await env.APPROVALS.delete("proposal:"+id);await env.APPROVALS.delete(key);throw error;}
+    }
+   }
   let sent=0;
   for(const p of proposals){
    const fixture=cup.rounds.flatMap(r=>r.matches??[]).find((f)=>f.id===p.fixtureId)??cup.rounds[Number(p.fixtureId.match(/^round:(\d+):match:(\d+)$/)?.[1])]?.matches?.[Number(p.fixtureId.match(/^round:(\d+):match:(\d+)$/)?.[2])];
