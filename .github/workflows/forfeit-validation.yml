@@ -1,0 +1,23 @@
+name: Forfeit validation
+on:
+  pull_request:
+    paths:
+      - 'automation/forfeit-approval/**'
+      - 'automation/scorer-approval/worker.js'
+      - 'automation/cup-sync/**'
+      - '.github/workflows/forfeit-approval.yml'
+      - '.github/workflows/forfeit-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --package-lock=false acorn@8
+      - run: node --check automation/scorer-approval/worker.js
+      - run: node --test automation/forfeit-approval/*.test.mjs automation/cup-sync/*.test.mjs
