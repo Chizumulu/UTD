@@ -1,0 +1,22 @@
+name: FA Cup sync (validation)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: approved-scorer-proposals-main
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --package-lock=false acorn@8
+      - run: node --test automation/cup-sync/match-fixtures.test.mjs
+      - run: curl --fail --silent --show-error --retry 3 'https://api.chizumulu.net/v1/structured?limit=40' -o /tmp/cup-api.json
+      - run: node automation/cup-sync/run.mjs /tmp/cup-api.json --apply
+      - run: node --check data.js
+      - run: git diff -- data.js
