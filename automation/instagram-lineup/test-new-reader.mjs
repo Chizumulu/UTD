@@ -7,7 +7,7 @@ import {validateCandidates} from './plan-lineup.mjs';
 
 const {post,bytes}=await readCard({raw:true});
 const reader=fileURLToPath(new URL('./read-new-card.py',import.meta.url));
-const raw=execFileSync('/usr/bin/python3',[reader],{input:bytes,encoding:'utf8',timeout:240000,maxBuffer:2*1024*1024});
+const raw=execFileSync('/usr/bin/python3',[reader],{input:bytes,encoding:'utf8',timeout:900000,maxBuffer:2*1024*1024});
 const ocr=JSON.parse(raw);
 const source=await readFile('data.js','utf8');
 const squadData=runInNewContext(source+'\n;squadData',{}, {timeout:3000});
