@@ -48,7 +48,7 @@ jobs:
             git fetch origin main
             git checkout -B main origin/main
             node automation/cup-sync/apply-approved-scorers.mjs
-            node --input-type=module -e "import fs from 'node:fs'; import {locate} from './automation/cup-sync/sync-cup.mjs'; fs.writeFileSync('automation/cup-sync/cup-snapshot.json',JSON.stringify(locate(fs.readFileSync('data.js','utf8')).cup,null,2)+'\\n');"
+            node --input-type=module -e "import fs from 'node:fs'; import {locate,resolveCupParticipants} from './automation/cup-sync/sync-cup.mjs'; fs.writeFileSync('automation/cup-sync/cup-snapshot.json',JSON.stringify(resolveCupParticipants(locate(fs.readFileSync('data.js','utf8')).cup),null,2)+'\\n');"
             node --check data.js
 
             if git diff --quiet -- data.js; then
@@ -72,7 +72,7 @@ jobs:
           git fetch origin main
           git checkout -B main origin/main
           node automation/cup-sync/apply-approved-scorers.mjs
-            node --input-type=module -e "import fs from 'node:fs'; import {locate} from './automation/cup-sync/sync-cup.mjs'; fs.writeFileSync('automation/cup-sync/cup-snapshot.json',JSON.stringify(locate(fs.readFileSync('data.js','utf8')).cup,null,2)+'\\n');"
+            node --input-type=module -e "import fs from 'node:fs'; import {locate,resolveCupParticipants} from './automation/cup-sync/sync-cup.mjs'; fs.writeFileSync('automation/cup-sync/cup-snapshot.json',JSON.stringify(resolveCupParticipants(locate(fs.readFileSync('data.js','utf8')).cup),null,2)+'\\n');"
             node --check data.js
           if git diff --quiet -- data.js; then
             echo "No data.js changes are needed after refreshing main."
