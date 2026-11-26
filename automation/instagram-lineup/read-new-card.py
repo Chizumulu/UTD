@@ -64,6 +64,17 @@ def read_bench(image):
     pairs = maximal[0]
     return [{"votes": {n: votes[pairs]}, "names": [name]} for n, name in pairs]
 
+def improve_slot(image, box, name_box, slot, alternate=False):
+    # Re-read independently using wider number crops, not roster-derived digits.
+    x1, y1, x2, y2 = box
+    extra = reader.read_slot(image, (x1-4, y1-5, x2+5, y2+5),
+                             (name_box[0]-3, name_box[1]-2, name_box[2]+3, name_box[3]+2),
+                             alternate=alternate)
+    for n, count in extra["votes"].items():
+        slot["votes"][n] = slot["votes"].get(n, 0) + count
+    slot["names"] = list(dict.fromkeys(slot["names"] + extra["names"]))
+    return slot
+
 def main():
     with Image.open(sys.stdin.buffer) as original:
         if original.width * original.height > 25_000_000:
@@ -101,10 +112,19 @@ def main():
                                 slot["names"].append(name)
             # Skip implausible bench geometry before spending time on starters.
             print(json.dumps({"layout": label, "bench": bench}, ensure_ascii=False), file=sys.stderr)
-            if any(not slot["votes"] or not slot["names"] for slot in bench):
+            if sum(bool(slot["votes"] and slot["names"]) for slot in bench) < len(bench)-2:
                 continue
-            starters = [reader.read_slot(image, box, name, alternate=False)
+            starters = [reader.read_slot(image, box, name, alternate=(label != "reference"))
                         for box, name in zip(boxes, names, strict=True)]
+            # Re-read every weakly sampled slot; names and numbers remain separate.
+            for slot, box, name in zip(starters, boxes, names, strict=True):
+                if max(slot["votes"].values(), default=0) < 5 or len(slot["names"]) < 2:
+                    improve_slot(image, box, name, slot)
+            for slot, box, name in zip(bench, bench_boxes, bench_names, strict=True):
+                if label == "chihame":
+                    box, name = reader.shift_up(box, 17), reader.shift_up(name, 17)
+                if max(slot["votes"].values(), default=0) < 5 or len(slot["names"]) < 2:
+                    improve_slot(image, box, name, slot)
             candidates.append({"layout": label, "starters": starters, "bench": bench, "captain": None})
         print(json.dumps({"status": "candidates", "candidates": candidates}, ensure_ascii=False))
 
