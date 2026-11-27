@@ -78,9 +78,15 @@ jobs:
         run: |
           python3 scripts/test-optimize-player-png.py
           python3 scripts/verify-design-assets.py "$RUNNER_TEMP/site-before/UTD" "$RUNNER_TEMP/site-after/UTD"
+      - name: Validate exact runtime changes against first verified batch
+        if: github.event_name == 'pull_request' && github.head_ref == 'perf/1-h-5-10-integrated' && env.BASE_INPUT == '56f773088579f89653c92542f5056bbc691fdc93'
+        run: |
+          cd "$RUNNER_TEMP/candidate"
+          node --test scripts/design-preserved-runtime.test.mjs
+          node scripts/verify-runtime-assets.mjs "$RUNNER_TEMP/site-before/UTD" "$RUNNER_TEMP/site-after/UTD"
       - name: Install pinned Lighthouse
         run: |
-          npm install --no-save --package-lock=false lighthouse@12.8.2
+          npm install --no-save --package-lock=false lighthouse@12.8.2 playwright@1.56.1
           command -v google-chrome
           google-chrome --version
           ./node_modules/.bin/lighthouse --version
@@ -103,6 +109,9 @@ jobs:
             node scripts/lighthouse-comparison-compression-check.mjs "$port" "$RESULTS/compression-$port.json"
           done
           export CHROME_PATH="$(command -v google-chrome)"
+          if [[ "$BASE_INPUT" == '56f773088579f89653c92542f5056bbc691fdc93' && "${GITHUB_HEAD_REF:-}" == 'perf/1-h-5-10-integrated' ]]; then
+            node scripts/design-preserved-browser.mjs "http://127.0.0.1:8081/UTD/" "http://127.0.0.1:8082/UTD/" "$RESULTS/pinned-design"
+          fi
           for profile in mobile desktop; do
             for ((i=1;i<=RUNS;i++)); do
               if (( i % 2 == 1 )); then order=(before after); else order=(after before); fi
