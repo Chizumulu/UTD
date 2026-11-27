@@ -80,3 +80,15 @@ jobs:
           git switch -c "$branch"
           git push origin "$branch"
           gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" --title "Update scorers: $MATCH_LABEL" --body "This scorer update was approved in WhatsApp. Direct push to main failed after retries, so this PR is available for recovery."
+      - name: Record publication receipt
+        if: success()
+        run: |
+          node scripts/publication-receipt.mjs "$RUNNER_TEMP/publication-receipt.json"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: publication-receipt
+          path: ${{ runner.temp }}/publication-receipt.json
+          retention-days: 14
+          overwrite: true
+          if-no-files-found: error
