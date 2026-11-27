@@ -1,3 +1,4 @@
+import { writeSeo } from './seo-pages.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -51,3 +52,5 @@ for (const file of files) {
   if (file === 'index.html') writeFileSync(destination, html);
   else copyFileSync(file, destination);
 }
+
+writeSeo(output, readFileSync('data.js', 'utf8'));

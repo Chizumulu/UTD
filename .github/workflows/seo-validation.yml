@@ -1,0 +1,23 @@
+name: SEO pages validation
+on:
+  pull_request:
+    paths:
+      - 'data.js'
+      - 'index.html'
+      - 'scripts/build-pages.mjs'
+      - 'scripts/seo-pages*.mjs'
+      - '.github/workflows/seo-validation.yml'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node --test scripts/seo-pages.test.mjs
+      - run: node scripts/build-pages.mjs "$RUNNER_TEMP/pages"
