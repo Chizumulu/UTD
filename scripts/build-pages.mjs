@@ -1,5 +1,6 @@
 import { applyResponsiveCrests, applyStaticCrests } from './crest-templates.mjs';
 import { minifyPagesAssets } from './minify-pages-assets.mjs';
+import { splitCupView } from './cup-view-split.mjs';
 import { splitPredictionView } from './prediction-view-split.mjs';
 import { splitClubExtras } from './club-extras-split.mjs';
 import { splitArchiveView } from './archive-view-split.mjs';
@@ -61,7 +62,9 @@ const splitVenues = await splitVenueMap(splitDetails.app);
 const splitArchive = await splitArchiveView(splitVenues.app);
 const splitExtras = await splitClubExtras(splitArchive.app);
 const splitPrediction = await splitPredictionView(splitExtras.app);
-writeFileSync(appPath, splitPrediction.app);
+const splitCup = await splitCupView(splitPrediction.app);
+writeFileSync(appPath, splitCup.app);
+writeFileSync(join(output,splitCup.file),splitCup.code);
 writeFileSync(join(output,splitPrediction.file),splitPrediction.code);
 writeFileSync(join(output,splitExtras.file),splitExtras.code);
 writeFileSync(join(output,splitArchive.file),splitArchive.code);
@@ -72,7 +75,7 @@ for (const asset of splitTeamMatch.assets) writeFileSync(join(output,asset.file)
 writeFileSync(join(output,splitCompare.file),splitCompare.code);
 writeFileSync(join(output,splitExport.file),splitExport.code);
 await minifyPagesAssets(output);
-for (const file of ['app.js','a11y.js',splitExport.file,splitCompare.file,...splitTeamMatch.assets.map(asset=>asset.file),splitPlayers.file,splitDetails.file,splitVenues.file,splitArchive.file,splitExtras.file,splitPrediction.file]) execFileSync(process.execPath,['--check',join(output,file)],{stdio:'inherit'});
+for (const file of ['app.js','a11y.js',splitExport.file,splitCompare.file,...splitTeamMatch.assets.map(asset=>asset.file),splitPlayers.file,splitDetails.file,splitVenues.file,splitArchive.file,splitExtras.file,splitPrediction.file,splitCup.file]) execFileSync(process.execPath,['--check',join(output,file)],{stdio:'inherit'});
 
 function assetVersion(file) {
   if (!publishedFiles.has(file)) throw new Error(`Asset is missing from the Pages artifact: ${file}`);
