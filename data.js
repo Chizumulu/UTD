@@ -1754,7 +1754,7 @@ const scheduledRounds = {
   
   // ── 정규 19주차 (엑셀 "Week 19") — 킥오프 15:00은 임시 일괄값(일정표에 시간 없음) ──
   round20: [
-    { fixtureId: "utd-2026.chizumulu-united-fc.mafu-stars-fc", homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-11-27", kickoffTime: "15:00", movedFromWeek: 18 }, // 17주차(round18)에서 연기된 경기 (킥오프 시간은 기존 값 유지, 확정 시 수정)
+    { fixtureId: "utd-2026.chizumulu-united-fc.mafu-stars-fc", homeKo: "치주물루 유나이티드 FC", homeEn: "Chizumulu United FC", awayKo: "마푸 스타즈 FC", awayEn: "Mafu Stars FC", kickoffDate: "2026-11-27", kickoffTime: "15:00", movedFromWeek: 18, homeScore: 3, awayScore: 0, forfeit: true, scorersHome: "없음", scorersAway: "없음" }, // 17주차(round18)에서 연기된 경기 (킥오프 시간은 기존 값 유지, 확정 시 수정)
     { fixtureId: "utd-2026.chilumba-barracks-fc.chipolopolo-boys-fc", homeKo: "칠룸바 배럭스 FC", homeEn: "Chilumba Barracks FC", awayKo: "치폴로폴로 보이즈 FC", awayEn: "Chipolopolo Boys FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
     { fixtureId: "utd-2026.vision-s-academy.euthini-veterans-fc", homeKo: "비전 S 아카데미", homeEn: "Vision S Academy", awayKo: "에우티니 베테랑스 FC", awayEn: "Euthini Veterans FC", kickoffDate: "2026-11-28", kickoffTime: "15:00" },
     { fixtureId: "utd-2026.m-mbelwa-warriors-fc.luviri-fc", homeKo: "음벨와 워리어스 FC", homeEn: "M'mbelwa Warriors FC", awayKo: "루비리 FC", awayEn: "Luviri FC", kickoffDate: "2026-11-29", kickoffTime: "15:00" },
