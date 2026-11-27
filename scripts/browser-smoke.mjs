@@ -101,6 +101,23 @@ try{
      assert.ok(strips.every(img=>img.srcset),'home match crest missing responsive source');
      console.log(label+' home match crests: '+JSON.stringify(strips));
      assert.equal(await page.locator('img.league-logo[srcset],img.archive-hero-logo[srcset]').count(),2,'static NRFA responsive sources missing');
+     const fonts=await page.evaluate(async()=>{
+      const style=document.getElementById('utd-pretendard-fonts');
+      const faces=style?.sheet?.cssRules.length||0;
+      const loaded=await document.fonts.load('600 16px "Pretendard Variable"','NRFA 2026 치주물루');
+      return {faces,loaded:loaded.length,status:loaded.every(f=>f.status==='loaded'),
+       fontFamily:getComputedStyle(document.body).fontFamily,
+       localRequests:performance.getEntriesByType('resource').filter(e=>e.name.includes('/fonts/pretendard/')).map(e=>e.name),
+       googleMedia:document.querySelector('link[href*="fonts.googleapis.com/css2?family=Noto"]')?.media};
+     });
+     assert.equal(fonts.faces,92,'Pretendard font declarations missing');
+     assert.ok(fonts.loaded>0&&fonts.status,'Pretendard sample failed to load');
+     assert.match(fonts.fontFamily,/Pretendard Variable/);
+     assert.ok(fonts.localRequests.some(url=>url.endsWith('.woff2')),'no local WOFF2 request');
+     assert.ok(!fonts.localRequests.some(url=>url.endsWith('.css')),'redundant font CSS request');
+     assert.ok(['print','all'].includes(fonts.googleMedia),'Google fallback stylesheet missing');
+     console.log(label+' font delivery: '+JSON.stringify(fonts));
+
     }
     await dismiss(page);
     await visible(page,'#rankView');
