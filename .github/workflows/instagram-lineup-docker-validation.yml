@@ -70,3 +70,29 @@ jobs:
           start=$SECONDS
           docker run --rm -e UTD_INSTAGRAM_TOKEN -v "$GITHUB_WORKSPACE:/workspace:ro" "$IMAGE" node automation/instagram-lineup/test-new-reader.mjs "--$SAMPLE"
           echo "OCR validation: $((SECONDS-start)) seconds"
+  publish:
+    needs: [build, validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: utd-lineup-ocr-image
+          path: /tmp
+      - name: Load and publish the exact validated image
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ needs.build.outputs.image }}
+        run: |
+          set -euo pipefail
+          target=ghcr.io/chizumulu/utd-lineup-ocr
+          docker load -i /tmp/utd-lineup-ocr.tar.gz
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker tag "$IMAGE" "$target:$GITHUB_SHA"
+          docker push "$target:$GITHUB_SHA"
+          docker tag "$IMAGE" "$target:validated-v1"
+          docker push "$target:validated-v1"
