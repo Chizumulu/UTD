@@ -4,6 +4,7 @@ on:
     types: [instagram-lineup-discovered]
 permissions:
   contents: read
+  packages: read
 concurrency:
   group: instagram-lineup-${{ github.event.client_payload.postId }}
   cancel-in-progress: false
@@ -16,13 +17,23 @@ jobs:
         with:
           ref: main
           persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install OCR dependencies
-        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-kor python3-pil
+      - name: Pull validated OCR image
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker pull ghcr.io/chizumulu/utd-lineup-ocr:validated-v1
       - name: Recognize and submit official lineup
         env:
           UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
           LINEUP_INGEST_TOKEN: ${{ secrets.LINEUP_INGEST_TOKEN }}
-        run: node automation/instagram-lineup/process-post.mjs
+        run: |
+          docker run --rm \
+            -e UTD_INSTAGRAM_TOKEN -e LINEUP_INGEST_TOKEN \
+            -e GITHUB_EVENT_PATH=/event.json \
+            -v "$GITHUB_EVENT_PATH:/event.json:ro" \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" \
+            ghcr.io/chizumulu/utd-lineup-ocr:validated-v1 \
+            node automation/instagram-lineup/process-post.mjs
