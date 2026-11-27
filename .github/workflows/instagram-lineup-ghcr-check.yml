@@ -1,0 +1,51 @@
+name: Instagram OCR GHCR access check
+on:
+  push:
+    branches: [automation/instagram-lineup-sync]
+    paths:
+      - '.github/workflows/instagram-lineup-ghcr-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Pull exact validated image using repository token
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker pull ghcr.io/chizumulu/utd-lineup-ocr@sha256:5eaccc20759897ffbb1c81a357528d7b56f7388baea48aca3eac689797284e24
+          docker tag ghcr.io/chizumulu/utd-lineup-ocr@sha256:5eaccc20759897ffbb1c81a357528d7b56f7388baea48aca3eac689797284e24 utd-lineup-smoke:validated
+      - name: Verify runtime and isolated regression tests
+        run: |
+          docker run --rm --network none utd-lineup-smoke:validated node --version
+          docker run --rm --network none utd-lineup-smoke:validated tesseract --list-langs
+          docker run --rm --network none -v "$GITHUB_WORKSPACE:/workspace:ro" utd-lineup-smoke:validated node --test automation/instagram-lineup/integration.test.mjs
+      - name: Check Worker and production entrypoint syntax
+        run: |
+          docker run --rm --network none -v "$GITHUB_WORKSPACE:/workspace:ro" utd-lineup-smoke:validated node --check automation/scorer-approval/worker.js
+          docker run --rm --network none -v "$GITHUB_WORKSPACE:/workspace:ro" utd-lineup-smoke:validated node --check automation/instagram-lineup/process-post.mjs
+      - name: Check production event mount and registered secrets without printing values
+        env:
+          UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
+          LINEUP_INGEST_TOKEN: ${{ secrets.LINEUP_INGEST_TOKEN }}
+        run: |
+          docker run --rm --network none \
+            -e UTD_INSTAGRAM_TOKEN -e LINEUP_INGEST_TOKEN \
+            -e GITHUB_EVENT_PATH=/event.json \
+            -v "$GITHUB_EVENT_PATH:/event.json:ro" \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" \
+            utd-lineup-smoke:validated \
+            node --input-type=module -e 'import {readFileSync} from "node:fs"; JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH,"utf8")); if (!process.env.UTD_INSTAGRAM_TOKEN || (process.env.LINEUP_INGEST_TOKEN || "").length < 32) throw Error("Required secrets missing or invalid length"); console.log("Event mount and required secret presence OK");'
