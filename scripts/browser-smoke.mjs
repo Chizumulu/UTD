@@ -398,6 +398,8 @@ try{
     const orig=window.matchMedia.bind(window);
     window.matchMedia=q=>q==='(display-mode: standalone)'?{matches:mode,media:q,addEventListener(){},removeEventListener(){}}:orig(q);
     Object.defineProperty(window,'PushManager',{value:window.PushManager||function(){},configurable:true});
+    // Chromium may deny notifications by default in headless CI; mock eligibility, not real permission.
+    Object.defineProperty(window.Notification,'permission',{get:()=> 'default',configurable:true});
     window.__onboardingChecks=0;
    },standalone);
    // Isolate the onboarding check from actual push subscriptions and server calls.
@@ -405,8 +407,11 @@ try{
    try{
     await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
     await visible(p,'#disclaimerModal');
-    await p.waitForTimeout(2200);
-    assert.equal(await p.evaluate(()=>window.__onboardingChecks),standalone?1:0);
+    if(standalone)await p.waitForFunction(()=>window.__onboardingChecks===1,null,{timeout:10000});
+    else await p.waitForTimeout(2200);
+    const eligibility=await p.evaluate(()=>({mode:matchMedia('(display-mode: standalone)').matches,permission:Notification.permission,serviceWorker:'serviceWorker' in navigator,push:'PushManager' in window,config:!!window.UTD_PUSH_API_URL,checks:window.__onboardingChecks}));
+    console.log('onboarding eligibility fixture: '+JSON.stringify(eligibility));
+    assert.equal(eligibility.checks,standalone?1:0);
     assert.equal(await p.locator('#pwaMatchAlertsPrompt[open]').count(),0,'onboarding overlaps disclaimer');
     await dismiss(p);
     if(standalone){
