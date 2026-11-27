@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {analyze,selectorOwners,mergeRanges,coverage} from './css-audit.mjs';
+import {analyze,selectorOwners,mergeRanges,coverage,completeness,markdown} from './css-audit.mjs';
 test('selector lists preserve functional commas and protect mixed/unknown selectors',()=>{
  assert.equal(selectorOwners('.cup-card:is(.a,.b), .nmh-team').classification,'mixed');
  assert.equal(selectorOwners('.cup-card, .unclassified').classification,'mixed');
@@ -18,4 +18,22 @@ test('coverage distinguishes complete, partial and unobserved rules with unicode
  assert.equal(css.slice(x.start,x.end),'.cup-a{color:red}');
  const c=coverage(css,a,[{name:'one',ranges:[{start:x.start,end:x.end},{start:y.start,end:y.start+2}]}]);
  assert.deepEqual(c.union.used,[x.id]);assert.deepEqual(c.union.partial,[y.id]);assert.deepEqual(c.union.unused,[z.id]);assert.equal(c.byGroup.venue.unobservedDeclarations,1);
+});
+
+test('complete audit requires exact unique manifest matches and no failures',()=>{
+ const a={name:'a',ranges:[]},b={name:'b',ranges:[]};
+ assert.equal(completeness([a,b],['a','b']).complete,true);
+ assert.equal(completeness([a],['a','b']).complete,false);
+ assert.deepEqual(completeness([a],['a','b']).missing,['b']);
+ assert.equal(completeness([a,a],['a','b']).complete,false);
+ assert.equal(completeness([a,b],['a','b'],[{name:'b'}]).complete,false);
+ assert.equal(completeness([a,b],['a','c']).complete,false);
+ assert.equal(completeness([],[]).complete,false);
+});
+test('partial report prominently warns against extraction',()=>{
+ const css='.cup-a{color:red}',a=analyze(css),c=coverage(css,a,[]);
+ c.completeness=completeness([],['desktop/cup'],[{name:'desktop/cup'}]);
+ assert.match(markdown(a,c),/INCOMPLETE — PARTIAL COVERAGE; NOT SAFE FOR EXTRACTION/);
+ assert.match(markdown(a,c),/Successful: 0\/1; failed: 1/);
+ assert.match(markdown(a,c),/Missing: desktop\/cup/);
 });
