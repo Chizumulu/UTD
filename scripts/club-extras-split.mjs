@@ -1,7 +1,8 @@
 import {createHash} from 'node:crypto';
 import {minifyJs} from './minify-pages-assets.mjs';
 
-export async function splitClubExtras(app){
+export async function splitClubExtras(app,sponsorCssUrl){
+ if(!/^club-sponsors\.css\?v=[a-f0-9]{16}$/.test(sponsorCssUrl))throw Error('Invalid sponsor CSS URL');
  const unique=s=>{if(app.split(s).length!==2)throw Error('Expected unique club extras source: '+s);return app.indexOf(s)};
  const take=(start,end)=>{const a=unique(start),b=unique(end);if(b<=a)throw Error('Invalid club extras boundaries');const block=app.slice(a,b);app=app.slice(0,a)+app.slice(b);return block};
  const replace=(before,after)=>{unique(before);app=app.replace(before,()=>after)};
@@ -12,11 +13,15 @@ export async function splitClubExtras(app){
  replace('  function renderTeamStaffTab() {',`  function loadClubExtras(){
     return loadOptionalAsset('${url}',()=>!!window.__utdClubExtras);
   }
+  let clubSponsorCssReady=false;
+  function loadClubSponsors(){
+    return Promise.all([loadClubExtras(),loadOptionalAsset('${sponsorCssUrl}',null,true)]).then(()=>{clubSponsorCssReady=true;});
+  }
   function renderTeamStoryTab(){
     const panel=document.getElementById('teamInfoStoryTab');
     if(!panel)return;
-    if(window.__utdClubExtras){window.__utdClubExtras.sponsors();setupTeamInfoRevealObserver();return;}
-    loadFeaturePanel(panel,loadClubExtras,()=>{
+    if(window.__utdClubExtras&&clubSponsorCssReady){window.__utdClubExtras.sponsors();setupTeamInfoRevealObserver();return;}
+    loadFeaturePanel(panel,loadClubSponsors,()=>{
       if(currentView==='squad'&&currentTeamInfoKey==='Chizumulu United FC'&&currentTeamInfoTab==='story'&&!archiveMode)renderTeamStoryTab();
     },renderTeamStoryTab);
   }
