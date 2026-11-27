@@ -292,6 +292,53 @@ try{
    }
   });
  }
+ await run('automatic notices wait, preserve order and acknowledge once',async()=>{
+  const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',serviceWorkers:'block',reducedMotion:'reduce',locale:'ko-KR'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage();
+  const faults=[];
+  p.on('pageerror',e=>faults.push(e.message));
+  await p.addInitScript(()=>localStorage.setItem('nrfa-pwa-visit-count','2'));
+  // Test-only fixtures: the production news has expired; supply one match for any test date.
+  await p.route(/\/app\.js(?:\?|$)/,async route=>{
+   const res=await route.fetch(),src=await res.text();
+   const edited=src.replace(/const NEWS_POPUP_EXPIRES_AT = [^;]+;/,'const NEWS_POPUP_EXPIRES_AT = Date.now()+86400000;')
+    .replace('function collectTodayMatches() {', "function collectTodayMatches() { return [{m:{homeEn:'Chizumulu United FC',homeKo:'치주물루',awayEn:'Mafu Stars FC',awayKo:'마푸',kickoffTime:'15:00'},ms:Date.now(),pos:19}];");
+   assert.notEqual(edited,src);
+   await route.fulfill({response:res,body:edited});
+  });
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await visible(p,'#disclaimerModal');
+   // The install delay is allowed to expire without dismissing the first modal.
+   await p.waitForTimeout(15500);
+   for(const id of ['newsPopupModal','matchdayPopupModal','pwaInstallBanner'])assert.ok(!await p.locator('#'+id).isVisible(),id+' overlapped disclaimer');
+   await p.locator('#disclaimerModal .dc-confirm').click();
+   await visible(p,'#newsPopupModal');
+   assert.ok(!await p.locator('#disclaimerModal').isVisible());
+   assert.ok(!await p.locator('#matchdayPopupModal').isVisible());
+   await p.locator('#newsPopupModal .news-popup-close-x').click();
+   await visible(p,'#matchdayPopupModal');
+   assert.ok(!await p.locator('#newsPopupModal').isVisible());
+   assert.ok(!await p.locator('#pwaInstallBanner').isVisible());
+   // Open a visitor-requested dialog before the next automatic notice.
+   await p.evaluate(()=>{closeMatchdayPopup();openIosGuideModal()});
+   await visible(p,'#iosGuideModal');
+   await p.waitForTimeout(700);
+   assert.ok(!await p.locator('#pwaInstallBanner').isVisible());
+   await p.evaluate(()=>closeIosGuideModal());
+   await visible(p,'#pwaInstallBanner');
+   await p.locator('#pwaInstallBanner .pwa-install-banner-close').click();
+   await p.reload({waitUntil:'domcontentloaded',timeout:45000});
+   await visible(p,'#disclaimerModal');
+   await p.locator('#disclaimerModal .dc-confirm').click();
+   await p.waitForTimeout(800);
+   assert.ok(!await p.locator('#newsPopupModal').isVisible());
+   assert.ok(!await p.locator('#matchdayPopupModal').isVisible());
+   assert.ok(!await p.locator('#pwaInstallBanner').isVisible());
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  const seoContext=await browser.newContext({serviceWorkers:'block'});
  await blockAnalytics(seoContext);
  try{

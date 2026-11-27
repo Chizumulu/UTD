@@ -348,10 +348,16 @@
   async function installApp() {
     hideInstallBanner();
     if (deferredInstallPrompt) {
-      deferredInstallPrompt.prompt();
-      try { await deferredInstallPrompt.userChoice; } catch (e) {}
-      deferredInstallPrompt = null;
-      updateInstallBtnVisibility();
+      nativeInstallPending = true;
+      try {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+      } catch (e) {} finally {
+        nativeInstallPending = false;
+        deferredInstallPrompt = null;
+        updateInstallBtnVisibility();
+        scheduleAutomaticNotices();
+      }
       return;
     }
     if (isIOSDevice()) {
@@ -686,7 +692,7 @@
   const PWA_DISMISS_KEY = 'nrfa-pwa-banner-dismiss-until';
   const PWA_DISMISS_DAYS = 7;
   const PWA_MIN_VISITS = 2;
-  const PWA_SHOW_DELAY_MS = 2500;
+  const PWA_SHOW_DELAY_MS = 15000;
 
   function isMobileDevice() {
     return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -719,11 +725,16 @@
     } catch (e) {}
   }
 
+  let pwaBannerGeneration = 0;
+  let pwaBannerHandled = false;
   function hideInstallBanner() {
+    pwaBannerHandled = true;
+    pwaBannerActive = false;
+    const generation = ++pwaBannerGeneration;
     const banner = document.getElementById('pwaInstallBanner');
     if (!banner) return;
     banner.classList.remove('show');
-    setTimeout(() => { banner.style.display = 'none'; }, 350);
+    setTimeout(() => { if (generation === pwaBannerGeneration) banner.style.display = 'none'; }, 350);
   }
 
   function showInstallBanner() {
@@ -731,18 +742,93 @@
     if (!banner) return;
     banner.style.display = 'flex';
     // display 적용 후 다음 프레임에 show 클래스를 붙여야 슬라이드 애니메이션이 재생됩니다.
-    requestAnimationFrame(() => requestAnimationFrame(() => banner.classList.add('show')));
+    const generation = ++pwaBannerGeneration;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (generation === pwaBannerGeneration && !pwaBannerHandled) banner.classList.add('show');
+    }));
   }
 
   let pwaVisitCount = 0;
 
+  // One shared queue for automatic notices. Eligibility is rechecked at display time.
+  // A busy page delays a notice; it does not consume it.
+  const automaticNotices = new Map();
+  const completedAutomaticNotices = new Set();
+  let automaticNoticeTimer = null;
+  let automaticNoticeReady = false;
+  let pwaBannerActive = false;
+  let nativeInstallPending = false;
+
+  function automaticModalBusy() {
+    return nativeInstallPending || Array.from(document.querySelectorAll('.modal-overlay, dialog[open], #celebrateOverlay'))
+      .some(el => el.isConnected && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden');
+  }
+
+  function suspendInstallBanner() {
+    if (!pwaBannerActive || pwaBannerHandled) return;
+    const banner = document.getElementById('pwaInstallBanner');
+    if (!banner || banner.style.display === 'none') return;
+    ++pwaBannerGeneration;
+    banner.classList.remove('show');
+    banner.style.display = 'none';
+    pwaBannerActive = false;
+    completedAutomaticNotices.delete('install');
+    enqueueAutomaticNotice('install', 40, 0, showEligibleInstallBanner);
+  }
+
+  function scheduleAutomaticNotices(delay = 250) {
+    if (!automaticNoticeReady || automaticNoticeTimer !== null || !automaticNotices.size) return;
+    automaticNoticeTimer = setTimeout(() => {
+      automaticNoticeTimer = null;
+      const installBanner = document.getElementById('pwaInstallBanner');
+      if (document.hidden || automaticModalBusy() || pwaBannerActive ||
+          (installBanner && getComputedStyle(installBanner).display !== 'none')) {
+        scheduleAutomaticNotices();
+        return;
+      }
+      const next = Array.from(automaticNotices.values()).sort((a,b) => a.priority-b.priority)[0];
+      if (!next) return;
+      if (Date.now() < next.due) { scheduleAutomaticNotices(Math.min(1000, next.due-Date.now())); return; }
+      automaticNotices.delete(next.key);
+      completedAutomaticNotices.add(next.key);
+      try { next.show(); } catch (error) { console.warn('Automatic notice failed:', next.key, error); }
+      scheduleAutomaticNotices();
+    }, delay);
+  }
+
+  function enqueueAutomaticNotice(key, priority, delay, show) {
+    if (automaticNotices.has(key) || completedAutomaticNotices.has(key)) return;
+    automaticNotices.set(key, { key, priority, due: Date.now()+delay, show });
+    scheduleAutomaticNotices(0);
+  }
+  window.enqueueUtdAutomaticNotice = enqueueAutomaticNotice;
+
+  function canShowInstallBanner() {
+    return !pwaBannerHandled && !isStandaloneMode() && isMobileDevice() &&
+      !isInstallBannerDismissed() && !!(deferredInstallPrompt || isIOSDevice()) &&
+      pwaVisitCount >= PWA_MIN_VISITS;
+  }
+  function showEligibleInstallBanner() {
+    if (!canShowInstallBanner() || !document.getElementById('pwaInstallBanner')) return;
+    pwaBannerActive = true;
+    showInstallBanner();
+  }
   function maybeShowInstallBanner() {
-    if (isStandaloneMode()) return;
-    if (!isMobileDevice()) return; // PC에서는 배너를 띄우지 않습니다.
-    if (isInstallBannerDismissed()) return;
-    if (!deferredInstallPrompt && !isIOSDevice()) return; // 설치 가능한 환경이 아니면 스킵
-    if (pwaVisitCount < PWA_MIN_VISITS) return;
-    setTimeout(showInstallBanner, PWA_SHOW_DELAY_MS);
+    if (canShowInstallBanner()) enqueueAutomaticNotice('install', 40, PWA_SHOW_DELAY_MS, showEligibleInstallBanner);
+  }
+
+  function startAutomaticNotices() {
+    if (automaticNoticeReady) return;
+    automaticNoticeReady = true;
+    // Observe only the existing modal shells, not the entire application DOM.
+    const observer = new MutationObserver(() => {
+      if (automaticModalBusy()) suspendInstallBanner();
+      scheduleAutomaticNotices();
+    });
+    document.querySelectorAll('.modal-overlay').forEach(el =>
+      observer.observe(el, {attributes:true, attributeFilter:['style','class','hidden']}));
+    document.addEventListener('visibilitychange', () => scheduleAutomaticNotices(0));
+    scheduleAutomaticNotices(0);
   }
 
   // leagueData, topScorersData, SEASON_START 등은 data.js 파일에서 불러옵니다.
@@ -24132,9 +24218,7 @@
     }
     var tries = 0;
     (function waitAndShow() {
-      var busy = Array.prototype.some.call(document.querySelectorAll('.modal-overlay'), function (m) {
-        return m.style.display && m.style.display !== 'none';
-      }) || document.body.classList.contains('season-archive');
+      var busy = automaticModalBusy() || pwaBannerActive || automaticNotices.size > 0 || document.body.classList.contains('season-archive');
       if (busy && ++tries < 40) { setTimeout(waitAndShow, 400); return; }
       if (busy) return; // 끝내 다른 창이 열려 있으면 이번엔 건너뛰고(저장 안 함) 다음 방문에 보여줍니다
       if (!state.preview) celebrateMarkSeen(id);
@@ -24306,6 +24390,7 @@
 
   function showModalAnimated(modal) {
     if (!modal) return;
+    suspendInstallBanner();
     modalAnimTokens.set(modal, ++modalAnimSeq);
     // 직전 닫힘 애니메이션이 남겨둔 인라인 opacity/transform이 있으면 지워서,
     // 다시 열릴 때 반투명하거나 살짝 작게 보이는 채로 시작하지 않게 합니다.
@@ -24486,7 +24571,7 @@
       try { localStorage.setItem(DISCLAIMER_KEY, String(hideUntil)); } catch (e) {}
     }
     if (modal) closeModalAnimated(modal);
-    showNewsPopupIfNeeded() || showMatchdayPopupIfNeeded();
+    scheduleAutomaticNotices();
   }
 
   // ===== 뉴스 안내 팝업 (치주물루 vs 마푸 경기 11/27(금) 일정 변경 안내 · 2026-11-17부터 7일간 노출) =====
@@ -24523,11 +24608,10 @@
   function closeNewsPopup(skipNext) {
     const modal = document.getElementById('newsPopupModal');
     const hideUntil = computeHideUntil('newsPopup', NEWS_POPUP_HIDE_DAYS);
-    if (hideUntil !== null) {
-      try { localStorage.setItem(NEWS_POPUP_KEY, String(hideUntil)); } catch (e) {}
-    }
+    // An ordinary close acknowledges this specific news item; a new item uses a new key.
+    try { localStorage.setItem(NEWS_POPUP_KEY, String(hideUntil === null ? HIDE_FOREVER : hideUntil)); } catch (e) {}
     if (modal) closeModalAnimated(modal);
-    if (!skipNext) showMatchdayPopupIfNeeded();
+    scheduleAutomaticNotices();
   }
 
   // ===== 경기일 팝업 (오늘 열리는 경기 안내 · 리그 + 컵대회) =====
@@ -24683,7 +24767,9 @@
   }
 
   function closeMatchdayPopup() {
+    try { localStorage.setItem(MATCHDAY_POPUP_KEY, kstDateKey(Date.now())); } catch (e) {}
     closeModalAnimated(document.getElementById('matchdayPopupModal'));
+    scheduleAutomaticNotices();
   }
 
   function dismissMatchdayPopupToday() {
@@ -24739,8 +24825,12 @@
     window.addEventListener('resize', equalizeTitleLines);
 
     if (!location.hash.startsWith('#/match/')) {
-      showDisclaimerIfNeeded() || showNewsPopupIfNeeded() || showMatchdayPopupIfNeeded();
+      // Keep the first acknowledgement immediate, then wait until its closing animation ends.
+      showDisclaimerIfNeeded();
+      enqueueAutomaticNotice('news', 20, 0, showNewsPopupIfNeeded);
+      enqueueAutomaticNotice('matchday', 30, 0, showMatchdayPopupIfNeeded);
     }
+    startAutomaticNotices();
     initScrollFadeHints();
     updateInstallBtnVisibility();
 
