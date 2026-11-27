@@ -440,8 +440,13 @@ try{
    await p.waitForSelector('#predictTableBody .pt-c-rank',{timeout:90000});
    assert.equal(requests,2);
    await p.locator('#predictTabs [data-predict-tab="model"]').click();
-   await visible(p,'#aiTrackSummary');
+   await visible(p,'#predictView [data-predict-panel="model"].active');
+   assert.equal(await p.locator('#predictTabs [data-predict-tab="model"]').getAttribute('aria-selected'),'true');
+   await visible(p,'#aiTrackDetails > summary');
+   if(!(await p.locator('#aiTrackDetails').evaluate(el=>el.open)))await p.locator('#aiTrackDetails > summary').click();
+   await visible(p,'#aiTrackDetails[open] #aiTrackSummary');
    await filled(p,'#aiTrackSummary');
+   await visible(p,'#aiTrackSummary .ai-track-chip-val, #aiTrackSummary .ai-track-empty');
    await p.locator('#predictTabs [data-predict-tab="outlook"]').click();
    await visible(p,'#predictTableBody');
    await p.evaluate(()=>showView('rank'));
