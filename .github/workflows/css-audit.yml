@@ -3,6 +3,10 @@ on:
   pull_request:
     paths:
       - 'scripts/css-audit*.mjs'
+      - 'scripts/club-css-*.mjs'
+      - 'scripts/club-extras-split.mjs'
+      - 'scripts/build-pages.mjs'
+      - 'style.css'
       - '.github/workflows/css-audit.yml'
   workflow_dispatch:
 permissions:
@@ -21,7 +25,7 @@ jobs:
           python-version: '3.12'
       - run: python3 -m pip install Pillow==11.3.0
       - run: npm install --no-save --package-lock=false playwright@1.56.1 terser@5.44.1 postcss@8.5.6 cssnano@7.1.2
-      - run: node --test scripts/css-audit.test.mjs
+      - run: node --test scripts/css-audit.test.mjs scripts/club-css-split.test.mjs
       - run: sudo python3 scripts/playwright-ci-apt.py
       - run: bash scripts/playwright-ci-install.sh css-audit-results/install
       - name: Build and audit deployed CSS
@@ -37,13 +41,15 @@ jobs:
             sleep 1
           done
           curl -fsS http://127.0.0.1:8081/UTD/ -o /dev/null
+          club_status=0
+          node scripts/club-css-browser.mjs http://127.0.0.1:8081/UTD/ || club_status=$?
           browser_status=0
           node scripts/css-audit-browser.mjs http://127.0.0.1:8081/UTD/ "$RUNNER_TEMP/css-site/UTD/style.css" css-audit-results || browser_status=$?
           report_status=0
           node scripts/css-audit.mjs "$RUNNER_TEMP/css-site/UTD/style.css" css-audit-results/samples.json css-audit-results || report_status=$?
           if [[ -f css-audit-results/report.md ]]; then cat css-audit-results/report.md | tee -a "$GITHUB_STEP_SUMMARY"; fi
-          if (( browser_status != 0 || report_status != 0 )); then
-            echo "::error::CSS audit incomplete (browser=$browser_status report=$report_status)"
+          if (( club_status != 0 || browser_status != 0 || report_status != 0 )); then
+            echo "::error::CSS audit incomplete (club=$club_status browser=$browser_status report=$report_status)"
             exit 1
           fi
       - uses: actions/upload-artifact@v4
