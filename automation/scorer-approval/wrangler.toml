@@ -1,4 +1,5 @@
-name = "utd-scorer-approval"
+name = "utd"
+keep_vars = true
 main = "worker.js"
 compatibility_date = "2026-11-21"
 
@@ -7,4 +8,4 @@ crons = ["*/10 * * * *"]
 
 [[kv_namespaces]]
 binding = "APPROVALS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "ea154a24db70473380edd9553f27624a"
