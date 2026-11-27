@@ -1,5 +1,6 @@
 import { applyResponsiveCrests, applyStaticCrests } from './crest-templates.mjs';
 import { minifyPagesAssets } from './minify-pages-assets.mjs';
+import { splitArchiveView } from './archive-view-split.mjs';
 import { splitVenueMap } from './venue-map-split.mjs';
 import { splitMatchDetail } from './match-detail-split.mjs';
 import { splitPlayerModals } from './player-modal-split.mjs';
@@ -55,7 +56,9 @@ const splitTeamMatch = await splitTeamMatchCompare(splitCompare.app);
 const splitPlayers = await splitPlayerModals(splitTeamMatch.app);
 const splitDetails = await splitMatchDetail(splitPlayers.app);
 const splitVenues = await splitVenueMap(splitDetails.app);
-writeFileSync(appPath, splitVenues.app);
+const splitArchive = await splitArchiveView(splitVenues.app);
+writeFileSync(appPath, splitArchive.app);
+writeFileSync(join(output,splitArchive.file),splitArchive.code);
 writeFileSync(join(output,splitVenues.file),splitVenues.code);
 writeFileSync(join(output,splitDetails.file),splitDetails.code);
 writeFileSync(join(output,splitPlayers.file),splitPlayers.code);
@@ -63,7 +66,7 @@ for (const asset of splitTeamMatch.assets) writeFileSync(join(output,asset.file)
 writeFileSync(join(output,splitCompare.file),splitCompare.code);
 writeFileSync(join(output,splitExport.file),splitExport.code);
 await minifyPagesAssets(output);
-for (const file of ['app.js','a11y.js',splitExport.file,splitCompare.file,...splitTeamMatch.assets.map(asset=>asset.file),splitPlayers.file,splitDetails.file,splitVenues.file]) execFileSync(process.execPath,['--check',join(output,file)],{stdio:'inherit'});
+for (const file of ['app.js','a11y.js',splitExport.file,splitCompare.file,...splitTeamMatch.assets.map(asset=>asset.file),splitPlayers.file,splitDetails.file,splitVenues.file,splitArchive.file]) execFileSync(process.execPath,['--check',join(output,file)],{stdio:'inherit'});
 
 function assetVersion(file) {
   if (!publishedFiles.has(file)) throw new Error(`Asset is missing from the Pages artifact: ${file}`);
