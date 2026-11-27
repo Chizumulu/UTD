@@ -14,16 +14,24 @@ export async function splitClubExtras(app,sponsorCssUrl){
     return loadOptionalAsset('${url}',()=>!!window.__utdClubExtras);
   }
   let clubSponsorCssReady=false;
+  let clubSponsorLoadFailed=false;
   function loadClubSponsors(){
-    return Promise.all([loadClubExtras(),loadOptionalAsset('${sponsorCssUrl}',null,true)]).then(()=>{clubSponsorCssReady=true;});
+    return Promise.all([loadClubExtras(),loadOptionalAsset('${sponsorCssUrl}',null,true)]).then(()=>{clubSponsorCssReady=true;}).catch(error=>{clubSponsorLoadFailed=true;throw error;});
+  }
+  function retryClubSponsors(){
+    clubSponsorLoadFailed=false;
+    renderTeamStoryTab();
   }
   function renderTeamStoryTab(){
     const panel=document.getElementById('teamInfoStoryTab');
     if(!panel)return;
     if(window.__utdClubExtras&&clubSponsorCssReady){window.__utdClubExtras.sponsors();setupTeamInfoRevealObserver();return;}
+    // Route restoration and other rerenders must not silently consume the
+    // error state or start a second request before the user chooses Retry.
+    if(clubSponsorLoadFailed)return;
     loadFeaturePanel(panel,loadClubSponsors,()=>{
       if(currentView==='squad'&&currentTeamInfoKey==='Chizumulu United FC'&&currentTeamInfoTab==='story'&&!archiveMode)renderTeamStoryTab();
-    },renderTeamStoryTab);
+    },retryClubSponsors);
   }
   function renderTeamStaffTab() {`);
  replace('    renderTeamStoryTab();\n    renderSquadView();','    renderSquadView();');
