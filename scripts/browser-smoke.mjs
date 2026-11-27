@@ -436,9 +436,11 @@ try{
    await p.evaluate(()=>loadArchiveData());
    assert.equal(requests,0);
    await p.evaluate(()=>{location.hash='#/archive/weekly'});
-   await p.waitForFunction(()=>document.body.style.cursor!=='progress'&&document.querySelector('.toast')?.textContent?.length>0);
+   await p.waitForFunction(()=>document.body.style.cursor!=='progress'&&document.querySelector('#shareToast.is-error.show .share-toast-action'));
+   assert.equal(requests,1);
    assert.ok(!(await p.locator('body').evaluate(e=>e.classList.contains('season-archive'))));
-   await p.evaluate(()=>window.openSeasonArchive({tab:'weekly'}));
+   assert.ok(await p.evaluate(()=>location.hash.includes('archive/weekly')));
+   await p.locator('#shareToast .share-toast-action').click();
    await visible(p,'#archiveWeeklyPane');
    await filled(p,'#archiveTableBody');
    assert.equal(requests,2);
