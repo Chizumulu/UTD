@@ -96,7 +96,7 @@ try{
      // Wait for actual strip content, then require raster crests to load responsive candidates.
      await page.waitForFunction(()=>['homeRecentStrip','homeUpcomingStrip'].every(id=>document.getElementById(id)?.children.length>0),null,{timeout:20000});
      await page.waitForFunction(()=>Array.from(document.querySelectorAll('#homeRecentStrip img.home-match-crest, #homeUpcomingStrip img.home-match-crest')).some(img=>img.hasAttribute('srcset')&&img.complete&&img.naturalWidth>0&&img.currentSrc.includes('/crest-assets/')),null,{timeout:20000});
-     const strips=await page.locator('img.home-match-crest').evaluateAll(imgs=>imgs.filter(img=>/\\.(webp|png|jpe?g)$/i.test(img.getAttribute('src')||'')).map(img=>({src:img.getAttribute('src'),srcset:img.getAttribute('srcset'),current:img.currentSrc})));
+     const strips=await page.locator('img.home-match-crest').evaluateAll(imgs=>imgs.filter(img=>/\.(webp|png|jpe?g)(?:[?#].*)?$/i.test(img.getAttribute('src')||'')).map(img=>({src:img.getAttribute('src'),srcset:img.getAttribute('srcset'),current:img.currentSrc})));
      assert.ok(strips.length>0,'home match raster crests missing');
      assert.ok(strips.every(img=>img.srcset),'home match crest missing responsive source');
      console.log(label+' home match crests: '+JSON.stringify(strips));
