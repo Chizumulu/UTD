@@ -5,6 +5,11 @@ const lead=(s)=>s.trim().replace(/^:root\[data-theme=["']dark["']\]\s+/,'');
 const id=(s,n)=>new RegExp('^#(?:'+n+')(?:$|[\\s.:#>+~\\[])').test(s);
 const cls=(s,n)=>new RegExp('^\\.(?:'+n+')(?:$|[\\s.:#>+~\\[])').test(s);
 
+// Shared renderer components are critical, regardless of the feature name.
+ // Match comparison layout itself is exclusive; its cards, stats, AI and
+ // history components are reused in other views and must not be deferred.
+export const sharedSelector=s=>/\.(?:mc-(?!compare-(?:layout|left|right|meet)(?![\w-])|layout-played(?![\w-])|modal-played(?![\w-])|col-(?:ai|meet|stats)(?![\w-]))[\w-]+|predict-intro(?:-[\w-]+)?|ti-pos-[\w-]+|ti-position-card|mgp-[\w-]+|round-half-empty|ti-appear-empty)(?![\w-])/.test(s);
+
 export const clubPolicies={
  club:s=>id(s,'myTeamInfoView|teamInfo(?:Overview|Record|Results|Youtube|Staff)Tab|squadGroups')||
   cls(s,'ti-(?:room|award|staff|yt|appear|gk|impact|assist|pair|am|pos|scorer|result)-[\\w-]+|ti-awards-card|ti-position-card|pcard(?:-[\\w-]+)?|squad-(?:card|pcard|former)(?:-[\\w-]+)?|sqt-[\\w-]+|team-(?:motto|kit|kits)-[\\w-]+'),
@@ -25,12 +30,13 @@ export const viewPolicies={
 export const modalPolicies={
  players:s=>cls(s,'spm-(?:team|photo|number|name|tags|tag|loan|section|stat|award|assist|form|comp|impact)(?:-[\\w-]+)?|squad-player-modal-national-badge(?:-[\\w-]+)?'),
  matchdetail:s=>cls(s,'pp-[\\w-]+|mcenter(?:-[\\w-]+)?'),
- matchcompare:s=>cls(s,'mc-[\\w-]+'),
+ matchcompare:s=>cls(s,'mc-(?:compare-(?:layout|left|right|meet)|layout-played|modal-played|col-(?:ai|meet|stats))'),
  fullrecord:s=>cls(s,'fullrec-(?:note|list|row|rank|photo|name|combo|arrow|sub|value)(?:-[\\w-]+)?'),
 };
 export const policies={...clubPolicies,...viewPolicies,...modalPolicies};
 export function featureOwner(selector){
  const s=lead(selector);
+ if(sharedSelector(s))return null;
  const owners=Object.entries(policies).filter(([,predicate])=>predicate(s)).map(([k])=>k);
  return owners.length===1?owners[0]:null;
 }
