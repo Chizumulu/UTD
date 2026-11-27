@@ -48,6 +48,8 @@ const cases=[
  ['postponed',()=>openPostponedMatchesModal(),'#postponedMatchesModal','#postponedMatchesBody > *',[]]
 ];
 const results=[];
+const slowCases=new Set(['teamcompare','rank','rounds','scorers','report','match-detail','match-compare','venue-map','venue-travel']);
+const runs=[...profiles.flatMap(p=>cases.map(c=>({p,c,slow:false}))),...profiles.flatMap(p=>cases.filter(c=>slowCases.has(c[0])).map(c=>({p,c,slow:true})))];
 const browser=await chromium.launch();
 async function compare(page,root){
  return page.evaluate(({source,root})=>{
@@ -90,8 +92,8 @@ async function compare(page,root){
  },{source,root});
 }
 try{
- for(const p of profiles)for(const [name,action,root,selector,kinds] of cases){
-  const label=p.name+'/'+name;
+ for(const {p,c:[name,action,root,selector,kinds],slow} of runs){
+  const label=(slow?'slow/':'')+p.name+'/'+name;
   const context=await browser.newContext({viewport:{width:p.width,height:p.height},colorScheme:p.theme,reducedMotion:'reduce',serviceWorkers:'block'});
   const page=await context.newPage(),errors=[],requests=[];
   page.on('pageerror',e=>errors.push(e.message));
@@ -101,14 +103,33 @@ try{
    await page.goto(new URL('?lang='+p.lang,base).href,{waitUntil:'domcontentloaded',timeout:45000});
    await page.waitForFunction(()=>document.querySelector('#mainMiniTableBody')?.children.length>0);
    if(p.theme==='dark')await page.evaluate(()=>document.documentElement.dataset.theme='dark');
-   if(action)await page.evaluate(action);
+   let release,seen;
+   const hold=new Promise(resolve=>{release=resolve});
+   const started=new Promise(resolve=>{seen=resolve});
+   if(slow){
+    const target=kinds[0];
+    await page.route(new RegExp('/feature-'+target+'\\.css\\?v='),async route=>{
+     seen();
+     await hold;
+     await route.continue();
+    });
+   }
+   try{
+    if(action)await page.evaluate(action);
+    if(slow){
+     let timer;
+     try{await Promise.race([started,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('No cold CSS request for '+name)),10000)})]);}finally{clearTimeout(timer);}
+     await page.waitForTimeout(800);
+     if(await page.locator(selector).first().isVisible())throw Error('Feature content exposed before its CSS: '+name);
+    }
+   }finally{release();}
    if(kinds.length)await page.waitForFunction(ks=>ks.every(k=>clubDetailCssReady.has(k)),kinds,{timeout:30000});
    await page.locator(selector).first().waitFor({state:'visible',timeout:30000});
    await page.waitForTimeout(300);
    const result=await compare(page,root);
    // Revisit team comparison after the two other known CSS owners load.
    // This explicitly reproduces the user's cross-feature navigation.
-   if(name==='teamcompare'){
+   if(name==='teamcompare'&&!slow){
     await page.screenshot({path:join(out,p.name+'-teamcompare-first.png')});
     await page.evaluate(()=>showView('predict'));
     await page.waitForFunction(()=>clubDetailCssReady.has('prediction'));
@@ -129,8 +150,8 @@ try{
   finally{await context.close();writeFileSync(join(out,'results.json'),JSON.stringify(results,null,2));}
  }
 }finally{await browser.close();}
-const mismatches=results.filter(r=>r.differenceCount>0),errors=results.filter(r=>r.error||r.errors?.length);
-const summary={expected:profiles.length*cases.length,executed:results.length,matched:results.filter(r=>!r.error&&!r.errors?.length&&!r.differenceCount).length,mismatch:mismatches.length,errors:errors.length};
+const mismatches=results.filter(r=>r.differenceCount>0||r.revisit?.differenceCount>0),errors=results.filter(r=>r.error||r.errors?.length);
+const summary={expected:runs.length,cold:profiles.length*cases.length,slow:profiles.length*slowCases.size,executed:results.length,matched:results.filter(r=>!r.error&&!r.errors?.length&&!r.differenceCount&&!r.revisit?.differenceCount).length,mismatch:mismatches.length,errors:errors.length};
 writeFileSync(join(out,'summary.json'),JSON.stringify(summary,null,2));
 console.log('Cold CSS summary '+JSON.stringify(summary));
 if(mismatches.length||errors.length||results.length!==summary.expected)process.exitCode=1;
