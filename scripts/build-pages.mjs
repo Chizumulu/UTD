@@ -1,3 +1,4 @@
+import { applyResponsiveCrests } from './crest-templates.mjs';
 import { writeSeo } from './seo-pages.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -27,9 +28,21 @@ const files = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' })
   .filter(file => file === '.nojekyll' || file.startsWith('fonts/') || /^[^./][^/]*$/.test(file));
 const publishedFiles = new Set(files);
 
+// Copy source assets first, then optimize only the deployment artifact.
+for (const file of files) {
+  const destination = join(output, file);
+  mkdirSync(dirname(destination), { recursive: true });
+  copyFileSync(file, destination);
+}
+execFileSync('python3', ['scripts/generate-crest-assets.py', output], {stdio:'inherit'});
+const manifest = JSON.parse(readFileSync(join(output,'crest-manifest.json'),'utf8'));
+const appPath = join(output,'app.js');
+writeFileSync(appPath, applyResponsiveCrests(readFileSync(appPath,'utf8'), manifest));
+execFileSync(process.execPath,['--check',appPath],{stdio:'inherit'});
+
 function assetVersion(file) {
   if (!publishedFiles.has(file)) throw new Error(`Asset is missing from the Pages artifact: ${file}`);
-  return createHash('sha256').update(readFileSync(file)).digest('hex').slice(0, 16);
+  return createHash('sha256').update(readFileSync(join(output,file))).digest('hex').slice(0, 16);
 }
 
 const source = readFileSync('index.html', 'utf8');
@@ -46,12 +59,7 @@ const html = source.replace(versionBlock, updatedBlock).replace(
   (_, prefix, file) => prefix + assetVersion(file)
 );
 
-for (const file of files) {
-  const destination = join(output, file);
-  mkdirSync(dirname(destination), { recursive: true });
-  if (file === 'index.html') writeFileSync(destination, html);
-  else copyFileSync(file, destination);
-}
+writeFileSync(join(output,'index.html'),html);
 
 writeSeo(output, readFileSync('data.js', 'utf8'), {analyticsVersion:assetVersion('utd-analytics.js')});
 
