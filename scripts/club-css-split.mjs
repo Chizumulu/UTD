@@ -29,14 +29,19 @@ export async function splitClubSponsorCss(source){
    throw Error('Non-sponsor selector '+n.selector);
   }
  }
- for(const n of block){verify(n);club.append(n.clone());}
+ // Keep the base card rule at its original cascade position: a later
+ // .ti-card rule intentionally overrides its margin on sponsor cards.
+ const keep=n=>n.type==='rule'&&n.selector==='.ti-sponsor-card';
+ if(block.filter(keep).length!==1)throw Error('Expected unique sponsor base card rule');
+ for(const n of block){verify(n);if(!keep(n))club.append(n.clone());}
  const remaining=root.clone();
  for(let i=last-1;i>=first;i--)remaining.nodes[i].remove();
- // Reject sponsor-specific selectors outside the extracted block.
+ // Check outside the original block before restoring the retained rule.
  remaining.walkRules(r=>{if(/\.ti-sponsor-|tiSponsorIn/.test(r.selector))throw Error('Sponsor selector outside block: '+r.selector)});
  remaining.walkDecls(d=>{if(/\btiSponsorIn\b/.test(d.value))throw Error('Sponsor animation outside block')});
  const rebuilt=remaining.clone();
  for(let i=0;i<block.length;i++)rebuilt.insertBefore(rebuilt.nodes[first+i],block[i].clone());
+ remaining.insertBefore(remaining.nodes[first],block.find(keep).clone());
  if(cssSignature(rebuilt.toString())!==cssSignature(source))throw Error('CSS reconstruction failed');
  const full=await minifyCss(source),critical=await minifyCss(remaining.toString()),optional=await minifyCss(club.toString());
  const size=s=>({raw:Buffer.byteLength(s),gzip:gzipSync(s).length,brotli:brotliCompressSync(s).length});
