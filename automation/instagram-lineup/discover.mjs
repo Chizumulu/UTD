@@ -70,7 +70,7 @@ export async function scanInstagramLineups(env){
   if(summary.initialized)return;
   if(env.GITHUB_REPOSITORY!=='Chizumulu/UTD'||!env.GITHUB_TOKEN)throw Error('Missing GitHub dispatch configuration');
   const kv=env.APPROVALS;
-  let cursor, count=0;
+  let cursor, count=0, failed=false;
   do{
    const page=await kv.list({prefix:PREFIX+'pending:',cursor,limit:100});
    for(const k of page.keys){
@@ -83,9 +83,11 @@ export async function scanInstagramLineups(env){
     p.nextAttempt=Date.now()+ (res.ok?60:10)*60000;
     await kv.put(k.name,JSON.stringify(p));
     console.log(JSON.stringify({event:'instagram_lineup_dispatch',postId:p.id,status:res.status}));
-    if(++count>=3)return;
+    if(!res.ok)failed=true;
+    if(++count>=3)return {ok:!failed};
    }
    cursor=page.list_complete?undefined:page.cursor;
   }while(cursor);
- }catch(e){console.error(JSON.stringify({event:'instagram_lineup_scan_failed',error:String(e)}));}
+  return {ok:!failed};
+ }catch(e){console.error(JSON.stringify({event:'instagram_lineup_scan_failed',error:String(e)}));return {ok:false};}
 }
