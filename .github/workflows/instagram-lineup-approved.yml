@@ -5,8 +5,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: approved-lineup-main
-  cancel-in-progress: false
+  group: approved-scorer-proposals-main
+  queue: max
 jobs:
   update-lineup:
     if: github.event.client_payload.proposal.kind == 'lineup' && github.event.client_payload.proposal.state == 'approved'
