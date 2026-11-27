@@ -83,8 +83,28 @@
     window.setTimeout(async function () {
       try {
         if (await shouldPrompt()) {
-          var dialog = addPrompt();
-          if (dialog && typeof dialog.showModal === "function") dialog.showModal();
+          var show = function () {
+            // Recheck synchronous preference/permission state after waiting.
+            if (!isStandalonePwa() || Notification.permission === "denied" ||
+                localStorage.getItem(NEVER_KEY) === "1" ||
+                Number(localStorage.getItem(SNOOZE_KEY) || 0) > Date.now()) return;
+            var dialog = addPrompt();
+            if (dialog && typeof dialog.showModal === "function") dialog.showModal();
+          };
+          if (typeof window.enqueueUtdAutomaticNotice === "function") {
+            window.enqueueUtdAutomaticNotice("match-alerts", 50, 0, show);
+          } else {
+            // Mixed-version fallback: do not cover a visible site modal.
+            var wait = function () {
+              if (document.hidden || Array.from(document.querySelectorAll(".modal-overlay, dialog[open], #celebrateOverlay"))
+                  .some(function (el) { return getComputedStyle(el).display !== "none"; })) {
+                window.setTimeout(wait, 300);
+                return;
+              }
+              show();
+            };
+            wait();
+          }
         }
       } catch (error) {
         console.warn("Could not check PWA match alert status:", error);
