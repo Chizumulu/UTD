@@ -1,3 +1,5 @@
+import { dashboardResponse } from '../admin-center/dashboard.mjs';
+import { monitorCredentialsIfDue } from '../admin-center/credentials.mjs';
 import { monitorCron, healthResponse } from '../health-monitor/health.mjs';
 import { scanMissingMatches } from '../match-monitor/missing.mjs';
 import { validateReviewMatches, lineupMessageValues, validatePartialLineup, correctLineupSlot } from '../instagram-lineup/review-message.mjs';
@@ -13,6 +15,10 @@ const FINISHED_STATUS = /^(full[_\s-]?time|ft|finished|final|ended|completed|mat
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/admin/dashboard")) {
+      const response = await dashboardResponse(request, env);
+      if (response) return response;
+    }
     if (url.pathname === "/webhook" && request.method === "GET") {
       return verifyWebhook(url, env);
     }
@@ -51,6 +57,11 @@ export default {
   },
 
   async scheduled(_event, env, ctx) {
+    if (env.ADMIN_CENTER_ENABLED === "true") {
+      ctx.waitUntil(monitorCredentialsIfDue(env).catch(() => {
+        console.error(JSON.stringify({event:"credential_monitor_storage_failed"}));
+      }));
+    }
     const tasks = [
       {name:"league",enabled:true,run:()=>scanForCompletedMatches(env)},
       {name:"cup",enabled:env.CUP_APPROVALS_ENABLED==="true",run:()=>scanCupApprovals(env)},
