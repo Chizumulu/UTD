@@ -13,6 +13,20 @@ async function run(name,fn){
  try{await fn();results.push({name,ok:true});console.log('PASS '+name)}
  catch(e){results.push({name,ok:false,error:String(e.message).slice(0,1000)});console.error('FAIL '+name+': '+e.message)}
 }
+// CI must not inflate real GA4/Clarity visitor or event statistics.
+async function blockAnalytics(context){
+ await context.route(/^https:\/\/(?:[^/]+\.)?(?:googletagmanager\.com|google-analytics\.com|analytics\.google\.com|clarity\.ms|doubleclick\.net)(?:\/|$)/i,route=>route.abort());
+}
+async function analyticsEvents(page,name='utd_screen_view'){
+ return page.evaluate(n=>(window.dataLayer||[]).filter(x=>x?.[0]==='event'&&x[1]===n).map(x=>x[2]),name);
+}
+async function analyticsScreen(page,group,extra={}){
+ await page.waitForFunction(({group,extra})=>{
+  const e=(window.dataLayer||[]).filter(x=>x?.[0]==='event'&&x[1]==='utd_screen_view').at(-1)?.[2];
+  return e?.screen_group===group&&Object.entries(extra).every(([k,v])=>e[k]===v);
+ },{group,extra},{timeout:15000});
+ return (await analyticsEvents(page)).at(-1);
+}
 async function visible(page,selector){await page.locator(selector).first().waitFor({state:'visible',timeout:20000})}
 async function filled(page,selector){
  await page.waitForFunction(sel=>{const n=document.querySelector(sel);return n&&n.children.length>0&&n.textContent.trim().length>0},selector,{timeout:30000});
@@ -60,6 +74,7 @@ try{
  for(const mobile of [false,true]){
   const label=mobile?'mobile-390':'desktop-1440';
   const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:1,serviceWorkers:'block',reducedMotion:'reduce',locale:'ko-KR'});
+  await blockAnalytics(context);
   const page=await context.newPage();
   const pageErrors=[];
   page.on('pageerror',e=>pageErrors.push(e.message));
@@ -75,15 +90,25 @@ try{
     await visible(page,'#rankView');
     await visible(page,mobile?'#mTabbar':'#appSidebar');
     await layout(page,mobile);
+    await analyticsScreen(page,'home',{entry_type:'entry'});
+    assert.equal((await analyticsEvents(page)).length,1,'initial home must count once');
    });
    for(const [view,selector] of [['leagueRank','#leagueTableBody'],['rounds','#roundMatchList'],['scorers','#scorersTableBody'],['squad','#teamInfoRecordTab'],['report','#reportViewContent'],['predict','#predictTableBody']]){
     await run(label+' '+view,async()=>{
      await dismiss(page);
      await navigate(page,view,mobile);
      await filled(page,selector);
+     await analyticsScreen(page,({leagueRank:'league',squad:'club'})[view]||view);
+     if(view==='leagueRank'){
+      const count=(await analyticsEvents(page)).length;
+      await page.evaluate(()=>{window.showView('leagueRank');window.showView('leagueRank')});
+      await page.waitForTimeout(100);
+      assert.equal((await analyticsEvents(page)).length,count,'re-render must not add a screen view');
+     }
      if(view==='squad'){
       await page.locator('#tiSquadBtn').click({timeout:10000});
       await filled(page,'#squadGroups');
+      await analyticsScreen(page,'club',{screen_tab:'squad'});
      }
     });
    }
@@ -92,6 +117,12 @@ try{
     await page.locator(mobile?'#cupToggleMobile':'#cupToggleSide').click({timeout:10000});
     await filled(page,'#cupViewContent');
     await visible(page,'#cupView');
+    const first=await analyticsScreen(page,'cup');
+    assert.ok(['faCup2627','mmbelwaCup'].includes(first.competition_id));
+    await page.locator('#cupViewContent .cup-chip[onclick*="mmbelwaCup"]').click({timeout:10000});
+    await analyticsScreen(page,'cup',{competition_id:'mmbelwaCup'});
+    await page.locator('#cupTabsWrap [data-cup-tab="teams"]').click({timeout:10000});
+    await analyticsScreen(page,'cup',{competition_id:'mmbelwaCup',screen_tab:'teams'});
    });
    await run(label+' poster canvas module',async()=>{
     const ok=await page.evaluate(async()=>{
@@ -105,12 +136,33 @@ try{
     });
     assert.ok(ok,'poster canvas did not render');
    });
+   await run(label+' analytics deep link and privacy',async()=>{
+    const deep=await context.newPage();
+    try {
+     await deep.goto(new URL('#/club/chizumulu-united-fc/squad',base).href,{waitUntil:'domcontentloaded',timeout:45000});
+     await analyticsScreen(deep,'club',{team_id:'chizumulu-united-fc',screen_tab:'squad',entry_type:'entry'});
+     const events=await analyticsEvents(deep);
+     assert.equal(events.length,1,'deep link must not count home first');
+     assert.ok(events.every(e=>!e.page_location.includes('#')&&!e.page_location.includes('?')));
+    }finally{await deep.close()}
+   });
    await run(label+' JavaScript runtime',async()=>assert.deepEqual(pageErrors,[]));
   }finally{
    await page.screenshot({path:join(out,label+'.png'),fullPage:false,timeout:10000}).catch(()=>{});
    await context.close();
   }
  }
+ const seoContext=await browser.newContext({serviceWorkers:'block'});
+ await blockAnalytics(seoContext);
+ try{
+  await run('SEO analytics real landing page',async()=>{
+   const page=await seoContext.newPage();
+   await page.goto(new URL('matches/',base).href,{waitUntil:'domcontentloaded',timeout:45000});
+   await analyticsScreen(page,'seo',{screen_tab:'matches',entry_type:'entry'});
+   assert.equal((await analyticsEvents(page)).length,1);
+   assert.equal(await page.evaluate(()=>(window.dataLayer||[]).filter(x=>x?.[0]==='config'&&x[1]==='G-N6GC687TZD').length),1);
+  });
+ }finally{await seoContext.close()}
  for(const path of ['matches/','league/','teams/','players/','cup/']){
   await run('SEO '+path,async()=>{
    const res=await fetch(new URL(path,base),{signal:AbortSignal.timeout(15000)});
