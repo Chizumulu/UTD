@@ -421,6 +421,40 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('match detail loads on demand, retries and preserves player return',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage(),faults=[];
+  let requests=0;
+  p.on('pageerror',e=>faults.push(e.message));
+  await p.route(/\/match-detail\.js\?v=[a-f0-9]{16}$/,route=>++requests===1?route.abort():route.continue());
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await dismiss(p);
+   await filled(p,'#mainMiniTableBody');
+   assert.equal(requests,0);
+   const key=await p.evaluate(()=>Object.keys(matchLineups).find(k=>matchLineups[k]?.starters?.length));
+   assert.ok(key);
+   await p.evaluate(k=>openMatchDetail(k,roundKeyPos(k)),key);
+   await visible(p,'#matchDetailBody .match-detail-load-status');
+   await visible(p,'#matchDetailBody button');
+   await p.locator('#matchDetailBody button').first().click();
+   await visible(p,'#matchDetailBody .match-detail-layout');
+   await visible(p,'#matchDetailBody .mcenter');
+   assert.equal(requests,2);
+   const list=p.locator('#matchDetailBody [data-lineup-mode="list"]');
+   if(await list.count()){
+    await list.click();
+    await p.locator('#matchDetailBody [data-lineup-mode="pitch"]').click();
+   }
+   await p.evaluate(()=>closeMatchDetail());
+   await p.evaluate(k=>openMatchDetail(k,roundKeyPos(k)),key);
+   await visible(p,'#matchDetailBody .match-detail-layout');
+   assert.equal(requests,2);
+   await p.evaluate(()=>closeMatchDetail());
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  if(base.hostname==='127.0.0.1')await run('player modals load on demand, retry, preserve competition and cancel stale loads',async()=>{
   const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
   await blockAnalytics(ctx);
