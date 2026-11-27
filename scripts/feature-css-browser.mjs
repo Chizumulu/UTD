@@ -119,4 +119,35 @@ try{
    console.log('Integrated CSS retry PASS '+kind);
   }finally{await context.close()}
  }
+ // A syntactically balanced but invalid at-rule forces insertRule to throw
+ // after at least one legitimate rule was inserted. Verify atomic rollback.
+ {
+  const {context,page,requests}=await start(profiles[0]);
+  try{
+   let attempts=0;
+   await page.route(/\/feature-rank\.css\?v=/,async route=>{
+    if(++attempts!==1)return route.continue();
+    const response=await route.fetch();
+    const css=await response.text();
+    const nextSlot='#utd-club-css-slot-rank-1';
+    assert.ok(css.includes(nextSlot));
+    await route.fulfill({response,body:css.replace(nextSlot,'@utd-invalid-rule{}'+nextSlot)});
+   });
+   await page.goto(base,{waitUntil:'domcontentloaded'});
+   await page.waitForFunction(()=>document.querySelector('#mainMiniTableBody')?.children.length>0);
+   const snapshot=()=>page.evaluate(()=>[...[...document.querySelectorAll('link[rel=stylesheet]')].find(l=>new URL(l.href).pathname.endsWith('/style.css')).sheet.cssRules].map(r=>r.cssText));
+   const before=await snapshot();
+   await page.evaluate(()=>showView('leagueRank'));
+   const retry=page.locator('[data-utd-css-pending="rank"] .utd-feature-css-status button');
+   await retry.waitFor({state:'visible',timeout:30000});
+   assert.deepEqual(await snapshot(),before,'partial CSS insertion must roll back');
+   assert.equal(await page.evaluate(()=>clubDetailCssReady.has('rank')),false);
+   assert.equal(attempts,1);
+   await retry.evaluate(el=>el.click());
+   await ready(page,'rank');
+   await page.locator('#leagueTableBody tr').first().waitFor({state:'visible'});
+   assert.equal(attempts,2);assert.equal(requests.rank,2);
+   console.log('Integrated CSS rollback PASS rank');
+  }finally{await context.close()}
+ }
 }finally{await browser.close()}
