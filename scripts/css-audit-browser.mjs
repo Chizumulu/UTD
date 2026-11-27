@@ -27,6 +27,37 @@ const scenarios=[
 const profiles=[{name:'desktop',width:1440,height:900,lang:'ko',theme:'light'},{name:'mobile',width:390,height:844,lang:'ko',theme:'light'},{name:'mobile-dark-en',width:360,height:780,lang:'en',theme:'dark'},{name:'tablet-ny',width:768,height:1024,lang:'ny',theme:'light'}];
 const expected=profiles.flatMap(p=>scenarios.map(s=>p.name+'/'+s[0]));
 writeFileSync(join(out,'manifest.json'),JSON.stringify({expected},null,2));
+// Drain only known automatic notices using their real acknowledgement buttons.
+// Require a quiet interval so a queued notice cannot immediately intercept the next click.
+async function dismissAutomaticNotices(page){
+ const notices=[
+  ['#disclaimerModal','button.disclaimer-confirm-btn'],
+  ['#newsPopupModal','button.news-popup-close-x'],
+  ['#matchdayPopupModal','button.matchday-popup-btn-close']
+ ];
+ const deadline=Date.now()+20000;
+ let quietSince=Date.now(),closed=0;
+ while(Date.now()<deadline){
+  let found=false;
+  for(const [selector,button] of notices){
+   const modal=page.locator(selector);
+   if(!(await modal.isVisible()))continue;
+   if(++closed>12)throw Error('Automatic notices did not settle');
+   await modal.locator(button).click({timeout:5000});
+   await modal.waitFor({state:'hidden',timeout:5000});
+   found=true;quietSince=Date.now();break;
+  }
+  if(!found){
+   if(Date.now()-quietSince>=1800)return;
+   await page.waitForTimeout(100);
+  }
+ }
+ throw Error('Automatic notices did not settle before deadline');
+}
+async function clickPredictionControl(page,selector){
+ await dismissAutomaticNotices(page);
+ await page.locator(selector).click({timeout:15000});
+}
 try{
  browser=await chromium.launch({headless:true});
  for(const profile of profiles)for(const [name,action,selector,click] of scenarios){
@@ -50,16 +81,12 @@ try{
    if(click)await page.evaluate(()=>{const b=document.querySelector('#cupToggleSide');if(!b)throw Error('Cup toggle unavailable');b.click()});
    await page.locator(selector).first().waitFor({state:'visible',timeout:15000});
    if(name==='prediction'){
-    const disclaimer=page.locator('#disclaimerModal');
-    await disclaimer.waitFor({state:'visible',timeout:15000});
-    await disclaimer.locator('button.disclaimer-confirm-btn').click({timeout:15000});
-    await disclaimer.waitFor({state:'hidden',timeout:15000});
-    await page.locator('#predictTabs [data-predict-tab="model"]').click();
+    await clickPredictionControl(page,'#predictTabs [data-predict-tab="model"]');
     await page.locator('#predictView [data-predict-panel="model"].active').waitFor({state:'visible',timeout:15000});
     await page.locator('#aiTrackDetails > summary').waitFor({state:'visible',timeout:15000});
-    if(!(await page.locator('#aiTrackDetails').evaluate(el=>el.open)))await page.locator('#aiTrackDetails > summary').click();
+    if(!(await page.locator('#aiTrackDetails').evaluate(el=>el.open)))await clickPredictionControl(page,'#aiTrackDetails > summary');
     await page.waitForFunction(()=>document.querySelector('#aiTrackSummary')?.children.length>0,{},{timeout:15000});
-    await page.locator('#predictTabs [data-predict-tab="outlook"]').click();
+    await clickPredictionControl(page,'#predictTabs [data-predict-tab="outlook"]');
     await page.locator('#predictTableBody .pt-c-rank').first().waitFor({state:'visible',timeout:15000});
    }
    await page.waitForTimeout(350);
