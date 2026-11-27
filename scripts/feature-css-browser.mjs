@@ -74,6 +74,26 @@ try{
     return {actual:actual.length,expected:ref.length,index,rule:index<0?null:actual[index],reference:index<0?null:ref[index]};
    },baseline);
    assert.equal(diff.actual,diff.expected,JSON.stringify(diff));assert.equal(diff.index,-1,JSON.stringify(diff));
+   // Regression: var()-backed border shorthand must survive a later
+   // border-top override, not just compare equal at the selector level.
+   const border=await page.evaluate(()=>{
+    const probe=document.createElement('div');
+    probe.className='squad-former-panel';
+    probe.style.setProperty('--color-border-light','rgb(17, 34, 51)');
+    document.body.appendChild(probe);
+    try{
+     const c=getComputedStyle(probe);
+     return ['top','right','bottom','left'].map(side=>[
+      c.getPropertyValue('border-'+side+'-width'),
+      c.getPropertyValue('border-'+side+'-style'),
+      c.getPropertyValue('border-'+side+'-color')
+     ]);
+    }finally{probe.remove();}
+   });
+   assert.equal(border[0][0],'0px');
+   assert.equal(border[0][1],'none');
+   for(const edge of border.slice(1))assert.deepEqual(edge,['1px','solid','rgb(17, 34, 51)']);
+   console.log('Integrated CSS shorthand PASS '+profile.name);
    assert.deepEqual(errors,[]);
    console.log('Integrated CSS order PASS '+profile.name);
   }finally{await context.close()}
