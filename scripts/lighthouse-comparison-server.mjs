@@ -1,5 +1,5 @@
 import {createServer} from 'node:http';
-import {readFileSync,statSync,realpathSync} from 'node:fs';
+import {readFileSync,statSync,realpathSync,readdirSync} from 'node:fs';
 import {resolve,relative,extname,sep} from 'node:path';
 import {gzipSync,brotliCompressSync} from 'node:zlib';
 import {pathToFileURL} from 'node:url';
@@ -24,6 +24,8 @@ export function encoding(header='',canCompress=true){
 }
 export function staticServer(directory){
  const root=realpathSync(directory),cache=new Map();
+ const warm=dir=>{for(const entry of readdirSync(dir,{withFileTypes:true})){const file=resolve(dir,entry.name);if(entry.isDirectory())warm(file);else if(entry.isFile()&&compressible.has(extname(file).toLowerCase())){const identity=readFileSync(file);cache.set(file,{identity,gzip:gzipSync(identity),br:brotliCompressSync(identity)});}}};
+ warm(root);
  const inside=file=>{const r=relative(root,file);return r!== '..'&&!r.startsWith('..'+sep)&&!r.startsWith(sep);};
  return createServer((req,res)=>{
   const fail=status=>{res.writeHead(status,{'Cache-Control':'no-store'});res.end();};
@@ -35,7 +37,7 @@ export function staticServer(directory){
    file=resolve(root,'.'+pathname);
    if(!inside(file))return fail(403);
    if(statSync(file).isDirectory()){
-    if(!pathname.endsWith('/')){res.writeHead(301,{Location:new URL(req.url,'http://localhost').pathname+'/'+new URL(req.url,'http://localhost').search});return res.end();}
+    if(!pathname.endsWith('/')){res.writeHead(301,{Location:encodeURI(pathname)+'/'+new URL(req.url,'http://localhost').search});return res.end();}
     file=resolve(file,'index.html');
    }
    file=realpathSync(file);
