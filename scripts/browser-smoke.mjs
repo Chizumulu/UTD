@@ -325,6 +325,35 @@ try{
    }
   });
  }
+  if(base.hostname==='127.0.0.1')await run('external scripts slow or unavailable do not block home and Clarity queues commands',async()=>{
+   const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block',reducedMotion:'no-preference'});
+   await blockAnalytics(ctx);
+   const p=await ctx.newPage(), faults=[];
+   let animeRequested=0,clarityRequested=0,releaseAnime;
+   const gate=new Promise(resolve=>{releaseAnime=resolve});
+   p.on('pageerror',e=>faults.push(e.message));
+   await p.route('https://www.clarity.ms/tag/**',async route=>{
+    clarityRequested++;
+    await route.fulfill({contentType:'application/javascript',body:"window.__mockClarityCalls=Array.from(window.clarity.q||[],a=>Array.from(a));window.clarity=function(){window.__mockClarityCalls.push(Array.from(arguments))};"});
+   });
+   await p.route('https://cdn.jsdelivr.net/npm/animejs@4/lib/anime.iife.min.js',async route=>{
+    animeRequested++;await gate;await route.abort();
+   });
+   try{
+    await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+    await filled(p,'#mainMiniTableBody');
+    assert.ok(animeRequested>0,'Anime request missing');
+    assert.equal(await p.evaluate(()=>typeof window.anime),'undefined');
+    await p.evaluate(()=>{window.clarity('event','diagnostic-before-interaction');document.dispatchEvent(new Event('pointerdown',{bubbles:true}));});
+    await p.waitForFunction(()=>window.__mockClarityCalls?.some(a=>a[0]==='event'&&a[1]==='diagnostic-before-interaction'),null,{timeout:10000});
+    await p.evaluate(()=>document.dispatchEvent(new Event('keydown',{bubbles:true})));
+    releaseAnime();
+    await dismiss(p);
+    await visible(p,'#rankView');
+    assert.equal(clarityRequested,1,'Clarity loaded more than once');
+    assert.deepEqual(faults,[]);
+   }finally{releaseAnime();await ctx.close()}
+  });
  await run('automatic notices wait, preserve order and acknowledge once',async()=>{
   const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',serviceWorkers:'block',reducedMotion:'reduce',locale:'ko-KR'});
   await blockAnalytics(ctx);
