@@ -421,6 +421,71 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('team comparison and match modal share lazy asset, retry and preserve routes',async()=>{
+  for(const mode of ['team','modal','cancel']){
+   const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
+   await blockAnalytics(ctx);
+   const p=await ctx.newPage(),faults=[];
+   let requests=0,release,started;
+   const gate=new Promise(r=>release=r),requestStarted=new Promise(r=>started=r);
+   p.on('pageerror',e=>faults.push(e.message));
+   await p.route(/\/team-comparison\.js\?v=[a-f0-9]{16}$/,async route=>{
+    requests++;started();
+    if(mode==='cancel')await gate;
+    return mode!=='cancel'&&requests===1?route.abort():route.continue();
+   });
+   try{
+    await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+    await dismiss(p);
+    assert.equal(requests,0);
+    if(mode==='team'){
+     await navigate(p,'teamCompare',false);
+     await visible(p,'#teamCompareBody button');
+     assert.equal(requests,1);
+     await p.locator('#teamCompareBody button').click();
+     await filled(p,'#teamCompareBody .tc-card');
+     const a=await p.locator('#tcSelectA').inputValue(),b=await p.locator('#tcSelectB').inputValue();
+     assert.ok(a&&b&&a!==b);
+     await p.locator('#tcSwapBtn').click();
+     assert.equal(await p.locator('#tcSelectA').inputValue(),b);
+     assert.equal(await p.locator('#tcSelectB').inputValue(),a);
+     await p.waitForFunction(()=>location.hash.startsWith('#/compare/')&&location.hash.split('/').length===4);
+     const swapped=p.url();
+     await p.reload({waitUntil:'domcontentloaded',timeout:45000});
+     await dismiss(p);
+     await filled(p,'#teamCompareBody .tc-card');
+     assert.equal(await p.locator('#tcSelectA').inputValue(),b);
+     assert.equal(await p.locator('#tcSelectB').inputValue(),a);
+     assert.equal(p.url(),swapped);
+     assert.equal(requests,3);
+    }else{
+     await p.evaluate(()=>{
+      const [a,b]=getRankedTeams('all');
+      openMatchCompareModal(a.nameEn,a.nameKo,b.nameEn,b.nameKo,null,{homeScore:2,awayScore:1});
+     });
+     await visible(p,'#matchCompareModal');
+     if(mode==='cancel'){
+      await requestStarted;
+      await p.evaluate(()=>closeMatchCompareModal());
+      release();
+      await p.waitForFunction(()=>!!window.__utdTeamComparison);
+      assert.equal(await p.locator('#matchCompareModal').isVisible(),false);
+     }else{
+      await visible(p,'#matchCompareBody button');
+      await p.locator('#matchCompareBody button').click();
+      await filled(p,'#matchCompareBody .mc-teams-row');
+      assert.equal((await p.locator('#matchCompareBody .mc-vs').textContent()).trim(),'2 : 1');
+      assert.equal(await p.locator('#matchCompareBody .mc-col-ai').count(),0);
+      await p.evaluate(()=>closeMatchCompareModal());
+      await navigate(p,'teamCompare',false);
+      await filled(p,'#teamCompareBody .tc-card');
+      assert.equal(requests,2);
+     }
+    }
+    assert.deepEqual(faults,[]);
+   }finally{release();await ctx.close()}
+  }
+ });
  if(base.hostname==='127.0.0.1')await run('season comparison loads only on compare tab, retries, and supports direct route',async()=>{
   for(const direct of [false,true]){
    const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
