@@ -1,5 +1,6 @@
 import { applyResponsiveCrests, applyStaticCrests } from './crest-templates.mjs';
 import { minifyPagesAssets } from './minify-pages-assets.mjs';
+import { splitPlayerModals } from './player-modal-split.mjs';
 import { splitTeamMatchCompare } from './team-match-compare-split.mjs';
 import { splitSeasonCompare } from './season-compare-split.mjs';
 import { splitStandingsExport } from './standings-export-split.mjs';
@@ -49,12 +50,14 @@ const appPath = join(output,'app.js');
 const splitExport = await splitStandingsExport(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(readFileSync(appPath,'utf8'), manifest)))));
 const splitCompare = await splitSeasonCompare(splitExport.app);
 const splitTeamMatch = await splitTeamMatchCompare(splitCompare.app);
-writeFileSync(appPath, splitTeamMatch.app);
+const splitPlayers = await splitPlayerModals(splitTeamMatch.app);
+writeFileSync(appPath, splitPlayers.app);
+writeFileSync(join(output,splitPlayers.file),splitPlayers.code);
 for (const asset of splitTeamMatch.assets) writeFileSync(join(output,asset.file),asset.code);
 writeFileSync(join(output,splitCompare.file),splitCompare.code);
 writeFileSync(join(output,splitExport.file),splitExport.code);
 await minifyPagesAssets(output);
-for (const file of ['app.js','a11y.js',splitExport.file,splitCompare.file,...splitTeamMatch.assets.map(asset=>asset.file)]) execFileSync(process.execPath,['--check',join(output,file)],{stdio:'inherit'});
+for (const file of ['app.js','a11y.js',splitExport.file,splitCompare.file,...splitTeamMatch.assets.map(asset=>asset.file),splitPlayers.file]) execFileSync(process.execPath,['--check',join(output,file)],{stdio:'inherit'});
 
 function assetVersion(file) {
   if (!publishedFiles.has(file)) throw new Error(`Asset is missing from the Pages artifact: ${file}`);

@@ -421,6 +421,35 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('player modals load on demand, retry, preserve competition and cancel stale loads',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage(),faults=[];
+  let requests=0;
+  p.on('pageerror',e=>faults.push(e.message));
+  await p.route(/\/player-modals\.js\?v=[a-f0-9]{16}$/,route=>++requests===1?route.abort():route.continue());
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await dismiss(p);
+   await filled(p,'#mainMiniTableBody');
+   assert.equal(requests,0);
+   await p.evaluate(()=>openPlayerModal(topScorersData[0].key));
+   await visible(p,'#playerModal .player-modal-load-status button');
+   await p.locator('#playerModal .player-modal-load-status button').click();
+   await filled(p,'#playerTimeline');
+   assert.equal(requests,2);
+   await p.evaluate(()=>closePlayerModal());
+   await p.evaluate(()=>{openSquadPlayerModal(squadData.find(x=>x.number!=null).number);setSquadPlayerComp('cup')});
+   await visible(p,'#squadPlayerModalName');
+   await p.waitForFunction(()=>document.querySelector('#squadPlayerModalName').textContent.trim().length>0);
+   assert.equal(await p.locator('#squadPlayerCompToggle [data-comp="cup"]').getAttribute('aria-pressed'),'true');
+   await p.locator('#squadPlayerCompToggle [data-comp="total"]').click();
+   assert.equal(await p.locator('#squadPlayerCompToggle [data-comp="total"]').getAttribute('aria-pressed'),'true');
+   await p.evaluate(()=>closeSquadPlayerModal());
+   assert.equal(requests,2);
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  if(base.hostname==='127.0.0.1')await run('team and match comparison assets load independently and retry',async()=>{
   const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
   await blockAnalytics(ctx);
