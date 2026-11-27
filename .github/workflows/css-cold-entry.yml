@@ -1,0 +1,56 @@
+name: UTD cold entry CSS parity
+on:
+  pull_request:
+    paths:
+      - 'scripts/css-cold-entry-browser.mjs'
+      - 'scripts/feature-css-*.mjs'
+      - 'scripts/club-css-*.mjs'
+      - 'scripts/build-pages.mjs'
+      - 'style.css'
+      - 'app.js'
+      - 'index.html'
+      - '.github/workflows/css-cold-entry.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install Pillow==11.3.0
+      - run: npm install --no-save --package-lock=false playwright@1.56.1 terser@5.44.1 postcss@8.5.6 cssnano@7.1.2
+      - run: node --check scripts/css-cold-entry-browser.mjs
+      - run: sudo python3 scripts/playwright-ci-apt.py
+      - run: bash scripts/playwright-ci-install.sh cold-css-results/install
+      - name: Compare isolated cold entries with original CSS
+        run: |
+          set -euo pipefail
+          mkdir -p cold-css-results
+          node scripts/build-pages.mjs "$RUNNER_TEMP/cold-site/UTD"
+          node scripts/lighthouse-comparison-server.mjs "$RUNNER_TEMP/cold-site" 8081 > cold-css-results/server.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8081/UTD/ -o /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8081/UTD/ -o /dev/null
+          status=0
+          node scripts/css-cold-entry-browser.mjs http://127.0.0.1:8081/UTD/ cold-css-results || status=$?
+          if [[ -f cold-css-results/summary.json ]]; then cat cold-css-results/summary.json | tee -a "$GITHUB_STEP_SUMMARY"; fi
+          exit "$status"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cold-css-parity
+          path: cold-css-results/
+          retention-days: 30
+          if-no-files-found: warn
