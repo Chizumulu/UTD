@@ -23,7 +23,7 @@ export async function splitPlayerModals(app){
     }
     const content = modal.querySelector('.modal-content');
     if (!content) return;
-    content.querySelector('.player-modal-load-status')?.remove();
+    clearPlayerModalLoading(kind);
     const status = document.createElement('div');
     status.className = 'report-empty player-modal-load-status';
     status.setAttribute('role','status');
@@ -32,6 +32,10 @@ export async function splitPlayerModals(app){
     content.setAttribute('aria-busy','true');
     for (const child of content.children) {
       if (child !== status && !child.matches('.close-btn') && !child.querySelector('.close-btn')) {
+        child.dataset.playerModalPreviousHidden = child.hidden ? '1' : '0';
+        child.hidden = true;
+        child.dataset.playerModalPreviousDisplay = child.style.display;
+        child.style.display = 'none';
         child.classList.add('player-modal-loading-hidden');
       }
     }
@@ -61,7 +65,7 @@ export async function splitPlayerModals(app){
     const content=modal?.querySelector('.modal-content');
     content?.removeAttribute('aria-busy');
     content?.querySelector('.player-modal-load-status')?.remove();
-    content?.querySelectorAll('.player-modal-loading-hidden').forEach(el=>el.classList.remove('player-modal-loading-hidden'));
+    content?.querySelectorAll('.player-modal-loading-hidden').forEach(el=>{el.hidden=el.dataset.playerModalPreviousHidden==='1';delete el.dataset.playerModalPreviousHidden;el.style.display=el.dataset.playerModalPreviousDisplay||'';delete el.dataset.playerModalPreviousDisplay;el.classList.remove('player-modal-loading-hidden');});
   }
   function openPlayerModal(key) {
     if (!topScorersData.some(p=>p.key===key)) return;
