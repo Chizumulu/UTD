@@ -421,6 +421,39 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('archive view module loads separately from comparison data and retries deep links',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage(),faults=[];
+  let requests=0;
+  p.on('pageerror',e=>faults.push(e.message));
+  await p.route(/\/archive-view\.js\?v=[a-f0-9]{16}$/,route=>++requests===1?route.abort():route.continue());
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await dismiss(p);
+   await filled(p,'#mainMiniTableBody');
+   assert.equal(requests,0);
+   await p.evaluate(()=>loadArchiveData());
+   assert.equal(requests,0);
+   await p.evaluate(()=>{location.hash='#/archive/weekly'});
+   await p.waitForFunction(()=>document.body.style.cursor!=='progress'&&document.querySelector('.toast')?.textContent?.length>0);
+   assert.ok(!(await p.locator('body').evaluate(e=>e.classList.contains('season-archive'))));
+   await p.evaluate(()=>window.openSeasonArchive({tab:'weekly'}));
+   await visible(p,'#archiveWeeklyPane');
+   await filled(p,'#archiveTableBody');
+   assert.equal(requests,2);
+   await p.locator('#archiveNavClubs').click();
+   await visible(p,'#archiveClubsPane');
+   await p.evaluate(()=>openArchiveTeamModal());
+   await visible(p,'#archiveTeamModal');
+   await filled(p,'#archiveTeamGrid');
+   await p.evaluate(()=>closeArchiveTeamModal());
+   await p.evaluate(()=>window.exitSeasonArchive());
+   await visible(p,'#rankView');
+   assert.equal(requests,2);
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  if(base.hostname==='127.0.0.1')await run('venue map module is optional and retries without affecting travel tab',async()=>{
   const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
   await blockAnalytics(ctx);
