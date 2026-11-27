@@ -1,7 +1,6 @@
 // Conservative deployment-only minification. Source files are never changed.
 import { minify } from 'terser';
 import postcss from 'postcss';
-import cssnano from 'cssnano';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -23,23 +22,30 @@ export async function minifyJs(source) {
   return result.code;
 }
 
-// Disable CSS restructuring and semantic normalization. Only remove
-// comments and normalize whitespace using a parser, never a regex.
+// Only change parser-owned formatting. Preserve all selectors, declaration
+// values, at-rule parameters, cascade order, and comments (including licenses).
+// Check the complete parsed tree, ignoring formatting metadata only.
+export function cssSignature(css) {
+  function visit(node) {
+    const {type,selector,name,params,prop,value,important,text,nodes}=node;
+    return {type,selector,name,params,prop,value,important,text,nodes:nodes?.map(visit)};
+  }
+  return JSON.stringify(visit(postcss.parse(css)));
+}
 export async function minifyCss(source) {
-  const result = await postcss([cssnano({preset:['default',{
-    discardComments:{removeAll:false},
-    normalizeWhitespace:true,
-    // All other default transformations explicitly disabled.
-    calc:false,colormin:false,convertValues:false,discardDuplicates:false,
-    discardEmpty:false,discardOverridden:false,mergeLonghand:false,mergeRules:false,
-    minifyFontValues:false,minifyGradients:false,minifyParams:false,minifySelectors:false,
-    normalizeCharset:false,normalizeDisplayValues:false,normalizePositions:false,
-    normalizeRepeatStyle:false,normalizeString:false,normalizeTimingFunctions:false,
-    normalizeUnicode:false,normalizeUrl:false,orderedValues:false,reduceInitial:false,
-    reduceTransforms:false,svgo:false,uniqueSelectors:false,rawCache:false
-  } ]})]).process(source,{from:undefined,map:false});
-  if (!result.css.length) throw Error('Empty minified CSS');
-  return result.css;
+  const root=postcss.parse(source);
+  root.walk(node=>{
+    // Raw selector/value/params representations may include meaningful tokens.
+    // Do not touch them, custom-property values, or comment text.
+    if(typeof node.raws.before==='string' && /^\s*$/.test(node.raws.before))node.raws.before='';
+    if(typeof node.raws.after==='string' && /^\s*$/.test(node.raws.after))node.raws.after='';
+    if(node.type==='decl' && /^\s*:\s*$/.test(node.raws.between||''))node.raws.between=':';
+    if((node.type==='rule'||node.type==='atrule') && /^\s+$/.test(node.raws.between||''))node.raws.between='';
+  });
+  root.raws.after='';
+  const css=root.toString();
+  if (!css.length || cssSignature(css)!==cssSignature(source)) throw Error('CSS structural integrity check failed');
+  return css;
 }
 
 export async function minifyPagesAssets(output) {
