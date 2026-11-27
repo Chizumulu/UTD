@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           trap 'docker logout ghcr.io' EXIT
-          docker pull ghcr.io/chizumulu/utd-lineup-ocr:validated-v1
+          docker pull ghcr.io/chizumulu/utd-lineup-ocr@sha256:5eaccc20759897ffbb1c81a357528d7b56f7388baea48aca3eac689797284e24
       - name: Recognize and submit official lineup
         env:
           UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
@@ -35,5 +35,5 @@ jobs:
             -e GITHUB_EVENT_PATH=/event.json \
             -v "$GITHUB_EVENT_PATH:/event.json:ro" \
             -v "$GITHUB_WORKSPACE:/workspace:ro" \
-            ghcr.io/chizumulu/utd-lineup-ocr:validated-v1 \
+            ghcr.io/chizumulu/utd-lineup-ocr@sha256:5eaccc20759897ffbb1c81a357528d7b56f7388baea48aca3eac689797284e24 \
             node automation/instagram-lineup/process-post.mjs
