@@ -92,6 +92,10 @@ try{
      assert.ok(logos.length>=10,'responsive league crests missing');
      assert.ok(logos.every(img=>img.src&&!img.src.includes('crest-assets/')),'original fallback lost');
      console.log(label+' responsive crests: '+JSON.stringify(logos));
+     const strips=await page.locator('img.home-match-crest').evaluateAll(imgs=>imgs.filter(img=>/\\.(webp|png|jpe?g)$/i.test(img.getAttribute('src')||'')).map(img=>({src:img.getAttribute('src'),srcset:img.getAttribute('srcset')})));
+     if(!mobile)assert.ok(strips.length>0,'desktop home match strips missing');
+     assert.ok(strips.every(img=>img.srcset),'home match crest missing responsive source');
+     assert.equal(await page.locator('img.league-logo[srcset],img.archive-hero-logo[srcset]').count(),2,'static NRFA responsive sources missing');
     }
     await dismiss(page);
     await visible(page,'#rankView');
