@@ -25,8 +25,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     concurrency:
-      group: youtube-highlight-publish
-      cancel-in-progress: false
+      group: approved-scorer-proposals-main
+      queue: max
     permissions:
       contents: write
       pull-requests: write
