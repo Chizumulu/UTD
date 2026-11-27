@@ -9,13 +9,13 @@ export function prioritizeInitialRender(app){
 // Discover the critical styles and scripts early rather than waiting for
 // document.write at the bottom of the HTML. Exact URLs reuse the same fetch.
 export function preloadInitialAssets(html,versions){
- const anchor='<head>';
- if(html.split(anchor).length!==2)throw Error('Expected unique head tag');
+ const anchor=/^<head>[ \t]*$/m;
+ if([...html.matchAll(/^<head>[ \t]*$/gm)].length!==1)throw Error('Expected unique head tag');
  const assets=[['style','style.css','style'],['data','data.js','script'],['app','app.js','script']];
  const tags=assets.map(([key,file,as])=>{
   const v=versions[key];
   if(!/^[a-f0-9]{16}$/.test(v||''))throw Error('Missing final asset version: '+key);
   return '<link rel="preload" as="'+as+'" href="'+file+'?v='+v+'">';
  }).join('\n');
- return html.replace(anchor,anchor+'\n'+tags);
+ return html.replace(anchor,match=>match+'\n'+tags);
 }
