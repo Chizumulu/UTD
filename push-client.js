@@ -372,6 +372,7 @@
       }
 
       await registerSubscription(subscription);
+      try { window.UTDAnalytics?.action("utd_notification_subscribe","web_push"); } catch (_) {}
       toast("이 기기에서 경기 알림을 받습니다.", "Match alerts are enabled on this device.");
     } catch (error) {
       console.error("Web Push subscription failed:", error);
@@ -396,6 +397,7 @@
         }
       }
       await refreshButton();
+      if (subscription) { try { window.UTDAnalytics?.action("utd_notification_unsubscribe","web_push"); } catch (_) {} }
       toast("이 기기의 경기 알림을 껐어요.", "Match alerts are off on this device.");
     } catch (error) {
       await refreshButton();
