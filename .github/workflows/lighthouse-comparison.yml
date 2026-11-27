@@ -73,6 +73,11 @@ jobs:
               node scripts/build-pages.mjs "$RUNNER_TEMP/site-$side/UTD"
             )
           done
+      - name: Validate lossless PNG and unchanged deployment assets
+        if: env.BASE_INPUT == '0ffafd04b3e22461c7968a1322e065aa273acc46'
+        run: |
+          python3 scripts/test-optimize-player-png.py
+          python3 scripts/verify-design-assets.py "$RUNNER_TEMP/site-before/UTD" "$RUNNER_TEMP/site-after/UTD"
       - name: Install pinned Lighthouse
         run: |
           npm install --no-save --package-lock=false lighthouse@12.8.2
