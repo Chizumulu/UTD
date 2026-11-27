@@ -1,5 +1,6 @@
 import { applyResponsiveCrests, applyStaticCrests } from './crest-templates.mjs';
 import { minifyPagesAssets } from './minify-pages-assets.mjs';
+import { splitTeamComparison } from './team-comparison-split.mjs';
 import { splitSeasonCompare } from './season-compare-split.mjs';
 import { splitStandingsExport } from './standings-export-split.mjs';
 import { renderEarlyHero } from './early-hero.mjs';
@@ -47,11 +48,13 @@ const manifest = JSON.parse(readFileSync(join(output,'crest-manifest.json'),'utf
 const appPath = join(output,'app.js');
 const splitExport = await splitStandingsExport(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(readFileSync(appPath,'utf8'), manifest)))));
 const splitCompare = await splitSeasonCompare(splitExport.app);
-writeFileSync(appPath, splitCompare.app);
+const splitTeam = await splitTeamComparison(splitCompare.app);
+writeFileSync(appPath, splitTeam.app);
+writeFileSync(join(output,splitTeam.file),splitTeam.code);
 writeFileSync(join(output,splitCompare.file),splitCompare.code);
 writeFileSync(join(output,splitExport.file),splitExport.code);
 await minifyPagesAssets(output);
-for (const file of ['app.js','a11y.js',splitExport.file,splitCompare.file]) execFileSync(process.execPath,['--check',join(output,file)],{stdio:'inherit'});
+for (const file of ['app.js','a11y.js',splitExport.file,splitCompare.file,splitTeam.file]) execFileSync(process.execPath,['--check',join(output,file)],{stdio:'inherit'});
 
 function assetVersion(file) {
   if (!publishedFiles.has(file)) throw new Error(`Asset is missing from the Pages artifact: ${file}`);
