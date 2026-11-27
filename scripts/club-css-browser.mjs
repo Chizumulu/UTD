@@ -34,6 +34,19 @@ try{
    await page.locator('#teamInfoStoryTab .ti-sponsor-card').first().waitFor({state:'visible'});
    await page.waitForFunction(()=>[...document.querySelectorAll('link[rel=stylesheet]')].some(l=>l.href.includes('club-sponsors.css')&&l.sheet));
    assert.equal(requests.length,1,'sponsor CSS loads once');
+   // Check production re-entry BEFORE the destructive comparison. Toggling
+   // HTMLLinkElement.disabled can itself re-fetch CSS in Chromium.
+   const loadedLink=await page.locator('link[rel=stylesheet][href*="club-sponsors.css"]').elementHandle();
+   assert.ok(loadedLink,'Expected loaded sponsor link');
+   await page.evaluate(()=>applyTeamInfoTab('overview'));
+   await page.locator('#teamInfoStoryTab').waitFor({state:'hidden'});
+   await page.evaluate(()=>applyTeamInfoTab('story'));
+   await page.locator('#teamInfoStoryTab .ti-sponsor-card').first().waitFor({state:'visible'});
+   assert.equal(await loadedLink.evaluate(el=>el.isConnected&&!!el.sheet),true,'Original sponsor stylesheet remains loaded');
+   assert.equal(await page.locator('link[rel=stylesheet][href*="club-sponsors.css"]').count(),1,'No duplicate sponsor links');
+   assert.equal(requests.length,1,'reentry must reuse loaded CSS');
+   console.log('Club CSS reuse PASS '+p.name+' requests='+requests.length);
+   // The following parity check is last: this context is discarded afterwards.
    const diff=await page.evaluate(source=>{
     const links=[...document.querySelectorAll('link[rel=stylesheet]')];
     const main=links.find(l=>new URL(l.href).pathname.endsWith('/style.css'));
@@ -46,13 +59,9 @@ try{
     full.textContent=source;
     main.before(full);main.disabled=true;club.disabled=true;
     const expected=snap();
-    full.remove();main.disabled=false;club.disabled=false;
     return actual.flatMap((row,i)=>row.flatMap((v,j)=>v===expected[i][j]?[]:[{element:nodes[i].className,property:props[j]||'::before content',actual:v,expected:expected[i][j]}])).slice(0,30);
    },original);
    assert.deepEqual(diff,[],'computed sponsor styles differ from original');
-   await page.evaluate(()=>{applyTeamInfoTab('overview');applyTeamInfoTab('story')});
-   await page.locator('#teamInfoStoryTab .ti-sponsor-card').first().waitFor({state:'visible'});
-   assert.equal(requests.length,1,'reentry must reuse loaded CSS');
    assert.deepEqual(errors,[]);
    console.log('Club CSS PASS '+p.name+' home/overview lazy load, computed parity, reuse');
   }finally{await context.close()}
