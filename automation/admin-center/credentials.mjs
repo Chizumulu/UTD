@@ -1,4 +1,4 @@
-import {requestJson} from './http.mjs';
+import {requestJson,workerFetch} from './http.mjs';
 // Read-only probes. Never persist upstream bodies, credentials or raw exceptions.
 export const KEY='admin-center:v1:credentials';
 const DAY=86400000;
@@ -25,7 +25,7 @@ async function probe(name,url,token,validate,fetcher,now){
   return {...result,...expiryStatus(r.headers.get('github-authentication-token-expiration'),now)};
  }catch{return {name,status:'unavailable',reason:'internal_error',expiresAt:null}}
 }
-export async function checkCredentials(env,{fetcher=fetch,now=Date.now()}={}){
+export async function checkCredentials(env,{fetcher=workerFetch,now=Date.now()}={}){
  let graph=null;
  try{const u=new URL(env.WHATSAPP_GRAPH_URL);if(u.origin==='https://graph.facebook.com'&&/^\/v\d+\.\d+\/?$/.test(u.pathname)&&!u.username&&!u.password&&!u.search&&!u.hash)graph=u.origin+u.pathname.replace(/\/$/,'')}catch{}
  const id=v=>/^\d{5,30}$/.test(String(v??''))?String(v):null;
@@ -39,7 +39,7 @@ export async function checkCredentials(env,{fetcher=fetch,now=Date.now()}={}){
  ]);
  return {version:1,checkedAt:now,checks};
 }
-export async function monitorCredentialsIfDue(env,{now=Date.now(),fetcher=fetch,manual=false}={}){
+export async function monitorCredentialsIfDue(env,{now=Date.now(),fetcher=workerFetch,manual=false}={}){
  if(env.ADMIN_CENTER_ENABLED!=='true')return;
  const old=await env.APPROVALS.get(KEY,'json');
  const interval=manual?60000:old?.checks?.some(c=>transient.has(c.status))?RETRY:DAY;
