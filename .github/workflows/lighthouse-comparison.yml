@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate comparison helper
-        run: node --test scripts/lighthouse-comparison.test.mjs
+        run: node --test scripts/lighthouse-comparison.test.mjs scripts/lighthouse-comparison-server.test.mjs
       - name: Resolve revisions and build actual Pages artifacts
         shell: bash
         run: |
@@ -77,17 +77,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m http.server 8081 --bind 127.0.0.1 --directory "$RUNNER_TEMP/site-before" > "$RESULTS/server-before.log" 2>&1 &
+          node scripts/lighthouse-comparison-server.mjs "$RUNNER_TEMP/site-before" 8081 > "$RESULTS/server-before.log" 2>&1 &
           server_before=$!
-          python3 -m http.server 8082 --bind 127.0.0.1 --directory "$RUNNER_TEMP/site-after" > "$RESULTS/server-after.log" 2>&1 &
+          node scripts/lighthouse-comparison-server.mjs "$RUNNER_TEMP/site-after" 8082 > "$RESULTS/server-after.log" 2>&1 &
           server_after=$!
           trap 'kill "$server_before" "$server_after" 2>/dev/null || true' EXIT
           for port in 8081 8082; do
-            for i in {1..20}; do
+            for i in {1..180}; do
               if curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null; then break; fi
               sleep 1
             done
             curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null
+            node scripts/lighthouse-comparison-compression-check.mjs "$port" "$RESULTS/compression-$port.json"
           done
           export CHROME_PATH="$(command -v google-chrome)"
           for profile in mobile desktop; do
