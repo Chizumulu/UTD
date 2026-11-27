@@ -11,7 +11,9 @@ test('production templates retain original source and select responsive assets',
  const manifest={[name]:{width:477,height:523,variants:[{src:variant,width:58,height:64}]}};
  const result=applyResponsiveCrests(source,manifest);
  new vm.Script(result);
- const prefix=result.slice(0,result.length-source.length);
+ const boundary=result.indexOf(source.slice(0,100));
+ assert.ok(boundary>0);
+ const prefix=result.slice(0,boundary);
  const context={document:{addEventListener(){}}};
  vm.runInNewContext(prefix,context);
  assert.match(context.utdResponsiveCrestAttrs(name,'24px'),/58w/);
