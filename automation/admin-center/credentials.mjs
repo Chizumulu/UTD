@@ -13,8 +13,8 @@ export function expiryStatus(value,now=Date.now()){
 async function probe(name,url,token,validate,fetcher,now){
  if(!token||!url)return {name,status:'not_configured',expiresAt:null};
  try{
-  const {response:r,body,error}=await requestJson(url,{method:'GET',redirect:'error',headers:{authorization:'Bearer '+token,accept:'application/json','user-agent':'UTD-credential-monitor'}},fetcher);
-  if(error)return {name,status:'unavailable',reason:error,expiresAt:null};
+  const {response:r,body,error,httpStatus}=await requestJson(url,{method:'GET',redirect:'manual',headers:{authorization:'Bearer '+token,accept:'application/json','user-agent':'UTD-credential-monitor'}},fetcher);
+  if(error)return {name,status:'unavailable',reason:error,httpStatus:httpStatus??null,expiresAt:null};
   const result={name,httpStatus:r.status,expiresAt:null};
   const metaCode=Number(body?.error?.code);
   if(r.status===401||metaCode===190)return {...result,status:'auth_failed'};
