@@ -86,6 +86,13 @@ try{
     const response=await page.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
     assert.ok(response?.ok(),'homepage HTTP error');
     await filled(page,'#mainMiniTableBody');
+    if(base.hostname==='127.0.0.1'){
+     await page.waitForFunction(()=>Array.from(document.querySelectorAll('#mainMiniTableBody img[srcset]')).some(img=>img.complete&&img.naturalWidth>0&&img.currentSrc.includes('/crest-assets/')));
+     const logos=await page.locator('#mainMiniTableBody img[srcset]').evaluateAll(imgs=>imgs.map(img=>({src:img.getAttribute('src'),current:img.currentSrc,width:img.naturalWidth})));
+     assert.ok(logos.length>=10,'responsive league crests missing');
+     assert.ok(logos.every(img=>img.src&&!img.src.includes('crest-assets/')),'original fallback lost');
+     console.log(label+' responsive crests: '+JSON.stringify(logos));
+    }
     await dismiss(page);
     await visible(page,'#rankView');
     await visible(page,mobile?'#mTabbar':'#appSidebar');
