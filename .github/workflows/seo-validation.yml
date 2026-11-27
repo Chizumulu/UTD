@@ -8,6 +8,7 @@ on:
       - 'scripts/early-hero*.mjs'
       - 'scripts/standings-export-split*.mjs'
       - 'scripts/season-compare-split*.mjs'
+      - 'scripts/team-match-compare-split*.mjs'
       - 'match-alert-onboarding.js'
       - 'scripts/match-alert-onboarding.test.mjs'
       - 'scripts/app-layout*.mjs'
@@ -39,5 +40,5 @@ jobs:
       - run: python3 -m pip install Pillow==11.3.0
       - run: npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2
       - run: python3 scripts/test-crest-assets.py
-      - run: node --test scripts/crest-templates.test.mjs scripts/seo-pages.test.mjs scripts/minify-pages-assets.test.mjs scripts/font-delivery.test.mjs scripts/external-script-delivery.test.mjs scripts/initial-render.test.mjs scripts/app-layout.test.mjs scripts/early-hero.test.mjs scripts/standings-export-split.test.mjs scripts/season-compare-split.test.mjs scripts/match-alert-onboarding.test.mjs
+      - run: node --test scripts/crest-templates.test.mjs scripts/seo-pages.test.mjs scripts/minify-pages-assets.test.mjs scripts/font-delivery.test.mjs scripts/external-script-delivery.test.mjs scripts/initial-render.test.mjs scripts/app-layout.test.mjs scripts/early-hero.test.mjs scripts/standings-export-split.test.mjs scripts/season-compare-split.test.mjs scripts/team-match-compare-split.test.mjs scripts/match-alert-onboarding.test.mjs
       - run: node scripts/build-pages.mjs "$RUNNER_TEMP/pages"
