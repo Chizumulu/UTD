@@ -43,6 +43,9 @@ try{
    await page.evaluate(()=>showTeamInfoForKey('Jenda United FC'));
    await page.locator('#otherTeamFullBody .ti-record-card').first().waitFor({state:'visible'});
    assert.deepEqual(requests,{analysis:1,other:1});
+   // The integrated split has additional slots. Restore those too before
+   // comparing the full base CSSOM with the original sponsor-only baseline.
+   await page.evaluate(()=>Promise.all(Object.keys(clubDetailCssUrls).map(loadClubDetailCss)));
    const diff=await page.evaluate(source=>{
     const link=[...document.querySelectorAll('link[rel=stylesheet]')].find(l=>new URL(l.href).pathname.endsWith('/style.css'));
     if(!link?.sheet)throw Error('Missing base CSS');
