@@ -4,9 +4,20 @@
   var SNOOZE_KEY = "utd-match-alerts-prompt-snoozed-until";
   var NEVER_KEY = "utd-match-alerts-prompt-never";
 
+  // Reuse one media query rather than constructing it during each eligibility check.
+  var standaloneMedia = window.matchMedia ? window.matchMedia("(display-mode: standalone)") : null;
+  var checkScheduled = false;
+  var checkStarted = false;
+
   function isStandalonePwa() {
-    return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+    return !!(standaloneMedia && standaloneMedia.matches) ||
       window.navigator.standalone === true;
+  }
+
+  function canCheckPrompt() {
+    return isStandalonePwa() && !!window.UTD_PUSH_API_URL &&
+      "Notification" in window && "serviceWorker" in navigator && "PushManager" in window &&
+      Notification.permission !== "denied";
   }
 
   function isKorean() {
@@ -66,9 +77,7 @@
   }
 
   async function shouldPrompt() {
-    if (!isStandalonePwa() || !window.UTD_PUSH_API_URL) return false;
-    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return false;
-    if (Notification.permission === "denied") return false;
+    if (!canCheckPrompt()) return false;
     if (localStorage.getItem(NEVER_KEY) === "1") return false;
 
     var snoozedUntil = Number(localStorage.getItem(SNOOZE_KEY) || 0);
@@ -79,8 +88,14 @@
       !(await window.hasRegisteredMatchAlerts());
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  function scheduleCheck() {
+    // Ordinary browser tabs never need the standalone onboarding timer.
+    if (checkScheduled || checkStarted || !canCheckPrompt()) return;
+    checkScheduled = true;
     window.setTimeout(async function () {
+      checkScheduled = false;
+      if (!canCheckPrompt()) return;
+      checkStarted = true;
       try {
         if (await shouldPrompt()) {
           var show = function () {
@@ -110,5 +125,17 @@
         console.warn("Could not check PWA match alert status:", error);
       }
     }, 1800);
-  });
+  }
+
+  function start() {
+    scheduleCheck();
+    // A browser tab can transition into standalone mode without a reload.
+    if (standaloneMedia) {
+      if (standaloneMedia.addEventListener) standaloneMedia.addEventListener("change", scheduleCheck);
+      else if (standaloneMedia.addListener) standaloneMedia.addListener(scheduleCheck);
+    }
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
+  else start();
 })();
