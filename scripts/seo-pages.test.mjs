@@ -39,7 +39,7 @@ test('deployment output contains sitemap and real HTML at every URL',()=>{
   assert.equal(paths.length,count+1);
   assert.equal(new Set(paths).size,paths.length);
   for(const p of paths)assert.ok(existsSync(join(out,p,'index.html')));
-  assert.match(readFileSync(join(out,'index.html'),'utf8'),/Existing SPA/);
+  assert.equal(readFileSync(join(out,'index.html'),'utf8'),'<!doctype html><html><body>Existing SPA</body></html>');
   assert.ok(!sitemap.includes('<lastmod>'));
  }finally{rmSync(out,{recursive:true,force:true});}
 });
