@@ -21,6 +21,10 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install Pillow==11.3.0
       - run: node --check app.js && node --check utd-analytics.js && node --check push-client.js
       - run: node --test scripts/utd-analytics.test.mjs scripts/seo-pages.test.mjs
       - run: node scripts/build-pages.mjs "$RUNNER_TEMP/analytics-pages"
