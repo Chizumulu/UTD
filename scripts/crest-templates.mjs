@@ -1,9 +1,10 @@
 // Build-time, narrowly scoped responsive attributes for the diagnosed home/league logos.
 // Original source URLs, HTML classes and layout remain unchanged.
 const targets = [
+  { needle: 'class="team-logo home-match-crest" src="${m.oppLogo}"', expr: 'm.oppLogo', sizes: '32px', minimum: 2 },
   { needle: 'class="team-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}"', expr: 'team.logoSrc', sizes: '24px', minimum: 2 },
-  { needle: 'src="${nmx.oppLogo}" alt="${nmx.oppEn}"', expr: 'nmx.oppLogo', sizes: '68px', minimum: 1 },
-  { needle: 'class="nmc-logo${alt ? \' nmc-logo-alt\' : \'\'}" src="${esc(logo)}"', expr: 'logo', sizes: '24px', minimum: 1 },
+  { needle: 'src="${nmx.oppLogo}" alt="${nmx.oppEn}"', expr: 'nmx.oppLogo', sizes: '(min-width: 1200px) 68px, 42px', minimum: 1 },
+  { needle: 'class="nmc-logo${alt ? \' nmc-logo-alt\' : \'\'}" src="${esc(logo)}"', expr: 'logo', sizes: '46px', minimum: 1 },
   { needle: 'class="nmc-logo nmc-logo-alt" src="${esc(logo)}"', expr: 'logo', sizes: '24px', minimum: 1 },
   { needle: 'class="nmc-logo" src="${esc(logo)}"', expr: 'logo', sizes: '24px', minimum: 1 }
 ];
