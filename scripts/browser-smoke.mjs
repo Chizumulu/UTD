@@ -421,6 +421,54 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('season comparison loads only on compare tab, retries, and supports direct route',async()=>{
+  for(const direct of [false,true]){
+   const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
+   await blockAnalytics(ctx);
+   const p=await ctx.newPage(),faults=[];
+   let requests=0;
+   p.on('pageerror',e=>faults.push(e.message));
+   await p.route(/\/season-compare\.js\?v=[a-f0-9]{16}$/,route=>{
+    requests++;
+    return !direct&&requests===1?route.abort():route.continue();
+   });
+   try{
+    await p.goto(direct?new URL('?lang=en#/stats/compare',base).href:base.href,{waitUntil:'domcontentloaded',timeout:45000});
+    await dismiss(p);
+    const tab=p.locator('#statsTabs [data-stats-tab="compare"]');
+    if(!direct){
+     assert.equal(requests,0);
+     await navigate(p,'stats',false);
+     assert.equal(requests,0);
+     await p.locator('#statsTabs [data-stats-tab="analysis"]').click();
+     assert.equal(requests,0);
+     await tab.click();
+     await visible(p,'#seasonCompareLoadStatus button');
+     assert.equal(requests,1);
+     await p.locator('#seasonCompareLoadStatus button').click();
+    }
+    await filled(p,'#seasonCompareCard');
+    await filled(p,'#prevCompareBoards');
+    await filled(p,'#luckChangeCard');
+    assert.equal(await tab.getAttribute('aria-selected'),'true');
+    assert.equal(await p.locator('#seasonCompareLoadStatus').count(),0);
+    assert.equal(requests,direct?1:2);
+    const title=await p.locator('#seasonCompareCard .stats-title').textContent();
+    assert.match(title,direct?/Season Comparison/:/두 시즌 리그 비교/);
+    const more=p.locator('#prevCompareBoards .more-link');
+    if(await more.count()){
+     await more.click();
+     assert.ok(await more.evaluate(el=>el.classList.contains('expanded')));
+     await more.click();
+    }
+    await p.locator('#statsTabs [data-stats-tab="rank"]').click();
+    await tab.click();
+    await filled(p,'#seasonCompareCard');
+    assert.equal(requests,direct?1:2,'comparison asset requested again');
+    assert.deepEqual(faults,[]);
+   }finally{await ctx.close()}
+  }
+ });
  if(base.hostname==='127.0.0.1')await run('standings export loads only on demand, retries failed asset and downloads PNG',async()=>{
   const ctx=await browser.newContext({viewport:{width:1440,height:900},acceptDownloads:true,serviceWorkers:'block',reducedMotion:'reduce'});
   await blockAnalytics(ctx);
