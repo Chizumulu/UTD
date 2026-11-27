@@ -11,6 +11,8 @@ export const clubPolicies={
  pathfinder:s=>cls(s,'pf-[\\w-]+|path-finder-card'),
 };
 export const viewPolicies={
+ rank:s=>id(s,'mainTable'),
+ seasoncompare:s=>cls(s,'sc-[\\w-]+|season-compare-card|prev-compare-board'),
  cup:s=>id(s,'cupViewContent')||cls(s,'cup-(?:hero|round|match-list|team|match-mid|score|when|venue|empty|back-btn|chips|chip|cl|new-badge|info|kv|br|bracket|tiers|tier|krw|team-chips|team-chip|rq|tl|fold|folds|rqb|view-toggle|rview|rd|rdraw|logo-fb)(?:-[\\w-]+)?'),
  archive:s=>cls(s,'archive-[\\w-]+')||id(s,'archiveMainPane|archiveWeeklyPane|archiveClubsPane|archiveTeamModal'),
  prediction:s=>id(s,'predictView')&&s!=='#predictView'||cls(s,'pt-[\\w-]+|rl-[\\w-]+|predict-(?:table|intro|meta|refresh-btn|my-summary)(?:-[\\w-]+)?'),
