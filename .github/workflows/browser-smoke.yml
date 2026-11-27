@@ -1,0 +1,72 @@
+name: UTD browser smoke tests
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Validate and deploy GitHub Pages]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: browser-smoke-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
+  cancel-in-progress: false
+jobs:
+  smoke:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && vars.UTD_HEALTH_MONITOR_ENABLED == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && 'main' || github.sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install --no-save --package-lock=false playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Build and serve Pages artifact for PR checks
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p "$RUNNER_TEMP/site"
+          node scripts/build-pages.mjs "$RUNNER_TEMP/site/UTD"
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory "$RUNNER_TEMP/site" > "$RUNNER_TEMP/smoke-server.log" 2>&1 &
+          for i in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:8080/UTD/ -o /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Run desktop and mobile smoke tests
+        env:
+          SITE_URL: ${{ github.event_name == 'pull_request' && 'http://127.0.0.1:8080/UTD/' || 'https://chizumulu.github.io/UTD/' }}
+          SMOKE_OUTPUT: smoke-results
+        run: node scripts/browser-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-smoke-results
+          path: smoke-results/
+          retention-days: 7
+          if-no-files-found: warn
+  incident:
+    needs: smoke
+    if: always() && github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && vars.UTD_HEALTH_MONITOR_ENABLED == 'true' && (needs.smoke.result == 'failure' || needs.smoke.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Manage production browser incident
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ needs.smoke.result }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          title='[UTD 화면 검사] 공개 사이트 확인 필요'
+          issue=$(gh issue list --repo "$REPO" --state open --search '"UTD 화면 검사" in:title' --limit 100 --json title,number --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+          url="https://github.com/$REPO/actions/runs/$GITHUB_RUN_ID"
+          if [[ "$RESULT" == failure && -z "$issue" ]]; then
+            gh issue create --repo "$REPO" --title "$title" --body "공개 사이트 브라우저 검사 실패. 테스트 로그와 스크린샷을 확인해 주세요. $url"
+          elif [[ "$RESULT" == success && -n "$issue" ]]; then
+            gh issue close "$issue" --repo "$REPO" --comment "공개 사이트 자동 검사 정상 복구: $url"
+          fi
