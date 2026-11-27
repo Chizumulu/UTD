@@ -14,7 +14,7 @@ test('expiration boundaries and unknown dates',()=>{
 test('probes only read approved origins and redact sensitive responses',async()=>{
  const urls=[];
  const r=await checkCredentials(env,{now,fetcher:async(url,opts)=>{
-  urls.push(url);assert.equal(opts.method,'GET');assert.equal(opts.redirect,'error');assert.equal(opts.headers.authorization,'Bearer '+secret);
+  urls.push(url);assert.equal(opts.method,'GET');assert.equal(opts.redirect,'manual');assert.equal(opts.headers.authorization,'Bearer '+secret);
   if(url.includes('api.github.com/user'))return Response.json({login:'test',secret},{headers:{'github-authentication-token-expiration':new Date(now+6*day).toISOString()}});
   if(url.includes('123456789'))return Response.json({error:{code:190,message:secret}},{status:400});
   return Response.json({data:[{secret}]});
@@ -63,7 +63,7 @@ test('workflow reads use server token only for fixed GitHub origin and redact er
  for(const [http,status] of [[401,'auth_failed'],[403,'permission_denied'],[429,'rate_limited'],[500,'unavailable']]){
   const d=await dashboardData(e,{fetcher:async(url,opts)=>{
    assert.equal(new URL(url).origin,'https://api.github.com');
-   assert.equal(opts.method,'GET');assert.equal(opts.redirect,'error');assert.equal(opts.headers.authorization,'Bearer '+secret);
+   assert.equal(opts.method,'GET');assert.equal(opts.redirect,'manual');assert.equal(opts.headers.authorization,'Bearer '+secret);
    return Response.json({message:secret},{status:http});
   }});
   assert.equal(d.github.status,status);assert.equal(d.github.httpStatus,http);
@@ -120,4 +120,24 @@ test('illegal invocation category does not expose raw exception',async()=>{
  const r=await checkCredentials(env,{now,fetcher:async()=>{throw new TypeError('Illegal invocation '+secret)}});
  assert.equal(r.checks[0].reason,'illegal_invocation');
  assert.ok(!JSON.stringify(r).includes(secret));
+});
+
+test('Workers redirect mode is compatible and upstream redirects are never followed',async()=>{
+ const calls=[];
+ const fetcher=async(url,opts)=>{
+  calls.push(url);
+  if(opts.redirect==='error')throw new TypeError('Invalid redirect value');
+  assert.equal(opts.redirect,'manual');
+  return new Response(null,{status:302,headers:{location:'https://evil.example/'+secret}});
+ };
+ const r=await checkCredentials(env,{now,fetcher});
+ assert.equal(calls.length,3);
+ assert.ok(r.checks.filter(c=>c.status!=='disabled').every(c=>c.reason==='redirect_blocked'&&c.httpStatus===302));
+ const d=await dashboardData({...env,APPROVALS:{get:async()=>null}},{now,fetcher});
+ assert.equal(d.github.reason,'redirect_blocked');
+ assert.equal(d.github.httpStatus,302);
+ assert.equal(calls.length,4);
+ assert.ok(calls.every(url=>['https://api.github.com','https://graph.facebook.com'].includes(new URL(url).origin)));
+ assert.ok(!JSON.stringify({r,d}).includes(secret));
+ assert.ok(!JSON.stringify({r,d}).includes('evil.example'));
 });
