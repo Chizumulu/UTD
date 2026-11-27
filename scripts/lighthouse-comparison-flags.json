@@ -1,0 +1,12 @@
+{
+  "blocked-url-patterns": [
+    "*://google-analytics.com/*",
+    "*://*.google-analytics.com/*",
+    "*://googletagmanager.com/*",
+    "*://*.googletagmanager.com/*",
+    "*://clarity.ms/*",
+    "*://*.clarity.ms/*",
+    "*://onesignal.com/*",
+    "*://*.onesignal.com/*"
+  ]
+}
