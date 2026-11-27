@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate comparison helper
-        run: node --test scripts/lighthouse-comparison.test.mjs scripts/lighthouse-comparison-server.test.mjs scripts/lighthouse-comparison-retry.test.mjs
+        run: node --test scripts/lighthouse-comparison.test.mjs scripts/lighthouse-comparison-server.test.mjs scripts/lighthouse-comparison-retry.test.mjs scripts/lighthouse-comparison-diagnostics.test.mjs
       - name: Resolve revisions and build actual Pages artifacts
         shell: bash
         run: |
@@ -104,6 +104,7 @@ jobs:
         run: |
           node scripts/lighthouse-comparison.mjs "$RESULTS" "$BASE_INPUT" "$HEAD_INPUT" "$RUNNER_TEMP/site-before/UTD" "$RUNNER_TEMP/site-after/UTD" "$RUNS"
           cat "$RESULTS/comparison.md" | tee -a "$GITHUB_STEP_SUMMARY"
+          cat "$RESULTS/diagnostics.md" | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
