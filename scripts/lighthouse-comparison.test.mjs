@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {median,extract,compare,sizes,summarize,metrics} from './lighthouse-comparison.mjs';
+import {median,extract,compare,sizes,summarize,metrics,blockedPatterns,verifyBlocking} from './lighthouse-comparison.mjs';
 
 function report(value){
- const out={categories:{performance:{score:value/100}},audits:{}};
+ const out={configSettings:{blockedUrlPatterns:[...blockedPatterns]},categories:{performance:{score:value/100}},audits:{}};
  for(const [key,path] of Object.entries(metrics))if(key!=='score')out.audits[path[1]]={numericValue:value};
  out.audits['network-requests']={details:{items:[{},{}]}};
  return out;
@@ -52,4 +52,20 @@ test('summary emits both profiles, raw samples and compressed asset inventory',(
   assert.match(md,/optional\.js/);assert.match(md,/## desktop/);
   assert.equal(JSON.parse(readFileSync(join(dir,'comparison.json'),'utf8')).runs,3);
  }finally{rmSync(dir,{recursive:true,force:true})}
+});
+
+test('blocking verifies individual patterns and rejects successful external responses',()=>{
+ const r=report(80);
+ assert.equal(verifyBlocking(r).leaks,0);
+ r.configSettings.blockedUrlPatterns=[blockedPatterns.join(',')];
+ assert.throws(()=>verifyBlocking(r),/configuration/);
+ r.configSettings.blockedUrlPatterns=[...blockedPatterns];
+ const items=r.audits['network-requests'].details.items;
+ items.push({url:'https://www.google-analytics.com/g/collect',transferSize:0,resourceSize:0,statusCode:0});
+ items.push({url:'https://notclarity.ms/file.js',transferSize:123,statusCode:200});
+ assert.equal(verifyBlocking(r).blockedAttempts,1);
+ items.push({url:'https://www.clarity.ms/script.js',transferSize:100,statusCode:200});
+ assert.throws(()=>verifyBlocking(r),/received a response/);
+ items.pop();items.push({url:'https://onesignal.com/api',transferSize:0,statusCode:204});
+ assert.throws(()=>verifyBlocking(r),/received a response/);
 });
