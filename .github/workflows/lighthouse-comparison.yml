@@ -5,6 +5,7 @@ on:
       - 'scripts/lighthouse-comparison*.mjs'
       - 'scripts/lighthouse-comparison-flags.json'
       - 'scripts/lighthouse-comparison-baseline.json'
+      - 'scripts/lighthouse-pr-plan.json'
       - '.github/workflows/lighthouse-comparison.yml'
   workflow_dispatch:
     inputs:
@@ -47,7 +48,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate comparison helper
-        run: node --test scripts/lighthouse-comparison.test.mjs scripts/lighthouse-comparison-server.test.mjs scripts/lighthouse-comparison-retry.test.mjs scripts/lighthouse-comparison-diagnostics.test.mjs scripts/lighthouse-comparison-baseline.test.mjs
+        run: node --test scripts/lighthouse-comparison.test.mjs scripts/lighthouse-comparison-server.test.mjs scripts/lighthouse-comparison-retry.test.mjs scripts/lighthouse-comparison-diagnostics.test.mjs scripts/lighthouse-comparison-baseline.test.mjs scripts/lighthouse-comparison-pr-plan.test.mjs
+      - name: Resolve opt-in PR benchmark plan
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/lighthouse-comparison-pr-plan.mjs
       - name: Resolve revisions and build actual Pages artifacts
         shell: bash
         run: |
@@ -108,10 +113,13 @@ jobs:
           cat "$RESULTS/comparison.md" | tee -a "$GITHUB_STEP_SUMMARY"
           cat "$RESULTS/diagnostics.md" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Generate fixed baseline reference
-        if: github.event_name == 'pull_request' || (inputs.baseline == 'fb08f0af422bf811d4948669c31577db3ba710bd' && inputs.candidate == 'def5d8846167fcb2699ac5f416028e46afebe2d4' && inputs.runs == '5')
         run: |
-          node scripts/lighthouse-comparison-baseline.mjs "$RESULTS"
-          cat "$RESULTS/baseline.md" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [[ "$BASE_INPUT" == 'fb08f0af422bf811d4948669c31577db3ba710bd' && "$HEAD_INPUT" == 'def5d8846167fcb2699ac5f416028e46afebe2d4' && "$RUNS" == '5' ]]; then
+            node scripts/lighthouse-comparison-baseline.mjs "$RESULTS"
+            cat "$RESULTS/baseline.md" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Not the historical fixed pair; preserving existing baseline.'
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
