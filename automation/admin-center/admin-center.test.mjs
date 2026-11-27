@@ -57,3 +57,18 @@ test('daily monitor does not write or probe before due',async()=>{
  await monitorCredentialsIfDue(e,{now,fetcher:async()=>{throw Error('must not fetch')}});
  assert.equal(writes,0);
 });
+
+test('workflow reads use server token only for fixed GitHub origin and redact errors',async()=>{
+ const e={...env,APPROVALS:{get:async()=>null}};
+ for(const [http,status] of [[401,'auth_failed'],[403,'permission_denied'],[429,'rate_limited'],[500,'unavailable']]){
+  const d=await dashboardData(e,{fetcher:async(url,opts)=>{
+   assert.equal(new URL(url).origin,'https://api.github.com');
+   assert.equal(opts.method,'GET');assert.equal(opts.redirect,'error');assert.equal(opts.headers.authorization,'Bearer '+secret);
+   return Response.json({message:secret},{status:http});
+  }});
+  assert.equal(d.github.status,status);assert.equal(d.github.httpStatus,http);
+  assert.ok(!JSON.stringify(d).includes(secret));
+ }
+ const d=await dashboardData({...e,GITHUB_TOKEN:''},{fetcher:async()=>{throw Error('must not call')}});
+ assert.equal(d.github.status,'not_configured');
+});
