@@ -14,7 +14,7 @@ concurrency:
 jobs:
   smoke:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && vars.UTD_HEALTH_MONITOR_ENABLED == 'true')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
