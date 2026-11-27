@@ -1,0 +1,40 @@
+name: Mmbelwa Cup discovery
+on:
+  pull_request:
+    paths:
+      - 'automation/mmbelwa-sync/**'
+      - '.github/workflows/mmbelwa-discovery.yml'
+      - 'data.js'
+  schedule:
+    - cron: '3,13,23,33,43,53 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mmbelwa-discovery-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node --test automation/mmbelwa-sync/discover.test.mjs
+  discover:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.UTD_HEALTH_MONITOR_ENABLED == 'true'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node automation/mmbelwa-sync/run.mjs "$RUNNER_TEMP/mmbelwa-discovery.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mmbelwa-discovery
+          path: ${{ runner.temp }}/mmbelwa-discovery.json
+          retention-days: 7
