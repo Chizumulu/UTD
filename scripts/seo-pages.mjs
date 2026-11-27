@@ -51,17 +51,22 @@ function scorerDetails(d,m){
  const hits=(d.matchDetails[m.round]||[]).filter(x=>x.match?.trim()===h+' '+m.homeScore+' : '+a+' '+m.awayScore);
  return hits.length===1?hits[0]:null;
 }
-function htmlPage(path,title,description,body,schema){
+// Generated search landing pages are real documents; one direct GA tag per page.
+function analyticsMarkup(path,version){
+ const prefix='../'.repeat(path.split('/').filter(Boolean).length);
+ return '<script async src="https://www.googletagmanager.com/gtag/js?id=G-N6GC687TZD"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-N6GC687TZD");</script><script src="'+esc(prefix+'utd-analytics.js?v='+encodeURIComponent(version))+'" data-utd-seo="'+esc(path)+'"></script>';
+}
+function htmlPage(path,title,description,body,schema,analyticsVersion){
  const canonical=BASE+path;
- return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+esc(title)+' | 치주물루 유나이티드 팬사이트</title><meta name="description" content="'+esc(description)+'"><link rel="canonical" href="'+esc(canonical)+'"><meta property="og:type" content="website"><meta property="og:title" content="'+esc(title)+'"><meta property="og:description" content="'+esc(description)+'"><meta property="og:url" content="'+esc(canonical)+'"><meta property="og:image" content="'+BASE+'og-image.jpg"><meta property="og:locale" content="ko_KR"><link rel="icon" href="'+BASE+'favicon.ico">'+(schema?'<script type="application/ld+json">'+json({'@context':'https://schema.org',...schema})+'</script>':'')+'<style>body{font:16px/1.65 system-ui,sans-serif;margin:0;background:#f5f7fb;color:#172033}main,nav,footer{max-width:900px;margin:auto;padding:18px 22px}header{background:#033990;color:#fff}header a{color:#fff}nav{display:flex;flex-wrap:wrap;gap:18px}a{color:#033990}main{background:white;min-height:45vh}h1{line-height:1.3}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px;border-bottom:1px solid #ddd}.scroll{overflow-x:auto}footer{font-size:.9rem} @media(prefers-color-scheme:dark){body,main{background:#161b26;color:#eef2ff}a{color:#a7c8ff}th,td{border-color:#394051}}</style></head><body><header><nav>'+link('','UTD 홈')+' '+link('matches/','경기 일정·결과')+' '+link('league/','리그 기록')+' '+link('teams/','구단')+' '+link('players/','선수단')+' '+link('cup/','FA컵')+'</nav></header><main><h1>'+esc(title)+'</h1>'+body+'</main><footer>치주물루 유나이티드 FC 비공식 팬사이트 · '+link('','기존 UTD 사이트 및 상세 분석 보기')+'</footer></body></html>';
+ return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+esc(title)+' | 치주물루 유나이티드 팬사이트</title><meta name="description" content="'+esc(description)+'"><link rel="canonical" href="'+esc(canonical)+'"><meta property="og:type" content="website"><meta property="og:title" content="'+esc(title)+'"><meta property="og:description" content="'+esc(description)+'"><meta property="og:url" content="'+esc(canonical)+'"><meta property="og:image" content="'+BASE+'og-image.jpg"><meta property="og:locale" content="ko_KR"><link rel="icon" href="'+BASE+'favicon.ico">'+analyticsMarkup(path,analyticsVersion)+(schema?'<script type="application/ld+json">'+json({'@context':'https://schema.org',...schema})+'</script>':'')+'<style>body{font:16px/1.65 system-ui,sans-serif;margin:0;background:#f5f7fb;color:#172033}main,nav,footer{max-width:900px;margin:auto;padding:18px 22px}header{background:#033990;color:#fff}header a{color:#fff}nav{display:flex;flex-wrap:wrap;gap:18px}a{color:#033990}main{background:white;min-height:45vh}h1{line-height:1.3}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px;border-bottom:1px solid #ddd}.scroll{overflow-x:auto}footer{font-size:.9rem} @media(prefers-color-scheme:dark){body,main{background:#161b26;color:#eef2ff}a{color:#a7c8ff}th,td{border-color:#394051}}</style></head><body><header><nav>'+link('','UTD 홈')+' '+link('matches/','경기 일정·결과')+' '+link('league/','리그 기록')+' '+link('teams/','구단')+' '+link('players/','선수단')+' '+link('cup/','FA컵')+'</nav></header><main><h1>'+esc(title)+'</h1>'+body+'</main><footer>치주물루 유나이티드 FC 비공식 팬사이트 · '+link('','기존 UTD 사이트 및 상세 분석 보기')+'</footer></body></html>';
 }
 const table=(heads,rows)=>'<div class="scroll"><table><thead><tr>'+heads.map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(x=>'<td>'+x+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
 function matchTable(rows,paths){return table(['날짜','경기','스코어','상태'],rows.map(m=>[esc(date(m)),paths.has(m.fixtureId)?link(matchPath(m),matchName(m)):esc(matchName(m)),esc(score(m)),esc(status(m))]));}
-export function generateSeo(d){
+export function generateSeo(d,{analyticsVersion='1'}={}){
  const pages=new Map(),rows=activeFixtures(d),clubRows=rows.filter(isClub);
  const detailRows=clubRows.filter(m=>validDate(m.kickoffDate)||scored(m));
  const paths=new Set(detailRows.map(m=>m.fixtureId));
- function add(path,title,desc,body,schema){if(pages.has(path))throw Error('Duplicate SEO path '+path);pages.set(path,htmlPage(path,title,desc,body,schema));}
+ function add(path,title,desc,body,schema){if(pages.has(path))throw Error('Duplicate SEO path '+path);pages.set(path,htmlPage(path,title,desc,body,schema,analyticsVersion));}
  add('matches/','치주물루 유나이티드 경기 일정 및 결과','2026/27 NRFA 리그 원 치주물루 유나이티드 경기 일정, 결과 및 하이라이트.', '<p>2026/27 NRFA 리그 원 등록 경기. 날짜와 시간은 변경될 수 있습니다.</p>'+matchTable(clubRows,paths));
  for(const m of detailRows){
   const title=matchName(m)+' '+(scored(m)?score(m)+' '+status(m):'경기 일정');
@@ -70,7 +75,7 @@ export function generateSeo(d){
   const video=youtube(d.matchHighlights[m.round]);
   let body='<p>'+esc(desc)+'</p><p>'+esc(m.homeEn)+' vs '+esc(m.awayEn)+'</p><dl><dt>경기일 (말라위 현지)</dt><dd>'+esc(date(m))+'</dd><dt>등록 킥오프 시간</dt><dd>'+esc(m.kickoffTime||'미정')+' (현지 기준, 변경 가능)</dd><dt>등록 결과</dt><dd>'+esc(score(m)+' · '+status(m))+'</dd></dl>';
   if(details)body+='<h2>득점 기록</h2><p>'+esc(m.homeKo||m.homeEn)+': '+esc(details.scorersHome||'미등록')+'</p><p>'+esc(m.awayKo||m.awayEn)+': '+esc(details.scorersAway||'미등록')+'</p>';
-  if(video&&clubRows.filter(x=>x.round===m.round).length===1&&!m.postponed&&!m.forfeit&&scored(m))body+='<h2>하이라이트</h2><p><a href="'+esc(video)+'">유튜브 경기 하이라이트 보기</a></p>';
+  if(video&&clubRows.filter(x=>x.round===m.round).length===1&&!m.postponed&&!m.forfeit&&scored(m))body+='<h2>하이라이트</h2><p><a data-utd-highlight href="'+esc(video)+'">유튜브 경기 하이라이트 보기</a></p>';
   body+='<p>'+link('matches/','전체 경기 일정 및 결과')+'</p>';
   // No event rich-result claims for completed, provisional or forfeited fixtures.
   const schema={'@type':'WebPage',name:title,url:BASE+matchPath(m),description:desc,inLanguage:'ko'};
@@ -92,8 +97,8 @@ export function generateSeo(d){
  add('cup/','26/27 대통령배 FA컵 대진 및 결과','말라위 대통령배 FA컵 대회 안내와 등록 대진표, 경기 결과.',cupBody);
  return pages;
 }
-export function writeSeo(output,source){
- const pages=generateSeo(readSeoData(source));
+export function writeSeo(output,source,options={}){
+ const pages=generateSeo(readSeoData(source),options);
  for(const [path,html] of pages){const file=join(output,path,'index.html');mkdirSync(dirname(file),{recursive:true});writeFileSync(file,html);}
  const urls=['',...pages.keys()];
  writeFileSync(join(output,'sitemap.xml'),'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+urls.map(p=>'  <url><loc>'+esc(BASE+p)+'</loc></url>').join('\n')+'\n</urlset>\n');
