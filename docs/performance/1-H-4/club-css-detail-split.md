@@ -1,0 +1,9 @@
+# 1-H-4-2 phase 2: analysis and other club detail CSS
+
+Based on PR #144, split two further groups: analysis rules (pure ta-* and analysis-scoped selectors) and other-club rules scoped to #otherTeamFullBody. Shared selectors, mixed groups, unrelated classes, global animations and other club components remain in the initial CSS. Source style.css and app.js are not rewritten.
+
+The build replaces each contiguous group of eligible top-level rules with an inert uniquely named selector. Each deferred CSS asset carries its corresponding markers. The runtime requests the asset only on the relevant route, parses it as an inactive same-origin stylesheet and restores rules before their exact original markers in the main stylesheet. The markers do not match site content. This preserves original relative cascade order, including shared selectors and media rules, rather than appending the extracted rules. It uses standard CSSOM; failed loads or insertions remove the temporary asset and roll back inserted rules before explicit retry.
+
+The build verifies exact PostCSS reconstruction and requires smaller initial raw, gzip and Brotli sizes. Unit tests independently reconstruct from emitted assets and protect mixed selectors. Browser checks compare the complete restored Chromium CSSOM against the prior deployed base (after the sponsor split), exercise independent requests, reuse, direct routes and forced failure/retry in the new assets. Existing sponsor tests, 64-scenario initial CSS audit and 54 browser checks remain. The initial coverage audit does not measure deferred analysis/other CSS; CSSOM checks cover those separately. No claim of exhaustive visual parity in every browser is made.
+
+This is an additional staged split, not the entire remaining 67KB ownership estimate. The actual size is measured by CI. Do not merge before all checks pass.
