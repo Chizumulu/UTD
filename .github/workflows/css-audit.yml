@@ -1,0 +1,49 @@
+name: UTD CSS ownership and coverage audit
+on:
+  pull_request:
+    paths:
+      - 'scripts/css-audit*.mjs'
+      - '.github/workflows/css-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install Pillow==11.3.0
+      - run: npm install --no-save --package-lock=false playwright@1.56.1 terser@5.44.1 postcss@8.5.6 cssnano@7.1.2
+      - run: node --test scripts/css-audit.test.mjs
+      - run: sudo python3 scripts/playwright-ci-apt.py
+      - run: bash scripts/playwright-ci-install.sh css-audit-results/install
+      - name: Build and audit deployed CSS
+        run: |
+          set -euo pipefail
+          mkdir -p css-audit-results
+          node scripts/build-pages.mjs "$RUNNER_TEMP/css-site/UTD"
+          node scripts/lighthouse-comparison-server.mjs "$RUNNER_TEMP/css-site" 8081 > css-audit-results/server.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8081/UTD/ -o /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8081/UTD/ -o /dev/null
+          node scripts/css-audit-browser.mjs http://127.0.0.1:8081/UTD/ "$RUNNER_TEMP/css-site/UTD/style.css" css-audit-results
+          node scripts/css-audit.mjs "$RUNNER_TEMP/css-site/UTD/style.css" css-audit-results/samples.json css-audit-results
+          cat css-audit-results/report.md | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: css-audit
+          path: css-audit-results/
+          retention-days: 30
+          if-no-files-found: warn
