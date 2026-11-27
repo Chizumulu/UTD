@@ -1,0 +1,7 @@
+# Browser smoke tests (phase 1)
+
+Playwright Chromium desktop (1440x900) and mobile viewport (390x844) checks run on PR builds and after successful production Pages deployments. Manual workflow runs check the public site. Production automatic checks use the existing UTD_HEALTH_MONITOR_ENABLED flag; no extra credentials or Worker changes.
+
+Checks: rendered homepage, sidebar/mobile navigation, layout width and sidebar overlap, regression against SEO nav injected into body, league table, schedule, scorers, club squad, report, predictions, FA Cup, poster drawing module, same-origin script/stylesheet HTTP failures, uncaught JavaScript errors, and SEO static pages. Screenshots and structured results are retained for seven days. Production failures open one Issue and a successful production check closes it; PR failures are visible in CI.
+
+Limitations: Chromium only; mobile is emulated, not physical iOS/Android. This is smoke coverage, not pixel-perfect screenshot comparison, prediction accuracy validation, poster download or report content accuracy testing. The poster uses synthetic inputs only in the browser and never modifies site data. Tests may fail due to third-party resources or changing site selectors. The first CI run is required to calibrate thresholds and interaction selectors. PR tests do not write Issues. Automatic checks after a successful deployment are not a pre-deployment gate for direct main pushes.
