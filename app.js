@@ -13042,24 +13042,27 @@
     try { localStorage.setItem('roundMonthMineOnly', roundMonthMineOnly ? '1' : '0'); } catch (e) {}
     renderRoundsView();
   }
+  // A missing schedule control must not abort initialization of the whole app.
   const roundTools = document.getElementById('roundTools');
-  const roundToolsSummary = roundTools.querySelector('summary');
-  roundTools.addEventListener('click', event => {
-    if (event.target.closest('.round-tools-actions button')) {
+  if (roundTools) {
+    const roundToolsSummary = roundTools.querySelector('summary');
+    roundTools.addEventListener('click', event => {
+      if (event.target.closest('.round-tools-actions button')) {
+        roundTools.open = false;
+        roundToolsSummary?.focus({ preventScroll: true });
+      }
+    }, true);
+    roundTools.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || !roundTools.open) return;
+      event.preventDefault();
+      event.stopPropagation();
       roundTools.open = false;
-      roundToolsSummary.focus({ preventScroll: true });
-    }
-  }, true);
-  roundTools.addEventListener('keydown', event => {
-    if (event.key !== 'Escape' || !roundTools.open) return;
-    event.preventDefault();
-    event.stopPropagation();
-    roundTools.open = false;
-    roundToolsSummary.focus();
-  });
-  document.addEventListener('click', event => {
-    if (roundTools.open && !roundTools.contains(event.target)) roundTools.open = false;
-  });
+      roundToolsSummary?.focus();
+    });
+    document.addEventListener('click', event => {
+      if (roundTools.open && !roundTools.contains(event.target)) roundTools.open = false;
+    });
+  }
 
   function syncRoundModeControls() {
     document.querySelectorAll('#roundModeSeg [data-mode]').forEach(button => {
