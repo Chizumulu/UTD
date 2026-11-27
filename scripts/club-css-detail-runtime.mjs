@@ -44,11 +44,12 @@ export function wireClubDetailCss(app,assets){
         }
         if(!slots.length||slots.length!==groups.length||slots.some((r,i)=>r.selectorText!==groups[i].id))throw Error('Club CSS slot mismatch');
         for(let g=0;g<groups.length;g++){
+          let index=[...target.cssRules].indexOf(slots[g]);
+          if(index<0)throw Error('Club CSS slot disappeared');
           for(const rule of groups[g].rules){
-            const index=[...target.cssRules].indexOf(slots[g]);
-            if(index<0)throw Error('Club CSS slot disappeared');
             target.insertRule(rule,index);
             inserted.push(target.cssRules[index]);
+            index++;
           }
         }
         clubDetailCssReady.add(kind);
