@@ -1,3 +1,4 @@
+import { monitorCron, healthResponse } from '../health-monitor/health.mjs';
 import { scanMissingMatches } from '../match-monitor/missing.mjs';
 import { validateReviewMatches, lineupMessageValues, validatePartialLineup, correctLineupSlot } from '../instagram-lineup/review-message.mjs';
 import { fetchLineupFeed, scanInstagramLineups } from '../instagram-lineup/discover.mjs';
@@ -24,6 +25,7 @@ export default {
     if (url.pathname === "/admin/lineup-diagnostics" && request.method === "POST") {
       return runLineupDiagnostics(request, env);
     }
+    if (url.pathname === "/health/automation" && request.method === "GET") return healthResponse(env);
     if (url.pathname === "/health") {
       return Response.json({ ok: true });
     }
@@ -49,7 +51,16 @@ export default {
   },
 
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(Promise.allSettled([scanForCompletedMatches(env), scanCupApprovals(env), scanYoutubeHighlights(env), scanInstagramLineups(env), scanMissingMatches(env)]));
+    const tasks = [
+      {name:"league",enabled:true,run:()=>scanForCompletedMatches(env)},
+      {name:"cup",enabled:env.CUP_APPROVALS_ENABLED==="true",run:()=>scanCupApprovals(env)},
+      {name:"youtube",enabled:env.YOUTUBE_HIGHLIGHTS_ENABLED==="true",run:()=>scanYoutubeHighlights(env)},
+      {name:"instagram",enabled:env.INSTAGRAM_LINEUP_ENABLED==="true",run:()=>scanInstagramLineups(env)},
+      {name:"missing_matches",enabled:env.MATCH_MISSING_ENABLED==="true",run:()=>scanMissingMatches(env)}
+    ];
+    ctx.waitUntil(env.HEALTH_MONITOR_ENABLED==="true"
+      ? monitorCron(env,tasks)
+      : Promise.allSettled(tasks.filter(t=>t.enabled).map(t=>t.run())));
   }
 };
 
@@ -1452,7 +1463,7 @@ async function scanCupApprovals(env) {
    try{await sendApprovalMessage(proposal,env);sent++;}catch(error){await env.APPROVALS.delete("proposal:"+id);await env.APPROVALS.delete(key);throw error;}
   }
   console.log(JSON.stringify({event:"cup_scorer_scan_summary",sent,held:held.length}));
- }catch(error){console.error(JSON.stringify({event:"cup_scorer_scan_failed",error:String(error)}));}
+ }catch(error){console.error(JSON.stringify({event:"cup_scorer_scan_failed",error:String(error)}));return {ok:false};}
 }
 
 async function receiveLineupProposal(request, env) {
