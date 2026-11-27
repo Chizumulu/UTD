@@ -388,6 +388,41 @@ try{
     assert.deepEqual(faults,[]);
    }finally{releaseAnime();await ctx.close()}
   });
+ if(base.hostname==='127.0.0.1')await run('match alert onboarding only in standalone mode and waits for existing modal',async()=>{
+  for(const standalone of [false,true]){
+   const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block',reducedMotion:'reduce'});
+   await blockAnalytics(ctx);
+   const p=await ctx.newPage(),faults=[];
+   p.on('pageerror',e=>faults.push(e.message));
+   await p.addInitScript(mode=>{
+    const orig=window.matchMedia.bind(window);
+    window.matchMedia=q=>q==='(display-mode: standalone)'?{matches:mode,media:q,addEventListener(){},removeEventListener(){}}:orig(q);
+    Object.defineProperty(window,'PushManager',{value:window.PushManager||function(){},configurable:true});
+    window.__onboardingChecks=0;
+   },standalone);
+   // Isolate the onboarding check from actual push subscriptions and server calls.
+   await p.route(/\/push-client\.js(?:\?|$)/,route=>route.fulfill({contentType:'application/javascript',body:"window.hasRegisteredMatchAlerts=async()=>{window.__onboardingChecks++;return false};window.enableMatchAlerts=()=>{window.__onboardingEnabled=true};"}));
+   try{
+    await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+    await visible(p,'#disclaimerModal');
+    await p.waitForTimeout(2200);
+    assert.equal(await p.evaluate(()=>window.__onboardingChecks),standalone?1:0);
+    assert.equal(await p.locator('#pwaMatchAlertsPrompt[open]').count(),0,'onboarding overlaps disclaimer');
+    await dismiss(p);
+    if(standalone){
+     await visible(p,'#pwaMatchAlertsPrompt');
+     await p.locator('#pwaMatchAlertsPrompt [data-action="snooze"]').click();
+     assert.ok(await p.evaluate(()=>Number(localStorage.getItem('utd-match-alerts-prompt-snoozed-until'))>Date.now()));
+     await p.reload({waitUntil:'domcontentloaded',timeout:45000});
+     await dismiss(p);
+     await p.waitForTimeout(2200);
+     assert.equal(await p.evaluate(()=>window.__onboardingChecks),0);
+     assert.equal(await p.locator('#pwaMatchAlertsPrompt[open]').count(),0);
+    }else assert.equal(await p.locator('#pwaMatchAlertsPrompt').count(),0);
+    assert.deepEqual(faults,[]);
+   }finally{await ctx.close()}
+  }
+ });
  await run('automatic notices wait, preserve order and acknowledge once',async()=>{
   const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',serviceWorkers:'block',reducedMotion:'reduce',locale:'ko-KR'});
   await blockAnalytics(ctx);
