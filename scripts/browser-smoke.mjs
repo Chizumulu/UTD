@@ -146,6 +146,101 @@ try{
      assert.ok(events.every(e=>!e.page_location.includes('#')&&!e.page_location.includes('?')));
     }finally{await deep.close()}
    });
+   await run(label+' archive navigation and history',async()=>{
+    const archive=await context.newPage();
+    const archiveErrors=[];
+    archive.on('pageerror',e=>archiveErrors.push(e.message));
+    try {
+     await archive.goto(new URL('#/archive/weekly',base).href,{waitUntil:'domcontentloaded',timeout:45000});
+     await dismiss(archive);
+     await visible(archive,'#archiveWeeklyPane');
+     await analyticsScreen(archive,'archive');
+     await archive.locator('#archiveNavClubs').click();
+     await visible(archive,'#archiveClubsPane');
+     await archive.waitForFunction(()=>location.hash.includes('archive/clubs'));
+     await archive.goBack();
+     await visible(archive,'#archiveWeeklyPane');
+     await archive.goForward();
+     await visible(archive,'#archiveClubsPane');
+     await archive.locator('#archiveNavMain').click();
+     await visible(archive,'#archiveMainPane');
+     await archive.evaluate(()=>window.exitSeasonArchive());
+     await visible(archive,'#rankView');
+     await archive.evaluate(()=>window.openSeasonArchive({tab:'weekly'}));
+     await visible(archive,'#archiveWeeklyPane');
+     await archive.evaluate(()=>window.exitSeasonArchive());
+     await visible(archive,'#rankView');
+     assert.deepEqual(archiveErrors,[]);
+    }finally{await archive.close()}
+   });
+   await run(label+' archive load failure and retry',async()=>{
+    const isolated=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},serviceWorkers:'block'});
+    await blockAnalytics(isolated);
+    const p=await isolated.newPage();
+    const runtime=[];
+    p.on('pageerror',e=>runtime.push(e.message));
+    let requests=0;
+    await p.route(/\/archive-2526\.js(?:\?|$)/,route=>{requests++;return requests===1?route.abort():route.continue()});
+    try{
+     await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+     await filled(p,'#mainMiniTableBody');
+     await dismiss(p);
+     await p.evaluate(()=>window.openSeasonArchive());
+     await p.waitForFunction(()=>document.body.style.cursor!=='progress');
+     assert.equal(requests,1);
+     assert.ok(!await p.locator('body').evaluate(e=>e.classList.contains('season-archive')));
+     await p.evaluate(()=>window.openSeasonArchive({tab:'weekly'}));
+     await visible(p,'#archiveWeeklyPane');
+     assert.equal(requests,2);
+     assert.deepEqual(runtime,[]);
+    }finally{await isolated.close()}
+   });
+   await run(label+' archive slow request must not override later navigation',async()=>{
+    const isolated=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},serviceWorkers:'block'});
+    await blockAnalytics(isolated);
+    const p=await isolated.newPage();
+    let release,started;
+    const held=new Promise(resolve=>{release=resolve});
+    const requested=new Promise(resolve=>{started=resolve});
+    await p.route(/\/archive-2526\.js(?:\?|$)/,async route=>{started();await held;await route.continue()});
+    try{
+     await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+     await filled(p,'#mainMiniTableBody');
+     await dismiss(p);
+     await p.evaluate(()=>window.openSeasonArchive());
+     await Promise.race([requested,new Promise((_,reject)=>setTimeout(()=>reject(Error('archive request did not start')),10000))]);
+     await p.evaluate(()=>window.showView('leagueRank'));
+     await visible(p,'#leagueRankView');
+     release();
+     await p.waitForFunction(()=>typeof ARCHIVE_2526!=='undefined'&&document.body.style.cursor!=='progress');
+     await p.waitForTimeout(150);
+     assert.ok(!await p.locator('body').evaluate(e=>e.classList.contains('season-archive')),'late archive response reopened a screen the visitor left');
+     await visible(p,'#leagueRankView');
+    }finally{release();await isolated.close()}
+   });
+   await run(label+' archive latest request wins',async()=>{
+    const isolated=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},serviceWorkers:'block'});
+    await blockAnalytics(isolated);
+    const p=await isolated.newPage();
+    let release,started;
+    const held=new Promise(resolve=>{release=resolve});
+    const requested=new Promise(resolve=>{started=resolve});
+    let requests=0;
+    await p.route(/\/archive-2526\.js(?:\?|$)/,async route=>{requests++;started();await held;await route.continue()});
+    try{
+     await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+     await filled(p,'#mainMiniTableBody');
+     await dismiss(p);
+     await p.evaluate(()=>window.openSeasonArchive({tab:'main'}));
+     await Promise.race([requested,new Promise((_,reject)=>setTimeout(()=>reject(Error('archive request did not start')),10000))]);
+     await p.evaluate(()=>window.openSeasonArchive({tab:'clubs'}));
+     release();
+     await visible(p,'#archiveClubsPane');
+     await p.waitForFunction(()=>location.hash.includes('archive/clubs'));
+     assert.equal(requests,1);
+     assert.ok(!await p.locator('#archiveMainPane').isVisible());
+    }finally{release();await isolated.close()}
+   });
    await run(label+' JavaScript runtime',async()=>assert.deepEqual(pageErrors,[]));
   }finally{
    await page.screenshot({path:join(out,label+'.png'),fullPage:false,timeout:10000}).catch(()=>{});
