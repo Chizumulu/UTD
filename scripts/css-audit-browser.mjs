@@ -50,6 +50,10 @@ try{
    if(click)await page.evaluate(()=>{const b=document.querySelector('#cupToggleSide');if(!b)throw Error('Cup toggle unavailable');b.click()});
    await page.locator(selector).first().waitFor({state:'visible',timeout:15000});
    if(name==='prediction'){
+    const disclaimer=page.locator('#disclaimerModal');
+    await disclaimer.waitFor({state:'visible',timeout:15000});
+    await disclaimer.locator('button.disclaimer-confirm-btn').click({timeout:15000});
+    await disclaimer.waitFor({state:'hidden',timeout:15000});
     await page.locator('#predictTabs [data-predict-tab="model"]').click();
     await page.locator('#predictView [data-predict-panel="model"].active').waitFor({state:'visible',timeout:15000});
     await page.locator('#aiTrackDetails > summary').waitFor({state:'visible',timeout:15000});
