@@ -388,7 +388,11 @@
     scheduled = false;
     var batch = pending; pending = [];
     // 이미 DOM에서 빠진 노드는 건너뜁니다.
-    batch.forEach(function (n) { if (n.isConnected) processNode(n); });
+    var roots = new Set(batch.filter(function (n) { return n.isConnected; }));
+    roots.forEach(function (n) {
+      for (var p = n.parentElement; p; p = p.parentElement) if (roots.has(p)) return;
+      processNode(n);
+    });
     if (pendingOverlays.size || openOverlays.length) syncOverlays();
   }
   var domObserver = new MutationObserver(function (records) {
