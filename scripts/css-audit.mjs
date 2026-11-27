@@ -1,6 +1,6 @@
 import postcss from 'postcss';
 import {gzipSync,brotliCompressSync} from 'node:zlib';
-import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,existsSync} from 'node:fs';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 
@@ -63,13 +63,28 @@ export function coverage(css,analysis,samples){
  for(const [name,g] of Object.entries(analysis.groups)){const rs=analysis.rules.filter(r=>r.classification===name),unused=new Set(result.unused),partial=new Set(result.partial);byGroup[name]={...g,unobservedRules:rs.filter(r=>unused.has(r.id)).length,unobservedRuleBytes:rs.filter(r=>unused.has(r.id)).reduce((n,r)=>n+r.bytes,0),partialRules:rs.filter(r=>partial.has(r.id)).length,unobservedDeclarations:rs.filter(r=>unused.has(r.id)).reduce((n,r)=>n+r.declarations.length,0)};}
  return {samples:samples.map(s=>({...s,...classify(mergeRanges(s.ranges))})),union:result,byGroup,notes:['Coverage reports matched rule ranges, not individual declaration execution. Unobserved declarations are inside wholly unobserved rules, not proven dead CSS.','Offsets are UTF-16; byte counts use UTF-8.','Only successful scenarios with an exact stylesheet text match contribute.']};
 }
+export function completeness(samples,expected,failures=[]){
+ const names=samples.map(s=>s.name),unique=new Set(names),wanted=new Set(expected);
+ const missing=expected.filter(n=>!unique.has(n)),unexpected=names.filter(n=>!wanted.has(n));
+ const complete=expected.length>0&&wanted.size===expected.length&&missing.length===0&&unexpected.length===0&&unique.size===names.length&&failures.length===0;
+ return {complete,expected:expected.length,successful:unique.size,failed:failures.length,missing,unexpected,duplicates:names.length-unique.size};
+}
 export function markdown(a,c){
  const lines=['# CSS ownership and browser coverage audit','','Source CSS bytes: '+a.size.raw+'; gzip: '+a.size.gzip+'; Brotli: '+a.size.brotli,'Rules: '+a.rules.length+'; repeated selectors: '+a.repeatedSelectors.length,'','| Group | Rules | Rule bytes | Unobserved rules | Unobserved rule bytes | Declarations in unobserved rules |','|---|---:|---:|---:|---:|---:|'];
+ if(c.completeness){const m=c.completeness;lines.splice(2,0,'**Status: '+(m.complete?'COMPLETE':'INCOMPLETE — PARTIAL COVERAGE; NOT SAFE FOR EXTRACTION')+'**','Successful: '+m.successful+'/'+m.expected+'; failed: '+m.failed,'Missing: '+(m.missing.join(', ')||'none'),'');}
  for(const [name,g] of Object.entries(c.byGroup))lines.push('| '+name+' | '+g.rules+' | '+g.ruleBytes+' | '+g.unobservedRules+' | '+g.unobservedRuleBytes+' | '+g.unobservedDeclarations+' |');
  lines.push('','## Browser scenarios','','| Scenario | Used bytes | Unobserved rules | Partial rules |','|---|---:|---:|---:|');
  for(const s of c.samples)lines.push('| '+s.name+' | '+s.usedBytes+' | '+s.unused.length+' | '+s.partial.length+' |');
  return lines.concat('',...a.notes,...c.notes,'').join('\n');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- const [cssPath,samplePath,out]=process.argv.slice(2);const css=readFileSync(cssPath,'utf8'),a=analyze(css),c=coverage(css,a,JSON.parse(readFileSync(samplePath,'utf8')));mkdirSync(out,{recursive:true});writeFileSync(join(out,'ownership.json'),JSON.stringify(a));writeFileSync(join(out,'coverage.json'),JSON.stringify(c));writeFileSync(join(out,'report.md'),markdown(a,c));
+ const [cssPath,samplePath,out]=process.argv.slice(2);
+ const css=readFileSync(cssPath,'utf8'),a=analyze(css);
+ const samples=existsSync(samplePath)?JSON.parse(readFileSync(samplePath,'utf8')):[];
+ const manifestPath=join(out,'manifest.json'),failurePath=join(out,'failures.json');
+ const expected=existsSync(manifestPath)?JSON.parse(readFileSync(manifestPath,'utf8')).expected:[];
+ const failures=existsSync(failurePath)?JSON.parse(readFileSync(failurePath,'utf8')):[];
+ const c=coverage(css,a,samples);c.completeness=completeness(samples,expected,failures);
+ mkdirSync(out,{recursive:true});writeFileSync(join(out,'ownership.json'),JSON.stringify(a));writeFileSync(join(out,'coverage.json'),JSON.stringify(c));writeFileSync(join(out,'report.md'),markdown(a,c));
+ if(!c.completeness.complete)process.exitCode=1;
 }
