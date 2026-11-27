@@ -1,5 +1,5 @@
 import { validateReviewMatches, lineupMessageValues, validatePartialLineup, correctLineupSlot } from '../instagram-lineup/review-message.mjs';
-import { scanInstagramLineups } from '../instagram-lineup/discover.mjs';
+import { fetchLineupFeed, scanInstagramLineups } from '../instagram-lineup/discover.mjs';
 import { planCupForfeits } from '../forfeit-approval/plan-cup-forfeits.mjs';
 import { scanYoutubeHighlights } from '../youtube-highlights/rss.mjs';
 import { detectForfeit } from '../forfeit-approval/detect-forfeit.mjs';
@@ -19,6 +19,9 @@ export default {
     }
     if (url.pathname === "/admin/lineup-proposal" && request.method === "POST") {
       return receiveLineupProposal(request, env);
+    }
+    if (url.pathname === "/admin/lineup-diagnostics" && request.method === "POST") {
+      return runLineupDiagnostics(request, env);
     }
     if (url.pathname === "/health") {
       return Response.json({ ok: true });
@@ -1512,4 +1515,40 @@ async function handleLineupCorrection(text,env){
  await env.APPROVALS.put(key,JSON.stringify(next),{expirationTtl:MAX_PROPOSAL_AGE_SECONDS});
  await sendLineupApproval(next,env,false);
  console.log(JSON.stringify({event:"lineup_slot_corrected",proposalId:p.id,slot:Number(m[2]),remaining:next.unresolvedSlots.length}));
+}
+
+ // Read-only diagnostics. Synthetic approvals use isolated memory and never the production KV or network.
+async function runLineupDiagnostics(request, env) {
+ const expected=String(env.LINEUP_INGEST_TOKEN||"");
+ const supplied=request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]||"";
+ if(expected.length<32||!constantTimeEqual(supplied,expected))return Response.json({ok:false},{status:401});
+ const checks={ingestAuthentication:true,automaticDiscoveryEnabled:env.INSTAGRAM_LINEUP_ENABLED==="true",signingSecretConfigured:String(env.APPROVAL_SIGNING_SECRET||"").length>=32,templateConfigured:!!env.WHATSAPP_LINEUP_TEMPLATE_NAME};
+ try {
+  const players=Array.from({length:13},(_,i)=>({number:i+1,nameKo:"테스트 선수 "+(i+1)}));
+  const p={kind:"lineup",id:crypto.randomUUID(),matchDate:"2099-01-01",home:"테스트 홈",away:"테스트 원정",starters:players.slice(0,11),bench:[players[11],{number:null,nameKo:"미확인",unresolved:true}],unresolvedSlots:[{slot:12}],correctionRoster:players,needsReview:true};
+  checks.partialValid=validatePartialLineup(p)&&validateReviewMatches(p);
+  let duplicateRejected=false;try{correctLineupSlot(p,12,1);}catch{duplicateRejected=true;}
+  checks.duplicateCorrectionRejected=duplicateRejected;
+  const corrected=correctLineupSlot(p,12,13);
+  checks.correctionValid=validatePartialLineup(corrected)&&corrected.unresolvedSlots.length===0;
+  checks.templateVariables=lineupMessageValues(corrected,false).length===4&&lineupMessageValues(corrected,true)[0].startsWith("2차 확인");
+  const memory=new Map();
+  const mock={...env,INSTAGRAM_LINEUP_ENABLED:"false",APPROVALS:{get:async k=>memory.get(k)??null,put:async(k,v)=>{memory.set(k,v);}}};
+  // Only call real handler for hold/reject and premature confirmation; these branches cannot send or dispatch.
+  const key="proposal:"+p.id;
+  await mock.APPROVALS.put(key,JSON.stringify(corrected));
+  await handleAction(await signedPayload(p.id,"confirm",mock),mock);
+  checks.prematureConfirmationBlocked=JSON.parse(memory.get(key)).state==="held";
+  await handleAction(await signedPayload(p.id,"hold",mock),mock);
+  checks.holdValid=JSON.parse(memory.get(key)).state==="held";
+  await handleAction(await signedPayload(p.id,"reject",mock),mock);
+  checks.rejectValid=JSON.parse(memory.get(key)).state==="rejected";
+  // A correctly signed second confirmation with discovery disabled must not dispatch.
+  await mock.APPROVALS.put(key,JSON.stringify({...corrected,state:"awaiting_confirmation"}));
+  await handleAction(await signedPayload(p.id,"confirm",mock),mock);
+  checks.disabledDispatchBlocked=JSON.parse(memory.get(key)).state==="awaiting_confirmation";
+ }catch{checks.localChecksFailed=true;}
+ try{const posts=await fetchLineupFeed(env.UTD_INSTAGRAM_TOKEN,{cutoff:Date.now()});checks.instagramRead=true;checks.instagramPostCount=posts.length;}catch{checks.instagramRead=false;}
+ const ok=checks.signingSecretConfigured&&checks.templateConfigured&&checks.partialValid&&checks.duplicateCorrectionRejected&&checks.correctionValid&&checks.templateVariables&&checks.prematureConfirmationBlocked&&checks.holdValid&&checks.rejectValid&&checks.disabledDispatchBlocked&&checks.instagramRead&&!checks.localChecksFailed;
+ return Response.json({ok:Boolean(ok),checks,mode:"read-only; no production KV writes, WhatsApp sends or GitHub dispatches"},{status:ok?200:503});
 }
