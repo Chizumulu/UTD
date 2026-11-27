@@ -53,7 +53,7 @@ for (const file of files) {
   else copyFileSync(file, destination);
 }
 
-writeSeo(output, readFileSync('data.js', 'utf8'));
+writeSeo(output, readFileSync('data.js', 'utf8'), {analyticsVersion:assetVersion('utd-analytics.js')});
 
 // Public deployment receipt contains only repository revision and public asset digest.
 writeFileSync(join(output,'publication.json'),JSON.stringify({version:1,commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dataSha256:createHash('sha256').update(readFileSync(join(output,'data.js'))).digest('hex')})+'\n');
