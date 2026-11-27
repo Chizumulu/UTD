@@ -421,6 +421,36 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('venue map module is optional and retries without affecting travel tab',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage(),faults=[];
+  let requests=0;
+  p.on('pageerror',e=>faults.push(e.message));
+  await p.route(/\/venue-map\.js\?v=[a-f0-9]{16}$/,route=>++requests===1?route.abort():route.continue());
+  await p.route('https://cdnjs.cloudflare.com/**/leaflet.min.*',route=>route.abort());
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await dismiss(p);
+   await filled(p,'#mainMiniTableBody');
+   assert.equal(requests,0);
+   await p.evaluate(()=>{setVenueMode('travel');showView('venues')});
+   await visible(p,'#venueModeTravel');
+   assert.equal(requests,0);
+   await p.evaluate(()=>setVenueMode('map'));
+   await visible(p,'#venueLeafletMap button');
+   await p.locator('#venueLeafletMap button').click();
+   await filled(p,'#venuesList');
+   assert.equal(requests,2);
+   await p.evaluate(()=>setVenueSort('straight'));
+   assert.ok(await p.locator('#venuesList .venue-list-item').count());
+   await p.evaluate(()=>openVenueMapModal());
+   await visible(p,'#venueMapModal');
+   await p.evaluate(()=>closeVenueMapModal());
+   assert.equal(requests,2);
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  if(base.hostname==='127.0.0.1')await run('match detail loads on demand, retries and preserves player return',async()=>{
   const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
   await blockAnalytics(ctx);
