@@ -43,3 +43,13 @@ test('deployment output contains sitemap and real HTML at every URL',()=>{
   assert.ok(!sitemap.includes('<lastmod>'));
  }finally{rmSync(out,{recursive:true,force:true});}
 });
+
+test('generated landing pages use one direct tag and a relative content-versioned analytics script',()=>{
+ const pages=generateSeo(readSeoData(source),{analyticsVersion:'test-version'});
+ for(const [path,html] of pages){
+  const prefix='../'.repeat(path.split('/').filter(Boolean).length);
+  assert.equal((html.match(/gtag\("config","G-N6GC687TZD"\)/g)||[]).length,1);
+  assert.ok(html.includes('src="'+prefix+'utd-analytics.js?v=test-version" data-utd-seo="'+path+'"'),path);
+  assert.ok(!html.includes('GTM-T7RRHPMN'));
+ }
+});
