@@ -1,0 +1,11 @@
+import {execFileSync} from 'node:child_process';
+import {writeFileSync,readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
+const output=process.argv[2];
+if(!output)throw Error('Receipt path required');
+if(git('status','--porcelain','--','data.js'))throw Error('Uncommitted data.js');
+const branch=git('branch','--show-current');
+const commit=git('rev-parse','HEAD');
+const dataSha256=createHash('sha256').update(readFileSync('data.js')).digest('hex');
+writeFileSync(output,JSON.stringify({version:1,runId:process.env.GITHUB_RUN_ID,runAttempt:process.env.GITHUB_RUN_ATTEMPT,branch,commit,dataSha256})+'\n');
