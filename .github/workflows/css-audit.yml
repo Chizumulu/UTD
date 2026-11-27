@@ -37,9 +37,15 @@ jobs:
             sleep 1
           done
           curl -fsS http://127.0.0.1:8081/UTD/ -o /dev/null
-          node scripts/css-audit-browser.mjs http://127.0.0.1:8081/UTD/ "$RUNNER_TEMP/css-site/UTD/style.css" css-audit-results
-          node scripts/css-audit.mjs "$RUNNER_TEMP/css-site/UTD/style.css" css-audit-results/samples.json css-audit-results
-          cat css-audit-results/report.md | tee -a "$GITHUB_STEP_SUMMARY"
+          browser_status=0
+          node scripts/css-audit-browser.mjs http://127.0.0.1:8081/UTD/ "$RUNNER_TEMP/css-site/UTD/style.css" css-audit-results || browser_status=$?
+          report_status=0
+          node scripts/css-audit.mjs "$RUNNER_TEMP/css-site/UTD/style.css" css-audit-results/samples.json css-audit-results || report_status=$?
+          if [[ -f css-audit-results/report.md ]]; then cat css-audit-results/report.md | tee -a "$GITHUB_STEP_SUMMARY"; fi
+          if (( browser_status != 0 || report_status != 0 )); then
+            echo "::error::CSS audit incomplete (browser=$browser_status report=$report_status)"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
