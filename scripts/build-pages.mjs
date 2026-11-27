@@ -1,4 +1,4 @@
-import { applyResponsiveCrests } from './crest-templates.mjs';
+import { applyResponsiveCrests, applyStaticCrests } from './crest-templates.mjs';
 import { writeSeo } from './seo-pages.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -59,7 +59,7 @@ const html = source.replace(versionBlock, updatedBlock).replace(
   (_, prefix, file) => prefix + assetVersion(file)
 );
 
-writeFileSync(join(output,'index.html'),html);
+writeFileSync(join(output,'index.html'),applyStaticCrests(html,manifest));
 
 writeSeo(output, readFileSync('data.js', 'utf8'), {analyticsVersion:assetVersion('utd-analytics.js')});
 

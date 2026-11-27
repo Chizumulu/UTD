@@ -1,9 +1,10 @@
 // Build-time, narrowly scoped responsive attributes for the diagnosed home/league logos.
 // Original source URLs, HTML classes and layout remain unchanged.
 const targets = [
+  { needle: 'class="team-logo home-match-crest" src="${m.oppLogo}"', expr: 'm.oppLogo', sizes: '32px', minimum: 2 },
   { needle: 'class="team-logo" src="${team.logoSrc}" data-en-name="${team.nameEn}" alt="${team.nameEn}"', expr: 'team.logoSrc', sizes: '24px', minimum: 2 },
-  { needle: 'src="${nmx.oppLogo}" alt="${nmx.oppEn}"', expr: 'nmx.oppLogo', sizes: '68px', minimum: 1 },
-  { needle: 'class="nmc-logo${alt ? \' nmc-logo-alt\' : \'\'}" src="${esc(logo)}"', expr: 'logo', sizes: '24px', minimum: 1 },
+  { needle: 'src="${nmx.oppLogo}" alt="${nmx.oppEn}"', expr: 'nmx.oppLogo', sizes: '(min-width: 1200px) 68px, 42px', minimum: 1 },
+  { needle: 'class="nmc-logo${alt ? \' nmc-logo-alt\' : \'\'}" src="${esc(logo)}"', expr: 'logo', sizes: '46px', minimum: 1 },
   { needle: 'class="nmc-logo nmc-logo-alt" src="${esc(logo)}"', expr: 'logo', sizes: '24px', minimum: 1 },
   { needle: 'class="nmc-logo" src="${esc(logo)}"', expr: 'logo', sizes: '24px', minimum: 1 }
 ];
@@ -44,4 +45,16 @@ document.addEventListener('error', function(event) {
 }, true);
 `;
   return prelude + '\n' + result;
+}
+
+export function applyStaticCrests(html, manifest) {
+  const entry = manifest['ddds.webp'];
+  if (!entry?.variants?.length) return html;
+  const candidates = [...entry.variants.map(v=>v.src+' '+v.width+'w'), 'ddds.webp '+entry.width+'w'].join(', ');
+  for (const [cls, sizes] of [['league-logo','108px'],['archive-hero-logo','64px']]) {
+    const needle = 'class="'+cls+'" src="./ddds.webp"';
+    if (!html.includes(needle)) throw Error('Static crest template changed: '+cls);
+    html = html.replace(needle, 'class="'+cls+'" srcset="'+candidates+'" sizes="'+sizes+'" src="./ddds.webp"');
+  }
+  return html;
 }
