@@ -29,8 +29,11 @@ jobs:
       BASE_INPUT: ${{ inputs.baseline || 'fb08f0af422bf811d4948669c31577db3ba710bd' }}
       HEAD_INPUT: ${{ inputs.candidate || github.event.pull_request.head.sha || github.sha }}
       RUNS: ${{ inputs.runs || '3' }}
-      RESULTS: ${{ runner.temp }}/lighthouse-results
     steps:
+      - name: Initialize results directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/lighthouse-results"
+          echo "RESULTS=$RUNNER_TEMP/lighthouse-results" >> "$GITHUB_ENV"
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -106,7 +109,7 @@ jobs:
       - name: Summarize medians and asset sizes
         run: |
           node scripts/lighthouse-comparison.mjs "$RESULTS" "$BASE_INPUT" "$HEAD_INPUT" "$RUNNER_TEMP/site-before/UTD" "$RUNNER_TEMP/site-after/UTD" "$RUNS"
-          cat "$RESULTS/comparison.md" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RESULTS/comparison.md" | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
