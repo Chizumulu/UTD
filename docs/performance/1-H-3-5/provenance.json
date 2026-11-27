@@ -1,0 +1,82 @@
+{
+  "source": {
+    "runId": 46043057096,
+    "artifactId": 15220423711,
+    "workflowSha": "4e68156f2bff1b973a8b13d3bc542206561f74c6",
+    "zipSha256": "bf5c153006af8a6b062a95f16255d3f45f33a4a5a07370c826e08c49dd84324c"
+  },
+  "verified": {
+    "zipIntegrity": true,
+    "rawReportsMatchingComparison": 20,
+    "attemptHistoriesMatching": 20,
+    "evidenceHashesMatching": 5,
+    "baselineMarkdownExact": true
+  },
+  "historical": "fb08f0af422bf811d4948669c31577db3ba710bd",
+  "reference": "def5d8846167fcb2699ac5f416028e46afebe2d4",
+  "status": "measured-with-variability-warning",
+  "validReports": 20,
+  "attempts": 20,
+  "retries": 0,
+  "rejected": 0,
+  "environment": {
+    "workflowSha": "4e68156f2bff1b973a8b13d3bc542206561f74c6",
+    "runId": "46043057096",
+    "runAttempt": "1",
+    "measuredAt": "2026-11-27T17:37:03.168Z",
+    "node": "v22.23.5",
+    "chrome": "Google Chrome 158.0.8127.36",
+    "lighthouse": "12.8.2",
+    "python": "Python 3.12.16",
+    "runnerImage": "20261122.23.1",
+    "platform": "linux",
+    "arch": "x64",
+    "kernel": "7.0.0-1018-aws",
+    "cpu": "Intel(R) Xeon(R) 6975P-C",
+    "logicalCpus": 4,
+    "throttling": "simulate",
+    "language": "ko",
+    "compression": "br/gzip/identity",
+    "cache": "no-store"
+  },
+  "warnings": [
+    "mobile historical: high-variability (jsExecution 224.86%, mainThread 56.64%)",
+    "mobile reference TBT range/median 65.47%; not part of heuristic"
+  ],
+  "metrics": {
+    "mobile": {
+      "score": 59,
+      "fcp": 4825.58,
+      "lcp": 7611.41,
+      "tbt": 69.5,
+      "cls": 0.13,
+      "speedIndex": 4825.58,
+      "jsExecution": 451.52,
+      "mainThread": 2664.41,
+      "transfer": 1705913,
+      "requests": 75
+    },
+    "desktop": {
+      "score": 89,
+      "fcp": 932.11,
+      "lcp": 1492.95,
+      "tbt": 0,
+      "cls": 0.14,
+      "speedIndex": 1005.02,
+      "jsExecution": 90.2,
+      "mainThread": 738.05,
+      "transfer": 1701704,
+      "requests": 73
+    }
+  },
+  "note": "Compact provenance and rounded reference medians transcribed from verified baseline.md, not the original baseline.json. Original full report and diagnostic evidence remain in the Actions artifact; preserve the ZIP separately for long-term full evidence.",
+  "sha256": {
+    "baseline.json": "36414cfef8bcab198735e0cc6b613e3a2b4e938668b2ace29730af28d0c7e7c8",
+    "baseline.md": "272c0b6a4656b5ab86c9ab3d92cb1105b5f35088e8ca49a9e8e6909544d33d69",
+    "comparison.json": "21d92b3ee5a9623d6f746fec00eadf464399bcaa7ba69d1819d8e2499baa5715",
+    "diagnostics.json": "0eed52479dc39329232200b324dc587dca8e2703a88d73faaa090ed46c8d1af5",
+    "environment.json": "bcb4e2c4f99135bbf0028154995f0dce0c1cce0617e39c0f3b7c236b1fbbcc57",
+    "compression-8081.json": "78f2a4c41036fec099fb06aa37d372e44f33c837f8e27fe8f136b1f760bbfa74",
+    "compression-8082.json": "c09df29dd3aa7a50bde01d57e6910eca65c5be756d92b8ef531e57342fc2eb68"
+  }
+}
