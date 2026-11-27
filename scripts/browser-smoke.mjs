@@ -147,6 +147,26 @@ try{
      await filled(page,selector);
      await analyticsScreen(page,({leagueRank:'league',squad:'club'})[view]||view);
      if(view==='leagueRank'){
+      if(base.hostname==='127.0.0.1'){
+       const result=await page.evaluate(async()=>{
+        const scroller=document.getElementById('rankTableScroller'),wrap=document.getElementById('rankTableFade');
+        const wait=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+        if(!scroller||!wrap)throw Error('rank scroll hint missing');
+        const original=scroller.scrollLeft;
+        scroller.scrollLeft=0;scroller.dispatchEvent(new Event('scroll'));await wait();
+        const max=scroller.scrollWidth-scroller.clientWidth;
+        const start={left:wrap.classList.contains('show-left'),right:wrap.classList.contains('show-right')};
+        scroller.scrollLeft=max;scroller.dispatchEvent(new Event('scroll'));await wait();
+        const end={left:wrap.classList.contains('show-left'),right:wrap.classList.contains('show-right')};
+        scroller.scrollLeft=original;scroller.dispatchEvent(new Event('scroll'));await wait();
+        return {max,start,end};
+       });
+       assert.equal(result.start.left,false,'left scroll hint at start');
+       assert.equal(result.start.right,result.max>4,'right scroll hint at start');
+       assert.equal(result.end.right,false,'right scroll hint at end');
+       assert.equal(result.end.left,result.max>4,'left scroll hint at end');
+       console.log(label+' scroll fade batching: '+JSON.stringify(result));
+      }
       const count=(await analyticsEvents(page)).length;
       await page.evaluate(()=>{window.showView('leagueRank');window.showView('leagueRank')});
       await page.waitForTimeout(100);
