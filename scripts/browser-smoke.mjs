@@ -110,6 +110,20 @@ try{
        localRequests:performance.getEntriesByType('resource').filter(e=>e.name.includes('/fonts/pretendard/')).map(e=>e.name),
        googleMedia:document.querySelector('link[href*="fonts.googleapis.com/css2?family=Noto"]')?.media};
      });
+     const initial=await page.evaluate(()=>{
+      const preload=Array.from(document.querySelectorAll('link[rel="preload"][as="script"],link[rel="preload"][as="style"]')).map(e=>({url:e.href,as:e.as}));
+      const scripts=Array.from(document.scripts).map(e=>e.src);
+      const styles=Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(e=>e.href);
+      return {hiddenTableRows:document.querySelectorAll('#leagueTableBody tr').length,
+       heroReady:!document.getElementById('nextMatchStrip').hasAttribute('aria-busy'),
+       preloads:preload.map(p=>({url:p.url,matched:(p.as==='script'?scripts:styles).includes(p.url)})),
+       };
+     });
+     assert.equal(initial.hiddenTableRows,0,'hidden league table rendered eagerly');
+     assert.ok(initial.heroReady,'next match card not initialized');
+     assert.equal(initial.preloads.length,3,'critical preload missing');
+     assert.ok(initial.preloads.every(p=>p.matched),'preload URL does not match actual resource');
+     console.log(label+' initial render: '+JSON.stringify(initial));
      assert.equal(fonts.faces,92,'Pretendard font declarations missing');
      assert.ok(fonts.loaded>0&&fonts.status,'Pretendard sample failed to load');
      assert.match(fonts.fontFamily,/Pretendard Variable/);
