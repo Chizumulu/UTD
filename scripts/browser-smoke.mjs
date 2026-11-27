@@ -421,6 +421,40 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('team and match comparison assets load independently and retry',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage(),faults=[];
+  let teams=0,matches=0;
+  p.on('pageerror',e=>faults.push(e.message));
+  await p.route(/\/team-compare\.js\?v=[a-f0-9]{16}$/,route=>++teams===1?route.abort():route.continue());
+  await p.route(/\/match-compare\.js\?v=[a-f0-9]{16}$/,route=>++matches===1?route.abort():route.continue());
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await dismiss(p);
+   await filled(p,'#mainMiniTableBody');
+   assert.equal(teams,0);assert.equal(matches,0);
+   await p.locator('#viewTeamCompareBtn').click();
+   await visible(p,'#teamCompareBody button');
+   await p.locator('#teamCompareBody button').first().click();
+   await visible(p,'#teamCompareBody .tc-card');
+   assert.equal(teams,2);assert.equal(matches,0);
+   const a=await p.locator('#tcSelectA').inputValue(),b=await p.locator('#tcSelectB').inputValue();
+   await p.locator('#tcSwapBtn').click();
+   assert.equal(await p.locator('#tcSelectA').inputValue(),b);
+   assert.equal(await p.locator('#tcSelectB').inputValue(),a);
+   await p.evaluate(([a,b])=>openMatchCompareModal(a,a,b,b,'round1',{homeScore:1,awayScore:0}),[a,b]);
+   await visible(p,'#matchCompareBody button');
+   await p.locator('#matchCompareBody button').first().click();
+   await visible(p,'#matchCompareBody .mc-teams-row');
+   assert.equal(matches,2);
+   await p.evaluate(()=>closeMatchCompareModal());
+   await p.evaluate(([a,b])=>openMatchCompareModal(a,a,b,b,'round1',{homeScore:1,awayScore:0}),[a,b]);
+   await visible(p,'#matchCompareBody .mc-teams-row');
+   assert.equal(matches,2);
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  if(base.hostname==='127.0.0.1')await run('season comparison loads only on compare tab, retries, and supports direct route',async()=>{
   for(const direct of [false,true]){
    const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
