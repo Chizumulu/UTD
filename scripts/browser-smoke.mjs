@@ -318,9 +318,13 @@ try{
   // Test-only fixtures: the production news has expired; supply one match for any test date.
   await p.route(/\/app\.js(?:\?|$)/,async route=>{
    const res=await route.fetch(),src=await res.text();
-   const edited=src.replace(/const NEWS_POPUP_EXPIRES_AT = [^;]+;/,'const NEWS_POPUP_EXPIRES_AT = Date.now()+86400000;')
-    .replace('function collectTodayMatches() {', "function collectTodayMatches() { return [{m:{homeEn:'Chizumulu United FC',homeKo:'치주물루',awayEn:'Mafu Stars FC',awayKo:'마푸',kickoffTime:'15:00'},ms:Date.now(),pos:19}];");
-   assert.notEqual(edited,src);
+    const expiry=/\bconst\s+NEWS_POPUP_EXPIRES_AT\s*=\s*[^;]+;/;
+    const matches=/\bfunction\s+collectTodayMatches\s*\(\s*\)\s*\{/;
+    assert.match(src,expiry,'news expiry fixture target missing');
+    assert.match(src,matches,'matchday fixture target missing');
+    const edited=src.replace(expiry,'const NEWS_POPUP_EXPIRES_AT = Date.now()+86400000;')
+     .replace(matches, "function collectTodayMatches() { return [{m:{homeEn:'Chizumulu United FC',homeKo:'치주물루',awayEn:'Mafu Stars FC',awayKo:'마푸',kickoffTime:'15:00'},ms:Date.now(),pos:19}];");
+    assert.notEqual(edited,src);
    await route.fulfill({response:res,body:edited});
   });
   try{
