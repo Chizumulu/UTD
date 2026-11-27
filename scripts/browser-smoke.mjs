@@ -421,6 +421,34 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('club extras load only for sponsors or postponed modal and retry',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage(),faults=[];
+  let requests=0;
+  p.on('pageerror',e=>faults.push(e.message));
+  await p.route(/\/club-extras\.js\?v=[a-f0-9]{16}$/,route=>++requests===1?route.abort():route.continue());
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await dismiss(p);
+   await filled(p,'#mainMiniTableBody');
+   assert.equal(requests,0);
+   await p.evaluate(()=>{showView('squad');applyTeamInfoTab('overview')});
+   await visible(p,'#squadView');
+   assert.equal(requests,0);
+   await p.evaluate(()=>applyTeamInfoTab('story'));
+   await visible(p,'#teamInfoStoryTab button');
+   await p.locator('#teamInfoStoryTab button').click();
+   await p.waitForSelector('#teamInfoStoryTab .ti-sponsor-card');
+   assert.equal(requests,2);
+   await p.evaluate(()=>{showView('rounds');openPostponedMatchesModal()});
+   await visible(p,'#postponedMatchesModal');
+   await p.waitForSelector('#postponedMatchesBody .postponed-match-row, #postponedMatchesBody .postponed-empty');
+   await p.evaluate(()=>closePostponedMatchesModal());
+   assert.equal(requests,2);
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  if(base.hostname==='127.0.0.1')await run('archive view module loads separately from comparison data and retries deep links',async()=>{
   const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
   await blockAnalytics(ctx);
