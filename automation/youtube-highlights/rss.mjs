@@ -22,6 +22,7 @@ export async function scanYoutubeHighlights(env) {
     let cutoff=await kv.get(PREFIX+'cutoff');
     if(!cutoff){ cutoff=String(Date.now()); await kv.put(PREFIX+'cutoff',cutoff); log('initialized',{cutoff:new Date(Number(cutoff)).toISOString()}); }
     if(!Number.isFinite(Number(cutoff))) throw Error('Invalid cutoff');
+    let failed=false;
     try {
       const res=await fetch('https://www.youtube.com/feeds/videos.xml?channel_id='+CHANNEL,{cache:'no-store'});
       if(!res.ok) throw Error('RSS HTTP '+res.status);
@@ -30,7 +31,7 @@ export async function scanYoutubeHighlights(env) {
         const key=PREFIX+'pending:'+v.id;
         if(!await kv.get(PREFIX+'done:'+v.id)&&!await kv.get(key)) await kv.put(key,JSON.stringify(v));
       }
-    } catch(e){log('rss_failed',{error:String(e)});}
+    } catch(e){failed=true;log('rss_failed',{error:String(e)});}
     if(!env.GITHUB_TOKEN||env.GITHUB_REPOSITORY!=='Chizumulu/UTD') throw Error('GitHub settings missing');
     const base='https://api.github.com/repos/Chizumulu/UTD';
     const headers={authorization:'Bearer '+env.GITHUB_TOKEN,accept:'application/vnd.github+json','content-type':'application/json','user-agent':'utd-youtube-highlights'};
@@ -50,10 +51,12 @@ export async function scanYoutubeHighlights(env) {
         v.nextAttempt=Date.now()+30*60*1000;
         await kv.put(key.name,JSON.stringify(v));
         log(response.ok?'dispatched':'dispatch_failed',{id:v.id,status:response.status});
-        if(++dispatched>=5)return;
+        if(!response.ok)failed=true;
+        if(++dispatched>=5)return {ok:!failed};
       }
       cursor=page.list_complete?undefined:page.cursor;
     }while(cursor);
     log('scan_completed',{dispatched});
-  }catch(e){log('scan_failed',{error:String(e)});}
+    return {ok:!failed};
+  }catch(e){log('scan_failed',{error:String(e)});return {ok:false};}
 }
