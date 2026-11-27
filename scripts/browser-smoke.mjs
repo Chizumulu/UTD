@@ -39,6 +39,12 @@ async function layout(page,mobile){
  if(!mobile)assert.ok(m.main.x>=m.side.right-4,'sidebar overlaps main content: '+JSON.stringify(m));
 }
 async function navigate(page,view,mobile){
+ // The mobile tab bar intentionally hides on downward scrolling. Return to
+ // the top with an upward scroll before exercising the real navigation.
+ if(mobile){
+  await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+  await page.waitForFunction(()=>{const b=document.querySelector('#mTabbar');return b&&!b.classList.contains('is-hidden')&&b.getBoundingClientRect().top<window.innerHeight;},{},{timeout:10000});
+ }
  const button={rank:'viewRankBtn',leagueRank:'viewLeagueRankBtn',rounds:'viewRoundsBtn',stats:'viewStatsBtn',scorers:'viewScorersBtn',squad:'viewSquadBtn',predict:'viewPredictBtn',report:'viewReportBtn'}[view];
  if(!mobile)await page.locator('#'+button).click({timeout:10000});
  else if(['rank','leagueRank','rounds','stats'].includes(view)){
