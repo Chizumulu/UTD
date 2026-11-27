@@ -108,5 +108,5 @@ export async function scanMissingMatches(env,{now=Date.now(),fetcher=fetch,send=
    await kv.put(key,String(f.stage),{expirationTtl:14*86400});sent++;
   }
   console.log(JSON.stringify({event:"match_missing_scan_completed",detected,sent}));
- }catch(e){console.error(JSON.stringify({event:"match_missing_scan_failed",error:e.message??String(e)}));}
+ }catch(e){console.error(JSON.stringify({event:"match_missing_scan_failed",error:e.message??String(e)}));return {ok:false};}
 }
