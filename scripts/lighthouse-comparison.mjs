@@ -3,6 +3,23 @@ import {join} from 'node:path';
 import {gzipSync,brotliCompressSync} from 'node:zlib';
 import {pathToFileURL} from 'node:url';
 
+export const blockedPatterns=JSON.parse(readFileSync(new URL('./lighthouse-comparison-flags.json',import.meta.url),'utf8'))['blocked-url-patterns'];
+const blockedDomains=['google-analytics.com','googletagmanager.com','clarity.ms','onesignal.com'];
+export function verifyBlocking(report){
+ const actual=report.configSettings?.blockedUrlPatterns;
+ if(!Array.isArray(actual)||blockedPatterns.some(pattern=>!actual.includes(pattern)))throw Error('Lighthouse blocked URL configuration missing or incorrect');
+ const requests=report.audits?.['network-requests']?.details?.items;
+ if(!Array.isArray(requests))throw Error('Missing network requests');
+ const matches=requests.filter(item=>{
+  let host;
+  try{host=new URL(item.url).hostname.toLowerCase();}catch{return false;}
+  return blockedDomains.some(domain=>host===domain||host.endsWith('.'+domain));
+ });
+ // Blocked attempts may remain in the audit; zero bytes and no HTTP response are not leaks.
+ const leaks=matches.filter(item=>(item.transferSize??0)>0||(item.resourceSize??0)>0||(Number(item.statusCode)>=100));
+ if(leaks.length)throw Error('Blocked service received a response or bytes: '+leaks.map(item=>new URL(item.url).hostname).join(', '));
+ return {patterns:[...blockedPatterns],blockedAttempts:matches.length,leaks:0};
+}
 export const metrics = {
  score:['categories','performance','score'],
  fcp:['audits','first-contentful-paint','numericValue'],
@@ -55,6 +72,7 @@ export function markdown(result){
   for(const [key,r] of Object.entries(rows))lines.push('| '+key+' | '+fmt(r.before)+' | '+fmt(r.after)+' | '+fmt(r.delta)+' | '+fmt(r.percent)+' |');
   lines.push('');
  }
+ if(result.blocking)lines.push('## External request blocking','','Verified '+Object.keys(result.blocking).length+' reports; no successful responses or bytes from configured blocked domains. Other external resources remain enabled.','');
  lines.push('## Build asset sizes (bytes)','','| Asset | Encoding | Baseline | Candidate | Delta |','|---|---|---:|---:|---:|');
  for(const name of [...new Set([...Object.keys(result.assets.before),...Object.keys(result.assets.after)])].sort()){
   for(const kind of ['raw','gzip','brotli']){
@@ -66,12 +84,12 @@ export function markdown(result){
  return lines.join('\n')+'\n';
 }
 export function summarize({dir,base,head,beforeDir,afterDir,runs}){
- const profiles={};
+ const profiles={},blocking={};
  for(const profile of ['mobile','desktop']){
-  const read=side=>Array.from({length:runs},(_,i)=>extract(JSON.parse(readFileSync(join(dir,profile+'-'+side+'-'+(i+1)+'.json'),'utf8'))));
+  const read=side=>Array.from({length:runs},(_,i)=>{const name=profile+'-'+side+'-'+(i+1);const report=JSON.parse(readFileSync(join(dir,name+'.json'),'utf8'));blocking[name]=verifyBlocking(report);return extract(report);});
   profiles[profile]=compare(read('before'),read('after'));
  }
- const result={base,head,runs,profiles,assets:{before:sizes(beforeDir),after:sizes(afterDir)}};
+ const result={base,head,runs,profiles,blocking,assets:{before:sizes(beforeDir),after:sizes(afterDir)}};
  mkdirSync(dir,{recursive:true});
  writeFileSync(join(dir,'comparison.json'),JSON.stringify(result,null,2)+'\n');
  writeFileSync(join(dir,'comparison.md'),markdown(result));
