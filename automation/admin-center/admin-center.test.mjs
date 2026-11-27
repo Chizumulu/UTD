@@ -72,3 +72,27 @@ test('workflow reads use server token only for fixed GitHub origin and redact er
  const d=await dashboardData({...e,GITHUB_TOKEN:''},{fetcher:async()=>{throw Error('must not call')}});
  assert.equal(d.github.status,'not_configured');
 });
+
+test('portable request signal and sanitized transport errors',async()=>{
+ const r=await checkCredentials(env,{now,fetcher:async(url,opts)=>{
+  assert.ok(opts.signal instanceof AbortSignal);
+  throw new TypeError(secret);
+ }});
+ assert.equal(r.checks[0].reason,'request_error');
+ assert.ok(!JSON.stringify(r).includes(secret));
+ const d=await dashboardData({...env,APPROVALS:{get:async()=>null}},{fetcher:async()=>{throw Error(secret)}});
+ assert.equal(d.github.reason,'transport_error');
+ assert.ok(!JSON.stringify(d).includes(secret));
+});
+test('transient report retried after ten minutes and manual cooldown enforced',async()=>{
+ let writes=0;
+ const e={...env,APPROVALS:{get:async()=>({checkedAt:now-600001,checks:[{status:'unavailable'}]}),put:async()=>{writes++}}};
+ await monitorCredentialsIfDue(e,{now,fetcher:async()=>Response.json({error:{code:190}},{status:400})});
+ assert.equal(writes,1);
+ const recent={...e,APPROVALS:{get:async()=>({checkedAt:Date.now()-1000}),put:async()=>{throw Error('must not write')}}};
+ assert.equal((await dashboardResponse(req('/recheck',undefined,'POST'),recent)).status,401);
+ assert.equal((await dashboardResponse(req('/recheck',key),recent)).status,405);
+ assert.equal((await dashboardResponse(req('/recheck',key,'POST'),recent)).status,429);
+ const cross=new Request('https://example.test/admin/dashboard/recheck',{method:'POST',headers:{authorization:'Bearer '+key,'sec-fetch-site':'cross-site'}});
+ assert.equal((await dashboardResponse(cross,recent)).status,403);
+});
