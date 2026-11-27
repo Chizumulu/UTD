@@ -25,7 +25,7 @@ permissions:
 jobs:
   compare:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 110
     env:
       BASE_INPUT: ${{ inputs.baseline || 'fb08f0af422bf811d4948669c31577db3ba710bd' }}
       HEAD_INPUT: ${{ inputs.candidate || github.event.pull_request.head.sha || github.sha }}
@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate comparison helper
-        run: node --test scripts/lighthouse-comparison.test.mjs scripts/lighthouse-comparison-server.test.mjs
+        run: node --test scripts/lighthouse-comparison.test.mjs scripts/lighthouse-comparison-server.test.mjs scripts/lighthouse-comparison-retry.test.mjs
       - name: Resolve revisions and build actual Pages artifacts
         shell: bash
         run: |
@@ -92,19 +92,11 @@ jobs:
           done
           export CHROME_PATH="$(command -v google-chrome)"
           for profile in mobile desktop; do
-            preset=()
-            if [[ "$profile" == desktop ]]; then preset=(--preset=desktop); fi
             for ((i=1;i<=RUNS;i++)); do
               if (( i % 2 == 1 )); then order=(before after); else order=(after before); fi
               for side in "${order[@]}"; do
                 if [[ "$side" == before ]]; then port=8081; else port=8082; fi
-                echo "Auditing $profile $side sample $i"
-                ./node_modules/.bin/lighthouse "http://127.0.0.1:$port/UTD/?lang=ko" \
-                  "${preset[@]}" --only-categories=performance --throttling-method=simulate \
-                  --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
-                  --cli-flags-path="$GITHUB_WORKSPACE/scripts/lighthouse-comparison-flags.json" \
-                  --output=json --output=html --output-path="$RESULTS/$profile-$side-$i" --quiet
-                mv "$RESULTS/$profile-$side-$i.report.json" "$RESULTS/$profile-$side-$i.json"
+                node scripts/lighthouse-comparison-retry.mjs "$RESULTS" "$profile" "$side" "$i" "$port" "$GITHUB_WORKSPACE/scripts/lighthouse-comparison-flags.json"
               done
             done
           done
