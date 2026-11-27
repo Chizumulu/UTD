@@ -2,13 +2,14 @@ name: UTD cold entry CSS parity
 on:
   pull_request:
     paths:
-      - 'scripts/css-cold-entry-browser.mjs'
-      - 'scripts/feature-css-*.mjs'
-      - 'scripts/club-css-*.mjs'
-      - 'scripts/build-pages.mjs'
-      - 'style.css'
-      - 'app.js'
-      - 'index.html'
+      - 'scripts/**/*.mjs'
+      - 'scripts/**/*.py'
+      - '**/*.css'
+      - '**/*.html'
+      - '*.js'
+      - '!data.js'
+      - 'fonts/**'
+      - 'AGENTS.md'
       - '.github/workflows/css-cold-entry.yml'
   workflow_dispatch:
 permissions:
