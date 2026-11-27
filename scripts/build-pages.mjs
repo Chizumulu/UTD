@@ -1,5 +1,6 @@
 import { applyResponsiveCrests, applyStaticCrests } from './crest-templates.mjs';
 import { minifyPagesAssets } from './minify-pages-assets.mjs';
+import { optimizeExternalScripts } from './external-script-delivery.mjs';
 import { optimizeFontDelivery } from './font-delivery.mjs';
 import { writeSeo } from './seo-pages.mjs';
 import { execFileSync } from 'node:child_process';
@@ -63,7 +64,7 @@ const html = source.replace(versionBlock, updatedBlock).replace(
 );
 
 const fontCss = readFileSync(join(output,'fonts/pretendard/pretendardvariable-dynamic-subset.css'),'utf8');
-writeFileSync(join(output,'index.html'),optimizeFontDelivery(applyStaticCrests(html,manifest),fontCss));
+writeFileSync(join(output,'index.html'),optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(html,manifest),fontCss)));
 
 writeSeo(output, readFileSync('data.js', 'utf8'), {analyticsVersion:assetVersion('utd-analytics.js')});
 
