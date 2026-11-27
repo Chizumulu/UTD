@@ -1,0 +1,119 @@
+name: UTD Lighthouse comparison
+on:
+  pull_request:
+    paths:
+      - 'scripts/lighthouse-comparison*.mjs'
+      - '.github/workflows/lighthouse-comparison.yml'
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: 'Baseline commit SHA (40 hex characters)'
+        required: true
+        default: 'fb08f0af422bf811d4948669c31577db3ba710bd'
+      candidate:
+        description: 'Candidate commit SHA (blank = selected workflow revision)'
+        required: false
+        default: ''
+      runs:
+        description: 'Runs per device per revision (3 or 5 recommended)'
+        type: choice
+        options: ['1', '3', '5']
+        default: '3'
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      BASE_INPUT: ${{ inputs.baseline || 'fb08f0af422bf811d4948669c31577db3ba710bd' }}
+      HEAD_INPUT: ${{ inputs.candidate || github.event.pull_request.head.sha || github.sha }}
+      RUNS: ${{ inputs.runs || '3' }}
+    steps:
+      - name: Initialize results directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/lighthouse-results"
+          echo "RESULTS=$RUNNER_TEMP/lighthouse-results" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate comparison helper
+        run: node --test scripts/lighthouse-comparison.test.mjs
+      - name: Resolve revisions and build actual Pages artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$BASE_INPUT" =~ ^[0-9a-fA-F]{40}$ && "$HEAD_INPUT" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$RUNS" =~ ^(1|3|5)$ ]]
+          git cat-file -e "$BASE_INPUT^{commit}"
+          git cat-file -e "$HEAD_INPUT^{commit}"
+          git worktree add --detach "$RUNNER_TEMP/baseline" "$BASE_INPUT"
+          git worktree add --detach "$RUNNER_TEMP/candidate" "$HEAD_INPUT"
+          python3 -m pip install Pillow==11.3.0
+          mkdir -p "$RUNNER_TEMP/site-before" "$RUNNER_TEMP/site-after" "$RESULTS"
+          for side in before after; do
+            if [[ "$side" == before ]]; then revision=baseline; else revision=candidate; fi
+            (
+              cd "$RUNNER_TEMP/$revision"
+              npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2
+              node scripts/build-pages.mjs "$RUNNER_TEMP/site-$side/UTD"
+            )
+          done
+      - name: Install pinned Lighthouse
+        run: |
+          npm install --no-save --package-lock=false lighthouse@12.8.2
+          command -v google-chrome
+          google-chrome --version
+          ./node_modules/.bin/lighthouse --version
+      - name: Serve both revisions and run paired mobile and desktop audits
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8081 --bind 127.0.0.1 --directory "$RUNNER_TEMP/site-before" > "$RESULTS/server-before.log" 2>&1 &
+          server_before=$!
+          python3 -m http.server 8082 --bind 127.0.0.1 --directory "$RUNNER_TEMP/site-after" > "$RESULTS/server-after.log" 2>&1 &
+          server_after=$!
+          trap 'kill "$server_before" "$server_after" 2>/dev/null || true' EXIT
+          for port in 8081 8082; do
+            for i in {1..20}; do
+              if curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null; then break; fi
+              sleep 1
+            done
+            curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null
+          done
+          export CHROME_PATH="$(command -v google-chrome)"
+          for profile in mobile desktop; do
+            preset=()
+            if [[ "$profile" == desktop ]]; then preset=(--preset=desktop); fi
+            for ((i=1;i<=RUNS;i++)); do
+              if (( i % 2 == 1 )); then order=(before after); else order=(after before); fi
+              for side in "${order[@]}"; do
+                if [[ "$side" == before ]]; then port=8081; else port=8082; fi
+                echo "Auditing $profile $side sample $i"
+                ./node_modules/.bin/lighthouse "http://127.0.0.1:$port/UTD/?lang=ko" \
+                  "${preset[@]}" --only-categories=performance --throttling-method=simulate \
+                  --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+                  --blocked-url-patterns="*google-analytics.com*,*googletagmanager.com*,*clarity.ms*,*onesignal.com*" \
+                  --output=json --output=html --output-path="$RESULTS/$profile-$side-$i" --quiet
+                mv "$RESULTS/$profile-$side-$i.report.json" "$RESULTS/$profile-$side-$i.json"
+              done
+            done
+          done
+      - name: Summarize medians and asset sizes
+        run: |
+          node scripts/lighthouse-comparison.mjs "$RESULTS" "$BASE_INPUT" "$HEAD_INPUT" "$RUNNER_TEMP/site-before/UTD" "$RUNNER_TEMP/site-after/UTD" "$RUNS"
+          cat "$RESULTS/comparison.md" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-comparison
+          path: ${{ env.RESULTS }}/
+          retention-days: 30
+          if-no-files-found: warn
