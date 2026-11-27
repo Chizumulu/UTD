@@ -8,7 +8,7 @@ export function optimizeFallbackScan(app){
  const anchor=/function attachImageFallback\(\)\s*\{\s*document\.querySelectorAll\((["'])img\1\)(?=\.forEach\()/g;
  const matches=[...app.matchAll(anchor)];
  if(matches.length!==1)throw Error('Expected exactly one image fallback scan');
- return app.replace(anchor,m=>m.replace(/(["'])img\1$/,()=>JSON.stringify(pendingImageSelector)));
+ return app.replace(anchor,m=>m.replace(/(["'])img\1\)$/,()=>JSON.stringify(pendingImageSelector)+')'));
 }
 
 const fontPattern=/<style id="utd-pretendard-fonts">\n([\s\S]*?)\n<\/style>/g;
