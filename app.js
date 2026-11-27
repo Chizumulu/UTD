@@ -14992,6 +14992,8 @@
   // 올해(26/27) 화면·순위표·필터는 전혀 건드리지 않고, body.season-archive 클래스 하나로 CSS가
   // 올해 화면들을 숨기고 사이드바 메뉴를 감춥니다. 25/26 데이터는 archive-2526.js(ARCHIVE_2526).
   let archiveMode = false;
+  let archiveEntryRequest = 0;
+  let archiveEntryPending = false;
   let archiveWeekIdx = null; // null = 최종 주차
 
   // ===== 25/26 아카이브 데이터 지연 로드 =====
@@ -15073,6 +15075,13 @@
     return w.key >= 19 ? `2nd half · Week ${n}` : `Week ${n}`;
   }
   function setArchiveMode(on) {
+    if (!on) {
+      archiveEntryRequest++;
+      if (archiveEntryPending) {
+        archiveEntryPending = false;
+        document.body.style.cursor = '';
+      }
+    }
     archiveMode = !!on;
     document.body.classList.toggle('season-archive', archiveMode);
     if (archiveMode && typeof setCupMode === 'function') setCupMode(false);
@@ -15087,10 +15096,15 @@
   }
   // opts: { tab: 'weekly'|'clubs', team: 25/26 팀명, fromTeamInfo: boolean }
   function openSeasonArchive(opts) {
+    const request = ++archiveEntryRequest;
     if (!archiveWeeks().length) {
+      archiveEntryPending = true;
       // 아직 로드 전이면 불러온 뒤 같은 인자로 다시 엽니다.
       document.body.style.cursor = 'progress';
       loadArchiveData().then(function (ok) {
+        // Only the latest entry request may change the current screen.
+        if (request !== archiveEntryRequest) return;
+        archiveEntryPending = false;
         document.body.style.cursor = '';
         if (ok) openSeasonArchive(opts);
         else showToast(isKorean ? '지난 시즌 데이터를 불러오지 못했어요' : 'Couldn\u2019t load last season\u2019s data', { tone: 'error', action: toastRetry(function () { openSeasonArchive(opts); }) });
