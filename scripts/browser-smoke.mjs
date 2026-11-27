@@ -421,6 +421,40 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('prediction view loads on demand, retries and preserves model and outlook tabs',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage(),faults=[];
+  let requests=0;
+  p.on('pageerror',e=>faults.push(e.message));
+  await p.route(/\/prediction-view\.js\?v=[a-f0-9]{16}$/,route=>++requests===1?route.abort():route.continue());
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await dismiss(p);
+   await filled(p,'#mainMiniTableBody');
+   assert.equal(requests,0);
+   await p.evaluate(()=>{location.hash='#/predict/outlook'});
+   await visible(p,'#predictTableBody button.analysis-share');
+   assert.equal(requests,1);
+   await p.locator('#predictTableBody button.analysis-share').click();
+   await p.waitForSelector('#predictTableBody .pt-c-rank',{timeout:90000});
+   assert.equal(requests,2);
+   await p.locator('#predictTabs [data-predict-tab="model"]').click();
+   await visible(p,'#predictView [data-predict-panel="model"].active');
+   assert.equal(await p.locator('#predictTabs [data-predict-tab="model"]').getAttribute('aria-selected'),'true');
+   await visible(p,'#aiTrackDetails > summary');
+   if(!(await p.locator('#aiTrackDetails').evaluate(el=>el.open)))await p.locator('#aiTrackDetails > summary').click();
+   await visible(p,'#aiTrackDetails[open] #aiTrackSummary');
+   await filled(p,'#aiTrackSummary');
+   await visible(p,'#aiTrackSummary .ai-track-chip-val, #aiTrackSummary .ai-track-empty');
+   await p.locator('#predictTabs [data-predict-tab="outlook"]').click();
+   await visible(p,'#predictTableBody');
+   await p.evaluate(()=>showView('rank'));
+   await visible(p,'#rankView');
+   assert.equal(requests,2);
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  if(base.hostname==='127.0.0.1')await run('club extras load only for sponsors or postponed modal and retry',async()=>{
   const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
   await blockAnalytics(ctx);
