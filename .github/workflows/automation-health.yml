@@ -1,0 +1,58 @@
+name: UTD automation health
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: utd-automation-health
+  cancel-in-progress: false
+jobs:
+  monitor:
+    if: vars.UTD_HEALTH_MONITOR_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check independent services and manage incident
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='[UTD 장애 감시] 자동화 상태 확인 필요'
+          report=$(mktemp)
+          failed=0
+          check() {
+            local name="$1" url="$2" type="$3"
+            local body
+            body=$(mktemp)
+            if curl --silent --show-error --fail --location --max-time 20 --retry 2 --retry-delay 3 "$url" -o "$body"; then
+              if [[ "$type" == heartbeat ]] && ! jq -e '.ok == true and .status == "ok"' "$body" >/dev/null; then
+                printf '%s: invalid health response\n' "$name" >> "$report"; failed=1
+              elif [[ "$type" == api ]] && ! jq -e '.items | type == "array"' "$body" >/dev/null; then
+                printf '%s: invalid API response\n' "$name" >> "$report"; failed=1
+              else
+                printf '%s: OK\n' "$name" >> "$report"
+              fi
+            else
+              printf '%s: request failed\n' "$name" >> "$report"; failed=1
+            fi
+            rm -f "$body"
+          }
+          check 'Worker heartbeat' 'https://utd.likey00700.workers.dev/health/automation' heartbeat
+          check 'Structured API' 'https://api.chizumulu.net/v1/structured?limit=1' api
+          check 'GitHub Pages' 'https://chizumulu.github.io/UTD/' page
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          issue=$(gh issue list --repo "$REPO" --state open --search "$title in:title" --limit 100 --json title,number --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+          if [[ "$failed" == 1 ]]; then
+            if [[ -z "$issue" ]]; then
+              { echo "자동화 또는 사이트 상태를 확인해 주세요."; echo; cat "$report"; echo; echo "Run: https://github.com/$REPO/actions/runs/$GITHUB_RUN_ID"; } > "$report.body"
+              gh issue create --repo "$REPO" --title "$title" --body-file "$report.body"
+            fi
+            exit 1
+          elif [[ -n "$issue" ]]; then
+            gh issue close "$issue" --repo "$REPO" --comment "자동 점검에서 정상 복구를 확인했습니다. Run: https://github.com/$REPO/actions/runs/$GITHUB_RUN_ID"
+          fi
