@@ -1,0 +1,42 @@
+name: Approved Instagram lineup
+on:
+  repository_dispatch:
+    types: [lineup-proposal-approved]
+permissions:
+  contents: read
+concurrency:
+  group: approved-lineup-main
+  cancel-in-progress: false
+jobs:
+  update-lineup:
+    if: github.event.client_payload.proposal.kind == 'lineup' && github.event.client_payload.proposal.state == 'approved'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.SCORER_GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate approved proposal and patch data
+        run: |
+          mkdir -p work
+          node -e 'const fs=require("node:fs"); const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH)).client_payload.proposal; fs.writeFileSync("work/lineup.json",JSON.stringify(p))'
+          node automation/instagram-lineup/apply-lineup.mjs work/lineup.json
+          node --check data.js
+      - name: Open reviewed lineup PR
+        env:
+          GH_TOKEN: ${{ secrets.SCORER_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data.js; then exit 0; fi
+          branch="automation/lineup-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add data.js
+          git commit -m "Add approved official lineup announcement"
+          git push origin "$branch"
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" --title "Add approved lineup announcement" --body "Approved via WhatsApp. Announced lineup only; historical appearance and substitution records remain unchanged. Verify formation and fixture before merging."

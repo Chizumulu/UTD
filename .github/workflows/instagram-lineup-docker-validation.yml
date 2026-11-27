@@ -1,0 +1,98 @@
+name: Instagram OCR Docker comparison
+on:
+  push:
+    branches: [automation/instagram-lineup-sync]
+    paths:
+      - 'automation/docker/lineup-ocr.Dockerfile'
+      - '.github/workflows/instagram-lineup-docker-validation.yml'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      image: ${{ steps.image.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: image
+        name: Build isolated OCR image
+        run: |
+          start=$SECONDS
+          docker build -f automation/docker/lineup-ocr.Dockerfile -t utd-lineup-ocr:${GITHUB_SHA} automation/docker
+          echo "name=utd-lineup-ocr:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "Image build: $((SECONDS-start)) seconds"
+          docker save utd-lineup-ocr:${GITHUB_SHA} | gzip -1 > /tmp/utd-lineup-ocr.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: utd-lineup-ocr-image
+          path: /tmp/utd-lineup-ocr.tar.gz
+          retention-days: 1
+          compression-level: 0
+  validate:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        sample: [raiply, chihame, luviri, chintheche, chilumba]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: utd-lineup-ocr-image
+          path: /tmp
+      - name: Load prebuilt OCR image
+        run: |
+          start=$SECONDS
+          docker load -i /tmp/utd-lineup-ocr.tar.gz
+          echo "Image load: $((SECONDS-start)) seconds"
+      - name: Offline regression tests in Docker
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+        run: docker run --rm -v "$GITHUB_WORKSPACE:/workspace:ro" "$IMAGE" node --test automation/instagram-lineup/integration.test.mjs
+      - name: Validate official image in Docker
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+          UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
+          SAMPLE: ${{ matrix.sample }}
+        run: |
+          start=$SECONDS
+          docker run --rm -e UTD_INSTAGRAM_TOKEN -v "$GITHUB_WORKSPACE:/workspace:ro" "$IMAGE" node automation/instagram-lineup/test-new-reader.mjs "--$SAMPLE"
+          echo "OCR validation: $((SECONDS-start)) seconds"
+  publish:
+    needs: [build, validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: utd-lineup-ocr-image
+          path: /tmp
+      - name: Load and publish the exact validated image
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ needs.build.outputs.image }}
+        run: |
+          set -euo pipefail
+          target=ghcr.io/chizumulu/utd-lineup-ocr
+          docker load -i /tmp/utd-lineup-ocr.tar.gz
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker tag "$IMAGE" "$target:$GITHUB_SHA"
+          docker push "$target:$GITHUB_SHA"
+          docker tag "$IMAGE" "$target:validated-v1"
+          docker push "$target:validated-v1"

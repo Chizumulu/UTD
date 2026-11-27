@@ -1,0 +1,39 @@
+name: Instagram lineup discovery
+on:
+  repository_dispatch:
+    types: [instagram-lineup-discovered]
+permissions:
+  contents: read
+  packages: read
+concurrency:
+  group: instagram-lineup-${{ github.event.client_payload.postId }}
+  cancel-in-progress: false
+jobs:
+  recognize-lineup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Pull validated OCR image
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker pull ghcr.io/chizumulu/utd-lineup-ocr@sha256:5eaccc20759897ffbb1c81a357528d7b56f7388baea48aca3eac689797284e24
+      - name: Recognize and submit official lineup
+        env:
+          UTD_INSTAGRAM_TOKEN: ${{ secrets.UTD_INSTAGRAM_TOKEN }}
+          LINEUP_INGEST_TOKEN: ${{ secrets.LINEUP_INGEST_TOKEN }}
+        run: |
+          docker run --rm \
+            -e UTD_INSTAGRAM_TOKEN -e LINEUP_INGEST_TOKEN \
+            -e GITHUB_EVENT_PATH=/event.json \
+            -v "$GITHUB_EVENT_PATH:/event.json:ro" \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" \
+            ghcr.io/chizumulu/utd-lineup-ocr@sha256:5eaccc20759897ffbb1c81a357528d7b56f7388baea48aca3eac689797284e24 \
+            node automation/instagram-lineup/process-post.mjs
