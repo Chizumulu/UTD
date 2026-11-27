@@ -1,0 +1,16 @@
+# 1-H-4 consolidated remaining feature CSS
+
+Baseline: main after #145. One draft PR, separate policy, extractor, view/runtime, modal/runtime, build integration, test and CI commits.
+
+## Scope
+16 additional asset groups: club (overview, squad, honors, team results, staff, video), pathfinder, rank, season comparison, cup, archive, prediction, venue, team comparison, rounds, scorers, report, player modals, match detail, match comparison and full-record modal. Existing sponsor, club analysis and other-club assets remain.
+
+The selector allowlist requires leading exclusive scopes or feature names. Mixed selector lists and mixed conditional groups remain critical; global styles, keyframes and variables are not removed. Shared match cards, prediction controls reused in other views, general club card styles and common modal shell rules remain. This is not an unused-CSS deletion or a claim that every ownership hint is safe to split.
+
+The output only is transformed, source style.css and app.js stay unchanged. Every extracted run is restored at its original marker with CSSOM. Build checks exact source-order reconstruction from emitted assets and positive initial raw/gzip/Brotli savings. View loading gates preserve navigation state and existing DOM, with explicit retry, while existing modal token-based loaders await CSS and JS together. Asset URLs include content hashes.
+
+## Verification
+One CI audit includes the existing 64 coverage scenarios and club-specific checks, 16 additional first-visit scenarios in four profiles (64), reentry/cache checks, whole stylesheet order checks and representative forced CSS failures. Existing 54 browser smoke tests and SEO/build validations remain. Existing Coverage report continues to measure the initial stylesheet, not all deferred assets. The browser tests are Chromium only. Report measured initial bytes, per-asset bytes, markers, gzip and Brotli from CI logs; total transfer after visiting all features and CSSOM insertion CPU cost may increase. Do not merge until all required tests pass. Further CSS ownership work should be justified by measured savings rather than deleting unobserved rules.
+
+## CSSOM shorthand regression fix
+The first integrated CI detected a loss of the pending variable-backed border shorthand in .squad-former-panel (rule index 855 of 4472), even though the rule count and ordinary browser smoke checks passed. The loader now fetches the same hashed CSS URL as text, scans complete top-level source rules, validates contiguous slot markers, and passes the original rule text directly to insertRule. It never reparses the lossy CSSRule.cssText serialization. All 18 slot-based assets are compared rule-by-rule against PostCSS by the new unit test. Exact full CSSOM equality is retained, and computed top/right/bottom/left border values and partial insertion rollback are separately tested. The sponsor stylesheet keeps its existing independent link loader. No CSS extraction allowlist or output CSS contents were changed in this correction; measure the actual build again before merging.
