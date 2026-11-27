@@ -46,3 +46,15 @@ document.addEventListener('error', function(event) {
 `;
   return prelude + '\n' + result;
 }
+
+export function applyStaticCrests(html, manifest) {
+  const entry = manifest['ddds.webp'];
+  if (!entry?.variants?.length) return html;
+  const candidates = [...entry.variants.map(v=>v.src+' '+v.width+'w'), 'ddds.webp '+entry.width+'w'].join(', ');
+  for (const [cls, sizes] of [['league-logo','108px'],['archive-hero-logo','64px']]) {
+    const needle = 'class="'+cls+'" src="./ddds.webp"';
+    if (!html.includes(needle)) throw Error('Static crest template changed: '+cls);
+    html = html.replace(needle, 'class="'+cls+'" srcset="'+candidates+'" sizes="'+sizes+'" src="./ddds.webp"');
+  }
+  return html;
+}
