@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'scripts/lighthouse-comparison*.mjs'
+      - 'scripts/lighthouse-comparison-flags.json'
       - '.github/workflows/lighthouse-comparison.yml'
   workflow_dispatch:
     inputs:
@@ -100,7 +101,7 @@ jobs:
                 ./node_modules/.bin/lighthouse "http://127.0.0.1:$port/UTD/?lang=ko" \
                   "${preset[@]}" --only-categories=performance --throttling-method=simulate \
                   --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
-                  --blocked-url-patterns="*google-analytics.com*,*googletagmanager.com*,*clarity.ms*,*onesignal.com*" \
+                  --cli-flags-path="$GITHUB_WORKSPACE/scripts/lighthouse-comparison-flags.json" \
                   --output=json --output=html --output-path="$RESULTS/$profile-$side-$i" --quiet
                 mv "$RESULTS/$profile-$side-$i.report.json" "$RESULTS/$profile-$side-$i.json"
               done
