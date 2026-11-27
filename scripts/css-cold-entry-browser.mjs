@@ -24,7 +24,7 @@ const cases=[
  ['stats-rank',()=>{showView('stats');setStatsTab('rank')},'#statsView','#statsView [data-stats-panel="rank"].active',[]],
  ['stats-analysis',()=>{showView('stats');setStatsTab('analysis')},'#statsView','#statsView [data-stats-panel="analysis"].active',[]],
  ['seasoncompare',()=>{showView('stats');setStatsTab('compare')},'#statsView','#seasonCompareCard .stats-title',['seasoncompare']],
- ['report',()=>showView('report'),'#reportView','#reportViewContent > *',['report']],
+ ['report',()=>showView('report'),'#reportView','#reportViewContent .report-grid',['report']],
  ['prediction',()=>showView('predict'),'#predictView','#predictTableBody .pt-c-rank',['prediction']],
  ['venue-map',()=>{showView('venues');setVenueMode('map')},'#venuesView','#venueLeafletMap button',['venue']],
  ['venue-travel',()=>{setVenueMode('travel');showView('venues')},'#venuesView','#travelImpactWrap > *',['venue']],
