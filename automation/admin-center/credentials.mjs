@@ -29,7 +29,7 @@ export async function checkCredentials(env,{fetcher=fetch,now=Date.now()}={}){
  const phone=id(env.WHATSAPP_PHONE_NUMBER_ID),waba=id(env.WHATSAPP_BUSINESS_ACCOUNT_ID);
  const instagram='https://graph.facebook.com/v27.0/17841454923295450?fields=business_discovery.username(chizumuluutd)%7Busername%7D';
  const checks=await Promise.all([
-  probe('github_pat','https://api.github.com/repos/Chizumulu/UTD',env.GITHUB_TOKEN,b=>b?.full_name==='Chizumulu/UTD',fetcher,now),
+  probe('github_pat','https://api.github.com/user',env.GITHUB_TOKEN,b=>typeof b?.login==='string'&&b.login.length>0,fetcher,now),
   probe('whatsapp_phone',graph&&phone?graph+'/'+phone+'?fields=id':null,env.WHATSAPP_ACCESS_TOKEN,b=>String(b?.id)===phone,fetcher,now),
   probe('whatsapp_templates',graph&&waba?graph+'/'+waba+'/message_templates?fields=name,status,language&limit=1':null,env.WHATSAPP_ACCESS_TOKEN,b=>Array.isArray(b?.data),fetcher,now),
   env.INSTAGRAM_LINEUP_ENABLED==='true'||env.UTD_INSTAGRAM_TOKEN?probe('instagram_token',instagram,env.UTD_INSTAGRAM_TOKEN,b=>b?.business_discovery?.username==='chizumuluutd',fetcher,now):Promise.resolve({name:'instagram_token',status:'disabled',expiresAt:null})
