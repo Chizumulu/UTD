@@ -5,7 +5,7 @@ import {cssSignature} from './minify-pages-assets.mjs';
 import {splitClubSponsorCss} from './club-css-split.mjs';
 import {splitClubDetailCss} from './club-css-detail-split.mjs';
 import {splitFeatureCss,reconstructFeatureCss} from './feature-css-split.mjs';
-import {featureOwner,policies} from './feature-css-policy.mjs';
+import {featureOwner,policies,sharedSelector} from './feature-css-policy.mjs';
 import postcss from 'postcss';
 import {parseDeferredCssGroups} from './club-css-raw-groups.mjs';
 
@@ -24,7 +24,7 @@ test('integrated CSS assets reconstruct previous base exactly and shrink all ini
 });
 test('only leading exclusive feature selectors may be moved',()=>{
  for(const selector of ['.round-mode-chip','.round-match-card','.rmc-team','.report-empty','.predict-tab','.wi-run','.cup-toggle-mobile','.cup-match-prediction','.ti-card','.ti-record-card','.modal-content','.team-logo','.app-shell',':root','.shared .tc-card','.ti-sponsor-card','.ta-card','#otherTeamFullBody .ti-card'])assert.equal(featureOwner(selector),null,selector);
- for(const [s,k] of [['.tc-card','teamcompare'],[':root[data-theme="dark"] .tc-card','teamcompare'],['.spm-form-bars','players'],['.pp-card','matchdetail'],['.mc-ai-block','matchcompare'],['.cup-br-team','cup'],['.archive-hl-card','archive'],['.ti-room-item','club'],['.pf-plan-grid','pathfinder'],['#mainTable td','rank']])assert.equal(featureOwner(s),k,s);
+ for(const [s,k] of [['.tc-card','teamcompare'],[':root[data-theme="dark"] .tc-card','teamcompare'],['.spm-form-bars','players'],['.pp-card','matchdetail'],['.mc-compare-layout','matchcompare'],['.cup-br-team','cup'],['.archive-hl-card','archive'],['.ti-room-item','club'],['.pf-plan-grid','pathfinder'],['#mainTable td','rank']])assert.equal(featureOwner(s),k,s);
 });
 
 test('raw loader preserves every emitted top-level rule for all 18 slot-based assets',async()=>{
@@ -57,4 +57,20 @@ test('raw scanner retains shorthand, nested media, strings, comments and escaped
  for(const bad of [marker,shorthand+marker,marker+shorthand.slice(0,-1),marker+shorthand+'@import "other.css";',marker+shorthand+marker+shorthand]){
   assert.throws(()=>parseDeferredCssGroups(bad,'club'));
  }
+});
+
+test('shared components stay critical even inside eligible scoped and conditional rules',()=>{
+ for(const s of ['.mc-teams-row','.mc-stat-row','.mc-ai-block','.mc-prior-row','.mc-form-dot','.predict-intro','.predict-intro-row','.ti-pos-donut','.ti-position-card','.mgp-row','.round-half-empty','.ti-appear-empty','#predictView .predict-intro','#myTeamInfoView .ti-pos-donut',':root[data-theme="dark"] .mc-stat-val']){
+  assert.equal(sharedSelector(s),true,s);
+  assert.equal(featureOwner(s),null,s);
+ }
+ for(const s of ['.mc-compare-layout','.mc-compare-left','.mc-modal-played','.mc-col-ai'])assert.equal(featureOwner(s),'matchcompare',s);
+});
+test('no shared selector leaks into emitted optional feature assets',async()=>{
+ const sponsor=await splitClubSponsorCss(readFileSync('style.css','utf8'));
+ const detail=await splitClubDetailCss(sponsor.critical);
+ const result=await splitFeatureCss(detail.critical);
+ for(const [kind,asset] of Object.entries(result.assets))postcss.parse(asset.css).walkRules(rule=>{
+  for(const s of rule.selectors)assert.equal(sharedSelector(s),false,kind+': '+s);
+ });
 });
