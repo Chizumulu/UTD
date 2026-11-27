@@ -1,5 +1,6 @@
 import { applyResponsiveCrests, applyStaticCrests } from './crest-templates.mjs';
 import { minifyPagesAssets } from './minify-pages-assets.mjs';
+import { renderEarlyHero } from './early-hero.mjs';
 import { optimizeAppLayout } from './app-layout.mjs';
 import { prioritizeInitialRender, preloadInitialAssets } from './initial-render.mjs';
 import { optimizeExternalScripts } from './external-script-delivery.mjs';
@@ -42,7 +43,7 @@ for (const file of files) {
 execFileSync('python3', ['scripts/generate-crest-assets.py', output], {stdio:'inherit'});
 const manifest = JSON.parse(readFileSync(join(output,'crest-manifest.json'),'utf8'));
 const appPath = join(output,'app.js');
-writeFileSync(appPath, optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(readFileSync(appPath,'utf8'), manifest))));
+writeFileSync(appPath, renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(readFileSync(appPath,'utf8'), manifest)))));
 await minifyPagesAssets(output);
 for (const file of ['app.js','a11y.js']) execFileSync(process.execPath,['--check',join(output,file)],{stdio:'inherit'});
 
