@@ -96,3 +96,28 @@ test('transient report retried after ten minutes and manual cooldown enforced',a
  const cross=new Request('https://example.test/admin/dashboard/recheck',{method:'POST',headers:{authorization:'Bearer '+key,'sec-fetch-site':'cross-site'}});
  assert.equal((await dashboardResponse(cross,recent)).status,403);
 });
+
+test('default native fetch preserves global receiver for all admin reads',async()=>{
+ const original=globalThis.fetch;
+ const seen=[];
+ try{
+  globalThis.fetch=async function(url,opts){
+   if(this!==globalThis)throw new TypeError('Illegal invocation');
+   seen.push(url);
+   if(url.endsWith('/user'))return Response.json({login:'test'});
+   if(url.includes('/actions/runs?'))return Response.json({workflow_runs:[]});
+   if(url.includes('/message_templates?'))return Response.json({data:[]});
+   return Response.json({id:env.WHATSAPP_PHONE_NUMBER_ID});
+  };
+  const report=await checkCredentials(env,{now});
+  assert.deepEqual(report.checks.map(c=>c.status),['valid','valid','valid','disabled']);
+  const d=await dashboardData({...env,APPROVALS:{get:async()=>null}},{now});
+  assert.equal(d.github.status,'ok');
+  assert.equal(seen.length,4);
+ }finally{globalThis.fetch=original}
+});
+test('illegal invocation category does not expose raw exception',async()=>{
+ const r=await checkCredentials(env,{now,fetcher:async()=>{throw new TypeError('Illegal invocation '+secret)}});
+ assert.equal(r.checks[0].reason,'illegal_invocation');
+ assert.ok(!JSON.stringify(r).includes(secret));
+});
