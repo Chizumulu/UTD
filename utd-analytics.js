@@ -2,10 +2,6 @@
 (function (root) {
   'use strict';
   const DESTINATION = 'G-N6GC687TZD';
-  const slug = value => {
-    const s = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    return s.slice(0, 64);
-  };
   const valid = (v, choices, fallback) => choices.includes(v) ? v : fallback;
   const token = v => typeof v === 'string' && /^[a-zA-Z0-9._-]{1,90}$/.test(v) ? v : '';
   const language = v => valid(v, ['ko','en','ny'], 'ko');
@@ -14,7 +10,7 @@
     const raw = String(state.route || '').split('?')[0].replace(/^#?\/?/, '').replace(/\/+$/, '');
     const parts = raw.split('/');
     const head = parts[0] || 'home';
-    const group = valid(head, ['home','league','rounds','stats','scorers','predict','compare','club','venues','report','cup','archive','match'], 'home');
+    const group = valid(head, ['home','league','rounds','stats','scorers','predict','compare','club','venues','report','cup','archive','match','seo'], 'home');
     const p = {screen_group:group,screen_key:group};
     const add = (name,value) => { if (value) p[name]=value; };
     let tab = '';
@@ -36,6 +32,12 @@
         add('competition_id',valid(state.cupId,cupIds,'unknown'));
         tab=valid(state.cupTab,['about','schedule','teams','prize','bracket'],'about');break;
       case 'archive': tab=valid(parts[1],['main','weekly','clubs'],'main');break;
+      case 'seo':
+        tab=valid(parts[1],['matches','league','teams','players','cup'],'other');
+        if (tab==='matches' && parts[2]==='2026-27' && token(parts[3])) {tab='match';add('match_id',token(parts[3]));}
+        if (tab==='teams' && token(parts[2])) {tab='team';add('team_id',token(parts[2]));}
+        if (tab==='cup') add('competition_id','faCup2627');
+        break;
       case 'match':
         if (parts[1] === 'id') add('match_id',token(parts[2]));
         else if (/^\d{4}$/.test(parts[1] || '')) {
@@ -50,10 +52,13 @@
   function makeTracker(env) {
     let last=null, lang='ko';
     const base=()=>env.location.origin+env.location.pathname;
+    function referrerOrigin() {
+      try { const u=new URL(env.document?.referrer || ''); return ['http:','https:'].includes(u.protocol)?u.origin:''; } catch (_) { return ''; }
+    }
     function emit(name, params) {
       try {
         if (typeof env.gtag !== 'function') return false;
-        env.gtag('event',name,{...params,site_language:lang,page_location:base(),send_to:DESTINATION});
+        env.gtag('event',name,{...params,site_language:lang,page_location:base(),page_referrer:referrerOrigin(),send_to:DESTINATION});
         return true;
       } catch (_) { return false; }
     }
@@ -61,7 +66,7 @@
       try {
         const next=screenInfo(state);
         lang=language(state.language);
-        if(last && last.screen_key===next.screen_key) return false;
+        if(last && JSON.stringify(last)===JSON.stringify(next)) return false;
         const entry_type=last?'navigation':'entry';
         if(!emit('utd_screen_view',{...next,entry_type})) return false;
         last=next;
@@ -82,10 +87,26 @@
         utd_pwa_install:['browser']
       };
       if(!Object.hasOwn(kinds,name)||!kinds[name].includes(value))return false;
+      try { const requested=new URLSearchParams(env.location.search || '').get('lang'); lang=language(requested || env.document?.documentElement?.lang || lang); } catch (_) {}
       return emit(name,{...(last||{screen_group:'home',screen_key:'home'}),action_type:value});
     }
     return {screen,action};
   }
   if(typeof module==='object'&&module.exports)module.exports={screenInfo,makeTracker};
-  else if(root&&!root.UTDAnalytics)root.UTDAnalytics=makeTracker(root);
+  else if(root&&!root.UTDAnalytics) {
+    root.UTDAnalytics=makeTracker(root);
+    const seo=root.document.currentScript?.dataset.utdSeo;
+    if (seo) {
+      root.UTDAnalytics.screen({route:'seo/'+seo,language:'ko'});
+      function seoHighlight(event) {
+        try {
+          if(event.type==='auxclick'&&event.button!==1)return;
+          const link=event.target.closest?.('a[data-utd-highlight]');
+          if(link&&['youtube.com','www.youtube.com','m.youtube.com','youtu.be'].includes(new URL(link.href).hostname))root.UTDAnalytics.action('utd_highlight_click','youtube');
+        } catch (_) {}
+      }
+      root.document.addEventListener('click',seoHighlight);
+      root.document.addEventListener('auxclick',seoHighlight);
+    }
+  }
 })(typeof window==='undefined'?null:window);
