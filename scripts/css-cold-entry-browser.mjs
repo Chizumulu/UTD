@@ -16,7 +16,7 @@ const profiles=[
 // Each case starts from a new browser context. No other feature CSS is
 // artificially preloaded before the first visible state is captured.
 const cases=[
- ['home',null,'#rankView','#mainMiniTableBody tr',[]],
+ ['home',null,'#rankView,#nextMatchStrip,#nextMatchPreviewCard','#mainMiniTableBody tr',[]],
  ['teamcompare',()=>showView('teamCompare'),'#teamCompareView','.tc-card',['teamcompare']],
  ['rank',()=>showView('leagueRank'),'#leagueRankView','#leagueTableBody tr',['rank']],
  ['rounds',()=>showView('rounds'),'#roundsView','#roundMatchList > *',['rounds']],
@@ -51,15 +51,15 @@ const results=[];
 const browser=await chromium.launch();
 async function compare(page,root){
  return page.evaluate(({source,root})=>{
-  const scope=document.querySelector(root);
-  if(!scope||!scope.getClientRects().length)throw Error('Missing visible root '+root);
+  const scopes=[...document.querySelectorAll(root)].filter(e=>e.getClientRects().length);
+  if(!scopes.length)throw Error('Missing visible root '+root);
   const base=[...document.querySelectorAll('link[rel=stylesheet]')].find(l=>new URL(l.href).pathname.endsWith('/style.css'));
   if(!base?.sheet)throw Error('Missing critical stylesheet');
   const sponsor=[...document.querySelectorAll('link[rel=stylesheet]')].filter(l=>new URL(l.href).pathname.endsWith('/club-sponsors.css')&&l.sheet);
   const reference=document.createElement('style');
   reference.textContent=source;
   const props=['display','visibility','position','flex-direction','flex-wrap','align-items','justify-content','grid-template-columns','gap','width','height','min-width','max-width','padding-top','padding-right','padding-bottom','padding-left','margin-top','margin-right','margin-bottom','margin-left','background-color','background-image','color','font-family','font-size','font-weight','line-height','text-align','border-top-width','border-right-width','border-bottom-width','border-left-width','border-top-style','border-right-style','border-bottom-style','border-left-style','border-top-color','border-right-color','border-bottom-color','border-left-color','border-radius','box-shadow','overflow-x','overflow-y','object-fit'];
-  const elems=[scope,...scope.querySelectorAll('*')].filter(e=>!['SCRIPT','STYLE','LINK','OPTION'].includes(e.tagName)&&e.getClientRects().length);
+  const elems=[...new Set(scopes.flatMap(scope=>[scope,...scope.querySelectorAll('*')]))].filter(e=>!['SCRIPT','STYLE','LINK','OPTION'].includes(e.tagName)&&e.getClientRects().length);
   const describe=e=>e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+[...e.classList].slice(0,5).map(c=>'.'+c).join('');
   const snapshot=()=>elems.map(e=>{const c=getComputedStyle(e);return props.map(p=>c.getPropertyValue(p))});
   const cold=snapshot();
