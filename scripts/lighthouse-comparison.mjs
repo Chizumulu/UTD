@@ -2,6 +2,7 @@ import {readFileSync,writeFileSync,mkdirSync,readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {gzipSync,brotliCompressSync} from 'node:zlib';
 import {pathToFileURL} from 'node:url';
+import {diagnose,aggregateDiagnostics,diagnosticMarkdown} from './lighthouse-comparison-diagnostics.mjs';
 
 export const blockedPatterns=JSON.parse(readFileSync(new URL('./lighthouse-comparison-flags.json',import.meta.url),'utf8'))['blocked-url-patterns'];
 const blockedDomains=['google-analytics.com','googletagmanager.com','clarity.ms','onesignal.com'];
@@ -109,11 +110,12 @@ export function markdown(result){
  return lines.join('\n')+'\n';
 }
 export function summarize({dir,base,head,beforeDir,afterDir,runs}){
- const profiles={},blocking={},reliability={};
+ const profiles={},blocking={},reliability={},diagnostics={},diagnosticSamples={};
  for(const profile of ['mobile','desktop']){
-  const read=side=>Array.from({length:runs},(_,i)=>{const name=profile+'-'+side+'-'+(i+1);const report=JSON.parse(readFileSync(join(dir,name+'.json'),'utf8'));const values=validateReport(report);blocking[name]=verifyBlocking(report);return values;});
+  const read=side=>Array.from({length:runs},(_,i)=>{const name=profile+'-'+side+'-'+(i+1);const report=JSON.parse(readFileSync(join(dir,name+'.json'),'utf8'));const values=validateReport(report);blocking[name]=verifyBlocking(report);diagnosticSamples[name]=diagnose(report);return values;});
   const before=read('before'),after=read('after');
   profiles[profile]=compare(before,after);
+  diagnostics[profile]=Object.fromEntries(['before','after'].map(side=>[side,aggregateDiagnostics(Array.from({length:runs},(_,i)=>diagnosticSamples[profile+'-'+side+'-'+(i+1)]))]));
   reliability[profile]={};
   for(const [side,samples] of [['before',before],['after',after]]){
    const stats=Object.fromEntries(Object.keys(samples[0]).map(k=>[k,spread(samples.map(x=>x[k]))]));
@@ -125,6 +127,8 @@ export function summarize({dir,base,head,beforeDir,afterDir,runs}){
  mkdirSync(dir,{recursive:true});
  writeFileSync(join(dir,'comparison.json'),JSON.stringify(result,null,2)+'\n');
  writeFileSync(join(dir,'comparison.md'),markdown(result));
+ writeFileSync(join(dir,'diagnostics.json'),JSON.stringify({base,head,runs,profiles:diagnostics,samples:diagnosticSamples},null,2)+'\n');
+ writeFileSync(join(dir,'diagnostics.md'),diagnosticMarkdown(diagnostics));
  return result;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
