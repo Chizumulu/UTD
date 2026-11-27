@@ -1,6 +1,9 @@
+import {requestJson} from './http.mjs';
 // Read-only probes. Never persist upstream bodies, credentials or raw exceptions.
 export const KEY='admin-center:v1:credentials';
 const DAY=86400000;
+const RETRY=10*60000;
+const transient=new Set(['unavailable','rate_limited','probe_failed','unexpected_response']);
 export function expiryStatus(value,now=Date.now()){
  const expiresAt=typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString():null;
  if(!expiresAt)return {status:'valid',expiresAt:null};
@@ -10,8 +13,8 @@ export function expiryStatus(value,now=Date.now()){
 async function probe(name,url,token,validate,fetcher,now){
  if(!token||!url)return {name,status:'not_configured',expiresAt:null};
  try{
-  const r=await fetcher(url,{method:'GET',redirect:'error',headers:{authorization:'Bearer '+token,accept:'application/json','user-agent':'UTD-credential-monitor'},signal:AbortSignal.timeout(15000)});
-  let body;try{body=await r.json()}catch{}
+  const {response:r,body,error}=await requestJson(url,{method:'GET',redirect:'error',headers:{authorization:'Bearer '+token,accept:'application/json','user-agent':'UTD-credential-monitor'}},fetcher);
+  if(error)return {name,status:'unavailable',reason:error,expiresAt:null};
   const result={name,httpStatus:r.status,expiresAt:null};
   const metaCode=Number(body?.error?.code);
   if(r.status===401||metaCode===190)return {...result,status:'auth_failed'};
@@ -20,7 +23,7 @@ async function probe(name,url,token,validate,fetcher,now){
   if(!r.ok||body?.error)return {...result,status:'probe_failed'};
   if(!validate(body))return {...result,status:'unexpected_response'};
   return {...result,...expiryStatus(r.headers.get('github-authentication-token-expiration'),now)};
- }catch{return {name,status:'unavailable',expiresAt:null}}
+ }catch{return {name,status:'unavailable',reason:'internal_error',expiresAt:null}}
 }
 export async function checkCredentials(env,{fetcher=fetch,now=Date.now()}={}){
  let graph=null;
@@ -36,10 +39,12 @@ export async function checkCredentials(env,{fetcher=fetch,now=Date.now()}={}){
  ]);
  return {version:1,checkedAt:now,checks};
 }
-export async function monitorCredentialsIfDue(env,{now=Date.now(),fetcher=fetch}={}){
+export async function monitorCredentialsIfDue(env,{now=Date.now(),fetcher=fetch,manual=false}={}){
  if(env.ADMIN_CENTER_ENABLED!=='true')return;
  const old=await env.APPROVALS.get(KEY,'json');
- if(Number.isFinite(old?.checkedAt)&&old.checkedAt<=now&&now-old.checkedAt<DAY)return;
+ const interval=manual?60000:old?.checks?.some(c=>transient.has(c.status))?RETRY:DAY;
+ if(Number.isFinite(old?.checkedAt)&&old.checkedAt<=now&&now-old.checkedAt<interval)return;
+
  const report=await checkCredentials(env,{now,fetcher});
  await env.APPROVALS.put(KEY,JSON.stringify(report),{expirationTtl:7*86400});
  console.log(JSON.stringify({event:'credential_monitor_completed',...report}));
