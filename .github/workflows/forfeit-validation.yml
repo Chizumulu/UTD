@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'automation/forfeit-approval/**'
+      - 'automation/match-monitor/**'
       - 'automation/scorer-approval/worker.js'
       - 'automation/cup-sync/**'
       - '.github/workflows/forfeit-approval.yml'
@@ -20,4 +21,4 @@ jobs:
           node-version: 22
       - run: npm install --no-save --package-lock=false acorn@8
       - run: node --check automation/scorer-approval/worker.js
-      - run: node --test automation/forfeit-approval/*.test.mjs automation/cup-sync/*.test.mjs
+      - run: node --test automation/forfeit-approval/*.test.mjs automation/cup-sync/*.test.mjs automation/match-monitor/*.test.mjs
