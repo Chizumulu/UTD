@@ -388,6 +388,39 @@ try{
     assert.deepEqual(faults,[]);
    }finally{releaseAnime();await ctx.close()}
   });
+ if(base.hostname==='127.0.0.1')await run('home hero renders before delayed secondary scripts and survives startup',async()=>{
+  for(const lang of ['ko','en']){
+   const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block',reducedMotion:'reduce'});
+   await blockAnalytics(ctx);
+   const p=await ctx.newPage(),faults=[];
+   let release,requested=0;
+   const gate=new Promise(resolve=>{release=resolve});
+   p.on('pageerror',e=>faults.push(e.message));
+   await p.addInitScript(()=>{window.__heroDcl=false;document.addEventListener('DOMContentLoaded',()=>{window.__heroDcl=true;});});
+   await p.route(/\/(?:lang-ny|a11y)\.js(?:\?|$)/,async route=>{requested++;await gate;await route.continue();});
+   try{
+    await p.goto(new URL('?lang='+lang,base).href,{waitUntil:'commit',timeout:45000});
+    await p.waitForFunction(()=>performance.getEntriesByName('utd-hero-ready').length===1,null,{timeout:30000});
+    const before=await p.evaluate(()=>{
+     const hero=document.getElementById('nextMatchStrip');
+     window.__earlyHeroFirst=hero.firstElementChild;
+     return {dcl:window.__heroDcl,busy:hero.hasAttribute('aria-busy'),text:hero.textContent.trim(),lang:document.documentElement.dataset.lang,ready:performance.getEntriesByName('utd-hero-ready')[0].startTime};
+    });
+    assert.equal(before.dcl,false);assert.equal(before.busy,false);assert.ok(before.text.length>0);assert.equal(before.lang,lang);
+    assert.ok(requested>0,'secondary script gate not exercised');
+    release();
+    await p.waitForLoadState('domcontentloaded',{timeout:45000});
+    await filled(p,'#mainMiniTableBody');
+    const after=await p.evaluate(()=>({same:window.__earlyHeroFirst===document.getElementById('nextMatchStrip').firstElementChild,dcl:window.__heroDcl,nav:performance.getEntriesByType('navigation')[0].domContentLoadedEventStart}));
+    assert.equal(after.same,true,'hero unnecessarily replaced at startup');
+    assert.equal(after.dcl,true);assert.ok(before.ready<after.nav);
+    console.log('early hero '+lang+': '+JSON.stringify({ready:before.ready,dcl:after.nav,same:after.same}));
+    await dismiss(p);
+    await visible(p,'#rankView');
+    assert.deepEqual(faults,[]);
+   }finally{release();await ctx.close()}
+  }
+ });
  if(base.hostname==='127.0.0.1')await run('match alert onboarding only in standalone mode and waits for existing modal',async()=>{
   for(const standalone of [false,true]){
    const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block',reducedMotion:'reduce'});
