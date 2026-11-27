@@ -421,6 +421,47 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('standings export loads only on demand, retries failed asset and downloads PNG',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:900},acceptDownloads:true,serviceWorkers:'block',reducedMotion:'reduce'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage(),faults=[];
+  let requests=0,fail=true;
+  p.on('pageerror',e=>faults.push(e.message));
+  await p.route(/\/standings-export\.js\?v=[a-f0-9]{16}$/,route=>{
+   requests++;
+   return fail?route.abort():route.continue();
+  });
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await filled(p,'#mainMiniTableBody');
+   await dismiss(p);
+   await navigate(p,'leagueRank',false);
+   assert.equal(requests,0,'export asset loaded before click');
+   const btn=p.locator('#exportImgBtn');
+   const label=await btn.locator('.lbl').textContent();
+   await btn.click();
+   await p.waitForFunction(()=>!document.getElementById('exportImgBtn').disabled);
+   assert.equal(requests,1);
+   assert.equal(await btn.locator('.lbl').textContent(),label);
+   fail=false;
+   for(let i=0;i<2;i++){
+    const downloading=p.waitForEvent('download',{timeout:30000});
+    await btn.click();
+    const download=await downloading;
+    assert.match(download.suggestedFilename(),/^NRFA_.*\.png$/);
+    assert.equal(await download.failure(),null);
+    const stream=await download.createReadStream();
+    const chunks=[];for await(const chunk of stream)chunks.push(chunk);
+    const bytes=Buffer.concat(chunks);
+    assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
+    assert.equal(bytes.readUInt32BE(16),2000);
+    await p.waitForFunction(()=>!document.getElementById('exportImgBtn').disabled);
+    assert.equal(await btn.locator('.lbl').textContent(),label);
+   }
+   assert.equal(requests,2,'loaded exporter was not reused');
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  if(base.hostname==='127.0.0.1')await run('match alert onboarding only in standalone mode and waits for existing modal',async()=>{
   for(const standalone of [false,true]){
    const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block',reducedMotion:'reduce'});
