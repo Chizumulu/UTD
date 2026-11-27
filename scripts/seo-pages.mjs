@@ -1,5 +1,5 @@
 import vm from 'node:vm';
-import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
+import {mkdirSync,writeFileSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 
 export const BASE='https://chizumulu.github.io/UTD/';
@@ -97,11 +97,7 @@ export function writeSeo(output,source){
  for(const [path,html] of pages){const file=join(output,path,'index.html');mkdirSync(dirname(file),{recursive:true});writeFileSync(file,html);}
  const urls=['',...pages.keys()];
  writeFileSync(join(output,'sitemap.xml'),'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+urls.map(p=>'  <url><loc>'+esc(BASE+p)+'</loc></url>').join('\n')+'\n</urlset>\n');
- const home=join(output,'index.html');
- const html=readFileSync(home,'utf8');
- if(!html.includes('</body>'))throw Error('Main HTML body missing');
- const nav='<nav aria-label="경기 기록 바로가기" style="text-align:center;padding:12px;font-size:13px">'+['matches/','league/','teams/','players/','cup/'].map((p,i)=>link(p,['치주물루 경기 일정·결과','리그 경기 기록','참가 구단','선수단','FA컵'][i])).join(' · ')+'</nav>';
- writeFileSync(home,html.replace('</body>',nav+'\n</body>'));
+ // Preserve the SPA markup: a body-level sibling changes its flex layout.
  console.log('SEO pages generated: '+pages.size);
  return pages.size;
 }
