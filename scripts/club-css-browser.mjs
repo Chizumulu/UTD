@@ -79,10 +79,20 @@ try{
   const panel=page.locator('#teamInfoStoryTab');
   const retry=panel.locator('button.rmd-act-btn');
   await retry.waitFor({state:'visible',timeout:30000});
+  assert.equal(attempts,1,'initial failed stylesheet request');
   assert.equal(await panel.locator('.ti-sponsor-card').count(),0,'unstyled cards must not render');
-  await retry.evaluate(el=>el.click());
+  // Repeated route/tab rendering must leave the original retry control intact.
+  const retryButton=await retry.elementHandle();
+  assert.ok(retryButton);
+  await page.evaluate(()=>{applyTeamInfoTab('story');applyTeamInfoTab('story');});
+  assert.equal(await retryButton.evaluate(el=>el.isConnected),true,'Retry control survives rerender');
+  assert.equal(attempts,1,'no implicit retry before user action');
+  await retryButton.evaluate(el=>el.click());
   await panel.locator('.ti-sponsor-card').first().waitFor({state:'visible',timeout:30000});
-  assert.equal(attempts,2);
+  await page.waitForFunction(()=>[...document.querySelectorAll('link[rel=stylesheet]')].some(l=>l.href.includes('club-sponsors.css')&&l.sheet));
+  assert.equal(attempts,2,'explicit retry makes exactly one additional request');
+  assert.equal(await retry.count(),0,'retry control cleared after success');
+  assert.equal(await page.locator('link[rel=stylesheet][href*="club-sponsors.css"]').count(),1,'failed link removed');
   console.log('Club CSS PASS direct link, failed CSS, retry');
  }finally{await context.close()}
 }finally{await browser.close()}
