@@ -421,6 +421,45 @@ try{
    }finally{release();await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('cup view loads on demand, retries and preserves cup switches and bracket',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage(),faults=[];
+  let requests=0;
+  p.on('pageerror',e=>faults.push(e.message));
+  await p.route(/\/cup-view\.js\?v=[a-f0-9]{16}$/,route=>++requests===1?route.abort():route.continue());
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await dismiss(p);
+   await filled(p,'#mainMiniTableBody');
+   assert.equal(requests,0);
+   await p.evaluate(()=>{location.hash='#/cup'});
+   await visible(p,'#cupViewContent button');
+   assert.equal(requests,1);
+   await p.locator('#cupViewContent button').first().click();
+   await visible(p,'#cupTabsWrap');
+   assert.equal(requests,2);
+   await p.locator('#cupViewContent .cup-chip[onclick*="faCup2627"]').click();
+   await p.locator('#cupTabsWrap [data-cup-tab="bracket"]').click();
+   await visible(p,'#cupViewContent [data-cup-panel="bracket"].is-on');
+   await filled(p,'#cupViewContent [data-cup-panel="bracket"]');
+   const table=p.locator('#cupViewContent .cup-view-toggle [data-v="table"]');
+   if(await table.count()){await table.click();await visible(p,'#cupViewContent [data-rview="table"]');}
+   const prize=p.locator('#cupTabsWrap [data-cup-tab="prize"]');
+   if(await prize.count()){
+    await prize.click();
+    const krw=p.locator('#cupKrwToggle');
+    if(await krw.count()){const before=await krw.getAttribute('aria-checked');await krw.click();assert.notEqual(await krw.getAttribute('aria-checked'),before);}
+   }
+   await p.locator('#cupViewContent .cup-chip[onclick*="mmbelwaCup"]').click();
+   await p.locator('#cupTabsWrap [data-cup-tab="teams"]').click();
+   await visible(p,'#cupViewContent [data-cup-panel="teams"].is-on');
+   await p.evaluate(()=>showView('rank'));
+   await visible(p,'#rankView');
+   assert.equal(requests,2);
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  if(base.hostname==='127.0.0.1')await run('prediction view loads on demand, retries and preserves model and outlook tabs',async()=>{
   const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block',reducedMotion:'reduce'});
   await blockAnalytics(ctx);
