@@ -247,6 +247,51 @@ try{
    await context.close();
   }
  }
+ // Startup diagnostics: attach listeners before any document scripts execute.
+ // This is a separate diagnostic context, not a change to production HTML.
+ for(const scenario of ['tablet-cold','tablet-delayed-scripts','tablet-missing-round-tools']){
+  await run(scenario+' startup',async()=>{
+   const ctx=await browser.newContext({viewport:{width:768,height:1024},isMobile:true,hasTouch:true,deviceScaleFactor:1,serviceWorkers:'block',locale:'ko-KR'});
+   await blockAnalytics(ctx);
+   const p=await ctx.newPage();
+   const faults=[];
+   p.on('pageerror',e=>faults.push(String(e.stack||e.message)));
+   p.on('response',r=>{if(sameSite(r.url())&&r.status()>=400&&['script','stylesheet'].includes(r.request().resourceType()))faults.push('Local asset HTTP '+r.status()+' '+new URL(r.url()).pathname)});
+   let injected=0;
+   if(scenario==='tablet-delayed-scripts'){
+    await p.route(/\/(?:app|data|a11y|lang-ny)\.js(?:\?|$)/,async route=>{
+     if(sameSite(route.request().url())){injected++;await new Promise(resolve=>setTimeout(resolve,650));}
+     await route.continue();
+    });
+   }
+   if(scenario==='tablet-missing-round-tools'){
+    // Controlled incompatible-markup case; not proof of a historical cache mismatch.
+    await p.route(url=>url.origin===base.origin&&url.pathname===base.pathname,async route=>{
+     if(!route.request().isNavigationRequest())return route.continue();
+     const response=await route.fetch();
+     const html=await response.text();
+     assert.match(html,/id="roundTools"/);
+     injected++;
+     await route.fulfill({response,body:html.replace('id="roundTools"','id="roundToolsDiagnosticMissing"')});
+    });
+   }
+   try{
+    for(let attempt=0;attempt<(scenario==='tablet-missing-round-tools'?1:3);attempt++){
+     if(attempt===0)await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+     else await p.reload({waitUntil:'domcontentloaded',timeout:45000});
+     // No clicks: replicate the reported error within a second of initial entry.
+     await p.waitForTimeout(2200);
+     if(faults.length)throw Error('Startup page errors: '+faults.join('\n').slice(0,1800));
+     await p.waitForFunction(()=>{const n=document.querySelector('#mainMiniTableBody');return n&&n.children.length>0&&n.textContent.trim().length>0},null,{timeout:15000});
+     assert.deepEqual(faults,[]);
+    }
+    if(scenario!=='tablet-cold')assert.ok(injected>0,'diagnostic interception did not run');
+   }finally{
+    await p.screenshot({path:join(out,scenario+'.png'),fullPage:false,timeout:5000}).catch(()=>{});
+    await ctx.close();
+   }
+  });
+ }
  const seoContext=await browser.newContext({serviceWorkers:'block'});
  await blockAnalytics(seoContext);
  try{
