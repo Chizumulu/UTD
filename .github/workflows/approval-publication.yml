@@ -1,0 +1,48 @@
+name: Approval publication tracking
+on:
+  schedule:
+    - cron: '11,26,41,56 * * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/monitor-publication*.mjs'
+      - 'scripts/publication-receipt.mjs'
+      - 'scripts/build-pages.mjs'
+      - '.github/workflows/approval-publication.yml'
+      - '.github/workflows/*approval.yml'
+      - '.github/workflows/instagram-lineup-approved.yml'
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  issues: write
+concurrency:
+  group: approval-publication-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node --test scripts/monitor-publication.test.mjs
+  monitor:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.UTD_HEALTH_MONITOR_ENABLED == 'true'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Verify approved changes reached public deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export PUBLICATION_MONITOR_START_AT="$(git log --first-parent --diff-filter=A --format=%cI -- scripts/monitor-publication.mjs | tail -n 1)"
+          node scripts/monitor-publication.mjs
