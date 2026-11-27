@@ -342,6 +342,7 @@
     updateInstallBtnVisibility();
     hideInstallBanner();
     showShareToast(isKorean ? '앱이 설치됐어요' : 'App installed');
+    trackUtdAction('utd_pwa_install', 'browser');
   });
 
   async function installApp() {
@@ -4751,6 +4752,7 @@
     if (navigator.share) {
       try {
         await navigator.share({ title, text, url: shareUrl });
+        trackUtdAction('utd_share_complete', 'native');
       } catch (e) {
         // 사용자가 공유 시트를 취소한 경우는 조용히 무시합니다.
       }
@@ -4758,6 +4760,7 @@
     }
     try {
       await navigator.clipboard.writeText(`${text}\n${shareUrl}`);
+      trackUtdAction('utd_share_complete', 'clipboard');
       if (window.hapticTap) window.hapticTap();
       showShareToast(isKorean ? '클립보드에 복사했어요' : 'Copied to clipboard');
     } catch (e) {
@@ -5045,6 +5048,7 @@
       return;
     }
     saveICSFile(ev, 'chizumulu-next-match.ics');
+    trackUtdAction('utd_calendar_download', 'next');
     showShareToast(isKorean ? '캘린더 파일을 내려받았어요' : 'Calendar file downloaded');
   }
 
@@ -5080,6 +5084,7 @@
     }
     saveICSFile([].concat.apply([], events), 'chizumulu-remaining-fixtures.ics',
       isKorean ? '치주물루 유나이티드 FC 남은 경기' : 'Chizumulu United FC Remaining Fixtures');
+    trackUtdAction('utd_calendar_download', 'remaining');
     const tail = undated
       ? (isKorean ? ` (일정 미정 ${undated}경기 제외)` : ` (${undated} TBD excluded)`)
       : '';
@@ -16635,6 +16640,7 @@
         a.download = `NRFA_${safeWeek}.png`;
         document.body.appendChild(a);
         a.click();
+        trackUtdAction('utd_poster_download', 'other');
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 2000);
         if (btn) btn.disabled = false;
@@ -16750,6 +16756,7 @@
         a.download = `chizumulu_${filenamePart}.png`;
         document.body.appendChild(a);
         a.click();
+        trackUtdAction('utd_poster_download', ['result','preview','lineup'].includes(kind) ? kind : 'other');
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 2000);
       }, 'image/png');
@@ -19938,6 +19945,7 @@
     const player = topScorersData.find(p => p.key === key);
     if (!player) return;
 
+    const newPlayerOpen = currentPlayerModalKey !== key;
     currentPlayerModalKey = key;
 
     const timeline = (playerGoalTimelines[key] || []).slice();
@@ -19989,6 +19997,7 @@
 
     attachImageFallback();
     showModalAnimated(document.getElementById('playerModal'));
+    if (newPlayerOpen) trackUtdAction('utd_player_open', 'scorer');
   }
 
   function closePlayerModal() {
@@ -20009,6 +20018,10 @@
   // - Clarity: 이벤트는 이름만 받으므로 구분이 필요한 값은 clarityName 에 접미사로 넣습니다.
   // 두 도구가 차단되었거나(광고 차단 등) 아직 로드되지 않았어도 사이트 동작에는 영향이 없도록 조용히 건너뜁니다.
   // 개인정보는 보내지 않고 팀/선수 키, 칩 종류 같은 값만 사용합니다.
+  function trackUtdAction(name, kind) {
+    try { window.UTDAnalytics?.action(name, kind); } catch (_) { /* analytics must not interrupt UI */ }
+  }
+
   function trackEvent(name, params, clarityName) {
     try {
       if (typeof window.gtag === 'function') window.gtag('event', name, params || {});
@@ -20017,6 +20030,18 @@
       if (typeof window.clarity === 'function') window.clarity('event', clarityName || name);
     } catch (e) { /* 위와 동일 */ }
   }
+
+  // Feature links can be rendered asynchronously; delegation covers both league and cup cards.
+  function trackHighlightClick(event) {
+    try {
+      const a = event.target.closest?.('a.rmc-highlight-btn, a.rmd-act-hl');
+      if (!a || (event.type === 'auxclick' && event.button !== 1)) return;
+      const host = new URL(a.href).hostname.toLowerCase();
+      if (['youtube.com','www.youtube.com','m.youtube.com','youtu.be'].includes(host)) trackUtdAction('utd_highlight_click','youtube');
+    } catch (_) {}
+  }
+  document.addEventListener('click',trackHighlightClick);
+  document.addEventListener('auxclick',trackHighlightClick);
 
   // ===== 경기 카드의 팀 이름/로고 → 팀 페이지 이동 =====
   // 카드 HTML에는 data-team-link(팀 영문명)만 심어두고, 실제 이동은 아래 위임 핸들러가
@@ -20363,6 +20388,7 @@
     const hasNumber = (player.number !== undefined && player.number !== null);
 
     if (currentSquadPlayerModalNumber !== identifier) squadPlayerCompMode = 'league'; // 새 선수를 열면 리그부터 (언어 전환 재렌더는 유지)
+    const newSquadOpen = currentSquadPlayerModalNumber !== identifier;
     currentSquadPlayerModalNumber = identifier;
     const statsKey = isFormerPlayer ? 'F' + player.number : player.number;
     const emptyStats = () => ({
@@ -20620,6 +20646,7 @@
 
     attachImageFallback();
     showModalAnimated(document.getElementById('squadPlayerModal'));
+    if (newSquadOpen) trackUtdAction('utd_player_open', isFormerPlayer ? 'former_squad' : 'squad');
   }
 
   function closeSquadPlayerModal() {
@@ -24874,6 +24901,14 @@
     let applying = false;   // 라우트를 적용하는 중에는 주소를 다시 쓰지 않습니다
     let scheduled = false;
     let lastHash = normHash(location.hash);
+    let analyticsReady = false;
+    function recordAnalyticsScreen() {
+      if (!analyticsReady) return;
+      try {
+        const language = new URLSearchParams(location.search).get('lang') === 'ny' ? 'ny' : (isKorean ? 'ko' : 'en');
+        window.UTDAnalytics?.screen({ route: buildHash(), cupId: currentView === 'cup' ? getSelectedCup()?.id : undefined, cupTab, language });
+      } catch (_) { /* analytics is never required for navigation */ }
+    }
 
     // 현재 화면 상태 → 해시 문자열(# 제외)
     function buildHash() {
@@ -24924,8 +24959,9 @@
       scheduled = false;
       if (applying) return;
       const h = buildHash();
-      if (h === normHash(location.hash)) { lastHash = h; return; }
+      if (h === normHash(location.hash)) { lastHash = h; recordAnalyticsScreen(); return; }
       writeUrl(h, sameBase(h, normHash(location.hash)));
+      recordAnalyticsScreen();
     }
     // 한 번의 화면 전환 동안 여러 함수가 연달아 호출돼도(showView → renderRoundsView 등)
     // 최종 상태 기준으로 한 번만 기록하도록 마이크로태스크로 모읍니다.
@@ -24948,7 +24984,7 @@
       }
       if (!normHash(location.hash).startsWith('match/')) return;
       if (history.state?.matchOverlay) history.back();
-      else writeUrl(buildHash(), true);
+      else { writeUrl(buildHash(), true); recordAnalyticsScreen(); }
     };
 
     // 해시 → 화면 상태
@@ -25043,11 +25079,12 @@
       // 주소가 잘못됐거나 번호가 생략된 경우(예: #/rounds, #/club/없는팀)를 실제 화면 기준으로 정리
       const canon = buildHash();
       if (canon !== normHash(location.hash)) writeUrl(canon, true); else lastHash = canon;
+      recordAnalyticsScreen();
     }
 
     // 기존 함수 래핑: 원본을 먼저 실행한 뒤 주소 동기화를 예약합니다.
     ['showView', 'showCupView', 'showTeamInfoForKey', 'applyTeamInfoTab', 'setStatsTab', 'setPredictTab', 'renderRoundsView',
-     'renderTeamCompareView', 'setArchiveTab', 'openSeasonArchive'].forEach(name => {
+     'renderTeamCompareView', 'setArchiveTab', 'openSeasonArchive', 'renderCupView', 'setCupTab'].forEach(name => {
       const orig = window[name];
       if (typeof orig !== 'function') return;
       window[name] = function () {
@@ -25064,6 +25101,7 @@
         if (matchCompareFromFixture) closeMatchCompareModal(false);
         if (activeMatchPath) dismissLinkedFixtureForNavigation();
         lastHash = target;
+        recordAnalyticsScreen();
         const { top } = roundOverlayOrigin;
         requestAnimationFrame(() => {
           if (currentView === 'rounds' && !archiveMode && lastHash === target) window.scrollTo(0, top);
@@ -25078,8 +25116,9 @@
 
     // 첫 진입: 기존 초기화(DOMContentLoaded)가 끝난 뒤, 해시가 있으면 그 화면을 복원합니다.
     document.addEventListener('DOMContentLoaded', function () {
+      analyticsReady = true;
       lastHash = '\u0000'; // 첫 적용은 항상 실행
-      if (normHash(location.hash)) applyRoute(); else lastHash = '';
+      if (normHash(location.hash)) applyRoute(); else { lastHash = ''; recordAnalyticsScreen(); }
     });
   })();
 
