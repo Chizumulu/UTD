@@ -36,16 +36,33 @@ export function median(values){
  const sorted=[...values].sort((a,b)=>a-b),i=Math.floor(sorted.length/2);
  return sorted.length%2?sorted[i]:(sorted[i-1]+sorted[i])/2;
 }
+export function validateReport(report){
+ if(!report||typeof report!=='object')throw Error('Missing Lighthouse report');
+ if(report.runtimeError)throw Error(report.runtimeError.message||'Lighthouse runtime error');
+ const warnings=report.runWarnings??[];
+ if(!Array.isArray(warnings))throw Error('Invalid Lighthouse warnings');
+ const incomplete=warnings.filter(w=>/timed?\s*out|time\s*limit|timeout|incomplete|unable to reliably|did not finish|did not complete/i.test(String(w)));
+ if(incomplete.length)throw Error('Incomplete Lighthouse report: '+incomplete.join('; '));
+ const result=extract(report);
+ verifyBlocking(report);
+ return result;
+}
+export function spread(values){
+ const center=median(values),min=Math.min(...values),max=Math.max(...values);
+ const mean=values.reduce((a,b)=>a+b,0)/values.length;
+ const standardDeviation=Math.sqrt(values.reduce((a,b)=>a+(b-mean)**2,0)/values.length);
+ return {count:values.length,min,max,median:center,standardDeviation,rangePercent:center===0?(max===min?0:null):(max-min)/center*100};
+}
 export function extract(report){
  if(report.runtimeError)throw Error(report.runtimeError.message||'Lighthouse runtime error');
  const result={};
  for(const [name,path] of Object.entries(metrics)){
   const v=path.reduce((x,k)=>x?.[k],report);
-  if(!Number.isFinite(v))throw Error('Missing Lighthouse metric: '+name);
+  if(!Number.isFinite(v)||v<0||(name==='score'&&v>1))throw Error('Missing or invalid Lighthouse metric: '+name);
   result[name]=name==='score'?v*100:v;
  }
  const requests=report.audits?.['network-requests']?.details?.items;
- if(!Array.isArray(requests))throw Error('Missing network requests');
+ if(!Array.isArray(requests)||requests.length===0)throw Error('Missing network requests');
  result.requests=requests.length;
  return result;
 }
@@ -72,6 +89,14 @@ export function markdown(result){
   for(const [key,r] of Object.entries(rows))lines.push('| '+key+' | '+fmt(r.before)+' | '+fmt(r.after)+' | '+fmt(r.delta)+' | '+fmt(r.percent)+' |');
   lines.push('');
  }
+ if(result.reliability){
+  lines.push('## Measurement reliability','','Range / median > 30% for FCP, LCP, main thread or JS execution flags high variability (heuristic, not a confidence interval). Valid slow samples are retained.','');
+  for(const [profile,sides] of Object.entries(result.reliability))for(const [side,r] of Object.entries(sides)){
+   lines.push('### '+profile+' '+side+': '+r.status,'','| Metric | Count | Min | Median | Max | SD | Range % |','|---|---:|---:|---:|---:|---:|---:|');
+   for(const [k,v] of Object.entries(r.stats))lines.push('| '+k+' | '+v.count+' | '+fmt(v.min)+' | '+fmt(v.median)+' | '+fmt(v.max)+' | '+fmt(v.standardDeviation)+' | '+fmt(v.rangePercent)+' |');
+   lines.push('', 'Flagged metrics: '+(r.noisy.join(', ')||'none'),'');
+  }
+ }
  if(result.blocking)lines.push('## External request blocking','','Verified '+Object.keys(result.blocking).length+' reports; no successful responses or bytes from configured blocked domains. Other external resources remain enabled.','');
  lines.push('## Build asset sizes (bytes)','','| Asset | Encoding | Baseline | Candidate | Delta |','|---|---|---:|---:|---:|');
  for(const name of [...new Set([...Object.keys(result.assets.before),...Object.keys(result.assets.after)])].sort()){
@@ -84,12 +109,19 @@ export function markdown(result){
  return lines.join('\n')+'\n';
 }
 export function summarize({dir,base,head,beforeDir,afterDir,runs}){
- const profiles={},blocking={};
+ const profiles={},blocking={},reliability={};
  for(const profile of ['mobile','desktop']){
-  const read=side=>Array.from({length:runs},(_,i)=>{const name=profile+'-'+side+'-'+(i+1);const report=JSON.parse(readFileSync(join(dir,name+'.json'),'utf8'));blocking[name]=verifyBlocking(report);return extract(report);});
-  profiles[profile]=compare(read('before'),read('after'));
+  const read=side=>Array.from({length:runs},(_,i)=>{const name=profile+'-'+side+'-'+(i+1);const report=JSON.parse(readFileSync(join(dir,name+'.json'),'utf8'));const values=validateReport(report);blocking[name]=verifyBlocking(report);return values;});
+  const before=read('before'),after=read('after');
+  profiles[profile]=compare(before,after);
+  reliability[profile]={};
+  for(const [side,samples] of [['before',before],['after',after]]){
+   const stats=Object.fromEntries(Object.keys(samples[0]).map(k=>[k,spread(samples.map(x=>x[k]))]));
+   const noisy=['fcp','lcp','mainThread','jsExecution'].filter(k=>stats[k].rangePercent===null||stats[k].rangePercent>30);
+   reliability[profile][side]={stats,noisy,status:runs<3?'insufficient-for-repeatability':noisy.length?'high-variability':'within-heuristic'};
+  }
  }
- const result={base,head,runs,profiles,blocking,assets:{before:sizes(beforeDir),after:sizes(afterDir)}};
+ const result={base,head,runs,profiles,blocking,reliability,assets:{before:sizes(beforeDir),after:sizes(afterDir)}};
  mkdirSync(dir,{recursive:true});
  writeFileSync(join(dir,'comparison.json'),JSON.stringify(result,null,2)+'\n');
  writeFileSync(join(dir,'comparison.md'),markdown(result));
