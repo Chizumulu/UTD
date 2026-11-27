@@ -1,0 +1,26 @@
+name: UTD analytics validation
+on:
+  pull_request:
+    paths:
+      - 'utd-analytics.js'
+      - 'app.js'
+      - 'index.html'
+      - 'push-client.js'
+      - 'scripts/utd-analytics.test.mjs'
+      - 'scripts/seo-pages*.mjs'
+      - 'scripts/build-pages.mjs'
+      - '.github/workflows/analytics-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node --check app.js && node --check utd-analytics.js && node --check push-client.js
+      - run: node --test scripts/utd-analytics.test.mjs scripts/seo-pages.test.mjs
+      - run: node scripts/build-pages.mjs "$RUNNER_TEMP/analytics-pages"
