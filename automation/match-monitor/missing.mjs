@@ -19,7 +19,7 @@ export function leagueFixtures(source){
   const start=source.indexOf("const "+section+" = {"),end=source.indexOf("\n};",start);
   if(start<0||end<0)throw Error("Missing league section "+section);
   for(const [row] of source.slice(start,end).matchAll(/\{[^{}]*\}/g)){
-   const str=k=>row.match(new RegExp("\\b"+k+"\\s*:\\s*[\"']([^\"']+)[\"']"))?.[1];
+   const str=k=>{const m=row.match(new RegExp("\\b"+k+"\\s*:\\s*([\"'])(.*?)\\1"));return m?.[2];};
    const num=k=>{const v=row.match(new RegExp("\\b"+k+"\\s*:\\s*(\\d+)\\b"));return v?Number(v[1]):null;};
    const home=str("homeEn"),away=str("awayEn");
    if(!home||!away)continue;
@@ -48,13 +48,13 @@ export function candidates(fixtures,now,start){
 }
 function matches(f,m,competition){
  const code=String(competition??"").toLowerCase();
- const right=f.competition==="nrfa_league_one"?code==="nrfa_league_one":/^(fa_cup|presidential_fa_cup|facup2627|presidential_cup)$/.test(code);
+ const right=f.competition==="nrfa_league_one"?code==="nrfa_league_one":/^(presidential_fa_cup|fam_presidential_fa_cup|fa_cup_presidential)$/.test(code);
  return right&&pair(f.home,f.away)===pair(m.homeTeam,m.awayTeam)&&f.date===dateOf(m.dateText);
 }
 export async function classify(f,items,kv){
  const hits=[];
  for(const item of items)for(const m of item.structured?.matches??[]){
-  if(matches(f,m,m.competitionCode||item.structured?.competition?.code))hits.push(m);
+  if(!item.structured?.competition?.conflict&&matches(f,m,m.competitionCode||item.structured?.competition?.code))hits.push(m);
  }
  if(hits.length&&hits.every(m=>excluded.test(m.status??"")))return null;
  const final=hits.filter(m=>terminal.test(m.status??"")&&score(m.homeScore)&&score(m.awayScore));
