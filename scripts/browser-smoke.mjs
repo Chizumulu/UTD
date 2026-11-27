@@ -428,6 +428,37 @@ try{
    }finally{await ctx.close()}
   }
  });
+ if(base.hostname==='127.0.0.1')await run('accessibility overlay batching preserves inert and focus',async()=>{
+  const ctx=await browser.newContext({serviceWorkers:'block',reducedMotion:'reduce'});
+  await blockAnalytics(ctx);
+  const p=await ctx.newPage(),faults=[];
+  p.on('pageerror',e=>faults.push(e.message));
+  try{
+   await p.goto(base.href,{waitUntil:'domcontentloaded',timeout:45000});
+   await dismiss(p);
+   await p.evaluate(()=>{
+    const fixture=document.createElement('section');fixture.id='a11yFixture';
+    fixture.innerHTML='<button id="a11yTrigger">Open</button><div id="a11yBackground"><button>Background</button></div><div class="modal-overlay" id="a11yTestOne" style="display:none"><div class="modal-content"><h2>First</h2><button autofocus>First action</button></div></div><div class="modal-overlay" id="a11yTestTwo" style="display:none"><div class="modal-content"><h2>Second</h2><button autofocus>Second action</button></div></div>';
+    document.body.appendChild(fixture);window.A11y.refresh();
+    document.getElementById('a11yTrigger').focus();
+    document.getElementById('a11yTestOne').style.display='flex';
+   });
+   await p.waitForFunction(()=>document.querySelector('#a11yTestOne').contains(document.activeElement)&&document.getElementById('a11yBackground').inert);
+   await p.evaluate(()=>{
+    const bg=document.getElementById('a11yBackground');
+    window.__inertWrites=0;
+    new MutationObserver(r=>window.__inertWrites+=r.length).observe(bg,{attributes:true,attributeFilter:['inert','data-a11y-inert']});
+    document.getElementById('a11yTestTwo').style.display='flex';
+   });
+   await p.waitForFunction(()=>document.querySelector('#a11yTestTwo').contains(document.activeElement));
+   assert.equal(await p.evaluate(()=>window.__inertWrites),0,'unchanged background inert was rewritten');
+   await p.evaluate(()=>document.getElementById('a11yTestTwo').style.display='none');
+   await p.waitForFunction(()=>document.getElementById('a11yTestTwo').inert&&document.getElementById('a11yBackground').inert&&!document.getElementById('a11yTestOne').inert);
+   await p.evaluate(()=>document.getElementById('a11yTestOne').style.display='none');
+   await p.waitForFunction(()=>document.activeElement.id==='a11yTrigger'&&!document.getElementById('a11yBackground').inert);
+   assert.deepEqual(faults,[]);
+  }finally{await ctx.close()}
+ });
  await run('automatic notices wait, preserve order and acknowledge once',async()=>{
   const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',serviceWorkers:'block',reducedMotion:'reduce',locale:'ko-KR'});
   await blockAnalytics(ctx);

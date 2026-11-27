@@ -195,6 +195,8 @@
   // ---------------------------------------------------------------------
   var lastFocusBefore = null;
   var openOverlays = [];
+  // Collect new overlays during one DOM enhancement pass before measuring visibility.
+  var pendingOverlays = new Set();
 
   function enhanceOverlay(ov) {
     if (has(ov, 'data-a11y-modal')) return;
@@ -211,7 +213,7 @@
     }
     // 제목이 나중에 채워지는 모달(내용이 열 때마다 바뀜)은 열릴 때 한 번 더 확인합니다.
     ovObserver.observe(ov, { attributes: true, attributeFilter: ['style'] });
-    syncOverlay(ov);   // 이미 열린 채로 만들어진 팝업(소식·경기일 안내 등)도 처리
+    pendingOverlays.add(ov);   // Measure after the DOM enhancement pass.
   }
 
   function isVisible(ov) {
@@ -228,14 +230,9 @@
       k.getAttribute('role') === 'status' || k.getAttribute('role') === 'alert' ||
       k.id === 'shareToast' || k.id === 'a11yAnnouncer' || k.classList.contains('skip-link');
   }
-  function updateInert() {
-    var open = Array.prototype.filter.call(document.querySelectorAll('.modal-overlay[data-a11y-modal]'), isVisible);
+  function updateInert(open) {
     openOverlays = open;
-
-    // 이전에 이 모듈이 걸어 둔 inert는 모두 풀고 다시 계산합니다.
-    var prev = document.querySelectorAll('[data-a11y-inert]');
-    for (var p = 0; p < prev.length; p++) { prev[p].removeAttribute('data-a11y-inert'); prev[p].inert = false; }
-    if (!open.length) return;
+    var desired = new Set();
 
     var onPath = [];
     open.forEach(function (ov) {
@@ -249,16 +246,34 @@
       for (var i = 0; i < kids.length; i++) {
         var k = kids[i];
         if (onPath.indexOf(k) >= 0 || BG_SKIP.test(k.tagName) || isKeepNode(k)) continue;
-        k.setAttribute('data-a11y-inert', '1');
-        k.inert = true;
+        desired.add(k);
       }
+    });
+    // Preserve unchanged background state; never clear and reapply the same inert attribute.
+    var prev = document.querySelectorAll('[data-a11y-inert]');
+    for (var p = 0; p < prev.length; p++) {
+      if (!desired.has(prev[p])) { prev[p].removeAttribute('data-a11y-inert'); prev[p].inert = false; }
+    }
+    desired.forEach(function (k) {
+      if (!k.inert) { k.setAttribute('data-a11y-inert', '1'); k.inert = true; }
     });
   }
 
-  function syncOverlay(ov) {
-    var visible = isVisible(ov);
-    var was = ov._a11yOpen === true;
-    if (visible && !was) {
+  function syncOverlays() {
+    pendingOverlays.clear();
+    // Measure every overlay before any ARIA, inert or focus writes.
+    var overlays = Array.from(document.querySelectorAll('.modal-overlay[data-a11y-modal]'));
+    var open = overlays.filter(isVisible);
+    var previous = openOverlays;
+    var opening = open.filter(function (ov) { return ov._a11yOpen !== true; });
+    var closing = previous.some(function (ov) { return open.indexOf(ov) < 0; });
+    previous.forEach(function (ov) { if (open.indexOf(ov) < 0) ov._a11yOpen = false; });
+    if (opening.length && !previous.length) {
+      var ae = document.activeElement;
+      if (ae && ae !== document.body && !open.some(function (ov) { return ov.contains(ae); })) lastFocusBefore = ae;
+    }
+    updateInert(open);
+    opening.forEach(function (ov) {
       ov._a11yOpen = true;
       // 제목이 이 시점에 채워졌을 수 있어 이름을 다시 연결
       var c = ov.querySelector('.modal-content');
@@ -266,29 +281,26 @@
         var h = c.querySelector('h1, h2, h3, [id$="Title"]');
         if (h && (h.textContent || '').trim()) c.setAttribute('aria-labelledby', ensureId(h, 'a11yDlgTitle'));
       }
-      // 다른 모달 위에 겹쳐 열린 경우는 "원래 있던 자리"를 덮어쓰지 않습니다.
-      var ae = document.activeElement;
-      if (!openOverlays.length && ae && ae !== document.body && !ov.contains(ae)) lastFocusBefore = ae;
-      updateInert();
+
       // 열림 애니메이션 한 프레임 뒤에 포커스를 안으로 옮깁니다.
       requestAnimationFrame(function () {
+        if (!ov.isConnected || ov._a11yOpen !== true || ov.style.display === 'none') return;
         var target = ov.querySelector('[autofocus]') || c || ov;
         if (target && !has(target, 'tabindex') && !/^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) target.setAttribute('tabindex', '-1');
         try { target.focus({ preventScroll: true }); } catch (e) { target.focus(); }
       });
-    } else if (!visible && was) {
-      ov._a11yOpen = false;
-      updateInert();
-      if (!openOverlays.length && lastFocusBefore && document.body.contains(lastFocusBefore)) {
-        var back = lastFocusBefore;
-        lastFocusBefore = null;
+    });
+    if (closing && !open.length) {
+      var back = lastFocusBefore;
+      lastFocusBefore = null;
+      if (back && document.body.contains(back)) {
         try { back.focus({ preventScroll: true }); } catch (e) { back.focus(); }
       }
     }
   }
 
   var ovObserver = new MutationObserver(function (records) {
-    records.forEach(function (r) { syncOverlay(r.target); });
+    syncOverlays();
   });
 
   // ---------------------------------------------------------------------
@@ -376,7 +388,12 @@
     scheduled = false;
     var batch = pending; pending = [];
     // 이미 DOM에서 빠진 노드는 건너뜁니다.
-    batch.forEach(function (n) { if (n.isConnected) processNode(n); });
+    var roots = new Set(batch.filter(function (n) { return n.isConnected; }));
+    roots.forEach(function (n) {
+      for (var p = n.parentElement; p; p = p.parentElement) if (roots.has(p)) return;
+      processNode(n);
+    });
+    if (pendingOverlays.size || openOverlays.length) syncOverlays();
   }
   var domObserver = new MutationObserver(function (records) {
     for (var i = 0; i < records.length; i++) {
@@ -427,7 +444,7 @@
     processNode(document.body);
     enhanceTeamInfoTabBar();
     syncNav(false);
-    updateInert();
+    syncOverlays();
 
     domObserver.observe(document.body, { childList: true, subtree: true });
 
@@ -456,5 +473,5 @@
   else init();
 
   // 필요하면 다른 코드에서도 쓸 수 있게 노출
-  window.A11y = { announce: announce, refresh: function () { processNode(document.body); } };
+  window.A11y = { announce: announce, refresh: function () { processNode(document.body); syncOverlays(); } };
 })();
