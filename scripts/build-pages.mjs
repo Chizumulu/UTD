@@ -167,7 +167,7 @@ const html = source.replace(versionBlock, updatedBlock).replace(
 );
 
 const fontCss = readFileSync(join(output,'fonts/pretendard/pretendardvariable-dynamic-subset.css'),'utf8');
-writeFileSync(join(output,'index.html'),preloadInitialAssets(optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(reserveInitialPanelRows(html),manifest),fontCss)),{style:assetVersion('style.css'),data:assetVersion('data.js'),app:assetVersion('app.js')}));
+writeFileSync(join(output,'index.html'),preloadInitialAssets(optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(reserveInitialPanelRows(html),manifest),fontCss)),{style:assetVersion('style.css'),data:assetVersion('data.js'),app:assetVersion('app.js'),a11y:assetVersion('a11y.js')}));
 
 writeSeo(output, readFileSync('data.js', 'utf8'), {analyticsVersion:assetVersion('utd-analytics.js')});
 

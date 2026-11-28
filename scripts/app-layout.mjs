@@ -15,5 +15,6 @@ export function optimizeAppLayout(app){
  replace("    indicator.style.top = activeBtn.offsetTop + 'px';\n    indicator.style.bottom = 'auto';\n    indicator.style.height = activeBtn.offsetHeight + 'px';","    indicator.style.top = top + 'px';\n    indicator.style.bottom = 'auto';\n    indicator.style.height = height + 'px';");
  replace("        if (!b || !b.offsetWidth) return;\n        indicator.style.transform = "+translate('b.offsetLeft')+";\n        indicator.style.width = b.offsetWidth + 'px';\n        indicator.style.top = b.offsetTop + 'px';\n        indicator.style.height = b.offsetHeight + 'px';",
  "        if (!b) return;\n        const width = b.offsetWidth;\n        if (!width) return;\n        const left = b.offsetLeft, top = b.offsetTop, height = b.offsetHeight;\n        indicator.style.transform = "+translate('left')+";\n        indicator.style.width = width + 'px';\n        indicator.style.top = top + 'px';\n        indicator.style.height = height + 'px';");
+ replace("      el.textContent = ddayClockText(kickoffMs);", "      const clockText = ddayClockText(kickoffMs);\n      if (el.textContent !== clockText) el.textContent = clockText;");
  return app;
 }

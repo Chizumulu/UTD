@@ -11,7 +11,7 @@ export function prioritizeInitialRender(app){
 export function preloadInitialAssets(html,versions){
  const anchor=/^<head>[ \t]*$/m;
  if([...html.matchAll(/^<head>[ \t]*$/gm)].length!==1)throw Error('Expected unique head tag');
- const assets=[['style','style.css','style'],['data','data.js','script'],['app','app.js','script']];
+ const assets=[['style','style.css','style'],['data','data.js','script'],['app','app.js','script'],['a11y','a11y.js','script']];
  const tags=assets.map(([key,file,as])=>{
   const v=versions[key];
   if(!/^[a-f0-9]{16}$/.test(v||''))throw Error('Missing final asset version: '+key);
