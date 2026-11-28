@@ -10,7 +10,6 @@ const baseline=(await splitClubSponsorCss(readFileSync('style.css','utf8'))).cri
 const kindOf=url=>new URL(url).pathname.match(/\/feature-([a-z]+)\.css$/)?.[1];
 const scenarios=[
  ['club',()=>{showView('squad');applyTeamInfoTab('overview')},'#myTeamInfoView .ti-card'],
- ['pathfinder',()=>applyTeamInfoTab('predict'),'#teamInfoPathFinder'],
  ['rank',()=>showView('leagueRank'),'#leagueTableBody tr'],
  ['rounds',()=>showView('rounds'),'#roundMatchList > *'],
  ['scorers',()=>showView('scorers'),'#scorersTableBody tr'],
@@ -64,6 +63,9 @@ try{
     assert.equal(requests[kind],1,kind+' duplicate');
     if(close)await page.evaluate(close);
    }
+   await page.evaluate(()=>{showView('squad');applyTeamInfoTab('predict')});
+   await page.locator('#teamInfoPathFinder .path-finder-card').first().waitFor({state:'visible',timeout:30000});
+   assert.equal(requests.pathfinder,undefined,'shared pathfinder must not request deferred CSS');
    await page.evaluate(()=>Promise.all(Object.keys(clubDetailCssUrls).map(loadClubDetailCss)));
    const diff=await page.evaluate(source=>{
     const base=[...document.querySelectorAll('link[rel=stylesheet]')].find(l=>new URL(l.href).pathname.endsWith('/style.css'));
