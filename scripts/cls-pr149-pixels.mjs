@@ -14,6 +14,7 @@ try{
    const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1,locale:lang==='ko'?'ko-KR':'en-US',timezoneId:'Asia/Seoul',colorScheme:theme,serviceWorkers:'block'});
    try{
     const page=await context.newPage();
+    await page.clock.setFixedTime(new Date('2026-11-28T01:00:00Z'));
     await page.addInitScript(t=>{localStorage.setItem('nrfa-theme',t)},theme);
     await page.route('**/*',r=>{const h=new URL(r.request().url()).hostname;return /(^|\.)(google-analytics\.com|googletagmanager\.com|clarity\.ms|onesignal\.com)$/.test(h)?r.abort():r.continue()});
     await page.goto('http://127.0.0.1:'+port+'/UTD/?lang='+lang,{waitUntil:'domcontentloaded',timeout:90000});
@@ -27,8 +28,11 @@ try{
   }
   const [a,b]=images,diff=new PNG({width:a.width,height:a.height});
   const pixels=pixelmatch(a.data,b.data,diff.data,a.width,a.height,{threshold:0,includeAA:true});
+  let minX=a.width,minY=a.height,maxX=-1,maxY=-1;
+  for(let y=0;y<a.height;y++)for(let x=0;x<a.width;x++){const i=(y*a.width+x)*4;if(a.data[i]!==b.data[i]||a.data[i+1]!==b.data[i+1]||a.data[i+2]!==b.data[i+2]||a.data[i+3]!==b.data[i+3]){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y)}}
+  const bounds=maxX<0?null:{minX,minY,maxX,maxY};
   writeFileSync(join(out,key+'-diff.png'),PNG.sync.write(diff));
-  rows.push({key,pixels,total:a.width*a.height,ratio:pixels/(a.width*a.height),geometry});
+  rows.push({key,pixels,total:a.width*a.height,ratio:pixels/(a.width*a.height),bounds,geometry});
   writeFileSync(join(out,'summary.json'),JSON.stringify(rows,null,2));
  }
 }finally{await browser.close();writeFileSync(join(out,'summary.json'),JSON.stringify(rows,null,2))}
