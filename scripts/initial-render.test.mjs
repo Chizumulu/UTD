@@ -43,5 +43,8 @@ test('static startup scripts preserve exact execution order, cache URLs and push
  assert.ok(output.includes(expected));
  assert.equal(output.slice(0,output.indexOf(expected)),preloaded.slice(0,preloaded.indexOf('<script>\n  document.write(\'<script src="data.js')));
  assert.equal(output.slice(output.indexOf(expected)+expected.length),'\n</body>\n</html>\n');
+ const hashedLang='5555555555555555';
+ const hashed=preloaded.replace('lang-ny.js?v=002','lang-ny.js?v='+hashedLang);
+ assert.ok(staticStartupScripts(hashed,{...versions,lang:hashedLang}).includes('<script src="lang-ny.js?v='+hashedLang+'"></script>'));
  assert.throws(()=>staticStartupScripts(preloaded,{...versions,a11y:'bad'}));
 });
