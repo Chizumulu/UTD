@@ -21,7 +21,7 @@ import { optimizeAppLayout } from './app-layout.mjs';
 import { prioritizeInitialRender, preloadInitialAssets } from './initial-render.mjs';
 import { optimizeExternalScripts } from './external-script-delivery.mjs';
 import { optimizeFontDelivery } from './font-delivery.mjs';
-import { writeSeo } from './seo-pages.mjs';
+import { writeSeo, readSeoData } from './seo-pages.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -60,7 +60,34 @@ execFileSync('python3', ['scripts/generate-crest-assets.py', output], {stdio:'in
 execFileSync('python3', ['scripts/optimize-player-png.py', output], {stdio:'inherit'});
 const manifest = JSON.parse(readFileSync(join(output,'crest-manifest.json'),'utf8'));
 const appPath = join(output,'app.js');
-const splitExport = await splitStandingsExport(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(readFileSync(appPath,'utf8'), manifest)))));
+// Reserve only the rows that the current published data will actually render.
+// Use the existing mobile row sizing, not a measured aggregate pixel offset.
+const initialPanelData = readSeoData(readFileSync('data.js','utf8'));
+const initialClub = initialPanelData.leagueData.find(t => t.nameEn === 'Chizumulu United FC' || t.nameKo === '치주물루 유나이티드 FC');
+const initialCup = initialPanelData.cupTournaments.some(Boolean);
+const initialPromo = !!initialClub && initialPanelData.leagueData.length >= 2 &&
+  initialClub.played < (initialPanelData.leagueData.length - 1) * 2;
+function releaseInitialPanelRows(app) {
+  for (const [name,id] of [['renderCupHeroPanel','nmCupPanel'],['renderPromoRaceStrip','promoRaceStrip']]) {
+    const before = 'function '+name+'() {';
+    if (app.split(before).length !== 2) throw Error('Expected unique initial panel renderer: '+name);
+    app = app.replace(before, before+'\n    document.getElementById("'+id+'")?.removeAttribute("data-initial-panel");');
+  }
+  return app;
+}
+function reserveInitialPanelRows(html) {
+  for (const [id,enabled] of [['nmCupPanel',initialCup],['promoRaceStrip',initialPromo]]) {
+    if (!enabled) continue;
+    const anchor = 'id="'+id+'"';
+    if (html.split(anchor).length !== 2) throw Error('Expected unique initial panel: '+id);
+    html = html.replace(anchor,anchor+' data-initial-panel=""');
+  }
+  // A loading row is not interactive and contains no stale match information.
+  // Existing CSS variables control the same row geometry as the real panels.
+  const style = '<style>@media(max-width:720px){html:not([data-initial-deep-link]) #nmCupPanel[data-initial-panel][hidden],html:not([data-initial-deep-link]) #promoRaceStrip[data-initial-panel][hidden]{display:block!important;box-sizing:border-box;min-height:var(--m-row-h,32px);margin-top:var(--m-row-gap,6px);margin-bottom:0;padding-block:0;pointer-events:none;}html:not([data-initial-deep-link]) [data-initial-panel][hidden]::before{content:"";display:block;width:45%;height:8px;margin:11px auto;border-radius:4px;background:currentColor;opacity:.12;}}</style>';
+  return html.replace('</head>','<script>if(location.hash)document.documentElement.setAttribute("data-initial-deep-link","");</script>'+style+'</head>');
+}
+const splitExport = await splitStandingsExport(releaseInitialPanelRows(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(readFileSync(appPath,'utf8'), manifest))))));
 const splitCompare = await splitSeasonCompare(splitExport.app);
 const splitTeamMatch = await splitTeamMatchCompare(splitCompare.app);
 const splitPlayers = await splitPlayerModals(splitTeamMatch.app);
@@ -115,7 +142,7 @@ const html = source.replace(versionBlock, updatedBlock).replace(
 );
 
 const fontCss = readFileSync(join(output,'fonts/pretendard/pretendardvariable-dynamic-subset.css'),'utf8');
-writeFileSync(join(output,'index.html'),preloadInitialAssets(optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(html,manifest),fontCss)),{style:assetVersion('style.css'),data:assetVersion('data.js'),app:assetVersion('app.js')}));
+writeFileSync(join(output,'index.html'),preloadInitialAssets(optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(reserveInitialPanelRows(html),manifest),fontCss)),{style:assetVersion('style.css'),data:assetVersion('data.js'),app:assetVersion('app.js')}));
 
 writeSeo(output, readFileSync('data.js', 'utf8'), {analyticsVersion:assetVersion('utd-analytics.js')});
 

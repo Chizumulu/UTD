@@ -23,7 +23,7 @@
   window.ASSET_VERSIONS = {
     style: '073',
     data: '019',
-    app: '063',
+    app: '065',
     report: '002',
     archive: '200',
     predictWorker: '220',
@@ -1881,6 +1881,29 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 </div>
+<script>
+  // Place existing nodes before downloading the application; keep the original
+  // sidebar marker for archive and responsive restoration in app.js.
+  (function () {
+    var controls = document.querySelector('.app-sidebar .side-controls');
+    var host = document.getElementById('moreSheetSettings');
+    if (controls && host && window.matchMedia('(max-width: 720px)').matches) {
+      var marker = document.createComment('side-controls-home');
+      controls.parentNode.insertBefore(marker, controls);
+      controls._sideControlsHome = marker;
+      host.appendChild(controls);
+    }
+    if (window.matchMedia('(max-width: 1199px)').matches) {
+      var panel = document.getElementById('nmCupPanel');
+      var promo = document.getElementById('promoRaceStrip');
+      var live = document.getElementById('nextMatchLiveBar');
+      if (panel && panel.parentNode && promo) {
+        if (live) panel.parentNode.insertBefore(live, panel);
+        panel.parentNode.insertBefore(promo, panel.nextSibling);
+      }
+    }
+  })();
+</script>
 <script>
   document.write('<script src="data.js?v=' + window.ASSET_VERSIONS.data + '"><\/script>');
   document.write('<script src="app.js?v=' + window.ASSET_VERSIONS.app + '"><\/script>');
