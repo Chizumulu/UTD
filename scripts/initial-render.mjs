@@ -37,5 +37,8 @@ export function preloadInitialAssets(html,versions){
   if(!/^[a-f0-9]{16}$/.test(v||''))throw Error('Missing final asset version: '+key);
   return '<link rel="preload" as="'+as+'" href="'+file+'?v='+v+'">';
  }).join('\n');
- // Replace the dynamic stylesheet insertion with the same final hashed URL.\n const dynamicStyle = /<script>document\\.write\\('<link rel="stylesheet" href="style\\.css\\?v=' \\+ window\\.ASSET_VERSIONS\\.style \\+ '\">'\\);<\\/script>/g;\n if([...html.matchAll(dynamicStyle)].length!==1)throw Error('Expected unique dynamic stylesheet');\n return html.replace(dynamicStyle, '<link rel="stylesheet" href="style.css?v='+versions.style+'">').replace(anchor,match=>match+'\\n'+tags);
+ // Replace the dynamic stylesheet insertion with the same final hashed URL.
+ const dynamicStyle = /<script>document\.write\('<link rel="stylesheet" href="style\.css\?v=' \+ window\.ASSET_VERSIONS\.style \+ '">'\);<\/script>/g;
+ if([...html.matchAll(dynamicStyle)].length!==1)throw Error('Expected unique dynamic stylesheet');
+ return html.replace(dynamicStyle, '<link rel="stylesheet" href="style.css?v='+versions.style+'">').replace(anchor,match=>match+'\n'+tags);
 }
