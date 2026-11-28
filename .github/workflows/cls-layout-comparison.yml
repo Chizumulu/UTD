@@ -12,7 +12,7 @@ permissions:
   contents: read
 jobs:
   compare:
-    if: github.head_ref == 'perf/cls-initial-layout' || github.head_ref == 'perf/cls-mobile-promo-row' || github.event_name == 'workflow_dispatch'
+    if: github.head_ref == 'perf/cls-initial-layout' || github.head_ref == 'perf/cls-mobile-promo-row' || github.head_ref == 'perf/cls-desktop-layout' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 100
     steps:
@@ -33,7 +33,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/cls-results"
           echo "RESULTS=$RUNNER_TEMP/cls-results" >> "$GITHUB_ENV"
           git rev-parse HEAD > "$RUNNER_TEMP/cls-results/candidate.txt"
-          git worktree add --detach "$RUNNER_TEMP/cls-base" 528c30c700052909753f7e4d2072323134f95e23
+          git worktree add --detach "$RUNNER_TEMP/cls-base" 9453b3e55d5317907516419d8855525cf03bdfb3
           python3 -m pip install Pillow==11.3.0
           npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2 lighthouse@12.8.2 playwright@1.56.1 pngjs@7.0.0 pixelmatch@7.1.0
           (cd "$RUNNER_TEMP/cls-base"; npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2; node scripts/build-pages.mjs "$RUNNER_TEMP/cls-before/UTD")
@@ -71,6 +71,7 @@ jobs:
           status=0
           node scripts/cls-pr149-lighthouse.mjs "$RESULTS/lighthouse" "$GITHUB_WORKSPACE/scripts/lighthouse-comparison-flags.json" || status=1
           node scripts/cls-pr149-traces.mjs "$RESULTS/traces" || status=1
+          UTD_CLS_DESKTOP=1 node scripts/cls-pr149-traces.mjs "$RESULTS/desktop-traces" || status=1
           node scripts/cls-pr149-pixels.mjs "$RESULTS/pixels" || status=1
           exit "$status"
       - uses: actions/upload-artifact@v4
