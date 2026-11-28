@@ -12,5 +12,7 @@ test('optional statistics preserve values and memoize on demand', () => {
  const original = runInNewContext(data+'\nJSON.stringify(['+names.join(',')+'])',context);
  const actual = runInNewContext(out.data+'\nif (!['+names.join(',')+'].every(v=>v===undefined)) throw Error("eager");\nJSON.stringify(['+names.map(n=>'getDeferred_'+n+'()').join(',')+'])',{console});
  assert.equal(actual,original);
+ const memoized = runInNewContext(out.data+'\n'+names.map(n=>'getDeferred_'+n+'() === getDeferred_'+n+'()').join(' && '),{console});
+ assert.equal(memoized,true,'Repeated access must reuse cached statistics');
  for(const n of names) assert.ok(out.app.includes('getDeferred_'+n+'()'));
 });
