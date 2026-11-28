@@ -1,0 +1,63 @@
+name: UTD BC isolation 80
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/bc-isolation.yml'
+      - 'scripts/bc-isolation-lighthouse.mjs'
+      - 'scripts/initial-render.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: bc-isolation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  measure:
+    if: github.head_ref == 'perf/bc-integrated-startup'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [mobile, desktop]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build five variants and measure 40 samples
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bc-results"
+          git rev-parse HEAD > "$RUNNER_TEMP/bc-results/sha.txt"
+          python3 -m pip install Pillow==11.3.0
+          npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2 lighthouse@12.8.2 playwright@1.56.1 pngjs@7.0.0 pixelmatch@7.1.0
+          export CHROME_PATH="$(command -v google-chrome)"
+          { lscpu; google-chrome --version; } > "$RUNNER_TEMP/bc-results/runner.txt"
+          port=8081
+          for group in A B C D E; do
+            UTD_PERF_GROUP="$group" node scripts/build-pages.mjs "$RUNNER_TEMP/bc-$group/UTD"
+            node scripts/lighthouse-comparison-server.mjs "$RUNNER_TEMP/bc-$group" "$port" > "$RUNNER_TEMP/bc-results/server-$group.log" 2>&1 &
+            for i in {1..60}; do
+              if curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null; then break; fi
+              sleep 1
+            done
+            for asset in index.html app.js data.js style.css publication.json; do
+              curl -fsS --compressed "http://127.0.0.1:$port/UTD/$asset" -o "$RUNNER_TEMP/bc-results/$group-$asset"
+              cmp "$RUNNER_TEMP/bc-$group/UTD/$asset" "$RUNNER_TEMP/bc-results/$group-$asset"
+            done
+            node scripts/lighthouse-comparison-compression-check.mjs "$port" "$RUNNER_TEMP/bc-results/compression-$group.json"
+            port=$((port+1))
+          done
+          node scripts/bc-isolation-lighthouse.mjs "$RUNNER_TEMP/bc-results" "${{ matrix.profile }}" "$GITHUB_WORKSPACE/scripts/lighthouse-comparison-flags.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bc-isolation-${{ matrix.profile }}
+          path: ${{ runner.temp }}/bc-results/
+          retention-days: 30
