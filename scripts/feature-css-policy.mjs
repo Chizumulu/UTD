@@ -8,7 +8,7 @@ const cls=(s,n)=>new RegExp('^\\.(?:'+n+')(?:$|[\\s.:#>+~\\[])').test(s);
 // Shared renderer components are critical, regardless of the feature name.
  // Match comparison layout itself is exclusive; its cards, stats, AI and
  // history components are reused in other views and must not be deferred.
-export const sharedSelector=s=>/\.(?:mc-(?!compare-(?:layout|left|right|meet)(?![\w-])|layout-played(?![\w-])|modal-played(?![\w-])|col-(?:ai|meet|stats)(?![\w-]))[\w-]+|predict-intro(?:-[\w-]+)?|ti-pos-[\w-]+|ti-position-card|mgp-[\w-]+|round-half-empty|ti-appear-empty)(?![\w-])/.test(s);
+export const sharedSelector=s=>/\.(?:venue-name|path-finder-card|path-finder-head|pf-[\w-]+)(?![\w-])/.test(s)||/\.(?:mc-(?!compare-(?:layout|left|right|meet)(?![\w-])|layout-played(?![\w-])|modal-played(?![\w-])|col-(?:ai|meet|stats)(?![\w-]))[\w-]+|predict-intro(?:-[\w-]+)?|ti-pos-[\w-]+|ti-position-card|mgp-[\w-]+|round-half-empty|ti-appear-empty)(?![\w-])/.test(s);
 
 export const clubPolicies={
  club:s=>id(s,'myTeamInfoView|teamInfo(?:Overview|Record|Results|Youtube|Staff)Tab|squadGroups')||
