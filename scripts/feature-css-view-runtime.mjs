@@ -70,6 +70,7 @@ export function wireFeatureViewCss(app,assets){
  gate('  function renderTeamCompareView() {','teamcompare','#teamCompareView',"currentView==='teamCompare'&&!archiveMode",'renderTeamCompareView()');
  gate('  function applyVenueMode() {','venue','#venuesView',"currentView==='venues'&&!archiveMode",'applyVenueMode()');
  gate('  function renderPathFinder() {','pathfinder','#teamInfoPathFinder',"currentView==='squad'&&currentTeamInfoTab==='predict'&&!archiveMode",'renderPathFinder()');
+ gate('  function renderRaceAnswer() {','pathfinder','#predictView',"currentView==='predict'&&predictTab==='race'&&!archiveMode",'renderRaceAnswer()');
  // Archive has its own cancellation token and pending entry workflow.
  replace('if (!archiveDataReady() || !window.__utdArchiveView) {',"if (!archiveDataReady() || !window.__utdArchiveView || !clubDetailCssReady.has('archive')) {");
  replace('Promise.all([loadArchiveData(),loadArchiveView().then(()=>true,()=>false)])',"Promise.all([loadArchiveData(),loadArchiveView().then(()=>true,()=>false),loadClubDetailCss('archive').then(()=>true,()=>false)])");
