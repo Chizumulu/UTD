@@ -2,14 +2,14 @@ import {auditSample} from './lighthouse-comparison-retry.mjs';
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 const [dir,profile,flagsPath]=process.argv.slice(2);
-const groups=['A','B','C','D','E'];
+const groups=['A','D','F'];
 if(!['mobile','desktop'].includes(profile))throw Error('Invalid profile');
 mkdirSync(dir,{recursive:true});
 const rows=[];
 const keys=['largest-contentful-paint','first-contentful-paint','total-blocking-time','cumulative-layout-shift','bootup-time','mainthread-work-breakdown','total-byte-weight','speed-index'];
 try {
- for(let index=1;index<=8;index++){
-  const order=groups.map((_,i)=>groups[(i+index-1)%5]);
+ for(let index=1;index<=10;index++){
+  const order=groups.map((_,i)=>groups[(i+index-1)%groups.length]);
   if(index%2===0)order.reverse();
   for(const side of order){
    await auditSample({dir,profile,side,index,port:8081+groups.indexOf(side),flagsPath});
@@ -26,4 +26,4 @@ try {
  writeFileSync(join(dir,'summary.json'),JSON.stringify({rows,summary},null,2));
  console.log(JSON.stringify(summary));
 }
-if(rows.length!==40)throw Error('Expected 40 valid samples per profile');
+if(rows.length!==30)throw Error('Expected 30 valid samples per profile');
