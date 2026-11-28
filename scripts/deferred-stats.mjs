@@ -13,7 +13,7 @@ export function deferOptionalStats(data, app) {
     let count = 0;
     app = lines.map(line => {
       if (line.trimStart().startsWith('//')) return line;
-      return line.replace(new RegExp('\\\\b'+name+'\\\\b','g'), () => { count++; return getter+'()'; });
+      return line.replace(new RegExp('\\b'+name+'\\b','g'), () => { count++; return getter+'()'; });
     }).join('\n');
     if (count !== (name === 'assistsByPositionData' ? 2 : 1)) throw Error('Unexpected statistic references: '+name+' '+count);
   }
