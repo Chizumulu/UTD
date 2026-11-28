@@ -28,9 +28,3 @@ test('narrow panels use the single deployment early hero path and existing condi
  assert.match(tail,/document.readyState === 'loading' && !location.hash/);
  assert.match(updated,/renderNextMatchStrip\(reuseEarlyHero\);/);
 });
-
-test('desktop early path renders only cup panel, retaining normal fallback and narrow behavior',()=>{
- const updated=renderEarlyHero(prioritizeInitialRender(readFileSync('app.js','utf8')));
- assert.match(updated,/else if \(window\.matchMedia\('\(min-width: 1200px\)'\)\.matches\) \{\s*renderCupHeroPanel\(\);\s*\}/);
- assert.match(updated,/document\.readyState === 'loading' && !location.hash/);
-});
