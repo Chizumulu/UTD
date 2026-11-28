@@ -4,7 +4,13 @@ const initialBlock="    renderLeagueTable();\n    renderMainMiniTable();\n    re
 const replacement="    // The full league table is hidden at startup and rendered by showView('leagueRank').\n    renderNextMatchStrip();\n    renderMainMiniTable();\n    renderHomeMatchCards();\n    // renderNextMatchStrip already renders the promotion ticker.\n    renderNextMatchPreviewCard();\n    initSpotlightCards();\n    startLeagueLiveTicker();";
 export function prioritizeInitialRender(app){
  if(app.split(initialBlock).length!==2)throw Error('Expected exact startup block once');
- return app.replace(initialBlock,replacement);
+ const labelWrite = "      el.innerHTML = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');";
+ const startup = app.indexOf("document.addEventListener('DOMContentLoaded', function() {");
+ if(startup < 0) throw Error('Missing startup listener');
+ const prefix = app.slice(0,startup);
+ const suffix = app.slice(startup);
+ if(!suffix.includes(labelWrite)) throw Error('Missing startup label assignment');
+ return (prefix + suffix.replace(labelWrite, "      const localized = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');\n      if (localized !== null && el.innerHTML === localized) return;\n      el.innerHTML = localized;")).replace(initialBlock,replacement);
 }
 // Discover the critical styles and scripts early rather than waiting for
 // document.write at the bottom of the HTML. Exact URLs reuse the same fetch.
