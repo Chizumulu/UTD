@@ -1,0 +1,26 @@
+name: Shared CSS regression
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'style.css'
+      - 'app.js'
+      - 'index.html'
+      - '.github/workflows/shared-css-regression.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2
+      - run: python3 -m pip install Pillow==11.3.0
+      - run: node --test scripts/shared-css-regression.test.mjs
+      - run: node scripts/build-pages.mjs "$RUNNER_TEMP/UTD"
