@@ -6,6 +6,8 @@ on:
       - 'index.html'
       - 'style.css'
       - 'scripts/build-pages.mjs'
+      - 'scripts/deferred-stats.mjs'
+      - 'scripts/deferred-stats.test.mjs'
       - 'scripts/initial-render.mjs'
       - 'scripts/initial-render.test.mjs'
       - 'scripts/early-hero.mjs'
@@ -45,7 +47,7 @@ jobs:
           python3 -m pip install Pillow==11.3.0
           npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2 lighthouse@12.8.2 playwright@1.56.1 pngjs@7.0.0 pixelmatch@7.1.0
           (cd "$RUNNER_TEMP/cls-base"; npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2; node scripts/build-pages.mjs "$RUNNER_TEMP/cls-before/UTD")
-          node --test scripts/early-hero.test.mjs scripts/initial-render.test.mjs
+          node --test scripts/early-hero.test.mjs scripts/initial-render.test.mjs scripts/deferred-stats.test.mjs
           node scripts/build-pages.mjs "$RUNNER_TEMP/cls-after/UTD"
       - name: Archive exact build bytes
         run: |
