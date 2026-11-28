@@ -29,7 +29,14 @@ export function classify(run,receipt,pr,proof,now){
  return sinceMerge>=60*minutes?'publication_unverified':'pending';
 }
 export function validManifest(m,bytes){
- return m?.version===1&&sha(m.commit)&&digest(m.dataSha256)&&createHash('sha256').update(bytes).digest('hex')===m.dataSha256;
+ return m?.version===1&&sha(m.commit)&&digest(m.dataSha256)&&(!Object.hasOwn(m,'sourceDataSha256')||digest(m.sourceDataSha256))&&createHash('sha256').update(bytes).digest('hex')===m.dataSha256;
+}
+// The approval receipt records source bytes; the publication manifest also
+// authenticates the actual transformed public asset. Legacy manifests used
+// identical source and public bytes.
+export function matchesSourceReceipt(receipt,manifest){
+ const source=Object.hasOwn(manifest,'sourceDataSha256')?manifest.sourceDataSha256:manifest.dataSha256;
+ return digest(source)&&digest(receipt?.dataSha256)&&receipt.dataSha256===source;
 }
 const gh=(...args)=>execFileSync('gh',args,{encoding:'utf8',timeout:45_000,maxBuffer:8*1024*1024,stdio:['ignore','pipe','pipe']}).trim();
 const api=path=>JSON.parse(gh('api',path));
@@ -95,7 +102,7 @@ async function main(){
      // A squash merge changes SHA; prove the matching PR was merged and deployed.
      if(target&&ancestor(target,manifest.commit)){
       proof=true;
-      if(target===manifest.commit&&receipt.branch==='main'&&receipt.dataSha256!==manifest.dataSha256)proof=false;
+      if(target===manifest.commit&&receipt.branch==='main'&&!matchesSourceReceipt(receipt,manifest))proof=false;
      }
     }
    }
