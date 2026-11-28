@@ -22,7 +22,6 @@ import { prioritizeInitialRender, preloadInitialAssets } from './initial-render.
 import { optimizeExternalScripts } from './external-script-delivery.mjs';
 import { optimizeFontDelivery } from './font-delivery.mjs';
 import { writeSeo } from './seo-pages.mjs';
-import { optimizeFallbackScan, compactInlineFontCss } from './design-preserved-runtime.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -94,8 +93,6 @@ for (const asset of splitTeamMatch.assets) writeFileSync(join(output,asset.file)
 writeFileSync(join(output,splitCompare.file),splitCompare.code);
 writeFileSync(join(output,splitExport.file),splitExport.code);
 await minifyPagesAssets(output);
-// Apply one verified selector substitution to the final app artifact.
-writeFileSync(appPath,optimizeFallbackScan(readFileSync(appPath,'utf8')));
 for (const file of ['app.js','a11y.js',splitExport.file,splitCompare.file,...splitTeamMatch.assets.map(asset=>asset.file),splitPlayers.file,splitDetails.file,splitVenues.file,splitArchive.file,splitExtras.file,splitPrediction.file,splitCup.file]) execFileSync(process.execPath,['--check',join(output,file)],{stdio:'inherit'});
 
 function assetVersion(file) {
@@ -118,10 +115,7 @@ const html = source.replace(versionBlock, updatedBlock).replace(
 );
 
 const fontCss = readFileSync(join(output,'fonts/pretendard/pretendardvariable-dynamic-subset.css'),'utf8');
-const initialHtml=preloadInitialAssets(optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(html,manifest),fontCss)),{style:assetVersion('style.css'),data:assetVersion('data.js'),app:assetVersion('app.js')});
-const compactFont=await compactInlineFontCss(initialHtml);
-writeFileSync(join(output,'index.html'),compactFont.html);
-console.log('Inline font formatting (bytes): '+JSON.stringify(compactFont.metrics));
+writeFileSync(join(output,'index.html'),preloadInitialAssets(optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(html,manifest),fontCss)),{style:assetVersion('style.css'),data:assetVersion('data.js'),app:assetVersion('app.js')}));
 
 writeSeo(output, readFileSync('data.js', 'utf8'), {analyticsVersion:assetVersion('utd-analytics.js')});
 

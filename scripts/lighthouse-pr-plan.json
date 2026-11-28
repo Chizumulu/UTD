@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "branch": "perf/1-h-5-10-integrated",
-  "baseline": "56f773088579f89653c92542f5056bbc691fdc93",
+  "baseline": "0ffafd04b3e22461c7968a1322e065aa273acc46",
   "candidate": "head",
   "runs": 5
 }
