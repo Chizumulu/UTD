@@ -140,6 +140,10 @@ jobs:
     needs: [build, measure]
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/download-artifact@v4
         if: always()
         continue-on-error: true
@@ -153,34 +157,8 @@ jobs:
           MEASURE_RESULT: ${{ needs.measure.result }}
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          python3 - <<'PY'
-          import pathlib, json, shutil, os
-          root = pathlib.Path('combined')
-          root.mkdir(exist_ok=True)
-          errors = []
-          for suite, count in [('lighthouse',20),('traces',12),('desktop-traces',12),('pixels',28)]:
-              part = pathlib.Path('parts') / ('cls-part-' + suite)
-              if part.exists():
-                  shutil.copytree(part, root / 'diagnostics' / suite, dirs_exist_ok=True)
-              try:
-                  assert (part/'candidate.txt').read_text().strip() == os.environ['EXPECTED_SHA']
-                  src = part/suite
-                  shutil.copytree(src, root/suite, dirs_exist_ok=True)
-                  data = json.loads((src/'summary.json').read_text())
-                  rows = data['rows'] if suite == 'lighthouse' else data
-                  assert len(rows) == count, f'{len(rows)}/{count}'
-                  if suite == 'lighthouse':
-                      assert all(g['n']==5 for g in data['groups'].values()) and len(data['groups'])==4
-                  if suite in ('traces','desktop-traces'):
-                      assert all(sum(r['arm']==a for r in rows)==6 for a in ('baseline','candidate'))
-              except Exception as e:
-                  errors.append(f'{suite}: {e!r}')
-          (root/'candidate.txt').write_text(os.environ['EXPECTED_SHA']+'\n')
-          if os.environ['BUILD_RESULT'] != 'success' or os.environ['MEASURE_RESULT'] != 'success':
-              errors.append('Build or measurement job failed')
-          (root/'validation.json').write_text(json.dumps({'errors':errors,'expected':72},indent=2))
-          if errors: raise SystemExit(str(errors))
-          PY
+          python3 scripts/cls-parallel-validate.py --test
+          python3 scripts/cls-parallel-validate.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
