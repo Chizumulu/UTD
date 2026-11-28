@@ -5,8 +5,13 @@ const replacement="    // The full league table is hidden at startup and rendere
 export function prioritizeInitialRender(app){
  if(app.split(initialBlock).length!==2)throw Error('Expected exact startup block once');
  const labelWrite = "      el.innerHTML = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');";
- const startup = app.indexOf("document.addEventListener('DOMContentLoaded', function() {");
+ let startup = app.indexOf("document.addEventListener('DOMContentLoaded', function() {");
  if(startup < 0) throw Error('Missing startup listener');
+ // Reuse the two geometry reads already taken after resetting letter spacing.
+ const redundant = '    const longer = w1 < w2 ? line2 : line1;\n    const diff = longer.getBoundingClientRect().width - shorter.getBoundingClientRect().width;';
+ if(app.split(redundant).length!==2)throw Error('Expected unique title geometry block');
+ app = app.replace(redundant, '    const diff = Math.abs(w1 - w2);');
+ startup = app.indexOf("document.addEventListener('DOMContentLoaded', function() {");
  const prefix = app.slice(0,startup);
  const suffix = app.slice(startup);
  if(!suffix.includes(labelWrite)) throw Error('Missing startup label assignment');
