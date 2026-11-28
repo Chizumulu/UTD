@@ -1,14 +1,14 @@
 import {createHash} from 'node:crypto';
 import {minifyJs} from './minify-pages-assets.mjs';
 
-export async function splitClubExtras(app,sponsorCssUrl){
+export async function splitClubExtras(app,sponsorCssUrl, optionalData = ''){
  if(!/^club-sponsors\.css\?v=[a-f0-9]{16}$/.test(sponsorCssUrl))throw Error('Invalid sponsor CSS URL');
  const unique=s=>{if(app.split(s).length!==2)throw Error('Expected unique club extras source: '+s);return app.indexOf(s)};
  const take=(start,end)=>{const a=unique(start),b=unique(end);if(b<=a)throw Error('Invalid club extras boundaries');const block=app.slice(a,b);app=app.slice(0,a)+app.slice(b);return block};
  const replace=(before,after)=>{unique(before);app=app.replace(before,()=>after)};
  const sponsors=take('  function renderTeamStoryTab() {','  function renderTeamStaffTab() {');
  const postponed=take('  function getAllPostponedMatches() {','  function openPostponedMatchesModal() {');
- const code=await minifyJs('(function(){\n'+sponsors+postponed+'\nwindow.__utdClubExtras={sponsors:renderTeamStoryTab,postponed:renderPostponedMatchesModal};\n})();');
+ const code=await minifyJs('(function(){\n'+optionalData+'\n'+sponsors+postponed+'\nwindow.__utdClubExtras={sponsors:renderTeamStoryTab,postponed:renderPostponedMatchesModal};\n})();');
  const file='club-extras.js',url=file+'?v='+createHash('sha256').update(code).digest('hex').slice(0,16);
  replace('  function renderTeamStaffTab() {',`  function loadClubExtras(){
     return loadOptionalAsset('${url}',()=>!!window.__utdClubExtras);

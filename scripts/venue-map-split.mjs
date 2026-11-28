@@ -1,12 +1,12 @@
 import {createHash} from 'node:crypto';
 import {minifyJs} from './minify-pages-assets.mjs';
 
-export async function splitVenueMap(app){
+export async function splitVenueMap(app, optionalData = ''){
  const unique=s=>{if(app.split(s).length!==2)throw Error('Expected unique venue map source: '+s);return app.indexOf(s)};
  const take=(start,end)=>{const a=unique(start),b=unique(end);if(b<=a)throw Error('Invalid venue map boundaries');const block=app.slice(a,b);app=app.slice(0,a)+app.slice(b);return block};
  const state=take('  let venueLeafletMap = null;','  // 두 좌표 간 직선거리');
  const maps=take('  function getVenueEntries() {','  const RANK_HIST_COLORS = [');
- const code=await minifyJs('(function(){\n'+state+maps+'\nwindow.__utdVenueMap={list:renderVenuesList,map:renderVenueLeafletMap,large:renderVenueLeafletMapLarge,open:openVenueMapModal,sort:setVenueSort};\n})();');
+ const code=await minifyJs('(function(){\n'+optionalData+'\n'+state+maps+'\nwindow.__utdVenueMap={list:renderVenuesList,map:renderVenueLeafletMap,large:renderVenueLeafletMapLarge,open:openVenueMapModal,sort:setVenueSort};\n})();');
  const file='venue-map.js',url=file+'?v='+createHash('sha256').update(code).digest('hex').slice(0,16);
  unique('  function renderVenuesView() {\n    renderVenuesList();\n    applyVenueMode();\n  }');
  app=app.replace('  function renderVenuesView() {\n    renderVenuesList();\n    applyVenueMode();\n  }',()=>`  function loadVenueMapModule(){

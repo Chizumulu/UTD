@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {classify,validManifest} from './monitor-publication.mjs';
+import {classify,validManifest,matchesSourceReceipt} from './monitor-publication.mjs';
 import {readFileSync} from 'node:fs';
 const now=Date.parse('2026-11-27T10:00:00Z'),hour=3600000;
 const run={id:42,run_attempt:1,status:'completed',conclusion:'success',created_at:new Date(now-2*hour).toISOString(),updated_at:new Date(now-2*hour).toISOString()};
@@ -39,4 +39,18 @@ test('all four approval workflows capture receipts',()=>{
   assert.match(text,/node scripts\/publication-receipt\.mjs/);
   assert.match(text,/name: publication-receipt/);
  }
+});
+
+test('transformed deployment retains source receipt verification and actual public integrity',()=>{
+ const original=Buffer.from('source data'), deployed=Buffer.from('transformed data');
+ const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+ const m={version:1,commit:receipt.commit,dataSha256:hash(deployed),sourceDataSha256:hash(original)};
+ const r={...receipt,dataSha256:hash(original)};
+ assert.ok(validManifest(m,deployed));
+ assert.ok(matchesSourceReceipt(r,m));
+ assert.ok(!validManifest(m,original));
+ assert.ok(!validManifest({...m,sourceDataSha256:'invalid'},deployed));
+ assert.ok(!matchesSourceReceipt({...r,dataSha256:hash(deployed)},m));
+ assert.ok(!matchesSourceReceipt(r,{...m,sourceDataSha256:hash(deployed)}));
+ assert.ok(matchesSourceReceipt(r,{version:1,commit:r.commit,dataSha256:hash(original)}));
 });

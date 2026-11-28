@@ -1,3 +1,4 @@
+import { deferOptionalStats, splitOptionalData, assertNoOptionalDataReference } from './deferred-stats.mjs';
 import { applyResponsiveCrests, applyStaticCrests } from './crest-templates.mjs';
 import { minifyPagesAssets } from './minify-pages-assets.mjs';
 import { splitCupView } from './cup-view-split.mjs';
@@ -18,7 +19,7 @@ import { splitSeasonCompare } from './season-compare-split.mjs';
 import { splitStandingsExport } from './standings-export-split.mjs';
 import { renderEarlyHero } from './early-hero.mjs';
 import { optimizeAppLayout } from './app-layout.mjs';
-import { prioritizeInitialRender, preloadInitialAssets } from './initial-render.mjs';
+import { prioritizeInitialRender, preloadInitialAssets, staticStartupScripts } from './initial-render.mjs';
 import { optimizeExternalScripts } from './external-script-delivery.mjs';
 import { optimizeFontDelivery } from './font-delivery.mjs';
 import { writeSeo, readSeoData } from './seo-pages.mjs';
@@ -112,12 +113,20 @@ function reserveInitialPanelRows(html) {
   const style = '<style>@media(max-width:720px){html:not([data-initial-deep-link]) #nmCupPanel[data-initial-panel][hidden],html:not([data-initial-deep-link]) #promoRaceStrip[data-initial-panel][hidden]{display:block!important;box-sizing:border-box;min-height:var(--m-row-h,32px);margin-top:var(--m-row-gap,6px);margin-bottom:0;padding-block:0;pointer-events:none;}html:not([data-initial-deep-link]) [data-initial-panel][hidden]::before{content:"";display:block;width:45%;height:8px;margin:11px auto;border-radius:4px;background:currentColor;opacity:.12;}}</style>';
   return html.replace('</head>','<script>if(location.hash)document.documentElement.setAttribute("data-initial-deep-link","");</script>'+style+'</head>');
 }
-const splitExport = await splitStandingsExport(releaseInitialPanelRows(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(readFileSync(appPath,'utf8'), manifest))))));
+// Isolation groups are measurement-only; production retains all changes.
+const isolationGroup = process.env.UTD_A_ISOLATION_GROUP || 'E';
+if (!['B','C','D','E'].includes(isolationGroup)) throw Error('Unknown A isolation group');
+const deferEnabled = ['B','E'].includes(isolationGroup);
+const splitEnabled = ['C','E'].includes(isolationGroup);
+const deferredStats = deferEnabled ? deferOptionalStats(rawData, readFileSync(appPath,'utf8')) : {data:rawData,app:readFileSync(appPath,'utf8')};
+const optionalData = splitEnabled ? splitOptionalData(deferredStats.data) : {data:deferredStats.data,extraVenues:'',teamSponsors:''};
+writeFileSync(join(output,'data.js'),optionalData.data);
+const splitExport = await splitStandingsExport(releaseInitialPanelRows(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(deferredStats.app, manifest))))));
 const splitCompare = await splitSeasonCompare(splitExport.app);
 const splitTeamMatch = await splitTeamMatchCompare(splitCompare.app);
 const splitPlayers = await splitPlayerModals(splitTeamMatch.app);
 const splitDetails = await splitMatchDetail(splitPlayers.app);
-const splitVenues = await splitVenueMap(splitDetails.app);
+const splitVenues = await splitVenueMap(splitDetails.app,optionalData.extraVenues);
 const splitArchive = await splitArchiveView(splitVenues.app);
 const sponsorCss = await splitClubSponsorCss(readFileSync(join(output,'style.css'),'utf8'));
 const clubDetailCss = await splitClubDetailCss(sponsorCss.critical);
@@ -129,7 +138,11 @@ for (const asset of Object.values(clubDetailCss.assets)) writeFileSync(join(outp
 console.log('Club detail CSS split (bytes): '+JSON.stringify(clubDetailCss.metrics));
 writeFileSync(join(output,sponsorCss.file),sponsorCss.optional);
 console.log('Club sponsor CSS split (bytes): '+JSON.stringify(sponsorCss.metrics));
-const splitExtras = await splitClubExtras(splitArchive.app,sponsorCss.url);
+const splitExtras = await splitClubExtras(splitArchive.app,sponsorCss.url,optionalData.teamSponsors);
+if (splitEnabled) {
+  assertNoOptionalDataReference(splitExtras.app,'extraVenues');
+  assertNoOptionalDataReference(splitExtras.app,'teamSponsors');
+}
 const splitPrediction = await splitPredictionView(splitExtras.app);
 const splitCup = await splitCupView(splitPrediction.app);
 const wiredClubCss = wireClubDetailCss(splitCup.app,{...clubDetailCss.assets,...featureCss.assets});
@@ -167,9 +180,9 @@ const html = source.replace(versionBlock, updatedBlock).replace(
 );
 
 const fontCss = readFileSync(join(output,'fonts/pretendard/pretendardvariable-dynamic-subset.css'),'utf8');
-writeFileSync(join(output,'index.html'),preloadInitialAssets(optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(reserveInitialPanelRows(html),manifest),fontCss)),{style:assetVersion('style.css'),data:assetVersion('data.js'),app:assetVersion('app.js')}));
+writeFileSync(join(output,'index.html'),staticStartupScripts(preloadInitialAssets(optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(reserveInitialPanelRows(html),manifest),fontCss)),{style:assetVersion('style.css'),data:assetVersion('data.js'),app:assetVersion('app.js')}),{data:assetVersion('data.js'),app:assetVersion('app.js'),a11y:assetVersion('a11y.js'),lang:assetVersion('lang-ny.js')}));
 
 writeSeo(output, readFileSync('data.js', 'utf8'), {analyticsVersion:assetVersion('utd-analytics.js')});
 
 // Public deployment receipt contains only repository revision and public asset digest.
-writeFileSync(join(output,'publication.json'),JSON.stringify({version:1,commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dataSha256:createHash('sha256').update(readFileSync(join(output,'data.js'))).digest('hex')})+'\n');
+writeFileSync(join(output,'publication.json'),JSON.stringify({version:1,commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dataSha256:createHash('sha256').update(readFileSync(join(output,'data.js'))).digest('hex'),sourceDataSha256:createHash('sha256').update(readFileSync('data.js')).digest('hex')})+'\n');
