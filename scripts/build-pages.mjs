@@ -103,6 +103,10 @@ function reserveInitialPanelRows(html) {
     if (html.split(anchor).length !== 2) throw Error('Expected unique initial panel: '+id);
     html = html.replace(anchor,anchor+' data-initial-panel=""');
   }
+  // Desktop promotion placeholder uses the production strip's own responsive
+  // min-height, margins and padding. Do not reserve space on deep links.
+  const desktopPromoStyle = '<style>@media(min-width:1200px){html:not([data-initial-deep-link]) #rankView #promoRaceStrip[data-initial-panel][hidden]{display:flex!important;pointer-events:none}html:not([data-initial-deep-link]) #rankView #promoRaceStrip[data-initial-panel][hidden]::before{content:"";display:block;width:35%;height:8px;margin:0 auto;border-radius:4px;background:currentColor;opacity:.12}}</style>';
+  html = html.replace('</head>', desktopPromoStyle + '</head>');
   // A loading row is not interactive and contains no stale match information.
   // Existing CSS variables control the same row geometry as the real panels.
   const style = '<style>@media(max-width:720px){html:not([data-initial-deep-link]) #nmCupPanel[data-initial-panel][hidden],html:not([data-initial-deep-link]) #promoRaceStrip[data-initial-panel][hidden]{display:block!important;box-sizing:border-box;min-height:var(--m-row-h,32px);margin-top:var(--m-row-gap,6px);margin-bottom:0;padding-block:0;pointer-events:none;}html:not([data-initial-deep-link]) [data-initial-panel][hidden]::before{content:"";display:block;width:45%;height:8px;margin:11px auto;border-radius:4px;background:currentColor;opacity:.12;}}</style>';
