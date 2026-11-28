@@ -92,9 +92,9 @@ function reserveInitialPanelRows(html) {
   if (initialPlayed > 0) {
     const anchor = '<div class="home-match-strip" id="homeRecentStrip"></div>';
     if (html.split(anchor).length !== 2) throw Error('Expected unique recent match strip');
-    const item = '<div class="home-match-item initial-home-match" aria-hidden="true"><span class="team-logo home-match-crest crest-fallback">–</span><span class="home-match-name">——</span><span class="home-match-score">–</span><span class="home-match-result">–</span><span class="home-match-date">——</span></div>';
+    const item = '<div class="home-match-item is-clickable initial-home-match" aria-hidden="true"><span class="team-logo home-match-crest crest-fallback">–</span><span class="home-match-name">——</span><span class="home-match-score">–</span><span class="home-match-result">–</span><span class="home-match-date">——</span></div>';
     html = html.replace(anchor, anchor.replace('</div>', item.repeat(Math.min(5, initialPlayed)) + '</div>'));
-    html = html.replace('</head>', '<style>.initial-home-match{display:none!important}@media(min-width:1200px){html:not([data-initial-deep-link]) .initial-home-match{display:flex!important;opacity:.18;pointer-events:none}}</style></head>');
+    html = html.replace('</head>', '<style>.initial-home-match{display:none!important}@media(min-width:1200px){html:not([data-initial-deep-link]) .initial-home-match{display:flex!important;opacity:.18;pointer-events:none;cursor:default}}</style></head>');
   }
 
   for (const [id,enabled] of [['nmCupPanel',initialCup],['promoRaceStrip',initialPromo]]) {

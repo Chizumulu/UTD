@@ -4,12 +4,16 @@ on:
     paths:
       - 'app.js'
       - 'index.html'
+      - 'style.css'
       - 'scripts/build-pages.mjs'
       - 'scripts/early-hero.mjs'
       - 'scripts/early-hero.test.mjs'
       - 'scripts/cls-pr149-*.mjs'
       - '.github/workflows/cls-layout-comparison.yml'
   workflow_dispatch:
+concurrency:
+  group: cls-layout-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
