@@ -5251,7 +5251,8 @@
       const kickoffMs = Number(el.getAttribute('data-kickoff-utc'));
       if (!kickoffMs) return;
       const diffMs = kickoffMs - Date.now();
-      el.textContent = ddayClockText(kickoffMs);
+      const nextText = ddayClockText(kickoffMs);
+      if (el.textContent !== nextText) el.textContent = nextText;
       el.classList.toggle('is-urgent', diffMs > 0 && diffMs <= 60 * 60 * 1000);
       el.classList.toggle('is-live', diffMs <= 0);
     });
