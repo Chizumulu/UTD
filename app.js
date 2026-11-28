@@ -24786,25 +24786,11 @@
     }
   }
 
-  // Narrow layouts: render the data-dependent hero panels before the
-  // DOMContentLoaded queue when all app declarations have been initialized.
-  // Keep the normal initialization as a fallback and for subsequent updates.
-  let initialNarrowHeroReady = false;
-  function prepareInitialNarrowHero() {
-    if (!NMC_NARROW_MQ || !NMC_NARROW_MQ.matches || initialNarrowHeroReady) return;
-    try {
-      renderNextMatchStrip();
-      initialNarrowHeroReady = true;
-    } catch (error) {
-      console.warn('initial narrow hero', error);
-    }
-  }
-
   // ===== 초기 실행 (App Init) =====
   document.addEventListener('DOMContentLoaded', function() {
     renderLeagueTable();
     renderMainMiniTable();
-    if (!initialNarrowHeroReady) renderNextMatchStrip();
+    renderNextMatchStrip();
     renderHomeMatchCards();
     renderPromoRaceStrip();
     renderNextMatchPreviewCard();
@@ -25678,6 +25664,3 @@
     } catch (err) {}
   });
 })();
-
-// All top-level declarations are initialized; render the narrow hero in this task.
-prepareInitialNarrowHero();
