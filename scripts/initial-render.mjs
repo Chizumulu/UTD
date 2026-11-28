@@ -35,8 +35,11 @@ export function preloadInitialAssets(html,versions){
 // Use exactly the same content-hashed URLs as the preloads.
 export function staticStartupScripts(html, versions) {
  if(process.env.UTD_PERF_GROUP) return html;
- const original = "<script>\n  document.write('<script src=\"data.js?v=' + window.ASSET_VERSIONS.data + '\"><\\/script>');\n  document.write('<script src=\"app.js?v=' + window.ASSET_VERSIONS.app + '\"><\\/script>');\n  document.write('<script src=\"lang-ny.js?v=002\"><\\/script>');\n  document.write('<script src=\"a11y.js?v=' + window.ASSET_VERSIONS.a11y + '\"><\\/script>');\n</script>";
+ const originalTemplate = "<script>\n  document.write('<script src=\"data.js?v=' + window.ASSET_VERSIONS.data + '\"><\\/script>');\n  document.write('<script src=\"app.js?v=' + window.ASSET_VERSIONS.app + '\"><\\/script>');\n  document.write('<script src=\"lang-ny.js?v=002\"><\\/script>');\n  document.write('<script src=\"a11y.js?v=' + window.ASSET_VERSIONS.a11y + '\"><\\/script>');\n</script>";
+ const langVersion = versions.lang ?? '002';
+ if(!/^[a-zA-Z0-9.-]+$/.test(langVersion)) throw Error('Invalid language asset version');
+ const original = originalTemplate.replace('lang-ny.js?v=002','lang-ny.js?v='+langVersion);
  if(html.split(original).length !== 2) throw Error('Expected unique startup script block');
  for(const key of ['data','app','a11y']) if(!/^[a-f0-9]{16}$/.test(versions[key]||'')) throw Error('Missing startup asset version: '+key);
- return html.replace(original, ['data.js?v='+versions.data,'app.js?v='+versions.app,'lang-ny.js?v=002','a11y.js?v='+versions.a11y].map(src=>'<script src="'+src+'"></script>').join('\n'));
+ return html.replace(original, ['data.js?v='+versions.data,'app.js?v='+versions.app,'lang-ny.js?v='+langVersion,'a11y.js?v='+versions.a11y].map(src=>'<script src="'+src+'"></script>').join('\n'));
 }
