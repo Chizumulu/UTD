@@ -10,6 +10,8 @@ try {
   const r=JSON.parse(readFileSync(join(dir,profile+'-'+side+'-'+index+'.json'),'utf8'));
   const metrics={score:r.categories.performance.score*100};
   for(const key of ['cumulative-layout-shift','largest-contentful-paint','first-contentful-paint','total-blocking-time','speed-index','mainthread-work-breakdown','bootup-time','total-byte-weight'])metrics[key]=r.audits[key].numericValue;
+  const diagnostics = Object.fromEntries(['largest-contentful-paint-element','lcp-breakdown-insight','lcp-discovery-insight','network-requests','critical-request-chains','render-blocking-insight','long-tasks','bootup-time','mainthread-work-breakdown'].filter(key=>r.audits[key]).map(key=>[key,r.audits[key].details ?? null]));
+  writeFileSync(join(dir,profile+'-'+side+'-'+index+'-diagnostics.json'),JSON.stringify(diagnostics,null,2));
   rows.push({profile,side,index,metrics});
  }
 } finally {
