@@ -36,6 +36,6 @@ export function splitOptionalData(data) {
 }
 export function assertNoOptionalDataReference(source, name) {
   const reference = new RegExp('\\b'+name+'\\b');
-  const unexpected = source.split('\\n').filter(line => !line.trimStart().startsWith('//') && reference.test(line));
+  const unexpected = source.split('\n').filter(line => !line.trimStart().startsWith('//') && reference.test(line));
   if (unexpected.length) throw Error('Unexpected shared reference to optional data: '+name);
 }
