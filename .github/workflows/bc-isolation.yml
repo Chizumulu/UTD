@@ -1,4 +1,4 @@
-name: UTD BC isolation 80
+name: UTD BC isolation 60
 on:
   pull_request:
     paths:
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Build five variants and measure 40 samples
+      - name: Build three variants and measure 30 samples
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/bc-results"
@@ -40,7 +40,7 @@ jobs:
           export CHROME_PATH="$(command -v google-chrome)"
           { lscpu; google-chrome --version; } > "$RUNNER_TEMP/bc-results/runner.txt"
           port=8081
-          for group in A B C D E; do
+          for group in A D F; do
             UTD_PERF_GROUP="$group" node scripts/build-pages.mjs "$RUNNER_TEMP/bc-$group/UTD"
             node scripts/lighthouse-comparison-server.mjs "$RUNNER_TEMP/bc-$group" "$port" > "$RUNNER_TEMP/bc-results/server-$group.log" 2>&1 &
             for i in {1..60}; do
