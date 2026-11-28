@@ -19,7 +19,7 @@ import { splitSeasonCompare } from './season-compare-split.mjs';
 import { splitStandingsExport } from './standings-export-split.mjs';
 import { renderEarlyHero } from './early-hero.mjs';
 import { optimizeAppLayout } from './app-layout.mjs';
-import { prioritizeInitialRender, preloadInitialAssets } from './initial-render.mjs';
+import { prioritizeInitialRender, preloadInitialAssets, staticStartupScripts } from './initial-render.mjs';
 import { optimizeExternalScripts } from './external-script-delivery.mjs';
 import { optimizeFontDelivery } from './font-delivery.mjs';
 import { writeSeo, readSeoData } from './seo-pages.mjs';
@@ -173,7 +173,7 @@ const html = source.replace(versionBlock, updatedBlock).replace(
 );
 
 const fontCss = readFileSync(join(output,'fonts/pretendard/pretendardvariable-dynamic-subset.css'),'utf8');
-writeFileSync(join(output,'index.html'),preloadInitialAssets(optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(reserveInitialPanelRows(html),manifest),fontCss)),{style:assetVersion('style.css'),data:assetVersion('data.js'),app:assetVersion('app.js')}));
+writeFileSync(join(output,'index.html'),staticStartupScripts(preloadInitialAssets(optimizeExternalScripts(optimizeFontDelivery(applyStaticCrests(reserveInitialPanelRows(html),manifest),fontCss)),{style:assetVersion('style.css'),data:assetVersion('data.js'),app:assetVersion('app.js')}),{data:assetVersion('data.js'),app:assetVersion('app.js'),a11y:assetVersion('a11y.js')}));
 
 writeSeo(output, readFileSync('data.js', 'utf8'), {analyticsVersion:assetVersion('utd-analytics.js')});
 
