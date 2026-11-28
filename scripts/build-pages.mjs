@@ -113,8 +113,13 @@ function reserveInitialPanelRows(html) {
   const style = '<style>@media(max-width:720px){html:not([data-initial-deep-link]) #nmCupPanel[data-initial-panel][hidden],html:not([data-initial-deep-link]) #promoRaceStrip[data-initial-panel][hidden]{display:block!important;box-sizing:border-box;min-height:var(--m-row-h,32px);margin-top:var(--m-row-gap,6px);margin-bottom:0;padding-block:0;pointer-events:none;}html:not([data-initial-deep-link]) [data-initial-panel][hidden]::before{content:"";display:block;width:45%;height:8px;margin:11px auto;border-radius:4px;background:currentColor;opacity:.12;}}</style>';
   return html.replace('</head>','<script>if(location.hash)document.documentElement.setAttribute("data-initial-deep-link","");</script>'+style+'</head>');
 }
-const deferredStats = deferOptionalStats(rawData, readFileSync(appPath,'utf8'));
-const optionalData = splitOptionalData(deferredStats.data);
+// Isolation groups are measurement-only; production retains all changes.
+const isolationGroup = process.env.UTD_A_ISOLATION_GROUP || 'E';
+if (!['B','C','D','E'].includes(isolationGroup)) throw Error('Unknown A isolation group');
+const deferEnabled = ['B','E'].includes(isolationGroup);
+const splitEnabled = ['C','E'].includes(isolationGroup);
+const deferredStats = deferEnabled ? deferOptionalStats(rawData, readFileSync(appPath,'utf8')) : {data:rawData,app:readFileSync(appPath,'utf8')};
+const optionalData = splitEnabled ? splitOptionalData(deferredStats.data) : {data:deferredStats.data,extraVenues:'',teamSponsors:''};
 writeFileSync(join(output,'data.js'),optionalData.data);
 const splitExport = await splitStandingsExport(releaseInitialPanelRows(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(deferredStats.app, manifest))))));
 const splitCompare = await splitSeasonCompare(splitExport.app);
@@ -134,8 +139,10 @@ console.log('Club detail CSS split (bytes): '+JSON.stringify(clubDetailCss.metri
 writeFileSync(join(output,sponsorCss.file),sponsorCss.optional);
 console.log('Club sponsor CSS split (bytes): '+JSON.stringify(sponsorCss.metrics));
 const splitExtras = await splitClubExtras(splitArchive.app,sponsorCss.url,optionalData.teamSponsors);
-assertNoOptionalDataReference(splitExtras.app,'extraVenues');
-assertNoOptionalDataReference(splitExtras.app,'teamSponsors');
+if (splitEnabled) {
+  assertNoOptionalDataReference(splitExtras.app,'extraVenues');
+  assertNoOptionalDataReference(splitExtras.app,'teamSponsors');
+}
 const splitPrediction = await splitPredictionView(splitExtras.app);
 const splitCup = await splitCupView(splitPrediction.app);
 const wiredClubCss = wireClubDetailCss(splitCup.app,{...clubDetailCss.assets,...featureCss.assets});
