@@ -22,7 +22,7 @@ test('preloads exact hashed assets without rewriting existing script execution',
  const output=preloadInitialAssets(html,versions);
  const tags=[...output.matchAll(/<link rel="preload" as="(style|script)" href="([^"]+)">/g)];
  assert.deepEqual(tags.map(m=>[m[1],m[2]]),[['style','style.css?v='+versions.style],['script','data.js?v='+versions.data],['script','app.js?v='+versions.app]]);
- assert.equal(output.replace(/<head>\n(?:<link rel="preload" as="(?:style|script)" href="[^"]+">\n?){3}/,'<head>'),html.replace('<head>\n','<head>'));
+ assert.equal(output.replace(/<head>\n(?:<link rel="preload" as="(?:style|script)" href="[^"]+">\n?){3}/,'<head>'),html.replace('<head>\n','<head>').replace(/<script>document\.write\('<link rel="stylesheet" href="style\.css\?v=' \+ window\.ASSET_VERSIONS\.style \+ '">'\);<\/script>/, '<link rel="stylesheet" href="style.css?v='+versions.style+'">'));
  assert.throws(()=>preloadInitialAssets(html,{...versions,app:'bad'}));
 });
 
