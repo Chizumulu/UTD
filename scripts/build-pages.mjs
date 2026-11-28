@@ -57,6 +57,7 @@ for (const file of files) {
   copyFileSync(file, destination);
 }
 execFileSync('python3', ['scripts/generate-crest-assets.py', output], {stdio:'inherit'});
+execFileSync('python3', ['scripts/optimize-player-png.py', output], {stdio:'inherit'});
 const manifest = JSON.parse(readFileSync(join(output,'crest-manifest.json'),'utf8'));
 const appPath = join(output,'app.js');
 const splitExport = await splitStandingsExport(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(readFileSync(appPath,'utf8'), manifest)))));
