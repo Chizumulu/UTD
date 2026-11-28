@@ -13,7 +13,6 @@ export const sharedSelector=s=>/\.(?:venue-name|path-finder-card|path-finder-hea
 export const clubPolicies={
  club:s=>id(s,'myTeamInfoView|teamInfo(?:Overview|Record|Results|Youtube|Staff)Tab|squadGroups')||
   cls(s,'ti-(?:room|award|staff|yt|appear|gk|impact|assist|pair|am|pos|scorer|result)-[\\w-]+|ti-awards-card|ti-position-card|pcard(?:-[\\w-]+)?|squad-(?:card|pcard|former)(?:-[\\w-]+)?|sqt-[\\w-]+|team-(?:motto|kit|kits)-[\\w-]+'),
- pathfinder:s=>cls(s,'pf-[\\w-]+|path-finder-card'),
 };
 export const viewPolicies={
  rank:s=>id(s,'mainTable'),
