@@ -9,7 +9,7 @@ const rows=[];
 try{
  for(const width of [390,412,720,768,1199,1200,1440])for(const lang of ['ko','en'])for(const theme of ['light','dark']){
   const key=width+'-'+lang+'-'+theme;
-  const images=[],geometry=[];
+  const images=[],geometry=[],ticker=[];
   for(const port of [8081,8082]){
    const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1,locale:lang==='ko'?'ko-KR':'en-US',timezoneId:'Asia/Seoul',colorScheme:theme,serviceWorkers:'block'});
    try{
@@ -22,6 +22,7 @@ try{
     await page.evaluate(()=>document.fonts.ready);
     await page.waitForTimeout(3000);
     geometry.push(await page.evaluate(()=>Object.fromEntries(['.app-sidebar','.side-controls','#nmHero','#nmCupPanel','#promoRaceStrip','#rankView','#mainContent'].map(s=>{const e=document.querySelector(s),r=e?.getBoundingClientRect();return [s,r?{x:r.x,y:r.y,w:r.width,h:r.height,hidden:e.hidden,parent:e.parentElement?.id||e.parentElement?.className}:null]}))));
+    ticker.push(await page.evaluate(()=>{const e=document.querySelector('#promoRaceStrip');return {text:e?.innerText,children:[...e?.querySelectorAll('*')||[]].map(n=>{const r=n.getBoundingClientRect();return {tag:n.tagName,cls:n.className,text:n.childElementCount?null:n.textContent,x:r.x,y:r.y,w:r.width,h:r.height}})}}));
     const buf=await page.screenshot({path:join(out,key+'-'+port+'.png'),animations:'disabled'});
     images.push(PNG.sync.read(buf));
    }finally{await context.close()}
@@ -32,7 +33,7 @@ try{
   for(let y=0;y<a.height;y++)for(let x=0;x<a.width;x++){const i=(y*a.width+x)*4;if(a.data[i]!==b.data[i]||a.data[i+1]!==b.data[i+1]||a.data[i+2]!==b.data[i+2]||a.data[i+3]!==b.data[i+3]){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y)}}
   const bounds=maxX<0?null:{minX,minY,maxX,maxY};
   writeFileSync(join(out,key+'-diff.png'),PNG.sync.write(diff));
-  rows.push({key,pixels,total:a.width*a.height,ratio:pixels/(a.width*a.height),bounds,geometry});
+  rows.push({key,pixels,total:a.width*a.height,ratio:pixels/(a.width*a.height),bounds,geometry,ticker});
   writeFileSync(join(out,'summary.json'),JSON.stringify(rows,null,2));
  }
 }finally{await browser.close();writeFileSync(join(out,'summary.json'),JSON.stringify(rows,null,2))}

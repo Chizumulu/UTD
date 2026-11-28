@@ -87,12 +87,26 @@ function releaseInitialPanelRows(app) {
   return app;
 }
 function reserveInitialPanelRows(html) {
+  // Reserve the desktop match-card row with the existing item geometry, not a
+  // fixed pixel height. The runtime renderer replaces these children normally.
+  if (initialPlayed > 0) {
+    const anchor = '<div class="home-match-strip" id="homeRecentStrip"></div>';
+    if (html.split(anchor).length !== 2) throw Error('Expected unique recent match strip');
+    const item = '<div class="home-match-item is-clickable initial-home-match" aria-hidden="true"><span class="team-logo home-match-crest crest-fallback">–</span><span class="home-match-name">——</span><span class="home-match-score">–</span><span class="home-match-result">–</span><span class="home-match-date">——</span></div>';
+    html = html.replace(anchor, anchor.replace('</div>', item.repeat(Math.min(5, initialPlayed)) + '</div>'));
+    html = html.replace('</head>', '<style>.initial-home-match{display:none!important}@media(min-width:1200px){html:not([data-initial-deep-link]) .initial-home-match{display:flex!important;opacity:.18;pointer-events:none;cursor:default}}</style></head>');
+  }
+
   for (const [id,enabled] of [['nmCupPanel',initialCup],['promoRaceStrip',initialPromo]]) {
     if (!enabled) continue;
     const anchor = 'id="'+id+'"';
     if (html.split(anchor).length !== 2) throw Error('Expected unique initial panel: '+id);
     html = html.replace(anchor,anchor+' data-initial-panel=""');
   }
+  // Desktop promotion placeholder uses the production strip's own responsive
+  // min-height, margins and padding. Do not reserve space on deep links.
+  const desktopPromoStyle = '<style>@media(min-width:1200px){html:not([data-initial-deep-link]) #rankView #promoRaceStrip[data-initial-panel][hidden]{display:flex!important;pointer-events:none}html:not([data-initial-deep-link]) #rankView #promoRaceStrip[data-initial-panel][hidden]::before{content:"";display:block;width:35%;height:8px;margin:0 auto;border-radius:4px;background:currentColor;opacity:.12}}</style>';
+  html = html.replace('</head>', desktopPromoStyle + '</head>');
   // A loading row is not interactive and contains no stale match information.
   // Existing CSS variables control the same row geometry as the real panels.
   const style = '<style>@media(max-width:720px){html:not([data-initial-deep-link]) #nmCupPanel[data-initial-panel][hidden],html:not([data-initial-deep-link]) #promoRaceStrip[data-initial-panel][hidden]{display:block!important;box-sizing:border-box;min-height:var(--m-row-h,32px);margin-top:var(--m-row-gap,6px);margin-bottom:0;padding-block:0;pointer-events:none;}html:not([data-initial-deep-link]) [data-initial-panel][hidden]::before{content:"";display:block;width:45%;height:8px;margin:11px auto;border-radius:4px;background:currentColor;opacity:.12;}}</style>';

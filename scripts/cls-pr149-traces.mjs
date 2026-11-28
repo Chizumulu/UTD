@@ -8,32 +8,33 @@ const [out]=process.argv.slice(2);mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROME_PATH,args:['--no-sandbox','--disable-dev-shm-usage']});
 const arms=['baseline','candidate'],ports=[8081,8082];
 const records=[];
+const desktop=process.env.UTD_CLS_DESKTOP==='1';
 try{
  for(let round=0;round<6;round++)for(let offset=0;offset<2;offset++){
   const i=(offset+round)%2,arm=arms[i],port=ports[i];
-  const context=await browser.newContext({viewport:{width:412,height:823},deviceScaleFactor:1.75,isMobile:true,hasTouch:true,locale:'ko-KR',timezoneId:'Asia/Seoul',serviceWorkers:'block'});
+  const context=await browser.newContext({viewport:desktop?{width:1350,height:940}:{width:412,height:823},deviceScaleFactor:desktop?1:1.75,isMobile:!desktop,hasTouch:!desktop,locale:'ko-KR',timezoneId:'Asia/Seoul',serviceWorkers:'block'});
   try{
    const page=await context.newPage();
    const cdp=await context.newCDPSession(page);
    await cdp.send('Network.enable');
    await cdp.send('Network.setCacheDisabled',{cacheDisabled:true});
-   await cdp.send('Network.emulateNetworkConditions',{offline:false,latency:150,downloadThroughput:1638.4*1024/8,uploadThroughput:675*1024/8});
-   await cdp.send('Emulation.setCPUThrottlingRate',{rate:4});
+   await cdp.send('Network.emulateNetworkConditions',{offline:false,latency:desktop?40:150,downloadThroughput:(desktop?10240:1638.4)*1024/8,uploadThroughput:(desktop?10240:675)*1024/8});
+   await cdp.send('Emulation.setCPUThrottlingRate',{rate:desktop?1:4});
    await page.route('**/*',r=>{const host=new URL(r.request().url()).hostname;return /(^|\.)(google-analytics\.com|googletagmanager\.com|clarity\.ms|onesignal\.com)$/.test(host)?r.abort():r.continue()});
    await page.addInitScript(()=>{
     const events=[],shifts=[],critical=[],frames=[]; let dropped=0;
     const add=(kind,detail={})=>{if(events.length<40000)events.push({t:performance.now(),kind,...detail});else dropped++};
     const label=n=>{if(!n)return null;const el=n.nodeType===1?n:n.parentElement;return el?el.tagName+(el.id?'#'+el.id:'')+(typeof el.className==='string'&&el.className?'.'+el.className.trim().replace(/\s+/g,'.'):''):null};
     const rect=r=>r?{x:r.x,y:r.y,width:r.width,height:r.height}:null;
-    const selectors=['.app-sidebar','.side-controls','#moreSheetSettings','#mainContent','#nextMatchStrip','#nmCupPanel','#promoRaceStrip','#rankView','.nmh-meta','.nmh-venue','.nmh-dday','#mainMiniTableBody td','#mainMiniTableBody th'];
-    const geometry=()=>Object.fromEntries(selectors.map(sel=>{const e=document.querySelector(sel);return [sel,e?{...rect(e.getBoundingClientRect()),hidden:e.hidden,parent:label(e.parentElement),display:getComputedStyle(e).display,marginTop:getComputedStyle(e).marginTop,font:getComputedStyle(e).font,lineHeight:getComputedStyle(e).lineHeight,tableLayout:getComputedStyle(e.closest('table')||e).tableLayout}:null]}));
+    const selectors=['html','body','.app-shell','.skip-link','dialog[open]','.app-sidebar','.side-controls','#moreSheetSettings','#mainContent','#nextMatchStrip','#nmCupPanel','#promoRaceStrip','#rankView','.nmh-meta','.nmh-venue','.nmh-dday','#mainMiniTableBody td','#mainMiniTableBody th','.nm-hero','#rankView .content-row','.content-row','.nmh-top','.nmh-bottom','.nmh-eyebrow','.nmc-pcwrap','.nmc-pc-item','.prs-ctrl','.prs-slide-in','#mainMiniTableBody td.team','#mainMiniTableBody td:last-child','.home-matches-row','.home-match-card','.home-match-card--upcoming','#homeRecentStrip','#homeUpcomingStrip','#homeRecentStrip .home-match-item','#homeUpcomingStrip .home-match-item','.home-match-crest','.home-match-name','.home-match-score','.home-match-result','.home-match-date','.home-match-badges'];
+    const geometry=()=>Object.fromEntries(selectors.map(sel=>{const e=document.querySelector(sel);return [sel,e?{...rect(e.getBoundingClientRect()),hidden:e.hidden,parent:label(e.parentElement),display:getComputedStyle(e).display,marginTop:getComputedStyle(e).marginTop,font:getComputedStyle(e).font,lineHeight:getComputedStyle(e).lineHeight,tableLayout:getComputedStyle(e.closest('table')||e).tableLayout,position:getComputedStyle(e).position,paddingTop:getComputedStyle(e).paddingTop,marginLeft:getComputedStyle(e).marginLeft,overflowY:getComputedStyle(e).overflowY,clientWidth:e.clientWidth,scrollHeight:e.scrollHeight,marginBottom:getComputedStyle(e).marginBottom,paddingBottom:getComputedStyle(e).paddingBottom,gap:getComputedStyle(e).gap,boxSizing:getComputedStyle(e).boxSizing,fontSize:getComputedStyle(e).fontSize,flexWrap:getComputedStyle(e).flexWrap,gridTemplateColumns:getComputedStyle(e).gridTemplateColumns,childCount:e.childElementCount}:null]}));
     const relevant=n=>n?.nodeType===1&&selectors.some(sel=>n.matches(sel)||n.querySelector(sel));
     const record=(kind,detail)=>critical.push({t:performance.now(),kind,...detail});
     for(const [proto,key] of [[Node.prototype,'appendChild'],[Node.prototype,'insertBefore'],[Node.prototype,'removeChild'],[Node.prototype,'replaceChild'],[Element.prototype,'append'],[Element.prototype,'prepend'],[Element.prototype,'remove'],[Element.prototype,'setAttribute'],[Element.prototype,'removeAttribute']]){
       const original=proto[key];if(typeof original!=='function')continue;
       proto[key]=function(...args){
         const direct=this.nodeType===1&&selectors.some(sel=>this.matches(sel));
-        const hit=(key==='setAttribute'||key==='removeAttribute')?direct&&['hidden','class','style'].includes(args[0]):direct||args.some(relevant);
+        const hit=(key==='setAttribute'||key==='removeAttribute')?direct&&['hidden','class','style','open','media'].includes(args[0]):direct||args.some(relevant);
         if(!hit)return Reflect.apply(original,this,args);
         const detail={operation:key,target:label(this),nodes:args.filter(x=>x?.nodeType).map(label),attribute:typeof args[0]==='string'?args[0]:null,stack:new Error().stack};
         const result=Reflect.apply(original,this,args);record('dom-operation',detail);return result;
@@ -55,7 +56,7 @@ try{
       const el=m.target.nodeType===1?m.target:m.target.parentElement;
       if(el&&el.closest('header,.app-shell,#mainContent,#nextMatchStrip,#rankView')&&(m.type==='childList'||['class','style','hidden','aria-busy'].includes(m.attributeName)))add('mutation',{node:label(el),type:m.type,attr:m.attributeName,added:m.addedNodes.length,removed:m.removedNodes.length});
       if(el&&(selectors.some(sel=>el.matches(sel))||[...m.addedNodes,...m.removedNodes].some(relevant)))record('critical-mutation',{node:label(el),type:m.type,attr:m.attributeName,oldValue:m.oldValue,added:[...m.addedNodes].map(label),removed:[...m.removedNodes].map(label)});
-    }}).observe(document,{subtree:true,childList:true,attributes:true,attributeOldValue:true,attributeFilter:['class','style','hidden','aria-busy']});
+    }}).observe(document,{subtree:true,childList:true,attributes:true,attributeOldValue:true,attributeFilter:['class','style','hidden','aria-busy','open','media']});
     const observed=new WeakSet(),ro=new ResizeObserver(entries=>{for(const e of entries)add('resize',{node:label(e.target),w:e.contentRect.width,h:e.contentRect.height})});
     const observe=()=>{for(const el of document.querySelectorAll('header,.app-shell,#mainContent,#nextMatchStrip,#rankView,.nmh-meta-line,.nmh-venue'))if(!observed.has(el)){observed.add(el);ro.observe(el)}};
     new MutationObserver(observe).observe(document,{subtree:true,childList:true});
@@ -63,7 +64,8 @@ try{
     for(const type of ['loadingdone','loadingerror'])document.fonts.addEventListener(type,e=>add('font-'+type,{faces:[...e.fontfaces].map(f=>({family:f.family,status:f.status,range:f.unicodeRange}))}));
     document.addEventListener('DOMContentLoaded',()=>{observe();add('dom-content-loaded')});
     window.addEventListener('load',()=>add('load'));
-    window.__utdClsDiagnostic=()=>({events,shifts,critical,frames,dropped,marks:performance.getEntriesByType('mark').map(e=>({name:e.name,t:e.startTime})),resources:performance.getEntriesByType('resource').map(e=>({url:e.name,start:e.startTime,end:e.responseEnd,type:e.initiatorType,transfer:e.transferSize}))});
+    for(const type of ['load','error'])document.addEventListener(type,e=>{const n=e.target;if(n instanceof HTMLImageElement&&n.closest('#rankView,#nmHero'))add('image-'+type,{node:label(n),src:n.currentSrc||n.src,naturalWidth:n.naturalWidth,naturalHeight:n.naturalHeight,rect:rect(n.getBoundingClientRect())})},true);
+    window.__utdClsDiagnostic=()=>({events,shifts,critical,frames,dropped,paints:performance.getEntriesByType('paint').map(e=>({name:e.name,t:e.startTime})),marks:performance.getEntriesByType('mark').map(e=>({name:e.name,t:e.startTime})),resources:performance.getEntriesByType('resource').map(e=>({url:e.name,start:e.startTime,end:e.responseEnd,type:e.initiatorType,transfer:e.transferSize}))});
    });
    await page.goto('http://127.0.0.1:'+port+'/UTD/?lang=ko',{waitUntil:'domcontentloaded',timeout:90000});
    await page.waitForFunction(()=>document.querySelector('#mainMiniTableBody')?.children.length>0,null,{timeout:30000});
