@@ -35,6 +35,7 @@ export function preloadInitialAssets(html,versions){
 // Use exactly the same content-hashed URLs as the preloads.
 export function staticStartupScripts(html, versions) {
  if(process.env.UTD_PERF_GROUP) return html;
+ if(process.env.UTD_A_ISOLATION_GROUP && !['D','E'].includes(process.env.UTD_A_ISOLATION_GROUP)) return html;
  const originalTemplate = "<script>\n  document.write('<script src=\"data.js?v=' + window.ASSET_VERSIONS.data + '\"><\\/script>');\n  document.write('<script src=\"app.js?v=' + window.ASSET_VERSIONS.app + '\"><\\/script>');\n  document.write('<script src=\"lang-ny.js?v=002\"><\\/script>');\n  document.write('<script src=\"a11y.js?v=' + window.ASSET_VERSIONS.a11y + '\"><\\/script>');\n</script>";
  const langVersion = versions.lang ?? '002';
  if(!/^[a-zA-Z0-9.-]+$/.test(langVersion)) throw Error('Invalid language asset version');
