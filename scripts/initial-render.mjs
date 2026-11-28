@@ -7,10 +7,6 @@ export function prioritizeInitialRender(app){
  const labelWrite = "      el.innerHTML = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');";
  let startup = app.indexOf("document.addEventListener('DOMContentLoaded', function() {");
  if(startup < 0) throw Error('Missing startup listener');
- // Reuse the two geometry reads already taken after resetting letter spacing.
- const redundant = '    const longer = w1 < w2 ? line2 : line1;\n    const diff = longer.getBoundingClientRect().width - shorter.getBoundingClientRect().width;';
- if(app.split(redundant).length!==2)throw Error('Expected unique title geometry block');
- app = app.replace(redundant, '    const diff = Math.abs(w1 - w2);');
  // Avoid replacing identical countdown markup (especially after kickoff).
  const clockWrites = [
   ['      el.textContent = ddayClockText(kickoffMs);', '      const clockText = ddayClockText(kickoffMs);\n      if (el.textContent !== clockText) el.textContent = clockText;'],
