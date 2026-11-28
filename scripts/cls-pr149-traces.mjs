@@ -25,8 +25,8 @@ try{
     const add=(kind,detail={})=>{if(events.length<40000)events.push({t:performance.now(),kind,...detail});else dropped++};
     const label=n=>{if(!n)return null;const el=n.nodeType===1?n:n.parentElement;return el?el.tagName+(el.id?'#'+el.id:'')+(typeof el.className==='string'&&el.className?'.'+el.className.trim().replace(/\s+/g,'.'):''):null};
     const rect=r=>r?{x:r.x,y:r.y,width:r.width,height:r.height}:null;
-    const selectors=['.app-sidebar','.side-controls','#moreSheetSettings','#mainContent','#nextMatchStrip','#nmCupPanel','#promoRaceStrip','#rankView'];
-    const geometry=()=>Object.fromEntries(selectors.map(sel=>{const e=document.querySelector(sel);return [sel,e?{...rect(e.getBoundingClientRect()),hidden:e.hidden,parent:label(e.parentElement),display:getComputedStyle(e).display,marginTop:getComputedStyle(e).marginTop}:null]}));
+    const selectors=['.app-sidebar','.side-controls','#moreSheetSettings','#mainContent','#nextMatchStrip','#nmCupPanel','#promoRaceStrip','#rankView','.nmh-meta','.nmh-venue','.nmh-dday','#mainMiniTableBody td','#mainMiniTableBody th'];
+    const geometry=()=>Object.fromEntries(selectors.map(sel=>{const e=document.querySelector(sel);return [sel,e?{...rect(e.getBoundingClientRect()),hidden:e.hidden,parent:label(e.parentElement),display:getComputedStyle(e).display,marginTop:getComputedStyle(e).marginTop,font:getComputedStyle(e).font,lineHeight:getComputedStyle(e).lineHeight,tableLayout:getComputedStyle(e.closest('table')||e).tableLayout}:null]}));
     const relevant=n=>n?.nodeType===1&&selectors.some(sel=>n.matches(sel)||n.querySelector(sel));
     const record=(kind,detail)=>critical.push({t:performance.now(),kind,...detail});
     for(const [proto,key] of [[Node.prototype,'appendChild'],[Node.prototype,'insertBefore'],[Node.prototype,'removeChild'],[Node.prototype,'replaceChild'],[Element.prototype,'append'],[Element.prototype,'prepend'],[Element.prototype,'remove'],[Element.prototype,'setAttribute'],[Element.prototype,'removeAttribute']]){
@@ -38,6 +38,14 @@ try{
         const detail={operation:key,target:label(this),nodes:args.filter(x=>x?.nodeType).map(label),attribute:typeof args[0]==='string'?args[0]:null,stack:new Error().stack};
         const result=Reflect.apply(original,this,args);record('dom-operation',detail);return result;
       };
+    }
+    for(const [proto,key] of [[HTMLElement.prototype,'hidden'],[Element.prototype,'innerHTML']]){
+      const d=Object.getOwnPropertyDescriptor(proto,key);
+      if(!d?.set||!d.configurable)continue;
+      Object.defineProperty(proto,key,{...d,set(value){
+        if(selectors.some(sel=>this.matches(sel)))record('dom-setter',{property:key,target:label(this),value:key==='hidden'?value:String(value).length,stack:new Error().stack});
+        return d.set.call(this,value);
+      }});
     }
     let previous='';
     const sample=()=>{const g=geometry(),signature=JSON.stringify(g);if(signature!==previous){frames.push({t:performance.now(),geometry:g});previous=signature;}requestAnimationFrame(sample)};
@@ -58,7 +66,7 @@ try{
     window.__utdClsDiagnostic=()=>({events,shifts,critical,frames,dropped,marks:performance.getEntriesByType('mark').map(e=>({name:e.name,t:e.startTime})),resources:performance.getEntriesByType('resource').map(e=>({url:e.name,start:e.startTime,end:e.responseEnd,type:e.initiatorType,transfer:e.transferSize}))});
    });
    await page.goto('http://127.0.0.1:'+port+'/UTD/?lang=ko',{waitUntil:'domcontentloaded',timeout:90000});
-   await page.waitForFunction(()=>document.querySelector('#mainMiniTableBody')?.children.length>0,{timeout:30000});
+   await page.waitForFunction(()=>document.querySelector('#mainMiniTableBody')?.children.length>0,null,{timeout:30000});
    await page.waitForTimeout(10000);
    const data=await page.evaluate(()=>window.__utdClsDiagnostic());
    let max=0,sum=0,start=0,last=0;
