@@ -38,7 +38,7 @@ const cases=[
  ['club-results',()=>{showView('squad');applyTeamInfoTab('results')},'#myTeamInfoView','#teamInfoResultsTab > *',['club']],
  ['club-sponsors',()=>{showView('squad');applyTeamInfoTab('story')},'#myTeamInfoView','#teamInfoStoryTab .ti-sponsor-card',['club']],
  ['club-analysis',()=>{showView('squad');applyTeamInfoTab('analysis')},'#myTeamInfoView','#teamInfoAnalysisTab .ta-card',['club','analysis']],
- ['club-predict',()=>{showView('squad');applyTeamInfoTab('predict')},'#myTeamInfoView','#teamInfoPathFinder .path-finder-card',['club','pathfinder']],
+ ['club-predict',()=>{showView('squad');applyTeamInfoTab('predict')},'#myTeamInfoView','#teamInfoPathFinder .path-finder-card',['club']],
  ['other-club',()=>{showView('squad');showTeamInfoForKey('Chibavi Real Stars FC')},'#otherTeamFullView','#otherTeamFullBody .ti-record-card',['club','other']],
  ['player',()=>openPlayerModal(topScorersData[0].key),'#playerModal','#playerTimeline > *',['players']],
  ['squad-player',()=>openSquadPlayerModal(squadData.find(x=>x.number!=null).number),'#squadPlayerModal','#squadPlayerModalName',['players']],

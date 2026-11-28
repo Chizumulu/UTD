@@ -8,12 +8,11 @@ const cls=(s,n)=>new RegExp('^\\.(?:'+n+')(?:$|[\\s.:#>+~\\[])').test(s);
 // Shared renderer components are critical, regardless of the feature name.
  // Match comparison layout itself is exclusive; its cards, stats, AI and
  // history components are reused in other views and must not be deferred.
-export const sharedSelector=s=>/\.(?:mc-(?!compare-(?:layout|left|right|meet)(?![\w-])|layout-played(?![\w-])|modal-played(?![\w-])|col-(?:ai|meet|stats)(?![\w-]))[\w-]+|predict-intro(?:-[\w-]+)?|ti-pos-[\w-]+|ti-position-card|mgp-[\w-]+|round-half-empty|ti-appear-empty)(?![\w-])/.test(s);
+export const sharedSelector=s=>/\.(?:venue-name|path-finder-card|path-finder-head|pf-[\w-]+)(?![\w-])/.test(s)||/\.(?:mc-(?!compare-(?:layout|left|right|meet)(?![\w-])|layout-played(?![\w-])|modal-played(?![\w-])|col-(?:ai|meet|stats)(?![\w-]))[\w-]+|predict-intro(?:-[\w-]+)?|ti-pos-[\w-]+|ti-position-card|mgp-[\w-]+|round-half-empty|ti-appear-empty)(?![\w-])/.test(s);
 
 export const clubPolicies={
  club:s=>id(s,'myTeamInfoView|teamInfo(?:Overview|Record|Results|Youtube|Staff)Tab|squadGroups')||
   cls(s,'ti-(?:room|award|staff|yt|appear|gk|impact|assist|pair|am|pos|scorer|result)-[\\w-]+|ti-awards-card|ti-position-card|pcard(?:-[\\w-]+)?|squad-(?:card|pcard|former)(?:-[\\w-]+)?|sqt-[\\w-]+|team-(?:motto|kit|kits)-[\\w-]+'),
- pathfinder:s=>cls(s,'pf-[\\w-]+|path-finder-card'),
 };
 export const viewPolicies={
  rank:s=>id(s,'mainTable'),
