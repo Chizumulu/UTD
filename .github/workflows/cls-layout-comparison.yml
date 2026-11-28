@@ -17,10 +17,10 @@ concurrency:
 permissions:
   contents: read
 jobs:
-  compare:
-    if: github.head_ref == 'perf/cls-initial-layout' || github.head_ref == 'perf/cls-mobile-promo-row' || github.head_ref == 'perf/cls-desktop-layout' || github.event_name == 'workflow_dispatch'
+  build:
+    if: github.head_ref == 'ci/parallel-performance' || startsWith(github.head_ref, 'perf/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
-    timeout-minutes: 100
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
         with:
@@ -45,6 +45,54 @@ jobs:
           (cd "$RUNNER_TEMP/cls-base"; npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2; node scripts/build-pages.mjs "$RUNNER_TEMP/cls-before/UTD")
           node --test scripts/early-hero.test.mjs
           node scripts/build-pages.mjs "$RUNNER_TEMP/cls-after/UTD"
+      - name: Archive exact build bytes
+        run: |
+          cd "$RUNNER_TEMP"
+          tar -cf cls-build.tar cls-before cls-after cls-results/candidate.txt
+          sha256sum cls-build.tar > cls-build.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cls-build
+          path: |
+            ${{ runner.temp }}/cls-build.tar
+            ${{ runner.temp }}/cls-build.sha256
+          retention-days: 3
+  measure:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [lighthouse, traces, desktop-traces, pixels]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: cls-build
+          path: ${{ runner.temp }}
+      - name: Verify and restore shared build
+        run: |
+          cd "$RUNNER_TEMP"
+          sha256sum -c cls-build.sha256
+          tar -xf cls-build.tar
+          test "$(cat cls-results/candidate.txt)" = "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"
+          echo "RESULTS=$RUNNER_TEMP/cls-results" >> "$GITHUB_ENV"
+          mkdir -p cls-results
+          { uname -a; lscpu; free -m; google-chrome --version; } > cls-results/runner.txt
+          cd "$GITHUB_WORKSPACE"
+          python3 -m pip install Pillow==11.3.0
+          npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2 lighthouse@12.8.2 playwright@1.56.1 pngjs@7.0.0 pixelmatch@7.1.0
       - name: Compare Lighthouse, real CLS and pixels
         run: |
           set -euo pipefail
@@ -75,15 +123,67 @@ jobs:
             node scripts/lighthouse-comparison-compression-check.mjs "$port" "$RESULTS/compression-$side.json"
             echo "Preflight passed: $side on $port"
           done
-          status=0
-          node scripts/cls-pr149-lighthouse.mjs "$RESULTS/lighthouse" "$GITHUB_WORKSPACE/scripts/lighthouse-comparison-flags.json" || status=1
-          node scripts/cls-pr149-traces.mjs "$RESULTS/traces" || status=1
-          UTD_CLS_DESKTOP=1 node scripts/cls-pr149-traces.mjs "$RESULTS/desktop-traces" || status=1
-          node scripts/cls-pr149-pixels.mjs "$RESULTS/pixels" || status=1
-          exit "$status"
+          case "${{ matrix.suite }}" in
+            lighthouse) node scripts/cls-pr149-lighthouse.mjs "$RESULTS/lighthouse" "$GITHUB_WORKSPACE/scripts/lighthouse-comparison-flags.json" ;;
+            traces) node scripts/cls-pr149-traces.mjs "$RESULTS/traces" ;;
+            desktop-traces) UTD_CLS_DESKTOP=1 node scripts/cls-pr149-traces.mjs "$RESULTS/desktop-traces" ;;
+            pixels) node scripts/cls-pr149-pixels.mjs "$RESULTS/pixels" ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cls-part-${{ matrix.suite }}
+          path: ${{ runner.temp }}/cls-results/
+          retention-days: 30
+  compare:
+    if: always() && needs.build.result != 'skipped'
+    needs: [build, measure]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          pattern: cls-part-*
+          path: parts
+      - name: Assemble and validate all 72 measurements
+        if: always()
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          MEASURE_RESULT: ${{ needs.measure.result }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 - <<'PY'
+          import pathlib, json, shutil, os
+          root = pathlib.Path('combined')
+          root.mkdir(exist_ok=True)
+          errors = []
+          for suite, count in [('lighthouse',20),('traces',12),('desktop-traces',12),('pixels',28)]:
+              part = pathlib.Path('parts') / ('cls-part-' + suite)
+              if part.exists():
+                  shutil.copytree(part, root / 'diagnostics' / suite, dirs_exist_ok=True)
+              try:
+                  assert (part/'candidate.txt').read_text().strip() == os.environ['EXPECTED_SHA']
+                  src = part/suite
+                  shutil.copytree(src, root/suite, dirs_exist_ok=True)
+                  data = json.loads((src/'summary.json').read_text())
+                  rows = data['rows'] if suite == 'lighthouse' else data
+                  assert len(rows) == count, f'{len(rows)}/{count}'
+                  if suite == 'lighthouse':
+                      assert all(g['n']==5 for g in data['groups'].values()) and len(data['groups'])==4
+                  if suite in ('traces','desktop-traces'):
+                      assert all(sum(r['arm']==a for r in rows)==6 for a in ('baseline','candidate'))
+              except Exception as e:
+                  errors.append(f'{suite}: {e!r}')
+          (root/'candidate.txt').write_text(os.environ['EXPECTED_SHA']+'\n')
+          if os.environ['BUILD_RESULT'] != 'success' or os.environ['MEASURE_RESULT'] != 'success':
+              errors.append('Build or measurement job failed')
+          (root/'validation.json').write_text(json.dumps({'errors':errors,'expected':72},indent=2))
+          if errors: raise SystemExit(str(errors))
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cls-layout-comparison
-          path: ${{ runner.temp }}/cls-results/
+          path: combined/
           retention-days: 30
