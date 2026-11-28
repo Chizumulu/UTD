@@ -5,6 +5,8 @@ on:
       - 'app.js'
       - 'index.html'
       - 'scripts/build-pages.mjs'
+      - 'scripts/early-hero.mjs'
+      - 'scripts/early-hero.test.mjs'
       - 'scripts/cls-pr149-*.mjs'
       - '.github/workflows/cls-layout-comparison.yml'
   workflow_dispatch:
