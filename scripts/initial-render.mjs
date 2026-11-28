@@ -19,3 +19,13 @@ export function preloadInitialAssets(html,versions){
  }).join('\n');
  return html.replace(anchor,match=>match+'\n'+tags);
 }
+
+ // Keep parser-blocking execution order, but expose resource URLs directly to HTML.
+export function staticInitialAssets(html, versions) {
+ const style = `<script>document.write('<link rel="stylesheet" href="style.css?v=' + window.ASSET_VERSIONS.style + '">');</script>`;
+ const scripts = ['data','app','lang-ny','a11y'];
+ const old = '<script>\n'+scripts.map(k => "  document.write('<script src=\""+k+".js?v="+(k==='lang-ny'?"002":"' + window.ASSET_VERSIONS."+k+" + '")+"\"><\\/script>');").join('\n')+'\n</script>';
+ for(const anchor of [style,old]) if(html.split(anchor).length!==2) throw Error('Expected unique initial asset loader');
+ for(const k of ['style',...scripts]) if(!/^[a-f0-9]{16}$/.test(versions[k]||'')) throw Error('Invalid asset version '+k);
+ return html.replace(style,'<link rel="stylesheet" href="style.css?v='+versions.style+'">').replace(old,scripts.map(k=>'<script src="'+k+'.js?v='+versions[k]+'"></script>').join('\n'));
+}
