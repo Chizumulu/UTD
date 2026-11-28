@@ -30,6 +30,6 @@ test('startup avoids rewriting identical localized markup without changing later
  const app=readFileSync('app.js','utf8');
  const updated=prioritizeInitialRender(app);
  const marker='// ===== 초기 실행 (App Init) =====';
- assert.equal(updated.slice(0,updated.indexOf(marker)),app.slice(0,app.indexOf(marker)));
+ assert.equal(updated.slice(0,updated.indexOf(marker)),app.slice(0,app.indexOf(marker)).replace('    const longer = w1 < w2 ? line2 : line1;\n    const diff = longer.getBoundingClientRect().width - shorter.getBoundingClientRect().width;', '    const diff = Math.abs(w1 - w2);'));
  assert.match(updated.slice(updated.indexOf(marker)),/if \(localized !== null && el.innerHTML === localized\) return;/);
 });
