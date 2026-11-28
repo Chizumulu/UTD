@@ -1,4 +1,4 @@
-import { deferOptionalStats } from './deferred-stats.mjs';
+import { deferOptionalStats, splitOptionalData, assertNoOptionalDataReference } from './deferred-stats.mjs';
 import { applyResponsiveCrests, applyStaticCrests } from './crest-templates.mjs';
 import { minifyPagesAssets } from './minify-pages-assets.mjs';
 import { splitCupView } from './cup-view-split.mjs';
@@ -114,13 +114,14 @@ function reserveInitialPanelRows(html) {
   return html.replace('</head>','<script>if(location.hash)document.documentElement.setAttribute("data-initial-deep-link","");</script>'+style+'</head>');
 }
 const deferredStats = deferOptionalStats(rawData, readFileSync(appPath,'utf8'));
-writeFileSync(join(output,'data.js'),deferredStats.data);
+const optionalData = splitOptionalData(deferredStats.data);
+writeFileSync(join(output,'data.js'),optionalData.data);
 const splitExport = await splitStandingsExport(releaseInitialPanelRows(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(deferredStats.app, manifest))))));
 const splitCompare = await splitSeasonCompare(splitExport.app);
 const splitTeamMatch = await splitTeamMatchCompare(splitCompare.app);
 const splitPlayers = await splitPlayerModals(splitTeamMatch.app);
 const splitDetails = await splitMatchDetail(splitPlayers.app);
-const splitVenues = await splitVenueMap(splitDetails.app);
+const splitVenues = await splitVenueMap(splitDetails.app,optionalData.extraVenues);
 const splitArchive = await splitArchiveView(splitVenues.app);
 const sponsorCss = await splitClubSponsorCss(readFileSync(join(output,'style.css'),'utf8'));
 const clubDetailCss = await splitClubDetailCss(sponsorCss.critical);
@@ -132,7 +133,9 @@ for (const asset of Object.values(clubDetailCss.assets)) writeFileSync(join(outp
 console.log('Club detail CSS split (bytes): '+JSON.stringify(clubDetailCss.metrics));
 writeFileSync(join(output,sponsorCss.file),sponsorCss.optional);
 console.log('Club sponsor CSS split (bytes): '+JSON.stringify(sponsorCss.metrics));
-const splitExtras = await splitClubExtras(splitArchive.app,sponsorCss.url);
+const splitExtras = await splitClubExtras(splitArchive.app,sponsorCss.url,optionalData.teamSponsors);
+assertNoOptionalDataReference(splitExtras.app,'extraVenues');
+assertNoOptionalDataReference(splitExtras.app,'teamSponsors');
 const splitPrediction = await splitPredictionView(splitExtras.app);
 const splitCup = await splitCupView(splitPrediction.app);
 const wiredClubCss = wireClubDetailCss(splitCup.app,{...clubDetailCss.assets,...featureCss.assets});
