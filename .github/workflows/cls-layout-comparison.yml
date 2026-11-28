@@ -1,0 +1,67 @@
+name: UTD CLS layout comparison
+on:
+  pull_request:
+    paths:
+      - 'app.js'
+      - 'index.html'
+      - 'scripts/cls-pr149-*.mjs'
+      - '.github/workflows/cls-layout-comparison.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compare:
+    if: github.head_ref == 'perf/cls-initial-layout' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build pinned baseline and exact candidate
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/cls-results"
+          echo "RESULTS=$RUNNER_TEMP/cls-results" >> "$GITHUB_ENV"
+          git rev-parse HEAD > "$RUNNER_TEMP/cls-results/candidate.txt"
+          git worktree add --detach "$RUNNER_TEMP/cls-base" 8ac64456ff112e5b237f09870fc3c0616cf968a6
+          python3 -m pip install Pillow==11.3.0
+          npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2 lighthouse@12.8.2 playwright@1.56.1 pngjs@7.0.0 pixelmatch@7.1.0
+          (cd "$RUNNER_TEMP/cls-base"; npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2; node scripts/build-pages.mjs "$RUNNER_TEMP/cls-before")
+          node scripts/build-pages.mjs "$RUNNER_TEMP/cls-after"
+      - name: Compare Lighthouse, real CLS and pixels
+        run: |
+          set -euo pipefail
+          export CHROME_PATH="$(command -v google-chrome)"
+          google-chrome --version > "$RESULTS/chrome.txt"
+          node scripts/lighthouse-comparison-server.mjs "$RUNNER_TEMP/cls-before" 8081 > "$RESULTS/server-before.log" 2>&1 &
+          p1=$!
+          node scripts/lighthouse-comparison-server.mjs "$RUNNER_TEMP/cls-after" 8082 > "$RESULTS/server-after.log" 2>&1 &
+          p2=$!
+          trap 'kill "$p1" "$p2" 2>/dev/null || true' EXIT
+          for port in 8081 8082; do
+            for i in {1..60}; do
+              if curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null; then break; fi
+              sleep 1
+            done
+            curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null
+          done
+          status=0
+          node scripts/cls-pr149-lighthouse.mjs "$RESULTS/lighthouse" "$GITHUB_WORKSPACE/scripts/lighthouse-comparison-flags.json" || status=1
+          node scripts/cls-pr149-traces.mjs "$RESULTS/traces" || status=1
+          node scripts/cls-pr149-pixels.mjs "$RESULTS/pixels" || status=1
+          exit "$status"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cls-layout-comparison
+          path: ${{ runner.temp }}/cls-results/
+          retention-days: 30
