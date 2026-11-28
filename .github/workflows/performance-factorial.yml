@@ -1,0 +1,72 @@
+name: UTD factorial performance and CLS diagnostic
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/performance-factorial.yml'
+      - 'scripts/performance-factorial*.mjs'
+      - 'scripts/cls-timing-diagnostic.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolate:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'perf/1-h-5-10-integrated'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Initialize
+        run: |
+          mkdir -p "$RUNNER_TEMP/factorial-results"
+          echo "RESULTS=$RUNNER_TEMP/factorial-results" >> "$GITHUB_ENV"
+      - name: Build exact previously verified first and second batches
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/control-rev" 56f773088579f89653c92542f5056bbc691fdc93
+          git worktree add --detach "$RUNNER_TEMP/both-rev" 03955f9cfd1ca37ddd809568cee323d2b849cfc9
+          python3 -m pip install Pillow==11.3.0
+          npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2 lighthouse@12.8.2 playwright@1.56.1
+          for rev in control both; do
+            (cd "$RUNNER_TEMP/$rev-rev"; npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2; node scripts/build-pages.mjs "$RUNNER_TEMP/$rev-built")
+          done
+          node scripts/performance-factorial-variants.mjs "$RUNNER_TEMP/control-built" "$RUNNER_TEMP/both-built" "$RUNNER_TEMP/variants"
+          cp "$RUNNER_TEMP/variants/variants.json" "$RESULTS/"
+      - name: Run balanced isolated audits and separate CLS timing traces
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CHROME_PATH="$(command -v google-chrome)"
+          google-chrome --version | tee "$RESULTS/chrome-version.txt"
+          pids=()
+          trap 'kill "${pids[@]}" 2>/dev/null || true' EXIT
+          port=8081
+          for arm in control font cpu both; do
+            node scripts/lighthouse-comparison-server.mjs "$RUNNER_TEMP/variants/$arm" "$port" > "$RESULTS/server-$arm.log" 2>&1 &
+            pids+=("$!")
+            port=$((port+1))
+          done
+          for port in 8081 8082 8083 8084; do
+            for i in {1..180}; do
+              if curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null; then break; fi
+              sleep 1
+            done
+            curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null
+            node scripts/lighthouse-comparison-compression-check.mjs "$port" "$RESULTS/compression-$port.json"
+          done
+          node scripts/performance-factorial-run.mjs "$RESULTS" "$GITHUB_WORKSPACE/scripts/lighthouse-comparison-flags.json"
+          node scripts/cls-timing-diagnostic.mjs "$RESULTS/cls-timing"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-factorial-diagnostics
+          path: ${{ env.RESULTS }}/
+          retention-days: 30
