@@ -35,8 +35,8 @@ jobs:
           git worktree add --detach "$RUNNER_TEMP/cls-base" 8ac64456ff112e5b237f09870fc3c0616cf968a6
           python3 -m pip install Pillow==11.3.0
           npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2 lighthouse@12.8.2 playwright@1.56.1 pngjs@7.0.0 pixelmatch@7.1.0
-          (cd "$RUNNER_TEMP/cls-base"; npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2; node scripts/build-pages.mjs "$RUNNER_TEMP/cls-before")
-          node scripts/build-pages.mjs "$RUNNER_TEMP/cls-after"
+          (cd "$RUNNER_TEMP/cls-base"; npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2; node scripts/build-pages.mjs "$RUNNER_TEMP/cls-before/UTD")
+          node scripts/build-pages.mjs "$RUNNER_TEMP/cls-after/UTD"
       - name: Compare Lighthouse, real CLS and pixels
         run: |
           set -euo pipefail
@@ -48,11 +48,24 @@ jobs:
           p2=$!
           trap 'kill "$p1" "$p2" 2>/dev/null || true' EXIT
           for port in 8081 8082; do
-            for i in {1..60}; do
+            for i in {1..180}; do
               if curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null; then break; fi
               sleep 1
             done
-            curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null
+            curl -fsS "http://127.0.0.1:$port/UTD/" -o /dev/null || { cat "$RESULTS"/server-*.log; exit 1; }
+          done
+          # Verify actual served bytes, not just a successful HTTP response.
+          for side in before after; do
+            if [ "$side" = before ]; then port=8081; else port=8082; fi
+            for asset in index.html app.js data.js style.css publication.json; do
+              test -s "$RUNNER_TEMP/cls-$side/UTD/$asset"
+              curl --fail --silent --show-error --max-time 30 --compressed "http://127.0.0.1:$port/UTD/$asset" -o "$RESULTS/preflight-$side-$asset"
+              cmp "$RUNNER_TEMP/cls-$side/UTD/$asset" "$RESULTS/preflight-$side-$asset"
+            done
+            curl --fail --silent --show-error --max-time 30 --compressed "http://127.0.0.1:$port/UTD/?lang=ko" -o "$RESULTS/preflight-$side-home.html"
+            cmp "$RUNNER_TEMP/cls-$side/UTD/index.html" "$RESULTS/preflight-$side-home.html"
+            node scripts/lighthouse-comparison-compression-check.mjs "$port" "$RESULTS/compression-$side.json"
+            echo "Preflight passed: $side on $port"
           done
           status=0
           node scripts/cls-pr149-lighthouse.mjs "$RESULTS/lighthouse" "$GITHUB_WORKSPACE/scripts/lighthouse-comparison-flags.json" || status=1
