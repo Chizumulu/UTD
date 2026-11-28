@@ -25420,11 +25420,14 @@
 // 버튼을 복제하지 않고 .side-controls 노드를 통째로 옮기므로 id·이벤트·상태(알림 켜짐 등)가 그대로 유지됩니다.
 // 폭이 넓어지거나 25/26 아카이브 화면(탭바가 없음)으로 가면 원래 사이드바 자리로 되돌립니다.
 (function () {
-  var controls = document.querySelector('.app-sidebar .side-controls');
   var host = document.getElementById('moreSheetSettings');
+  var controls = document.querySelector('.app-sidebar .side-controls') || (host && host.querySelector('.side-controls'));
   if (!controls || !host) return;
-  var marker = document.createComment('side-controls-home');
-  controls.parentNode.insertBefore(marker, controls);
+  var marker = controls._sideControlsHome;
+  if (!marker) {
+    marker = document.createComment('side-controls-home');
+    controls.parentNode.insertBefore(marker, controls);
+  }
   var mq = window.matchMedia('(max-width: 720px)');
 
   function place() {
