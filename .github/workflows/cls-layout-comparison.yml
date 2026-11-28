@@ -4,6 +4,7 @@ on:
     paths:
       - 'app.js'
       - 'index.html'
+      - 'scripts/build-pages.mjs'
       - 'scripts/cls-pr149-*.mjs'
       - '.github/workflows/cls-layout-comparison.yml'
   workflow_dispatch:
@@ -11,7 +12,7 @@ permissions:
   contents: read
 jobs:
   compare:
-    if: github.head_ref == 'perf/cls-initial-layout' || github.event_name == 'workflow_dispatch'
+    if: github.head_ref == 'perf/cls-initial-layout' || github.head_ref == 'perf/cls-mobile-promo-row' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 100
     steps:
@@ -32,7 +33,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/cls-results"
           echo "RESULTS=$RUNNER_TEMP/cls-results" >> "$GITHUB_ENV"
           git rev-parse HEAD > "$RUNNER_TEMP/cls-results/candidate.txt"
-          git worktree add --detach "$RUNNER_TEMP/cls-base" 8ac64456ff112e5b237f09870fc3c0616cf968a6
+          git worktree add --detach "$RUNNER_TEMP/cls-base" 528c30c700052909753f7e4d2072323134f95e23
           python3 -m pip install Pillow==11.3.0
           npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2 lighthouse@12.8.2 playwright@1.56.1 pngjs@7.0.0 pixelmatch@7.1.0
           (cd "$RUNNER_TEMP/cls-base"; npm install --no-save --package-lock=false terser@5.44.1 postcss@8.5.6 cssnano@7.1.2; node scripts/build-pages.mjs "$RUNNER_TEMP/cls-before/UTD")

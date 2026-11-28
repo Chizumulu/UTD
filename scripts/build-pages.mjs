@@ -65,8 +65,19 @@ const appPath = join(output,'app.js');
 const initialPanelData = readSeoData(readFileSync('data.js','utf8'));
 const initialClub = initialPanelData.leagueData.find(t => t.nameEn === 'Chizumulu United FC' || t.nameKo === '치주물루 유나이티드 FC');
 const initialCup = initialPanelData.cupTournaments.some(Boolean);
+// SEO extraction returns raw team declarations, not the computed .played field.
+// Reuse the official fixture collector verbatim to keep forfeits, postponements
+// and duplicate fixtures consistent with runtime standings.
+const rawData = readFileSync('data.js','utf8');
+const collector = rawData.match(/^function collectPlayedMatches\(\) \{[\s\S]*?^\}/m);
+if (!collector) throw Error('Official played-match collector missing');
+const { runInNewContext } = await import('node:vm');
+const initialPlayed = initialClub ? runInNewContext(collector[0] +
+  '\ncollectPlayedMatches().filter(m => m.homeEn === club || m.awayEn === club).length',
+  {scheduledRounds:initialPanelData.scheduledRounds,roundsData:initialPanelData.roundsData,club:initialClub.nameEn},
+  {timeout:1000,contextCodeGeneration:{strings:false,wasm:false}}) : 0;
 const initialPromo = !!initialClub && initialPanelData.leagueData.length >= 2 &&
-  initialClub.played < (initialPanelData.leagueData.length - 1) * 2;
+  initialPlayed < (initialPanelData.leagueData.length - 1) * 2;
 function releaseInitialPanelRows(app) {
   for (const [name,id] of [['renderCupHeroPanel','nmCupPanel'],['renderPromoRaceStrip','promoRaceStrip']]) {
     const before = 'function '+name+'() {';
