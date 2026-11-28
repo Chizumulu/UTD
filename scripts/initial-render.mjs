@@ -20,7 +20,7 @@ export function prioritizeInitialRender(app){
  const prefix = app.slice(0,startup);
  const suffix = app.slice(startup);
  if(!suffix.includes(labelWrite)) throw Error('Missing startup label assignment');
- if(process.env.UTD_PERF_GROUP && !['B','E'].includes(process.env.UTD_PERF_GROUP)) return app.replace(initialBlock,replacement);
+ if(process.env.UTD_PERF_GROUP && !['B','E','F'].includes(process.env.UTD_PERF_GROUP)) return app.replace(initialBlock,replacement);
  return (prefix + suffix.replace(labelWrite, "      const localized = isKorean ? el.getAttribute('data-ko') : el.getAttribute('data-en');\n      if (localized !== null && el.innerHTML === localized) return;\n      el.innerHTML = localized;")).replace(initialBlock,replacement);
 }
 // Discover the critical styles and scripts early rather than waiting for
@@ -35,7 +35,7 @@ export function preloadInitialAssets(html,versions){
   return '<link rel="preload" as="'+as+'" href="'+file+'?v='+v+'">';
  }).join('\n');
  // Replace the dynamic stylesheet insertion with the same final hashed URL.
- if(process.env.UTD_PERF_GROUP && !['D','E'].includes(process.env.UTD_PERF_GROUP)) return html.replace(anchor,match=>match+'\n'+tags);
+ if(process.env.UTD_PERF_GROUP && !['D','E','F'].includes(process.env.UTD_PERF_GROUP)) return html.replace(anchor,match=>match+'\n'+tags);
  const dynamicStyle = /<script>document\.write\('<link rel="stylesheet" href="style\.css\?v=' \+ window\.ASSET_VERSIONS\.style \+ '">'\);<\/script>/g;
  if([...html.matchAll(dynamicStyle)].length!==1)throw Error('Expected unique dynamic stylesheet');
  return html.replace(dynamicStyle, '<link rel="stylesheet" href="style.css?v='+versions.style+'">').replace(anchor,match=>match+'\n'+tags);
