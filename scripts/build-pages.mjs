@@ -1,3 +1,4 @@
+import { deferOptionalStats } from './deferred-stats.mjs';
 import { applyResponsiveCrests, applyStaticCrests } from './crest-templates.mjs';
 import { minifyPagesAssets } from './minify-pages-assets.mjs';
 import { splitCupView } from './cup-view-split.mjs';
@@ -112,7 +113,9 @@ function reserveInitialPanelRows(html) {
   const style = '<style>@media(max-width:720px){html:not([data-initial-deep-link]) #nmCupPanel[data-initial-panel][hidden],html:not([data-initial-deep-link]) #promoRaceStrip[data-initial-panel][hidden]{display:block!important;box-sizing:border-box;min-height:var(--m-row-h,32px);margin-top:var(--m-row-gap,6px);margin-bottom:0;padding-block:0;pointer-events:none;}html:not([data-initial-deep-link]) [data-initial-panel][hidden]::before{content:"";display:block;width:45%;height:8px;margin:11px auto;border-radius:4px;background:currentColor;opacity:.12;}}</style>';
   return html.replace('</head>','<script>if(location.hash)document.documentElement.setAttribute("data-initial-deep-link","");</script>'+style+'</head>');
 }
-const splitExport = await splitStandingsExport(releaseInitialPanelRows(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(readFileSync(appPath,'utf8'), manifest))))));
+const deferredStats = deferOptionalStats(rawData, readFileSync(appPath,'utf8'));
+writeFileSync(join(output,'data.js'),deferredStats.data);
+const splitExport = await splitStandingsExport(releaseInitialPanelRows(renderEarlyHero(optimizeAppLayout(prioritizeInitialRender(applyResponsiveCrests(deferredStats.app, manifest))))));
 const splitCompare = await splitSeasonCompare(splitExport.app);
 const splitTeamMatch = await splitTeamMatchCompare(splitCompare.app);
 const splitPlayers = await splitPlayerModals(splitTeamMatch.app);
